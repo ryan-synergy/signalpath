@@ -44,15 +44,13 @@ function footer(job, opts, sheetLabel) {
 <text x="714" y="22" font-size="9" fill="#777">Prepared By</text><text x="714" y="40" font-size="13" fill="#111">${esc(J.drawnBy || "SignalPath")}</text>
 <text x="714" y="60" font-size="9" fill="#777">Date Prepared</text><text x="714" y="78" font-size="13" fill="#111">${esc(last.date || "")}</text>
 <text x="880" y="22" font-size="9" fill="#777">Rev</text><text x="880" y="40" font-size="13" fill="#111">${esc(last.rev ?? 1)}</text>
-<g transform="translate(1080,18) scale(0.5)"><circle cx="50" cy="50" r="50" fill="#3966A9"/><g clip-path="url(#sphf)" fill="#fff"><path d="M -2 24 C 34 8 74 12 100 34 C 103 41 96 51 87 50 C 70 37 40 36 -2 38 Z"/><path d="M 102 76 C 66 92 26 88 0 66 C -3 59 4 49 13 50 C 30 63 60 64 102 62 Z"/></g></g>
-<text x="1150" y="40" font-size="20" font-weight="700" letter-spacing="5" fill="#111">${esc(co.name)}</text>
-<text x="1150" y="58" font-size="8" letter-spacing="2.4" fill="#444">${esc(co.tagline)}</text>
+<text x="1080" y="40" font-size="20" font-weight="700" letter-spacing="5" fill="#111">${esc(co.name)}</text>
+<text x="1080" y="58" font-size="8" letter-spacing="2.4" fill="#444">${esc(co.tagline)}</text>
 ${infoLines.slice(0, 3).map((l, i) => `<text x="1400" y="${28 + i * 16}" font-size="9" fill="#666">${esc(l)}</text>`).join("")}
 </g>
 <text x="1590" y="1018" text-anchor="end" font-size="12" fill="#555">${esc(sheetLabel)}</text>`;
 }
-const openPage = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" font-family="'Avenir Next', Avenir, Futura, 'Helvetica Neue', sans-serif">
-<defs><clipPath id="sphf"><circle cx="50" cy="50" r="50"/></clipPath></defs>`;
+const openPage = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" font-family="'Avenir Next', Avenir, Futura, 'Helvetica Neue', sans-serif">`;
 
 /* ---------- generic table ---------- */
 function table(x, y, w, cols, rows) {

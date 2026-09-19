@@ -1394,7 +1394,6 @@ export function render(job, ix, P, rt, opts = {}) {
   <g id="spk"><circle r="16" fill="#2d2d2d" stroke="#151515"/><circle r="9.5" fill="#8f8f8f" stroke="#3a3a3a"/><circle r="3" fill="#2d2d2d"/></g>
   <g id="spks"><circle r="10" fill="#2d2d2d" stroke="#151515"/><circle r="6" fill="#8f8f8f" stroke="#3a3a3a"/><circle r="1.8" fill="#2d2d2d"/></g>
   <g id="sub"><rect x="-15" y="-15" width="30" height="30" rx="3" fill="#2d2d2d" stroke="#151515"/><circle r="9" fill="#8f8f8f" stroke="#3a3a3a"/><circle r="2.6" fill="#2d2d2d"/></g>
-  <clipPath id="sph"><circle cx="50" cy="50" r="50"/></clipPath>
 </defs>`);
 
   /* sheet frame */
@@ -1522,12 +1521,12 @@ export function render(job, ix, P, rt, opts = {}) {
   const cx = tb.x + tb.w / 2;
   push(`<rect x="${tb.x}" y="${tb.y}" width="${tb.w}" height="${tb.h}" fill="#fff" stroke="#444" stroke-width="1.2"/>`);
   push(`<line x1="${tb.x}" y1="300" x2="${tb.x + tb.w}" y2="300" stroke="#444"/>`);
-  push(`<g transform="translate(${tb.x + 52},36) scale(0.52)"><circle cx="50" cy="50" r="50" fill="#3966A9"/><g clip-path="url(#sph)" fill="#fff"><path d="M -2 24 C 34 8 74 12 100 34 C 103 41 96 51 87 50 C 70 37 40 36 -2 38 Z"/><path d="M 102 76 C 66 92 26 88 0 66 C -3 59 4 49 13 50 C 30 63 60 64 102 62 Z"/></g></g>`);
+  // logo mark removed for now (text-only wordmark until the authentic logo file lands)
   const co = { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
     info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv", ...(opts.company || {}) };
-  push(`<text transform="rotate(-90 ${tb.x + 56} 196)" x="${tb.x + 56}" y="196" text-anchor="middle" font-size="26" font-weight="700" letter-spacing="7" fill="#111">${esc(co.name)}</text>`);
-  push(`<text transform="rotate(-90 ${tb.x + 88} 196)" x="${tb.x + 88}" y="196" text-anchor="middle" font-size="9" letter-spacing="2.6" fill="#444">${esc(co.tagline)}</text>`);
-  push(`<text transform="rotate(-90 ${tb.x + 118} 196)" x="${tb.x + 118}" y="196" text-anchor="middle" font-size="7.5" fill="#666">${esc(co.info)}</text>`);
+  push(`<text transform="rotate(-90 ${tb.x + 56} 160)" x="${tb.x + 56}" y="160" text-anchor="middle" font-size="26" font-weight="700" letter-spacing="7" fill="#111">${esc(co.name)}</text>`);
+  push(`<text transform="rotate(-90 ${tb.x + 88} 160)" x="${tb.x + 88}" y="160" text-anchor="middle" font-size="9" letter-spacing="2.6" fill="#444">${esc(co.tagline)}</text>`);
+  push(`<text transform="rotate(-90 ${tb.x + 118} 160)" x="${tb.x + 118}" y="160" text-anchor="middle" font-size="7.5" fill="#666">${esc(co.info)}</text>`);
   push(`<line x1="${tb.x}" y1="470" x2="${tb.x + tb.w}" y2="470" stroke="#444"/>`);
   push(`<text transform="rotate(-90 ${tb.x + 52} 385)" x="${tb.x + 52}" y="385" text-anchor="middle" font-size="14" font-weight="700" fill="#111">${esc(J.client?.name || "")}</text>`);
   push(`<text transform="rotate(-90 ${tb.x + 76} 385)" x="${tb.x + 76}" y="385" text-anchor="middle" font-size="11" fill="#333">${esc(addr1.trim())}</text>`);

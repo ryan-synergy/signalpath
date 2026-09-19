@@ -11,6 +11,18 @@ export const SIGNAL_COLORS = {
   prewire: "#a7a7a7",
 };
 
+/* B&W-safe line styles: when color can't carry signal identity (office laser
+   printers), dash patterns do — video solid, audio dashed, returns dash-dot,
+   network dotted, prewire light + short dash */
+export const SIGNAL_DASHES = {
+  video: { stroke: "#111", dash: null },
+  audio: { stroke: "#333", dash: "9 4" },
+  speaker: { stroke: "#333", dash: "9 4" },
+  audioReturn: { stroke: "#333", dash: "12 4 2.5 4" },
+  network: { stroke: "#666", dash: "2 4" },
+  prewire: { stroke: "#9a9a9a", dash: "5 4" },
+};
+
 export const READABILITY_ZONE_CEILING = 24; // one 11x17 page, per spec §"Readability budget"
 
 /* ---------- load & index ---------- */
@@ -1530,6 +1542,7 @@ const LEGEND_LABELS = { video: "Video", audio: "Audio", audioReturn: "Audio Retu
 const fmtDate = iso => { const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${+m[2]}/${+m[3]}/${m[1].slice(2)}` : esc(iso); };
 
 export function render(job, ix, P, rt, opts = {}) {
+  const bw = !!opts.grayscale;   // B&W-safe mode: dashes carry signal identity
   const s = ix.solutions[opts.solution ?? 0];
   const sol = s.sol;
   const out = [];
@@ -1590,7 +1603,7 @@ export function render(job, ix, P, rt, opts = {}) {
         for (let k = 1; k <= zones; k++) {
           const x = x0 + (k - 1) * pitch;
           const st = slot[k];
-          push(st === "used" ? `<rect x="${x}" y="${d.y + 26}" width="7" height="11" fill="#3b82c4"/>` :
+          push(st === "used" ? `<rect x="${x}" y="${d.y + 26}" width="7" height="11" fill="${bw ? "#16181c" : "#3b82c4"}"/>` :
                st === "res" ? `<rect x="${x}" y="${d.y + 26}" width="7" height="11" fill="#8c8c8c"/>` :
                               `<rect x="${x}" y="${d.y + 26}" width="7" height="11" fill="none" stroke="#666"/>`);
           push(`<text x="${x + 3.5}" y="${d.y + 48}" text-anchor="middle" font-size="8" fill="#9aa">${k}</text>`);
@@ -1660,9 +1673,10 @@ export function render(job, ix, P, rt, opts = {}) {
   push(`<g fill="none" stroke-width="2.2" stroke-linecap="round">`);
   const busTicks = [];
   for (const w of rt.wires) {
-    const color = w.scope !== "included" ? SIGNAL_COLORS.prewire
-      : SIGNAL_COLORS[w.signal === "speaker" ? "audio" : w.signal] || "#555";
-    push(`<path class="wire" data-wire="${esc(w.id)}" data-from="${esc(w.from)}" data-to="${esc(w.to)}" data-signal="${esc(w.signal)}" d="${wireD(w)}" stroke="${color}"/>`);
+    const key = w.scope !== "included" ? "prewire" : (w.signal === "speaker" ? "audio" : w.signal);
+    const gs = bw ? (SIGNAL_DASHES[key] || SIGNAL_DASHES.video) : null;
+    const color = gs ? gs.stroke : SIGNAL_COLORS[key] || "#555";
+    push(`<path class="wire" data-wire="${esc(w.id)}" data-from="${esc(w.from)}" data-to="${esc(w.to)}" data-signal="${esc(w.signal)}" d="${wireD(w)}" stroke="${color}"${gs?.dash ? ` stroke-dasharray="${gs.dash}"` : ""}/>`);
     // one-line bus notation: a trunk drawn once carries its real run count
     const conn = (sol.connections || []).find(c => c.from === w.from && c.to === w.to && c.signal === w.signal);
     const n = conn ? trunkCount(conn, s) : 1;
@@ -1703,7 +1717,8 @@ export function render(job, ix, P, rt, opts = {}) {
   push(`<text x="${lg.x + 12}" y="${lg.y + 16}" font-size="10" font-weight="700" fill="#555" letter-spacing="1">LEGEND</text>`);
   lg.rows.forEach((k, i) => {
     const x = lg.x + 12 + i * 140;
-    push(`<path d="M${x} ${lg.y + 36}H${x + 32}" stroke="${SIGNAL_COLORS[k]}" stroke-width="3" fill="none"/>`);
+    const st = bw ? SIGNAL_DASHES[k] : null;
+    push(`<path d="M${x} ${lg.y + 36}H${x + 32}" stroke="${st ? st.stroke : SIGNAL_COLORS[k]}" stroke-width="3" fill="none"${st?.dash ? ` stroke-dasharray="${st.dash}"` : ""}/>`);
     push(`<text x="${x + 38}" y="${lg.y + 40}" font-size="11.5" fill="#333">${LEGEND_LABELS[k] || k}</text>`);
   });
 

@@ -784,6 +784,27 @@ for (const [name, raw] of Object.entries(fixtures)) {
     cm.includes("Out 1 → In 1") && cm.includes("Out 6 → In 6") && cm.includes("Feed ("));
 }
 
+/* ---------- grayscale (B&W-safe) render mode ---------- */
+{
+  const { job, ix } = loadJob(fixtures.residence);
+  const p = place(job, ix), rt = route(job, ix, p);
+  const svg = render(job, ix, p, rt, { grayscale: true });
+  const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+  const wires = [...doc.querySelectorAll("path.wire")];
+  t("grayscale: no signal color survives on wires",
+    wires.every(w => !["#d22b1f", "#2b6cb8", "#e8842c", "#2f9e44"].includes(w.getAttribute("stroke"))));
+  const included = w => rt.wires.find(x => x.id === w.dataset.wire)?.scope === "included";
+  t("grayscale: dashes carry identity (audio dashed, video solid, prewire its own)",
+    wires.filter(w => included(w) && (w.dataset.signal === "audio" || w.dataset.signal === "speaker")).every(w => w.getAttribute("stroke-dasharray") === "9 4") &&
+    wires.filter(w => included(w) && w.dataset.signal === "video").every(w => !w.hasAttribute("stroke-dasharray")) &&
+    wires.some(w => !included(w) && w.getAttribute("stroke-dasharray") === "5 4"));
+  t("grayscale: legend samples show the dash patterns", svg.includes('stroke-dasharray="12 4 2.5 4"'));
+  const colorSvg = render(job, ix, p, rt);
+  t("grayscale: default render untouched (colored, no wire dashes)",
+    colorSvg.includes('#d22b1f') &&
+    [...new DOMParser().parseFromString(colorSvg, "image/svg+xml").querySelectorAll("path.wire")].every(w => !w.hasAttribute("stroke-dasharray")));
+}
+
 /* ---------- catalog research round 2026-09-19 (Sonance/Anthem/AudioControl/AVPro) ---------- */
 {
   const cat = await (await fetch("./catalog.json")).json();

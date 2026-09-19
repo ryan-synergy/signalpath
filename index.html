@@ -157,6 +157,7 @@
   <span class="spacer"></span>
   <span id="rulesChip" class="ok">✓</span>
   <label class="chk"><input type="checkbox" id="hideNet"> hide network</label>
+  <label class="chk" title="B&amp;W-safe: dash patterns carry signal identity for office laser printers"><input type="checkbox" id="bwMode"> B/W</label>
   <button id="importBtn">Import</button><input type="file" id="importFile" accept=".json,.md" hidden>
   <button id="exportJson">JSON</button>
   <button id="exportSvg">SVG</button>
@@ -259,7 +260,7 @@ function refresh(save = true) {
     const { job, ix } = loadJob(effectiveJob(S.job, S.sol));   // active solution's overrides applied
     S.view = { job, ix };                                      // interactive sheet resolves names from here
     v = validate(job, ix); a = advise(job, ix, effectiveCatalog());
-    const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], company: SETTINGS.company,
+    const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, company: SETTINGS.company,
                    sheet: `1 of ${sheetCount(S.job)}` };
     if (S.job.house.zones.length) {
       const p = place(job, ix, opts);
@@ -325,6 +326,7 @@ async function renderJobsSel() {
 $("#jobName").onchange = e => { S.job.job.name = e.target.value; refresh(); };
 $("#stageSel").onchange = e => { S.job.job.stage = e.target.value; refresh(); };
 $("#hideNet").onchange = () => refresh(false);
+$("#bwMode").onchange = () => refresh(false);
 $("#solSel").onchange = e => {
   if (e.target.value === "__add") {
     const base = S.job.solutions[S.sol];
@@ -389,7 +391,7 @@ $("#printBtn").onclick = () => {
   try {
     const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
     const a = advise(job, ix, effectiveCatalog());
-    const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], company: SETTINGS.company,
+    const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, company: SETTINGS.company,
                    sheet: `1 of ${sheetCount(S.job)}`, rawJob: S.job };
     const p = place(job, ix, opts);
     const rt = route(job, ix, p, opts);

@@ -324,7 +324,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
 /* hop-count regression guards (polish round 2026-09-19: returns route last
    and pick the least-crossing lane) */
 {
-  const ceiling = { residence: 14, estate: 26, stress: 560 };
+  const ceiling = { residence: 12, estate: 29, stress: 340 };  // re-baselined 2026-09-19: amps-bottom layout
   for (const [name, raw] of Object.entries(fixtures)) {
     const { job, ix } = loadJob(raw);
     const p = place(job, ix);

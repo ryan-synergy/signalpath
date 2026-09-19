@@ -462,41 +462,53 @@ export function place(job, ix = indexJob(job), opts = {}) {
   let rackY = topBandBottom + topCorridorH;
   let rackRight = PL.marginX;
   for (const r of sol.racks || []) {
-    const cols = { A: rackY + PL.rackPadTop, B: rackY + PL.rackPadTop, C: rackY + PL.rackPadTop };
-    const placed = [];
-    let usedC = false, maxTileBottom = rackY + PL.rackPadTop;
+    const cols = { A: rackY + PL.rackPadTop, B: rackY + PL.rackPadTop };
+    const placed = [], cTiles = [];
+    let maxTileBottom = rackY + PL.rackPadTop;
     for (const d of r.devices || []) {
       const t = deviceTileSpec(d, Math.max(inCount[d.id] || 0, inCount["out:" + d.id] || 0));
-      const x = t.col === "A" ? PL.colA : t.col === "B" ? colBx : colCx;
-      if (t.col === "C") usedC = true;
+      // amps (col C) anchor to the rack BOTTOM (mock rule: distribution exits
+      // high toward the top band, speaker audio exits low toward the audio band)
+      if (t.col === "C") { cTiles.push({ d, t }); continue; }
+      const x = t.col === "A" ? PL.colA : colBx;
       placed.push({ id: d.id, model: d.model, kind: t.kind, col: t.col, x, y: cols[t.col], w: t.w, h: t.h, type: d.type });
       maxTileBottom = Math.max(maxTileBottom, cols[t.col] + t.h + (t.kind === "small" ? PL.captionH : 0));
       cols[t.col] += t.pitch;
     }
+    const usedC = cTiles.length > 0;
+    const cTotal = cTiles.reduce((n, { t }) => n + t.h, 0) + 20 * Math.max(0, cTiles.length - 1);
     const w = (usedC ? colCx + PL.ampTile.w : colBx + PL.chassisTile.w) + PL.rackPadBottom - PL.marginX;
-    const h = maxTileBottom - rackY + PL.rackPadBottom;
+    const h = Math.max(maxTileBottom - rackY + PL.rackPadBottom,
+                       usedC ? PL.rackPadTop + cTotal + PL.rackPadBottom + 40 : 0);
+    let cy = rackY + h - PL.rackPadBottom - cTotal;
+    for (const { d, t } of cTiles) {
+      placed.push({ id: d.id, model: d.model, kind: t.kind, col: "C", x: colCx, y: cy, w: t.w, h: t.h, type: d.type });
+      cy += t.h + 20;
+    }
     out.racks.push({ id: r.id, name: r.name, x: PL.marginX, y: rackY, w, h, devices: placed });
     rackRight = Math.max(rackRight, PL.marginX + w);
     rackY += h + PL.rackGapY;
   }
   const rackBottom = rackY - PL.rackGapY;
 
-  /* -- primary audio band: rows to the right of the rack column, near the amps --
-     wraps on its own width budget (the drawing scales; a fixed sheet-edge wrap
-     would collapse wide racks into a single column) */
+  /* -- primary audio band: bottom-right of the page, bottom-aligned with the
+     rack (mock rule: speaker runs leave the bottom-anchored amps and flow
+     straight right — never through the top half). Rows wrap on their own
+     width budget and the block grows UPWARD as zone count rises. */
   {
     const bandX = rackRight + rightCorridorW;
     const bandMaxW = Math.max(680, Math.ceil(Math.sqrt(primary.audio.length)) * 170);
-    let x = bandX, y = topBandBottom + topCorridorH + 240, rowH = 0;
-    if (!out.racks.length) y = topBandBottom + topCorridorH;
+    const dry = [];                                   // dry layout first, then bottom-align the block
+    let x = bandX, y = 0, rowH = 0, bandH = 0;
     for (const z of primary.audio) {
       const c = cardOf[z.id];
-      if (x + c.w > bandX + bandMaxW && x > bandX) {
-        y += rowH + PL.rowGapY; x = bandX; rowH = 0;
-      }
-      placeZone(out, z, c, x, y, "audio");
-      x += c.w + PL.cardGapX; rowH = Math.max(rowH, c.h);
+      if (x + c.w > bandX + bandMaxW && x > bandX) { y += rowH + PL.rowGapY; x = bandX; rowH = 0; }
+      dry.push({ z, c, x, y });
+      x += c.w + PL.cardGapX; rowH = Math.max(rowH, c.h); bandH = Math.max(bandH, y + c.h);
     }
+    const bandTopMin = topBandBottom + topCorridorH + (out.racks.length ? 100 : 0);
+    const y0 = Math.max(bandTopMin, (out.racks.length ? rackBottom : bandTopMin + bandH) - bandH);
+    for (const p of dry) placeZone(out, p.z, p.c, p.x, y0 + p.y, "audio");
   }
 
   /* -- secondary clusters: full stacks to the right (video row, audio rows below) -- */
@@ -900,7 +912,8 @@ export function route(job, ix, placement, opts = {}) {
       (rightPorts[d.id] ||= []).push(o.portY);
       portPlan[wireId(o.c)] = o.portY;   // pass-4 classes reuse their reserved exit
     });
-    plans.push({ dev: d, ordered, west, east, other });
+    plans.push({ dev: d, ordered, west, east, other,
+      eastBandMinX: east.length ? Math.min(...east.map(o => o.t.pz.x)) : null });
   }
 
   /* ============ pass 3: rigid non-zone wires FIRST (short structural runs
@@ -1031,8 +1044,39 @@ export function route(job, ix, placement, opts = {}) {
           });
           return found;
         };
+        // level-with-the-band sources (bottom-anchored amps) dive below the band
+        // right at the source and run the bottom strip east — the mock's pattern;
+        // a target-side riser would have to cross every card between here and there
+        const tryDive = (landAt, rng, desired, dir) => {
+          const bandMinX = plan.eastBandMinX;
+          const g1 = Math.min(bandMinX != null ? bandMinX - 10 : tx - 10, tx - 10);
+          const g0 = px + 10;
+          if (g1 <= g0 + 6) return null;
+          // nearest target routes first (east plan is x-sorted), so risers start at
+          // the band edge and advance WEST: each farther sibling dives wider and
+          // deeper, its strip run passing safely under the nearer ones
+          const rk = "dive" + g0;
+          const prev = riserTrack[rk];
+          const rDesired = Math.min(g1, prev != null ? prev - 12 : g1);
+          if (rDesired < g0 + 6) return null;
+          scanLane(desired, dir, rng, px, tx, nWire, y => {
+            const riserX = alloc(usedV, rDesired, Math.min(py, y), Math.max(py, y), nWire, -1,
+              x => segBlocked(x, Math.min(py, y), x, Math.max(py, y), skip), [g0, rDesired]);
+            if (riserX == null) { dbg(o, { y, fail: "dive-riser" }); return false; }
+            const cand = [...prefix, [px, py], [riserX, py], [riserX, y], [tx, y], [tx, landAt]];
+            if (pathBlocked(cand, skip) || !pathRegisterable(cand, nWire)) { dbg(o, { y, riserX, fail: "dive-blocked" }); return false; }
+            if (crossesSiblings(cand, sibNets)) { dbg(o, { y, riserX, fail: "dive-sibling" }); return false; }
+            found = cand;
+            riserTrack[rk] = riserX;
+            return true;
+          });
+          return found;
+        };
         if (above) tryStaged(land, [Math.max(20, cardTop - 320), cardTop - 14], cardTop - 26, -1);
-        else tryStaged(land, [cardBot + 14, cardBot + 340], cardBot + 40, +1);
+        else {
+          tryDive(land, [cardBot + 14, cardBot + 340], cardBot + 40, +1);
+          if (!found) tryStaged(land, [cardBot + 14, cardBot + 340], cardBot + 40, +1);
+        }
         // starved strip: a plain border target may land on the OPPOSITE border
         // (feeds over the top of the band) — chips can't flip, their stub is fixed
         if (!found && landY == null)
@@ -1152,6 +1196,13 @@ export function route(job, ix, placement, opts = {}) {
           const zx = alloc(usedV, (gap[0] + gap[1]) / 2, Math.min(sy, ty), Math.max(sy, ty), nWire, 0,
             x => segBlocked(x, Math.min(sy, ty), x, Math.max(sy, ty), skip), gap);
           if (zx != null) cands.push([[sx, sy], [zx, sy], [zx, ty], [b.x, ty]]);
+          // starved center: the gap's edge channels may still be free (deep B→C
+          // descents to bottom-anchored amps travel the whole crowded gap)
+          for (const [des, bias] of [[gap[1] - 6, -1], [gap[0] + 6, +1]]) {
+            const ze = alloc(usedV, des, Math.min(sy, ty), Math.max(sy, ty), nWire, bias,
+              x => segBlocked(x, Math.min(sy, ty), x, Math.max(sy, ty), skip), gap);
+            if (ze != null && ze !== zx) cands.push([[sx, sy], [ze, sy], [ze, ty], [b.x, ty]]);
+          }
           // double-jog (col A → C, or when the single Z is starved)
           const my = alloc(usedH, sy, gapABx[0], gapBCx[1], nWire, 0,
             y => segBlocked(gapABx[0], y, gapBCx[1], y, skip), [rackTop + 26, rackBottom - 10]);
@@ -1306,21 +1357,68 @@ export function route(job, ix, placement, opts = {}) {
     // gather every valid (lane, channel) candidate and take the one that costs
     // the fewest hops — returns route last, so the corridor is fully known
     let best = null, bestCost = Infinity, seen = 0;
+    const rdbg = info => { if (opts.debug) { const k = wireId(conn); ((out.debug ||= {})[k] ||= []).length < 80 && out.debug[k].push(info); } };
+    // a stacked card directly below can wall off the straight descent — jog
+    // through the row strip into the cluster gutter beside the card, then drop
+    const buildCands = (y, wx) => {
+      const cb = pz.y + pz.h;
+      const list = [[[sx0, cb], [sx0, y], [wx, y], [wx, ty], [b.x, ty]]];
+      if (y > cb + 60) {
+        // the descent beside the card is a channel like any other — allocate it
+        // (cluster gutters carry inbound risers; a fixed offset would collide)
+        for (const [g0, g1, bias] of [[pz.x - 70, pz.x - 10, -1], [pz.x + pz.w + 10, pz.x + pz.w + 70, +1]]) {
+          const gx = alloc(usedV, bias < 0 ? g1 : g0, cb + 16, y, nWire, bias,
+            x => segBlocked(x, cb + 16, x, y, skip), [g0, g1]);
+          if (gx != null) for (const midY of [cb + 16, cb + 30, cb + 44])
+            list.push([[sx0, cb], [sx0, midY], [gx, midY], [gx, y], [wx, y], [wx, ty], [b.x, ty]]);
+        }
+      }
+      return list;
+    };
     scanLane(laneLo, +1, [laneLo, laneHi], gapABx[0], sx0, nWire, y => {
       for (const range of [gapABx, westMarginX]) {
         const wx = alloc(usedV, range === gapABx ? (range[0] + range[1]) / 2 : range[1],
           Math.min(y, ty), Math.max(y, ty), nWire, range === gapABx ? 0 : -1,
           x => segBlocked(x, Math.min(y, ty), x, Math.max(y, ty), skip), range);
-        if (wx == null) continue;
-        const cand = [[sx0, pz.y + pz.h], [sx0, y], [wx, y], [wx, ty], [b.x, ty]];
-        if (pathBlocked(cand, skip) || !pathRegisterable(cand, nWire)) continue;
+        if (wx == null) { rdbg({ y, r: range === gapABx ? "ab" : "west", fail: "alloc" }); continue; }
+        const cand = buildCands(y, wx).find(c => !pathBlocked(c, skip) && pathRegisterable(c, nWire));
+        if (!cand) {
+          const c0 = buildCands(y, wx)[0];
+          rdbg({ y, wx, r: range === gapABx ? "ab" : "west", fail: pathBlocked(c0, skip) ? "blocked:" + pathBlocked(c0, skip) : "registry" });
+          continue;
+        }
         // hops dominate; congestion breaks ties toward emptier corridors
         const cost = countCrossings(cand) * 100 + pathCongestion(cand);
         if (cost < bestCost) { best = cand; bestCost = cost; }
         seen++;
       }
-      return seen >= 10; // sample up to 10 — even a zero-hop lane may have a calmer twin
+      return seen >= 30; // dense sheets bury the easy lanes — sample wide before giving up
     });
+    // tall racks put the only clear crossing BELOW everything — the near-card
+    // scan can exhaust its sample budget before ever reaching it
+    if (!best) {
+      let seen2 = 0;
+      // the first 340px below the rack belong to the amp dive strips — a return
+      // crossing the whole sheet must duck BENEATH them
+      scanLane(rackBottom + 24, +1, [rackBottom + 24, rackBottom + 560], gapABx[0], sx0, nWire, y => {
+        for (const range of [gapABx, westMarginX]) {
+          const wx = alloc(usedV, range === gapABx ? (range[0] + range[1]) / 2 : range[1],
+            Math.min(y, ty), Math.max(y, ty), nWire, range === gapABx ? 0 : -1,
+            x => segBlocked(x, Math.min(y, ty), x, Math.max(y, ty), skip), range);
+          if (wx == null) { rdbg({ band2: y, r: range === gapABx ? "ab" : "west", fail: "alloc" }); continue; }
+          const cand = buildCands(y, wx).find(c => !pathBlocked(c, skip) && pathRegisterable(c, nWire));
+          if (!cand) {
+            const c0 = buildCands(y, wx)[0];
+            rdbg({ band2: y, wx, r: range === gapABx ? "ab" : "west", fail: pathBlocked(c0, skip) ? "blocked:" + pathBlocked(c0, skip) : "registry" });
+            continue;
+          }
+          const cost = countCrossings(cand) * 100 + pathCongestion(cand);
+          if (cost < bestCost) { best = cand; bestCost = cost; }
+          seen2++;
+        }
+        return seen2 >= 12;
+      });
+    }
     tryCommit(conn, "return", [best], skip);
   }
 

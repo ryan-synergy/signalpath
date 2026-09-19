@@ -1279,6 +1279,7 @@ export function route(job, ix, placement, opts = {}) {
 
   /* ============ pass 5: crossings → hops ============ */
   computeHops(out);
+  if (opts.debug) out.channels = { h: usedH, v: usedV };  // registered segments, for the congestion overlay
   return out;
 }
 

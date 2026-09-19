@@ -740,6 +740,17 @@ for (const [name, raw] of Object.entries(fixtures)) {
     v2.warnings.some(w => w.code === "stale-override" && w.msg.includes("ghost-ep")));
 }
 
+/* ---------- congestion overlay feed (debug-only channel registry export) ---------- */
+{
+  const { job, ix } = loadJob(fixtures.residence);
+  const p = place(job, ix);
+  const rt = route(job, ix, p, { debug: true });
+  t("debug: route exposes channel segments for the congestion overlay",
+    !!rt.channels && rt.channels.h.length > 0 && rt.channels.v.length > 0 &&
+    ["c", "a1", "a2"].every(k => k in rt.channels.h[0]));
+  t("debug: channels stay private outside debug mode", !route(job, ix, p).channels);
+}
+
 document.getElementById("summary").innerHTML =
   fail === 0 ? `<span class="pass">ALL ${pass} TESTS PASS</span>` : `<span class="fail">${fail} FAILED</span> · ${pass} passed`;
 document.title = fail === 0 ? `✓ ${pass} pass` : `✗ ${fail} fail`;

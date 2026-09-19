@@ -1,0 +1,105 @@
+{
+  "generator": "SignalPath",
+  "schemaVersion": 1,
+  "job": {
+    "name": "Sample Residence",
+    "client": { "name": "Customer Name", "address": "300 El Camino, Tustin, CA 92780" },
+    "stage": "proposal",
+    "drawnBy": "SignalPath",
+    "revisions": [{ "rev": 1, "date": "2026-09-16", "description": "Initial proposal", "by": "SP" }],
+    "catalogSnapshot": { "asOf": "2026-09-16" }
+  },
+  "house": {
+    "areas": [],
+    "zones": [
+      {
+        "id": "z-family", "name": "Family Room", "scope": "included",
+        "endpoints": [
+          { "id": "family-spk", "type": "speakers", "config": "surround-5.1", "status": "new" },
+          { "id": "family-tv", "type": "display", "displayType": "tv", "brand": "Sony", "size": 75, "status": "new" }
+        ]
+      },
+      {
+        "id": "z-master", "name": "Master Bed", "scope": "included",
+        "endpoints": [
+          { "id": "master-spk", "type": "speakers", "config": "stereo", "count": 2, "status": "ofe" },
+          { "id": "master-tv", "type": "display", "displayType": "tv", "brand": "Sony", "size": 65, "status": "new" }
+        ]
+      },
+      {
+        "id": "z-patio", "name": "Patio", "scope": "included",
+        "endpoints": [
+          { "id": "patio-spk", "type": "speakers", "config": "stereo", "count": 2, "status": "new" },
+          { "id": "patio-tv", "type": "display", "displayType": "tv", "brand": "Sony", "size": 55, "status": "new",
+            "confirm": ["size"], "note": "confirm size" }
+        ]
+      },
+      { "id": "z-kitchen", "name": "Kitchen", "scope": "included",
+        "endpoints": [{ "id": "kitchen-spk", "type": "speakers", "config": "stereo", "count": 2, "status": "ofe" }] },
+      { "id": "z-office", "name": "Office", "scope": "included",
+        "endpoints": [{ "id": "office-spk", "type": "speakers", "config": "stereo", "count": 2, "status": "ofe" }] },
+      { "id": "z-dining", "name": "Dining Room", "scope": "included",
+        "endpoints": [{ "id": "dining-spk", "type": "speakers", "config": "stereo", "count": 2, "status": "new" }] },
+      { "id": "z-gym", "name": "Gym", "scope": "prewire",
+        "endpoints": [{ "id": "gym-spk", "type": "speakers", "config": "stereo", "count": 2, "status": "prewire" }] }
+    ]
+  },
+  "solutions": [
+    {
+      "id": "sol-a", "name": "Proposed System", "videoDistribution": "hybrid",
+      "platforms": [],
+      "auxCounts": {},
+      "racks": [
+        {
+          "id": "rack-main", "name": "Equipment Rack",
+          "devices": [
+            { "id": "cablebox", "type": "source", "sourceType": "cable", "model": "Cable Box", "status": "new" },
+            { "id": "atv-rack", "type": "source", "sourceType": "appletv", "model": "Apple TV", "status": "new" },
+            { "id": "mrx540", "type": "avr", "model": "Anthem MRX-540", "catalogRef": "anthem-mrx-540-8k", "status": "new" },
+            { "id": "axion8", "type": "videoMatrix", "model": "AVPro Edge Axion 8", "io": { "in": 2, "out": 4 }, "status": "new" },
+            { "id": "sav-in", "type": "audioInputModule", "model": "Savant Input Module", "status": "new" },
+            { "id": "sav-out", "type": "audioOutputModule", "model": "Savant Output Module", "status": "new" },
+            { "id": "sav-avb", "type": "avbSwitch", "model": "Savant AVB", "status": "new" },
+            { "id": "sav-music", "type": "source", "sourceType": "streamer", "model": "Savant Music", "audioOnly": true, "status": "new" },
+            { "id": "turntable", "type": "source", "sourceType": "turntable", "model": "Turn Table", "audioOnly": true, "status": "ofe" },
+            { "id": "mdx16", "type": "amp", "model": "Anthem MDX-16", "catalogRef": "anthem-mdx-16", "zones": 8, "status": "new" }
+          ]
+        }
+      ],
+      "localDevices": [
+        { "id": "atv-patio", "type": "source", "sourceType": "appletv", "model": "Apple TV", "status": "new",
+          "zone": "z-patio", "location": "at-display" }
+      ],
+      "companions": [
+        { "id": "balun-family", "type": "balun", "serves": "family-tv", "auto": true },
+        { "id": "balun-master", "type": "balun", "serves": "master-tv", "auto": true }
+      ],
+      "connections": [
+        { "from": "cablebox", "to": "mrx540", "signal": "video" },
+        { "from": "atv-rack", "to": "axion8", "signal": "video" },
+        { "from": "axion8", "to": "mrx540", "signal": "video", "note": "matrix out 1 feeds AVR" },
+        { "from": "axion8", "to": "balun-family", "signal": "video", "matrixOut": 3 },
+        { "from": "axion8", "to": "balun-master", "signal": "video", "matrixOut": 2 },
+        { "from": "balun-family", "to": "family-tv", "signal": "video" },
+        { "from": "balun-master", "to": "master-tv", "signal": "video" },
+        { "from": "atv-patio", "to": "patio-tv", "signal": "video", "local": true },
+        { "from": "mrx540", "to": "family-spk", "signal": "speaker" },
+        { "from": "sav-music", "to": "sav-in", "signal": "audio" },
+        { "from": "turntable", "to": "sav-in", "signal": "audio" },
+        { "from": "sav-avb", "to": "sav-in", "signal": "network" },
+        { "from": "sav-avb", "to": "sav-out", "signal": "network" },
+        { "from": "sav-out", "to": "mdx16", "signal": "audio", "count": 2 },
+        { "from": "master-tv", "to": "sav-in", "signal": "audioReturn" },
+        { "from": "mdx16", "to": "master-spk", "signal": "speaker", "channels": "1-2" },
+        { "from": "mdx16", "to": "patio-spk", "signal": "speaker", "channels": "3-4" },
+        { "from": "mdx16", "to": "kitchen-spk", "signal": "speaker", "channels": "5-6" },
+        { "from": "mdx16", "to": "office-spk", "signal": "speaker", "channels": "7-8" },
+        { "from": "mdx16", "to": "dining-spk", "signal": "speaker", "channels": "9-10" },
+        { "from": "mdx16", "to": "gym-spk", "signal": "speaker", "channels": "11-12", "scope": "prewire" }
+      ],
+      "annotations": [
+        { "text": "Gym pre-wired only — MDX-16 ch 6 reserved for future", "near": "z-gym" }
+      ]
+    }
+  ]
+}

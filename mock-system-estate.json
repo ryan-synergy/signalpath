@@ -1,0 +1,113 @@
+{
+  "generator": "SignalPath",
+  "schemaVersion": 1,
+  "job": {
+    "name": "Sample Estate",
+    "client": { "name": "Customer Name", "address": "300 El Camino, Tustin, CA 92780" },
+    "stage": "proposal",
+    "drawnBy": "SignalPath",
+    "revisions": [{ "rev": 1, "date": "2026-09-17", "description": "Initial proposal", "by": "SP" }],
+    "catalogSnapshot": { "asOf": "2026-09-17" }
+  },
+  "house": {
+    "areas": [
+      { "id": "area-main", "name": "Main House", "homeRack": "rack-main" },
+      { "id": "area-pool", "name": "Pool House", "homeRack": "rack-pool" }
+    ],
+    "zones": [
+      { "id": "z-family", "name": "Family Room", "area": "area-main", "scope": "included",
+        "endpoints": [
+          { "id": "family-spk", "type": "speakers", "config": "surround-5.1", "status": "new" },
+          { "id": "family-tv", "type": "display", "displayType": "tv", "brand": "Sony", "size": 75, "status": "new" }
+        ] },
+      { "id": "z-master", "name": "Master Bed", "area": "area-main", "scope": "included",
+        "endpoints": [
+          { "id": "master-spk", "type": "speakers", "config": "stereo", "count": 2, "status": "ofe" },
+          { "id": "master-tv", "type": "display", "displayType": "tv", "brand": "Sony", "size": 65, "status": "new" }
+        ] },
+      { "id": "z-kitchen", "name": "Kitchen", "area": "area-main", "scope": "included",
+        "endpoints": [{ "id": "kitchen-spk", "type": "speakers", "config": "stereo", "count": 2, "status": "ofe" }] },
+      { "id": "z-office", "name": "Office", "area": "area-main", "scope": "included",
+        "endpoints": [{ "id": "office-spk", "type": "speakers", "config": "stereo", "count": 2, "status": "ofe" }] },
+      { "id": "z-pool", "name": "Pool House", "area": "area-pool", "scope": "included",
+        "endpoints": [
+          { "id": "pool-spk", "type": "speakers", "config": "stereo", "count": 2, "status": "ofe" },
+          { "id": "pool-tv", "type": "display", "displayType": "tv", "brand": "Sony", "size": 55, "status": "new" }
+        ] },
+      { "id": "z-patio1", "name": "Patio 1", "area": "area-pool", "scope": "included",
+        "endpoints": [{ "id": "patio1-spk", "type": "speakers", "config": "stereo", "count": 2, "status": "new" }] },
+      { "id": "z-patio2", "name": "Patio 2", "area": "area-pool", "scope": "included",
+        "endpoints": [{ "id": "patio2-spk", "type": "speakers", "config": "stereo", "count": 2, "status": "new" }] }
+    ]
+  },
+  "solutions": [
+    {
+      "id": "sol-a", "name": "Proposed System", "videoDistribution": "avoip-mxnet",
+      "platforms": [],
+      "auxCounts": {},
+      "racks": [
+        {
+          "id": "rack-main", "name": "Main Equipment Rack", "area": "area-main",
+          "devices": [
+            { "id": "atv1", "type": "source", "sourceType": "appletv", "model": "Apple TV 1", "status": "new" },
+            { "id": "atv2", "type": "source", "sourceType": "appletv", "model": "Apple TV 2", "status": "new" },
+            { "id": "cablebox", "type": "source", "sourceType": "cable", "model": "Cable Box", "status": "new" },
+            { "id": "sw-main", "type": "avSwitch", "model": "AVPro Edge MXNET SW12", "catalogRef": "avpro-mxnet-sw12", "status": "new" },
+            { "id": "cbx", "type": "controlBox", "model": "MXNet CBX", "catalogRef": "avpro-mxnet-cbox-ha", "status": "new" },
+            { "id": "mrx540", "type": "avr", "model": "Anthem MRX-540", "catalogRef": "anthem-mrx-540-8k", "status": "new" },
+            { "id": "mdx16", "type": "amp", "model": "Anthem MDX-16", "catalogRef": "anthem-mdx-16", "zones": 8, "status": "new" },
+            { "id": "sav-music", "type": "source", "sourceType": "streamer", "model": "Savant Music", "audioOnly": true, "status": "new" }
+          ]
+        },
+        {
+          "id": "rack-pool", "name": "Pool House Rack", "area": "area-pool",
+          "devices": [
+            { "id": "sw-pool", "type": "avSwitch", "model": "AVPro Edge MXNET SW", "catalogRef": "avpro-mxnet-sw12", "status": "new" },
+            { "id": "mdx8", "type": "amp", "model": "Anthem MDX-8", "catalogRef": "anthem-mdx-8", "zones": 4, "status": "new" }
+          ]
+        }
+      ],
+      "localDevices": [],
+      "companions": [
+        { "id": "enc-atv1", "type": "enc", "serves": "atv1", "auto": true },
+        { "id": "enc-atv2", "type": "enc", "serves": "atv2", "auto": true },
+        { "id": "enc-cable", "type": "enc", "serves": "cablebox", "auto": true },
+        { "id": "dec-family", "type": "dec", "serves": "family-tv", "auto": true },
+        { "id": "dec-master", "type": "dec", "serves": "master-tv", "auto": true },
+        { "id": "dec-pool", "type": "dec", "serves": "pool-tv", "auto": true },
+        { "id": "dec-mrx", "type": "dec", "serves": "mrx540", "auto": true },
+        { "id": "dec-audio-pool", "type": "dec", "variant": "audio-deembed", "serves": "mdx8", "auto": true,
+          "note": "MDX-8 is analog-input only; DEC de-embeds network audio to analog" }
+      ],
+      "connections": [
+        { "from": "atv1", "to": "enc-atv1", "signal": "video" },
+        { "from": "atv2", "to": "enc-atv2", "signal": "video" },
+        { "from": "cablebox", "to": "enc-cable", "signal": "video" },
+        { "from": "enc-atv1", "to": "sw-main", "signal": "video" },
+        { "from": "enc-atv2", "to": "sw-main", "signal": "video" },
+        { "from": "enc-cable", "to": "sw-main", "signal": "video" },
+        { "from": "cbx", "to": "sw-main", "signal": "network" },
+        { "from": "sw-main", "to": "dec-mrx", "signal": "video" },
+        { "from": "dec-mrx", "to": "mrx540", "signal": "video" },
+        { "from": "sw-main", "to": "dec-family", "signal": "video" },
+        { "from": "dec-family", "to": "family-tv", "signal": "video" },
+        { "from": "sw-main", "to": "dec-master", "signal": "video" },
+        { "from": "dec-master", "to": "master-tv", "signal": "video" },
+        { "from": "sw-main", "to": "sw-pool", "signal": "network", "note": "inter-switch uplink" },
+        { "from": "sw-pool", "to": "dec-pool", "signal": "video" },
+        { "from": "dec-pool", "to": "pool-tv", "signal": "video" },
+        { "from": "sw-pool", "to": "dec-audio-pool", "signal": "video" },
+        { "from": "dec-audio-pool", "to": "mdx8", "signal": "audio" },
+        { "from": "sav-music", "to": "mdx16", "signal": "audio" },
+        { "from": "mrx540", "to": "family-spk", "signal": "speaker" },
+        { "from": "mdx16", "to": "master-spk", "signal": "speaker", "channels": "1-2" },
+        { "from": "mdx16", "to": "kitchen-spk", "signal": "speaker", "channels": "3-4" },
+        { "from": "mdx16", "to": "office-spk", "signal": "speaker", "channels": "5-6" },
+        { "from": "mdx8", "to": "patio1-spk", "signal": "speaker", "channels": "1-2" },
+        { "from": "mdx8", "to": "pool-spk", "signal": "speaker", "channels": "3-4" },
+        { "from": "mdx8", "to": "patio2-spk", "signal": "speaker", "channels": "5-6" }
+      ],
+      "annotations": []
+    }
+  ]
+}

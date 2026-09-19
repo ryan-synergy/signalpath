@@ -69,6 +69,19 @@
   .del { background: none; border: none; color: #b55; padding: 2px 6px; }
   .sect { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: #888; margin: 12px 2px 6px; }
   .badge { font-size: 10px; border-radius: 4px; padding: 1px 5px; background: #eee; color: #666; }
+  .badge.ovb { background: #fdeedd; color: #b05e12; border: 1px solid #e8b57e; }
+
+  /* ---- per-solution override affordances ---- */
+  #escope { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 11px;
+            background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; margin-bottom: 8px; }
+  #escope .t { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #888; }
+  #escope label { display: flex; align-items: center; gap: 4px; cursor: pointer; color: #444; }
+  #escope input { accent-color: #e8842c; }
+  .f.ov input, .f.ov select { border-color: #e8842c; box-shadow: 0 0 0 1px #e8842c55; }
+  .f.ov label { color: #b05e12; }
+  .ovx { background: none; border: none; color: #e8842c; font-size: 12px; font-weight: 700;
+         cursor: pointer; padding: 0 3px; margin-left: 1px; border-radius: 3px; }
+  .ovx:hover { background: #e8842c; color: #fff; }
 
   /* ---- quick-add bar ---- */
   #qa { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
@@ -171,7 +184,7 @@
 </div></div>
 
 <script type="module">
-import { loadJob, validate, advise, place, route, render } from "./app/engine.js";
+import { loadJob, validate, advise, place, route, render, effectiveJob } from "./app/engine.js";
 import { importAny, mergeHouse } from "./app/importers.js";
 import { renderExtraPages, sheetCount, pageFlags, takeoffCSV } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
@@ -207,7 +220,7 @@ function effectiveCatalog() {
 }
 
 /* ============ state ============ */
-const S = { job: null, id: null, sol: 0, tab: "zones", openRows: new Set() };
+const S = { job: null, id: null, sol: 0, tab: "zones", openRows: new Set(), editScope: "house" };
 const uid = p => p + "-" + Math.random().toString(36).slice(2, 7);
 const $ = s => document.querySelector(s);
 
@@ -231,7 +244,7 @@ function refresh(save = true) {
   S.sol = S.job.solutions.indexOf(sol);
   let v, a, svg = "", err;
   try {
-    const { job, ix } = loadJob(S.job);
+    const { job, ix } = loadJob(effectiveJob(S.job, S.sol));   // active solution's overrides applied
     v = validate(job, ix); a = advise(job, ix, effectiveCatalog());
     const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], company: SETTINGS.company,
                    sheet: `1 of ${sheetCount(S.job)}` };
@@ -302,7 +315,7 @@ $("#solSel").onchange = e => {
   } else S.sol = +e.target.value;
   refresh();
 };
-$("#newJob").onclick = async () => { S.job = blankJob(); S.id = uid("job"); await persist(); refresh(); };
+$("#newJob").onclick = async () => { S.job = blankJob(); S.id = uid("job"); S.editScope = "house"; await persist(); refresh(); };
 $("#delJob").onclick = async () => {
   if (!confirm(`Delete "${S.job.job.name}"?`)) return;
   await dbDel(S.id);
@@ -312,6 +325,7 @@ $("#delJob").onclick = async () => {
 };
 $("#jobsSel").onchange = async e => {
   const v = e.target.value;
+  S.editScope = "house";
   if (v.startsWith("__")) {
     const raw = await (await fetch(`./mock-system-${v.slice(2)}.json`)).json();
     S.job = raw; S.id = uid("job"); S.sol = 0; await persist();
@@ -323,7 +337,7 @@ $("#jobsSel").onchange = async e => {
 };
 $("#exportJson").onclick = () => download(`${S.job.job.name}.json`, JSON.stringify(S.job, null, 2), "application/json");
 $("#exportSvg").onclick = () => { const svg = $("#canvas svg"); if (svg) download(`${S.job.job.name} — schematic.svg`, svg.outerHTML, "image/svg+xml"); };
-$("#exportCsv").onclick = () => { const { job, ix } = loadJob(S.job); download(`${S.job.job.name} — takeoff.csv`, takeoffCSV(job, ix, { solution: S.sol }), "text/csv"); };
+$("#exportCsv").onclick = () => { const { job, ix } = loadJob(effectiveJob(S.job, S.sol)); download(`${S.job.job.name} — takeoff.csv`, takeoffCSV(job, ix, { solution: S.sol }), "text/csv"); };
 
 /* ---- Field Kit TOOLS switcher (hub manifest, cached; self marked) ---- */
 const KIT_SELF = "signalpath";
@@ -354,7 +368,7 @@ $("#toolsBtn").onclick = () => {
 /* ---- print packet: sheet 1 + enabled pages, print-CSS one page each ---- */
 $("#printBtn").onclick = () => {
   try {
-    const { job, ix } = loadJob(S.job);
+    const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
     const a = advise(job, ix, effectiveCatalog());
     const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], company: SETTINGS.company,
                    sheet: `1 of ${sheetCount(S.job)}` };
@@ -456,39 +470,57 @@ function renderPanel() {
 }
 
 function zonesHTML() {
+  const sol = S.job.solutions[S.sol] || S.job.solutions[0];
+  const ov = sol?.overrides || {};
+  const multi = S.job.solutions.length > 1;
+  const scopeSol = multi && S.editScope === "sol";
+  const escope = multi ? `<div id="escope"><span class="t">EDITS APPLY TO</span>
+    <label><input type="radio" name="escope" value="house" ${scopeSol ? "" : "checked"}> House (all)</label>
+    <label><input type="radio" name="escope" value="sol" ${scopeSol ? "checked" : ""}> ${esc(sol.name)} only</label>
+    <span class="mini" title="Zone names and adding/removing zones, speakers or displays always edit the House.">ⓘ</span></div>` : "";
   const qa = `<div id="qa">
     <div class="line"><input id="qaInput" placeholder="family room 5.1 75 sony matrix…" autocomplete="off">
       <button id="qaMic" title="Dictate">🎤</button><button id="qaGo">Add</button></div>
     <div id="qaChips"></div>
     <div class="ex">shorthand: name + config (5.1, stereo, 2.1, soundbar, landscape 8) + TV size + brand · "ofe" "prewire" "no tv" · comma = next zone</div>
   </div>`;
+  const ovHas = (kind, id, f) => ov[kind]?.[id] != null && f in ov[kind][id];
+  const fieldO = (label, inner, kind, id, f) => {
+    const has = ovHas(kind, id, f);
+    return `<div class="f${has ? " ov" : ""}"><label>${label}${has ? `<button class="ovx" data-ovk="${kind}" data-ovid="${id}" data-ovf="${f}" title="Overridden in ${esc(sol.name)} — revert to House">×</button>` : ""}</label>${inner}</div>`;
+  };
   const rows = S.job.house.zones.map((z, i) => {
-    const spk = (z.endpoints || []).find(e => e.type === "speakers");
-    const tv = (z.endpoints || []).find(e => e.type === "display");
+    const spkH = (z.endpoints || []).find(e => e.type === "speakers");
+    const tvH = (z.endpoints || []).find(e => e.type === "display");
+    const spk = spkH && { ...spkH, ...(ov.endpoints || {})[spkH.id] };
+    const tv = tvH && { ...tvH, ...(ov.endpoints || {})[tvH.id] };
+    const zEff = { ...z, ...(ov.zones || {})[z.id] };
     const sub = [spk && (spk.config || "stereo"), tv && `TV ${tv.size || "?"}"`].filter(Boolean).join(" · ") || "empty";
     const open = S.openRows.has(z.id);
     return `<div class="row ${open ? "open" : ""}" data-zid="${z.id}">
       <div class="head" data-toggle="${z.id}"><span class="t">${esc(z.name)}</span>
-        ${z.scope !== "included" ? `<span class="badge">${z.scope}</span>` : ""}<span class="sub">${esc(sub)}</span></div>
+        ${zEff.scope !== "included" ? `<span class="badge${ovHas("zones", z.id, "scope") ? " ovb" : ""}">${zEff.scope}</span>` : ""}<span class="sub">${esc(sub)}</span></div>
       <div class="fields">
         ${field("Name", `<input class="zname" value="${esc(z.name)}">`)}
-        ${field("Scope", sel("zscope", ["included", "prewire", "future"], z.scope || "included"))}
+        ${fieldO("Scope", sel("zscope", ["included", "prewire", "future"], zEff.scope || "included"), "zones", z.id, "scope")}
         ${S.job.house.areas.length ? field("Area", sel("zarea", ["", ...S.job.house.areas.map(a => a.id)], z.area || "")) : ""}
         <div class="sect">SPEAKERS</div>
-        ${field("Config", sel("spkcfg", SPK_CONFIGS, spk ? (spk.config || "stereo") : "none"))}
-        ${spk ? field("Count", `<input class="spkcount" type="number" min="1" max="12" value="${spk.count || 2}">`) : ""}
-        ${spk ? field("Status", sel("spkstatus", STATUSES, spk.status || "new")) : ""}
+        ${spk ? fieldO("Config", sel("spkcfg", SPK_CONFIGS, spk.config || "stereo"), "endpoints", spkH.id, "config")
+              : field("Config", sel("spkcfg", SPK_CONFIGS, "none"))}
+        ${spk ? fieldO("Count", `<input class="spkcount" type="number" min="1" max="12" value="${spk.count || 2}">`, "endpoints", spkH.id, "count") : ""}
+        ${spk ? fieldO("Status", sel("spkstatus", STATUSES, spk.status || "new"), "endpoints", spkH.id, "status") : ""}
         <div class="sect">DISPLAY</div>
-        ${field("Type", sel("tvtype", ["none", "tv", "projector"], tv ? (tv.displayType || "tv") : "none"))}
-        ${tv ? field("Brand", `<input class="tvbrand" value="${esc(tv.brand || "")}">`) : ""}
-        ${tv ? field("Size", `<input class="tvsize" type="number" min="24" max="220" value="${tv.size || 65}">`) : ""}
-        ${tv ? field("Status", sel("tvstatus", STATUSES.slice(0, 2), tv.status || "new")) : ""}
-        ${tv ? field("Confirm", `<input type="checkbox" class="tvconfirm" ${tv.confirm?.length ? "checked" : ""}> <span class="mini">size needs confirmation</span>`) : ""}
+        ${tv ? fieldO("Type", sel("tvtype", ["none", "tv", "projector"], tv.displayType || "tv"), "endpoints", tvH.id, "displayType")
+             : field("Type", sel("tvtype", ["none", "tv", "projector"], "none"))}
+        ${tv ? fieldO("Brand", `<input class="tvbrand" value="${esc(tv.brand || "")}">`, "endpoints", tvH.id, "brand") : ""}
+        ${tv ? fieldO("Size", `<input class="tvsize" type="number" min="24" max="220" value="${tv.size || 65}">`, "endpoints", tvH.id, "size") : ""}
+        ${tv ? fieldO("Status", sel("tvstatus", STATUSES.slice(0, 2), tv.status || "new"), "endpoints", tvH.id, "status") : ""}
+        ${tv ? field("Confirm", `<input type="checkbox" class="tvconfirm" ${tvH.confirm?.length ? "checked" : ""}> <span class="mini">size needs confirmation</span>`) : ""}
         <div style="text-align:right"><button class="del zdel">delete zone</button></div>
       </div>
     </div>`;
   }).join("");
-  return qa + rows + `<button class="addbtn" id="addZone">＋ Add zone</button>`;
+  return escope + qa + rows + `<button class="addbtn" id="addZone">＋ Add zone</button>`;
 }
 
 function gearHTML() {
@@ -662,31 +694,50 @@ function wirePanel(body) {
   const zoneOf = el => S.job.house.zones.find(z => z.id === el.closest("[data-zid]")?.dataset.zid);
   const on = (selctor, fn) => body.querySelectorAll(selctor).forEach(el => el.onchange = () => { fn(el); refresh(); });
 
-  /* zones */
+  /* zones — writes go to the House, or to the active solution's overrides */
+  const solA = S.job.solutions[S.sol] || S.job.solutions[0];
+  const scopeSol = S.job.solutions.length > 1 && S.editScope === "sol";
+  const setF = (kind, obj, f, v) => {
+    if (!obj) return;
+    if (scopeSol) (((solA.overrides ||= {})[kind] ||= {})[obj.id] ||= {})[f] = v;
+    else obj[f] = v;
+  };
+  const structural = () => alert(`Adding or removing speakers/displays edits the House (all solutions). Switch "Edits apply to" to House first.`);
+  body.querySelectorAll("input[name=escope]").forEach(el => el.onchange = () => { S.editScope = el.value; renderPanel(); });
+  body.querySelectorAll(".ovx").forEach(el => el.onclick = ev => {
+    ev.preventDefault();
+    const { ovk, ovid, ovf } = el.dataset;
+    const m = solA.overrides?.[ovk]?.[ovid]; if (!m) return;
+    delete m[ovf];
+    if (!Object.keys(m).length) delete solA.overrides[ovk][ovid];
+    refresh();
+  });
   on(".zname", el => { const z = zoneOf(el); if (z) z.name = el.value; });
-  on(".zscope", el => { const z = zoneOf(el); if (z) z.scope = el.value; });
+  on(".zscope", el => { const z = zoneOf(el); setF("zones", z, "scope", el.value); });
   on(".zarea", el => { const z = zoneOf(el); if (z) { if (el.value) z.area = el.value; else delete z.area; } });
   on(".spkcfg", el => {
     const z = zoneOf(el); if (!z) return;
     z.endpoints = z.endpoints || [];
     let spk = z.endpoints.find(e => e.type === "speakers");
+    if (scopeSol && (el.value === "none" || !spk)) return structural();
     if (el.value === "none") { z.endpoints = z.endpoints.filter(e => e.type !== "speakers"); }
-    else if (spk) spk.config = el.value;
+    else if (spk) setF("endpoints", spk, "config", el.value);
     else z.endpoints.unshift({ id: uid(z.id + "-spk"), type: "speakers", config: el.value, count: 2, status: "new" });
   });
-  on(".spkcount", el => { const s = zoneOf(el)?.endpoints.find(e => e.type === "speakers"); if (s) s.count = +el.value; });
-  on(".spkstatus", el => { const s = zoneOf(el)?.endpoints.find(e => e.type === "speakers"); if (s) s.status = el.value; });
+  on(".spkcount", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "speakers"), "count", +el.value); });
+  on(".spkstatus", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "speakers"), "status", el.value); });
   on(".tvtype", el => {
     const z = zoneOf(el); if (!z) return;
     z.endpoints = z.endpoints || [];
     let tv = z.endpoints.find(e => e.type === "display");
+    if (scopeSol && (el.value === "none" || !tv)) return structural();
     if (el.value === "none") z.endpoints = z.endpoints.filter(e => e.type !== "display");
-    else if (tv) tv.displayType = el.value;
+    else if (tv) setF("endpoints", tv, "displayType", el.value);
     else z.endpoints.push({ id: uid(z.id + "-tv"), type: "display", displayType: el.value, brand: "", size: 65, status: "new" });
   });
-  on(".tvbrand", el => { const t = zoneOf(el)?.endpoints.find(e => e.type === "display"); if (t) t.brand = el.value; });
-  on(".tvsize", el => { const t = zoneOf(el)?.endpoints.find(e => e.type === "display"); if (t) t.size = +el.value; });
-  on(".tvstatus", el => { const t = zoneOf(el)?.endpoints.find(e => e.type === "display"); if (t) t.status = el.value; });
+  on(".tvbrand", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "brand", el.value); });
+  on(".tvsize", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "size", +el.value); });
+  on(".tvstatus", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "status", el.value); });
   on(".tvconfirm", el => { const t = zoneOf(el)?.endpoints.find(e => e.type === "display"); if (t) { if (el.checked) t.confirm = ["size"]; else delete t.confirm; } });
   body.querySelectorAll(".zdel").forEach(el => el.onclick = () => {
     const z = zoneOf(el); if (!z || !confirm(`Delete zone "${z.name}"?`)) return;
@@ -696,6 +747,11 @@ function wirePanel(body) {
     sol.connections = sol.connections.filter(c => !eps.has(c.from) && !eps.has(c.to));
     sol.companions = (sol.companions || []).filter(c => !eps.has(c.serves));
     sol.localDevices = (sol.localDevices || []).filter(d => d.zone !== z.id);
+    for (const so of S.job.solutions) {                       // overrides die with their House objects
+      if (!so.overrides) continue;
+      if (so.overrides.zones) delete so.overrides.zones[z.id];
+      if (so.overrides.endpoints) for (const eid of eps) delete so.overrides.endpoints[eid];
+    }
     refresh();
   });
   const addZone = body.querySelector("#addZone");

@@ -3,7 +3,7 @@
    the same job graph the schematic draws; no run or item exists here that
    is not on Sheet 1. Pure string builders, no DOM. */
 
-import { expandChannels } from "./engine.js";
+import { expandChannels, effectiveJob, indexJob } from "./engine.js";
 
 const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const W = 1632, H = 1056;
@@ -11,11 +11,13 @@ const W = 1632, H = 1056;
 /* ---------- per-project page flags ---------- */
 export function pageFlags(job) {
   const p = job.job?.pages || {};
-  return { channelMap: p.channelMap !== false, equipment: p.equipment !== false, wireSchedule: p.wireSchedule === true };
+  return { channelMap: p.channelMap !== false, equipment: p.equipment !== false,
+           wireSchedule: p.wireSchedule === true, bomCompare: p.bomCompare === true };
 }
 export function sheetCount(job) {
   const f = pageFlags(job);
-  return 1 + (f.channelMap ? 1 : 0) + (f.equipment ? 1 : 0) + (f.wireSchedule ? 1 : 0);
+  return 1 + (f.channelMap ? 1 : 0) + (f.equipment ? 1 : 0) + (f.wireSchedule ? 1 : 0) +
+         (f.bomCompare && (job.solutions || []).length > 1 ? 1 : 0);
 }
 
 /* ---------- shared frame + footer (horizontal bar variant) ---------- */
@@ -379,6 +381,95 @@ export function renderWireSchedule(job, ix, opts = {}) {
 }
 
 /* ---------- packet assembly (pages 2..N; page 1 comes from engine render) ---------- */
+/* ============ PAGE: SOLUTION COMPARISON (BOM compare) ============
+   Side-by-side equipment across the job's Solutions — the proposal-meeting
+   page the House/Solution split was designed for. Each column runs through
+   that solution's OWN effective house, so per-solution overrides (an 85"
+   in Better where Good has a 75") appear as real line-item differences.
+   Licensing rows come from adviseResult filtered by solution id. */
+export function renderBomCompare(job, ix, adviseResult, opts = {}) {
+  // callers in the editor pass the active-solution-effective job; columns must
+  // derive from the RAW job or the active solution's overrides would leak into
+  // every column — opts.rawJob carries it when the two differ
+  const base = opts.rawJob || job;
+  const sols = (base.solutions || []).slice(0, 4);         // 4 columns max on 11×17
+  const cols = sols.map((sol, i) => {
+    const ej = effectiveJob(base, i);
+    return { sol, ej, items: takeoffItems(ej, indexJob(ej), { solution: i }) };
+  });
+  // union of line items, grouped NEW → OFE → PRE-WIRE, in first-appearance order
+  const order = { new: 0, ofe: 1, prewire: 2 };
+  const keys = [], seen = new Set();
+  for (const c of cols) for (const it of c.items) {
+    const k = it.status + "|" + it.label;
+    if (!seen.has(k)) { seen.add(k); keys.push({ k, label: it.label, status: it.status }); }
+  }
+  keys.sort((a, b) => order[a.status] - order[b.status]);
+  const qtyOf = (c, key) => c.items.find(it => it.status + "|" + it.label === key.k)?.qty || 0;
+
+  const out = [openPage(), frame("Solution Comparison",
+    "Side-by-side equipment across proposed options — highlighted rows differ between solutions", opts.sheetLabel || "")];
+  const x = 40, wLabel = 620, wCol = Math.min(240, (1552 - wLabel) / cols.length);
+  const wTot = wLabel + wCol * cols.length;
+  let y = 130;
+
+  // header
+  out.push(`<g font-size="12.5"><rect x="${x}" y="${y}" width="${wTot}" height="34" fill="#16181c"/>`);
+  out.push(`<text x="${x + 14}" y="${y + 22}" fill="#fff" font-weight="600">Item</text>`);
+  cols.forEach((c, i) => out.push(`<text x="${x + wLabel + i * wCol + wCol / 2}" y="${y + 22}" text-anchor="middle" fill="#fff" font-weight="600">${esc(c.sol.name || c.sol.id)}</text>`));
+  out.push(`</g>`);
+  y += 34;
+
+  let lastStatus = null, diffs = 0;
+  const SECT = { new: ["NEW — Supplied & Installed", "#1a6fb5"], ofe: ["OWNER FURNISHED", "#4a7040"], prewire: ["PRE-WIRE ONLY", "#8a8a8a"] };
+  for (const key of keys) {
+    if (key.status !== lastStatus) {
+      lastStatus = key.status;
+      const [t, col] = SECT[key.status] || [key.status, "#666"];
+      out.push(`<rect x="${x}" y="${y}" width="${wTot}" height="24" fill="#eef0f4"/>` +
+        `<text x="${x + 14}" y="${y + 17}" font-size="11" font-weight="700" letter-spacing="1" fill="${col}">${esc(t)}</text>`);
+      y += 24;
+    }
+    const qtys = cols.map(c => qtyOf(c, key));
+    const differs = new Set(qtys).size > 1;
+    if (differs) diffs++;
+    out.push(`<rect x="${x}" y="${y}" width="${wTot}" height="26" fill="${differs ? "#fff9ec" : "#fff"}"/>`);
+    out.push(`<text x="${x + 14}" y="${y + 18}" font-size="12.5" fill="#222">${esc(key.label.length > 74 ? key.label.slice(0, 72) + "…" : key.label)}</text>`);
+    qtys.forEach((q, i) => out.push(`<text x="${x + wLabel + i * wCol + wCol / 2}" y="${y + 18}" text-anchor="middle" font-size="12.5"` +
+      `${differs ? ' font-weight="700"' : ""} fill="${q ? (differs ? "#a45a12" : "#222") : "#bbb"}">${q || "—"}</text>`));
+    y += 26;
+  }
+
+  // summary block: zone scopes + licensing per column
+  y += 10;
+  const sumRows = [];
+  sumRows.push(["Zones (included / pre-wire / future)", ...cols.map(c => {
+    const n = { included: 0, prewire: 0, future: 0 };
+    for (const z of c.ej.house.zones) n[z.scope || "included"] = (n[z.scope || "included"] || 0) + 1;
+    return `${n.included} / ${n.prewire} / ${n.future}`;
+  })]);
+  const plats = [...new Set(cols.flatMap(c => c.sol.platforms || []))];
+  for (const p of plats) sumRows.push([`Licensing — ${p}`, ...cols.map(c => {
+    const lic = (adviseResult?.licensing || []).find(l => l.platform === p && (!l.solution || l.solution === c.sol.id));
+    return (c.sol.platforms || []).includes(p) ? (lic?.pick || "—") : "—";
+  })]);
+  out.push(`<g font-size="12.5"><rect x="${x}" y="${y}" width="${wTot}" height="${sumRows.length * 26 + 8}" fill="#fbfbfc" stroke="#c8ccd4"/>`);
+  sumRows.forEach((rw, ri) => {
+    out.push(`<text x="${x + 14}" y="${y + 22 + ri * 26}" fill="#555" font-weight="600">${esc(rw[0])}</text>`);
+    const differs = new Set(rw.slice(1)).size > 1;
+    rw.slice(1).forEach((v, i) => out.push(`<text x="${x + wLabel + i * wCol + wCol / 2}" y="${y + 22 + ri * 26}" text-anchor="middle"` +
+      `${differs ? ' font-weight="700" fill="#a45a12"' : ' fill="#222"'}>${esc(v)}</text>`));
+  });
+  out.push(`</g>`);
+  y += sumRows.length * 26 + 8;
+
+  out.push(`<text x="${x}" y="${y + 34}" font-size="11.5" font-style="italic" fill="#767676">` +
+    `${diffs ? `${diffs} line item${diffs > 1 ? "s" : ""} differ${diffs > 1 ? "" : "s"} between solutions (highlighted).` : "Solutions are currently identical."}` +
+    `${(base.solutions || []).length > 4 ? ` Showing first 4 of ${base.solutions.length} solutions.` : ""}</text>`);
+  out.push(footer(job, opts, opts.sheetLabel || ""), `</svg>`);
+  return out.join("\n");
+}
+
 export function renderExtraPages(job, ix, adviseResult, opts = {}) {
   const flags = pageFlags(job);
   const n = sheetCount(job);
@@ -387,5 +478,7 @@ export function renderExtraPages(job, ix, adviseResult, opts = {}) {
   if (flags.channelMap) pages.push({ title: "Channel Map", svg: renderChannelMap(job, ix, { ...opts, sheetLabel: `Sheet ${no++} of ${n}` }) });
   if (flags.equipment) pages.push({ title: "Equipment & Takeoff", svg: renderTakeoff(job, ix, adviseResult, { ...opts, sheetLabel: `Sheet ${no++} of ${n}` }) });
   if (flags.wireSchedule) pages.push({ title: "Wire Schedule", svg: renderWireSchedule(job, ix, { ...opts, sheetLabel: `Sheet ${no++} of ${n}` }) });
+  if (flags.bomCompare && (job.solutions || []).length > 1)
+    pages.push({ title: "Solution Comparison", svg: renderBomCompare(job, ix, adviseResult, { ...opts, sheetLabel: `Sheet ${no++} of ${n}` }) });
   return pages;
 }

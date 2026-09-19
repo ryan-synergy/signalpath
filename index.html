@@ -390,7 +390,7 @@ $("#printBtn").onclick = () => {
     const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
     const a = advise(job, ix, effectiveCatalog());
     const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], company: SETTINGS.company,
-                   sheet: `1 of ${sheetCount(S.job)}` };
+                   sheet: `1 of ${sheetCount(S.job)}`, rawJob: S.job };
     const p = place(job, ix, opts);
     const rt = route(job, ix, p, opts);
     const pagesSvg = [render(job, ix, p, rt, opts), ...renderExtraPages(job, ix, a, opts).map(pg => pg.svg)];
@@ -687,7 +687,8 @@ function jobHTML() {
     </div></div>
     <div class="sect">PACKET PAGES <span class="mini">sheet 1 always prints</span></div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
-      ${["channelMap:Channel Map", "equipment:Equipment & Takeoff", "wireSchedule:Wire Schedule"].map(kv => {
+      ${["channelMap:Channel Map", "equipment:Equipment & Takeoff", "wireSchedule:Wire Schedule",
+         ...(S.job.solutions.length > 1 ? ["bomCompare:Solution Comparison"] : [])].map(kv => {
         const [k, label] = kv.split(":");
         return `<div class="f"><input type="checkbox" class="pgflag" data-pg="${k}" ${pageFlags(S.job)[k] ? "checked" : ""}> <span>${label}</span></div>`;
       }).join("")}

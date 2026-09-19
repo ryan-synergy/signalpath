@@ -57,6 +57,12 @@
   .fields input, .fields select { font: inherit; font-size: 12.5px; padding: 4px 6px; border: 1px solid var(--line);
                                   border-radius: 5px; flex: 1; min-width: 0; background: #fff; }
   .fields input[type=checkbox] { flex: 0 0 auto; }
+  /* mini numeric fields keep a real width and never collapse */
+  .fields input[type=number] { flex: 0 0 46px; width: 46px; min-width: 46px; padding: 4px 5px;
+                               appearance: textfield; -moz-appearance: textfield; }
+  .fields input[type=number]::-webkit-outer-spin-button,
+  .fields input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .fields .f.wrap { flex-wrap: wrap; row-gap: 5px; }
   .mini { font-size: 11px; color: #999; }
   .addbtn, .del { font: inherit; font-size: 12px; border-radius: 6px; cursor: pointer; }
   .addbtn { width: 100%; padding: 8px; background: #eef2f8; border: 1px dashed #9db4d0; color: var(--accent); font-weight: 600; }
@@ -533,7 +539,7 @@ function jobHTML() {
 /* ---- settings tab: company, licensing rules, device catalog ---- */
 function settingsHTML() {
   const co = SETTINGS.company, L = SETTINGS.catalog.licensing || {};
-  const numf = (cls, val, ph = "∞") => `<input class="${cls}" type="number" placeholder="${ph}" style="max-width:58px" value="${val ?? ""}">`;
+  const numf = (cls, val, ph = "∞") => `<input class="${cls}" type="number" placeholder="${ph}" value="${val ?? ""}">`;
   const savant = (L.savant?.hosts || []).map((h, i) => `<div class="f" data-sv="${i}">
       <input class="svname" value="${esc(h.name)}" style="flex:2">${numf("svzones", h.maxZones)}${numf("svipa", h.maxIpAudio)}</div>`).join("");
   const josh = (L.josh?.processors || []).map((p, i) => `<div class="f" data-jp="${i}">
@@ -550,8 +556,9 @@ function settingsHTML() {
       <div class="fields">
         ${field("Model", `<input class="catmodel" value="${esc(d.model)}">`)}
         ${field("Zones", numf("catzones", d.zones, "-"))}
-        ${field("Inputs", `<span class="mini">analog</span>${numf("catan", io.analog, "0")}<span class="mini">coax</span>${numf("catco", io.coax, "0")}
-          <span class="mini">opt</span>${numf("catop", io.optical, "0")}<span class="mini">hdmi</span>${numf("cathd", io.hdmi, "0")}`)}
+        <div class="f wrap"><label>Inputs</label>
+          <span class="mini">analog</span>${numf("catan", io.analog, "0")}<span class="mini">coax</span>${numf("catco", io.coax, "0")}
+          <span class="mini">opt</span>${numf("catop", io.optical, "0")}<span class="mini">hdmi</span>${numf("cathd", io.hdmi, "0")}</div>
         ${field("Notes", `<input class="catnotes" value="${esc(d.notes || "")}">`)}
         <div style="text-align:right"><button class="del catdel">delete entry</button></div>
       </div></div>`;

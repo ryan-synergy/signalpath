@@ -45,6 +45,40 @@ export function indexJob(job) {
 const nodeInSolution = (s, ix, id) =>
   s.devices[id] || s.companions[id] || s.locals[id] || ix.endpointsById[id] || null;
 
+/* ---------- per-solution endpoint overrides ----------
+   A solution may reinterpret House zones/endpoints without forking them:
+   sol.overrides = { zones: {zid: patch}, endpoints: {eid: patch} }.
+   Patches are sparse field sets; ids and endpoint existence stay House-owned. */
+
+export function effectiveHouse(house, sol) {
+  const ov = sol?.overrides;
+  if (!ov || (!Object.keys(ov.zones || {}).length && !Object.keys(ov.endpoints || {}).length)) return house;
+  const patch = (obj, p) => {
+    if (!p) return obj;
+    const { id, endpoints, ...rest } = p;
+    const out = { ...obj, ...rest };
+    if (out.confirm?.length) {                    // an override answers its own confirm flag
+      out.confirm = out.confirm.filter(f => !(f in rest));
+      if (!out.confirm.length) delete out.confirm;
+    }
+    return out;
+  };
+  return {
+    ...house,
+    zones: house.zones.map(z => {
+      const zp = (ov.zones || {})[z.id];
+      const eps = (z.endpoints || []).map(e => patch(e, (ov.endpoints || {})[e.id]));
+      if (!zp && eps.every((e, i) => e === z.endpoints[i])) return z;
+      return { ...patch(z, zp), endpoints: eps };
+    }),
+  };
+}
+
+export function effectiveJob(job, solIndex = 0) {
+  const h = effectiveHouse(job.house, (job.solutions || [])[solIndex]);
+  return h === job.house ? job : { ...job, house: h };
+}
+
 /* ---------- validate ---------- */
 
 export function validate(job, ix = indexJob(job)) {
@@ -74,8 +108,16 @@ export function validate(job, ix = indexJob(job)) {
 
   for (const s of ix.solutions) {
     const sol = s.sol;
+    // overrides must point at real House objects (stale after a zone/endpoint delete)
+    for (const zid of Object.keys(sol.overrides?.zones || {}))
+      if (!ix.zonesById[zid]) W("stale-override", `${sol.name || sol.id}: override for missing zone ${zid}`);
+    for (const eid of Object.keys(sol.overrides?.endpoints || {}))
+      if (!ix.endpointsById[eid]) W("stale-override", `${sol.name || sol.id}: override for missing endpoint ${eid}`);
+    // device ids are per-solution namespaces: unique within the solution and vs the House,
+    // but sibling solutions may reuse ids (duplicate-as-new clones the gear set)
+    const seenSol = new Set(seen);
     const solIds = new Set([...Object.keys(s.devices), ...Object.keys(s.companions), ...Object.keys(s.locals)]);
-    solIds.forEach(id => uniq(id, "device"));
+    solIds.forEach(id => { if (seenSol.has(id)) E("dup-id", `device id duplicated: ${id}`); seenSol.add(id); });
 
     // companions serve real things
     for (const c of sol.companions || []) {
@@ -126,7 +168,7 @@ export function validate(job, ix = indexJob(job)) {
     for (const c of sol.connections || []) {
       const zid = ix.endpointZone[c.to];
       if (!zid) continue;
-      const zScope = ix.zonesById[zid].scope || "included";
+      const zScope = sol.overrides?.zones?.[zid]?.scope || ix.zonesById[zid].scope || "included";
       const cScope = c.scope || "included";
       if (zScope !== "included" && cScope === "included")
         W("scope-mismatch", `feed to ${c.to} not tagged ${zScope} (zone ${zid} is ${zScope})`);

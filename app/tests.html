@@ -15,7 +15,7 @@
 <div id="summary">running…</div>
 <ul id="out"></ul>
 <script type="module">
-import { loadJob, validate, advise, place, route, render, expandChannels, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
+import { loadJob, validate, advise, place, route, render, expandChannels, effectiveHouse, effectiveJob, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
 import { sniff, importAny, importSiteWalk, importBlueprinted, mergeHouse } from "./importers.js";
 import { pageFlags, sheetCount, renderChannelMap, renderTakeoff, renderWireSchedule, renderExtraPages, wireRuns, takeoffItems, takeoffCSV } from "./pages.js";
 
@@ -698,6 +698,46 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const { job, ix } = loadJob(bad);
   t("negative: companion serving missing id → bad-serves error",
     validate(job, ix).errors.some(e => e.code === "bad-serves"));
+}
+
+/* ---------- per-solution endpoint overrides (Good/Better/Best without forking the House) ---------- */
+{
+  const raw = structuredClone(fixtures.residence);
+  t("overrides: none → effectiveJob returns the job itself", effectiveJob(raw, 0) === raw);
+
+  // Solution B: family TV 75→85, patio downgraded to prewire with a decided 65" TV
+  raw.solutions.push(structuredClone(raw.solutions[0]));
+  const solB = raw.solutions[1];
+  solB.id = "sol-b"; solB.name = "Better";
+  solB.overrides = {
+    zones: { "z-patio": { scope: "prewire" } },
+    endpoints: { "family-tv": { size: 85, id: "hax" }, "patio-tv": { size: 65 } },
+  };
+
+  const effA = effectiveJob(raw, 0), effB = effectiveJob(raw, 1);
+  t("overrides: solution A untouched (house passes through by reference)", effA.house === raw.house);
+  const famB = effB.house.zones.find(z => z.id === "z-family").endpoints.find(e => e.type === "display");
+  const famA = raw.house.zones.find(z => z.id === "z-family").endpoints.find(e => e.type === "display");
+  t("overrides: family TV 75→85 in solution B only", famB.size === 85 && famA.size === 75);
+  t("overrides: patches cannot change ids", famB.id === "family-tv");
+  const patioB = effB.house.zones.find(z => z.id === "z-patio");
+  t("overrides: zone scope reinterpreted (patio → prewire)", patioB.scope === "prewire");
+  t("overrides: an override answers its own confirm flag",
+    !(patioB.endpoints.find(e => e.type === "display").confirm || []).includes("size"));
+
+  const { job, ix } = loadJob(effB);
+  const v = validate(job, ix);
+  t("overrides: effective job still validates error-free", v.errors.length === 0, JSON.stringify(v.errors.slice(0, 2)));
+  const p = place(job, ix, { solution: 1 }), rt = route(job, ix, p, { solution: 1 });
+  const svg = render(job, ix, p, rt, { solution: 1 });
+  t("overrides: sheet draws the overridden size (85\", no 75\")",
+    svg.includes(">85&quot;</text>") && !svg.includes(">75&quot;</text>"));
+  t("overrides: routing unaffected by field overrides", rt.wires.length > 0 && !rt.warnings.some(w => w.code === "unrouted"));
+
+  solB.overrides.endpoints["ghost-ep"] = { size: 1 };
+  const v2 = validate(job, ix);
+  t("overrides: stale override → warning, never silent",
+    v2.warnings.some(w => w.code === "stale-override" && w.msg.includes("ghost-ep")));
 }
 
 document.getElementById("summary").innerHTML =

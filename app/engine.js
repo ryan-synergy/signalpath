@@ -680,6 +680,20 @@ export function route(job, ix, placement, opts = {}) {
     for (let i = 1; i < pts.length; i++) segs.push({ x1: pts[i - 1][0], y1: pts[i - 1][1], x2: pts[i][0], y2: pts[i][1], vert: pts[i - 1][0] === pts[i][0] });
     return segs;
   };
+  // score a candidate by how many existing wires it would cross (hops it costs)
+  const countCrossings = cand => {
+    let n = 0;
+    const mine = ptsSegs(cand);
+    for (const w of out.wires) for (const t of ptsSegs(w.pts)) for (const s of mine) {
+      if (s.vert === t.vert) continue;
+      const v = s.vert ? s : t, h = s.vert ? t : s;
+      const hx1 = Math.min(h.x1, h.x2), hx2 = Math.max(h.x1, h.x2);
+      const vy1 = Math.min(v.y1, v.y2), vy2 = Math.max(v.y1, v.y2);
+      if (v.x1 > hx1 + 1 && v.x1 < hx2 - 1 && h.y1 > vy1 + 1 && h.y1 < vy2 - 1) n++;
+    }
+    return n;
+  };
+
   const crossesSiblings = (cand, groupNets) => {
     if (!groupNets.length) return false;
     const mine = ptsSegs(cand);
@@ -805,18 +819,22 @@ export function route(job, ix, placement, opts = {}) {
     if (fromDev && toDev) { routeRackToRack(conn, fromDev, toDev); done.add(i); return; }
     if (fromDev && toChip) { routeDevToChip(conn, fromDev, toChip); done.add(i); return; }
     if (fromChip && toDev) { routeChipToDev(conn, fromChip, toDev); done.add(i); return; }
-    if (ix.endpointsById[conn.from] && toDev) { routeReturn(conn, toDev); done.add(i); return; }
+    if (ix.endpointsById[conn.from] && toDev) return; // audio returns route LAST (pass 4c) so they can dodge the corridor
     out.warnings.push({ code: "unrouted", msg: `no route class for ${wireId(conn)}` });
   });
 
-  /* ============ pass 4: route zone-bound wires per plan ============ */
-  for (const plan of plans) {
+  /* ============ pass 4a: WEST wires — ONE global river-ordered pass ============
+     All top-band feeds across every device, sorted by drop-x: westmost drop
+     takes the TOP corridor lane and the EASTMOST riser of its channel. For
+     right-side risers over left-side drops this ordering is crossing-free
+     across fan-out groups — the least-hops rule applied at corridor scale. */
+  const westNetsByDev = {};
+  const allWest = plans.flatMap(plan => plan.west.map(o => ({ plan, o }))); // plan order (farthest-first within device) — measured better than global river order
+  for (const { plan, o } of allWest) {
     const d = plan.dev;
     const sx = d.x + d.w;
-    const westNets = [], eastNets = [];
-    // WEST (top band): riser east of exit, corridor lane, drop-x = tx, land bottom border
-    // sequential alloc: farthest first ⇒ inner riser, lowest lane (nesting)
-    for (const o of plan.west) {
+    const westNets = westNetsByDev[d.id] ||= [];
+    {
       const { tx, landY, cardBot } = o.t;
       const land = landY ?? cardBot;                 // chip bottom or card bottom border
       const skip = new Set([d.id, o.t.chipId].filter(Boolean));
@@ -855,6 +873,14 @@ export function route(job, ix, placement, opts = {}) {
       else { commit(o.c, "zone-west-fallback", [[sx, o.portY], [tx, o.portY], [tx, land]], { group: d.id }); out.warnings.push({ code: "route-fallback", msg: wireId(o.c) }); }
       done.add(o.i);
     }
+  }
+
+  /* ============ pass 4b: EAST wires per plan ============ */
+  for (const plan of plans) {
+    const d = plan.dev;
+    const sx = d.x + d.w;
+    const eastNets = [];
+    const westNets = westNetsByDev[d.id] || [];
     // EAST (audio band / clusters): straight-east-then-turn; else stage via the
     // gutter west of the target; else escape the rack row through the BC gap.
     // Risers advance monotonically per (group × gutter) so a later sibling's
@@ -1181,10 +1207,10 @@ export function route(job, ix, placement, opts = {}) {
     // travel under everything to reach the AB gap
     const laneHi = Math.max(corTop ? corTop.y + corTop.h - 6 : pz.y + pz.h + 220, rackBottom + 320);
     const ty = takeLeftPort(b, b.y + b.h / 2);
-    let pts = null;
+    // gather every valid (lane, channel) candidate and take the one that costs
+    // the fewest hops — returns route last, so the corridor is fully known
+    let best = null, bestCost = Infinity, seen = 0;
     scanLane(laneLo, +1, [laneLo, laneHi], gapABx[0], sx0, nWire, y => {
-      // joint validation: the lane only counts if descent, gap channel and the
-      // whole path clear obstacles and the registry
       for (const range of [gapABx, westMarginX]) {
         const wx = alloc(usedV, range === gapABx ? (range[0] + range[1]) / 2 : range[1],
           Math.min(y, ty), Math.max(y, ty), nWire, range === gapABx ? 0 : -1,
@@ -1192,13 +1218,22 @@ export function route(job, ix, placement, opts = {}) {
         if (wx == null) continue;
         const cand = [[sx0, pz.y + pz.h], [sx0, y], [wx, y], [wx, ty], [b.x, ty]];
         if (pathBlocked(cand, skip) || !pathRegisterable(cand, nWire)) continue;
-        pts = cand;
-        return true;
+        const cost = countCrossings(cand);
+        if (cost < bestCost) { best = cand; bestCost = cost; }
+        seen++;
       }
-      return false;
+      return seen >= 10 || bestCost === 0; // stop early on a clean lane, else sample up to 10
     });
-    tryCommit(conn, "return", [pts], skip);
+    tryCommit(conn, "return", [best], skip);
   }
+
+  /* ============ pass 4c: audio returns — last, so they can dodge everything ============ */
+  visConns.forEach((conn, i) => {
+    if (done.has(i)) return;
+    const toDev = devById[conn.to];
+    if (ix.endpointsById[conn.from] && toDev) { routeReturn(conn, toDev); done.add(i); return; }
+    out.warnings.push({ code: "unrouted", msg: `no route class for ${wireId(conn)}` });
+  });
 
   /* ============ pass 5: crossings → hops ============ */
   computeHops(out);

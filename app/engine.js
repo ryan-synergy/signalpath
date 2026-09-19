@@ -79,6 +79,18 @@ export function effectiveJob(job, solIndex = 0) {
   return h === job.house ? job : { ...job, house: h };
 }
 
+/* ---------- trunk runs ----------
+   A module→amp audio trunk is drawn once but IS one analog run per zone the
+   amp feeds — that count is derived truth, not authored. An explicit
+   conn.count still wins when larger (e.g. pre-wired spare runs). */
+export function trunkCount(conn, s) {
+  const from = s.devices[conn.from], to = s.devices[conn.to];
+  let derived = 0;
+  if (conn.signal === "audio" && from?.type === "audioOutputModule" && to?.type === "amp")
+    derived = (s.sol.connections || []).filter(c => c.from === conn.to && c.signal === "speaker").length;
+  return Math.max(conn.count || 0, derived) || 1;
+}
+
 /* ---------- validate ---------- */
 
 export function validate(job, ix = indexJob(job)) {
@@ -1505,12 +1517,29 @@ export function render(job, ix, P, rt, opts = {}) {
 
   /* wires (under chips so badges sit inline on their runs) */
   push(`<g fill="none" stroke-width="2.2" stroke-linecap="round">`);
+  const busTicks = [];
   for (const w of rt.wires) {
     const color = w.scope !== "included" ? SIGNAL_COLORS.prewire
       : SIGNAL_COLORS[w.signal === "speaker" ? "audio" : w.signal] || "#555";
     push(`<path class="wire" data-wire="${esc(w.id)}" data-from="${esc(w.from)}" data-to="${esc(w.to)}" data-signal="${esc(w.signal)}" d="${wireD(w)}" stroke="${color}"/>`);
+    // one-line bus notation: a trunk drawn once carries its real run count
+    const conn = (sol.connections || []).find(c => c.from === w.from && c.to === w.to && c.signal === w.signal);
+    const n = conn ? trunkCount(conn, s) : 1;
+    if (n > 1) {
+      let bi = 1, bl = -1;
+      for (let i = 1; i < w.pts.length; i++) {
+        const L = Math.abs(w.pts[i][0] - w.pts[i - 1][0]) + Math.abs(w.pts[i][1] - w.pts[i - 1][1]);
+        if (L > bl) { bl = L; bi = i; }
+      }
+      const [x1, y1] = w.pts[bi - 1], [x2, y2] = w.pts[bi];
+      busTicks.push({ mx: (x1 + x2) / 2, my: (y1 + y2) / 2, vert: x1 === x2, n, color });
+    }
   }
   push(`</g>`);
+  for (const b of busTicks) {
+    push(`<line x1="${b.mx - 4}" y1="${b.my + (b.vert ? -4 : 5)}" x2="${b.mx + 4}" y2="${b.my + (b.vert ? 4 : -5)}" stroke="${b.color}" stroke-width="1.6"/>`);
+    push(`<text class="bustick" x="${b.mx + (b.vert ? 9 : 0)}" y="${b.my + (b.vert ? 4 : -9)}"${b.vert ? "" : ' text-anchor="middle"'} font-size="10.5" font-weight="600" fill="${b.color}" paint-order="stroke" stroke="#fff" stroke-width="3">×${b.n}</text>`);
+  }
 
   /* companion chips */
   for (const c of P.chips) {
@@ -1677,7 +1706,8 @@ export function advise(job, ix = indexJob(job), catalog = null) {
         const cat = catalog.devices[d.catalogRef];
         if (!cat) continue;
         const inbound = (sol.connections || []).filter(c => c.to === d.id);
-        const audioIn = inbound.filter(c => c.signal === "audio").length;
+        // audio edges weigh their real run count (a module→amp trunk = 1 run per zone fed)
+        const audioIn = inbound.filter(c => c.signal === "audio").reduce((n, c) => n + trunkCount(c, s), 0);
         const videoIn = inbound.filter(c => c.signal === "video").length;
         const audioCap = (cat.inputs?.analog || 0) + (cat.inputs?.coax || 0) + (cat.inputs?.optical || 0) + (cat.inputs?.digitalCombo || 0);
         const videoCap = cat.inputs?.hdmi || 0;
@@ -1685,6 +1715,25 @@ export function advise(job, ix = indexJob(job), catalog = null) {
           out.io.push({ device: d.id, kind: "audio-in", used: audioIn, capacity: audioCap, over: true,
             msg: `${d.model || d.id}: ${audioIn} audio feeds into ${audioCap} inputs (${cat.model}) — needs another input path` });
         else if (audioCap && audioIn) out.io.push({ device: d.id, kind: "audio-in", used: audioIn, capacity: audioCap, over: false });
+        // analog trunk runs vs dedicated analog inputs — the "enough inputs to feed the amp" check
+        const analogRuns = inbound.filter(c => c.signal === "audio" && s.devices[c.from]?.type === "audioOutputModule")
+          .reduce((n, c) => n + trunkCount(c, s), 0);
+        if (analogRuns && cat.inputs?.analog != null)
+          out.io.push({ device: d.id, kind: "analog-in", used: analogRuns, capacity: cat.inputs.analog,
+            over: analogRuns > cat.inputs.analog,
+            msg: analogRuns > cat.inputs.analog
+              ? `${d.model || d.id}: ${analogRuns} analog runs into ${cat.inputs.analog} analog inputs (${cat.model}) — over capacity`
+              : `${d.model || d.id}: ${analogRuns}/${cat.inputs.analog} analog inputs fed · ${cat.inputs.analog - analogRuns} spare` });
+        // module side of the trunk: outputs consumed = runs leaving
+        const outRuns = (sol.connections || []).filter(c => c.from === d.id && c.signal === "audio")
+          .reduce((n, c) => n + trunkCount(c, s), 0);
+        const outRunCap = cat.outputs?.analog || 0;
+        if (outRunCap && d.type === "audioOutputModule")
+          out.io.push({ device: d.id, kind: "audio-out", used: outRuns, capacity: outRunCap,
+            over: outRuns > outRunCap,
+            msg: outRuns > outRunCap
+              ? `${d.model || d.id}: ${outRuns} output runs of ${outRunCap} available (${cat.model}) — over capacity`
+              : `${d.model || d.id}: ${outRuns}/${outRunCap} outputs used · ${outRunCap - outRuns} spare` });
         if (videoCap && videoIn > videoCap)
           out.io.push({ device: d.id, kind: "video-in", used: videoIn, capacity: videoCap, over: true,
             msg: `${d.model || d.id}: ${videoIn} video feeds into ${videoCap} HDMI inputs (${cat.model})` });

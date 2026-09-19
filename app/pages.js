@@ -101,19 +101,25 @@ export function renderChannelMap(job, ix, opts = {}) {
     if (d.type === "amp") put((x, y, w) => {
       const feeds = outbound.filter(c => c.signal === "speaker")
         .map(c => ({ c, ch: expandChannels(c.channels || "")[0] || 999 })).sort((a, b) => a.ch - b.ch);
-      const rows = feeds.map(({ c }) => {
+      // trunk-fed amps get the per-run patch column: module output k → amp analog input k, in channel order
+      const trunkSrc = inbound.find(c => c.signal === "audio" && s.devices[c.from]?.type === "audioOutputModule");
+      const rows = feeds.map(({ c }, i) => {
         const ep = ix.endpointsById[c.to], z = zoneOf(ix, c.to);
         const gray = (c.scope || "included") !== "included";
         const chs = expandChannels(c.channels || "");
         return { gray, cells: [String(chs.length ? Math.ceil(chs[0] / 2) : "?"), chs.length > 1 ? `${chs[0]}–${chs[chs.length - 1]}` : String(chs[0] ?? "?"),
+          ...(trunkSrc ? [`Out ${i + 1} → In ${i + 1}`] : []),
           z?.name || c.to, gray ? `${spkDescr(ep)} (wire only)` : spkDescr(ep), { text: statusLabel(ep?.status, gray), bold: true }] };
       });
       const zones = d.zones || 0;
       const used = new Set(rows.map(r => +r.cells[0]));
       const spare = zones ? Array.from({ length: zones }, (_, i) => i + 1).filter(n => !used.has(n)) : [];
       if (spare.length) rows.push({ spare: true, cells: [spare.length > 1 ? `${spare[0]}–${spare[spare.length - 1]}` : String(spare[0]),
-        `${spare[0] * 2 - 1}–${spare[spare.length - 1] * 2}`, "— spare —", "", ""] });
-      const t = table(x, y + 20, w, [{ label: "Zone Out", dx: 14 }, { label: "Channels", dx: 110 }, { label: "Zone", dx: 210 }, { label: "Speakers", dx: 400 }, { label: "Status", dx: 580 }], rows);
+        `${spare[0] * 2 - 1}–${spare[spare.length - 1] * 2}`, ...(trunkSrc ? [""] : []), "— spare —", "", ""] });
+      const cols = trunkSrc
+        ? [{ label: "Zone Out", dx: 14 }, { label: "Channels", dx: 100 }, { label: `Feed (${s.devices[trunkSrc.from]?.model || "module"})`, dx: 180 }, { label: "Zone", dx: 320 }, { label: "Speakers", dx: 470 }, { label: "Status", dx: 610 }]
+        : [{ label: "Zone Out", dx: 14 }, { label: "Channels", dx: 110 }, { label: "Zone", dx: 210 }, { label: "Speakers", dx: 400 }, { label: "Status", dx: 580 }];
+      const t = table(x, y + 20, w, cols, rows);
       return { svg: heading(x, y + 8, `${d.model} — Distributed Audio`) + t.svg, bottom: t.bottom };
     });
 

@@ -762,6 +762,20 @@ export function route(job, ix, placement, opts = {}) {
     for (let i = 1; i < pts.length; i++) segs.push({ x1: pts[i - 1][0], y1: pts[i - 1][1], x2: pts[i][0], y2: pts[i][1], vert: pts[i - 1][0] === pts[i][0] });
     return segs;
   };
+  // SimCity tier: how much traffic already runs beside a candidate's segments
+  // (±2.5 lane pitches, overlapping span) — a tiebreaker under the hop cost,
+  // steering equal-hop candidates toward emptier corridors
+  const pathCongestion = cand => {
+    let n = 0;
+    for (const s of ptsSegs(cand)) {
+      const segs = s.vert ? usedV : usedH;
+      const c = s.vert ? s.x1 : s.y1;
+      const a1 = s.vert ? Math.min(s.y1, s.y2) : Math.min(s.x1, s.x2);
+      const a2 = s.vert ? Math.max(s.y1, s.y2) : Math.max(s.x1, s.x2);
+      for (const o of segs) if (Math.abs(o.c - c) <= 30 && Math.min(o.a2, a2) - Math.max(o.a1, a1) > 0) n++;
+    }
+    return n;
+  };
   // score a candidate by how many existing wires it would cross (hops it costs)
   const countCrossings = cand => {
     let n = 0;
@@ -1300,11 +1314,12 @@ export function route(job, ix, placement, opts = {}) {
         if (wx == null) continue;
         const cand = [[sx0, pz.y + pz.h], [sx0, y], [wx, y], [wx, ty], [b.x, ty]];
         if (pathBlocked(cand, skip) || !pathRegisterable(cand, nWire)) continue;
-        const cost = countCrossings(cand);
+        // hops dominate; congestion breaks ties toward emptier corridors
+        const cost = countCrossings(cand) * 100 + pathCongestion(cand);
         if (cost < bestCost) { best = cand; bestCost = cost; }
         seen++;
       }
-      return seen >= 10 || bestCost === 0; // stop early on a clean lane, else sample up to 10
+      return seen >= 10; // sample up to 10 — even a zero-hop lane may have a calmer twin
     });
     tryCommit(conn, "return", [best], skip);
   }
@@ -1775,6 +1790,10 @@ export function advise(job, ix = indexJob(job), catalog = null) {
         if (cat.flags?.includes("controlLanOnly"))
           out.notes.push({ code: "control-lan-only", msg: `${d.model || d.id}: LAN is control/DSP only — no Dante/audio-over-IP on this box` });
       }
+      // current-gen AVB/IP audio gear rides the network — and Savant makes no AVB switch of its own
+      if (Object.values(s.devices).some(d => catalog.devices[d.catalogRef]?.flags?.includes("avb")))
+        out.notes.push({ code: "avb-switch", solution: sol.id,
+          msg: "AVB/IP audio gear on this job — requires an Avnu-certified AVB switch (e.g. Netgear M4250 AV Line); an uncertified switch breaks AVB stream sync silently" });
     }
 
     /* -- licensing advisor per platform -- */

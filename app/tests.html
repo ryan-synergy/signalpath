@@ -806,6 +806,21 @@ for (const [name, raw] of Object.entries(fixtures)) {
     cat.devices["savant-pav-aom8c"]?.outputs.analog === 8 && !!cat.devices["savant-pav-aombal8c"]);
   t("catalog: Ecosystem host maxIpAudio filled (6)",
     cat.licensing.savant.hosts.find(h => h.id === "ip-audio-host").maxIpAudio === 6);
+
+  // AVB-switch advisory: fires for current-gen (avb-flagged) gear, silent for legacy backplane
+  const rawA = structuredClone(fixtures.residence);
+  {
+    const { job, ix } = loadJob(rawA);
+    t("advisor: legacy Savant modules alone do NOT trigger the AVB-switch note",
+      !advise(job, ix, cat).notes.some(n => n.code === "avb-switch"));
+  }
+  rawA.solutions[0].racks[0].devices.push({ id: "aim7c", type: "audioInputModule", model: "PAV-AIM7C-00", catalogRef: "savant-pav-aim7c", status: "new" });
+  {
+    const { job, ix } = loadJob(rawA);
+    const notes = advise(job, ix, cat).notes.filter(n => n.code === "avb-switch");
+    t("advisor: current-gen PAV gear triggers the Avnu-certified-switch note (once, solution-tagged)",
+      notes.length === 1 && notes[0].solution === "sol-a" && notes[0].msg.includes("Avnu"));
+  }
 }
 
 /* ---------- BOM comparison page: side-by-side solutions ---------- */

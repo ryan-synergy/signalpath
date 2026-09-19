@@ -784,6 +784,19 @@ for (const [name, raw] of Object.entries(fixtures)) {
     cm.includes("Out 1 → In 1") && cm.includes("Out 6 → In 6") && cm.includes("Feed ("));
 }
 
+/* ---------- catalog research round 2026-09-19 (Sonance/Anthem/AudioControl/AVPro) ---------- */
+{
+  const cat = await (await fetch("./catalog.json")).json();
+  t("catalog: research round merged (37 devices incl. Sonance Blaze line)",
+    Object.keys(cat.devices).length >= 37 && !!cat.devices["sonance-blaze-pzc-1008d"] && !!cat.devices["avpro-mxnet-sw24"]);
+  t("catalog: Bijou 3100 output gap fixed", cat.devices["audiocontrol-bijou-3100"].outputs.sub === 1 &&
+    cat.devices["audiocontrol-bijou-3100"].outputs.lineOut === 2);
+  t("catalog: Blaze Dante gotcha encoded (8ch amp, 4ch Dante)",
+    cat.devices["sonance-blaze-pzc-1008d"].inputs.dante === 4 && cat.devices["sonance-blaze-pzc-1008d"].ampCh === 8);
+  t("catalog: unconfirmed specs stay verified:false (DSP MKIII, MX-44/1616)",
+    [cat.devices["sonance-dsp-8-130-mkiii"], cat.devices["avpro-ac-mx-44"], cat.devices["avpro-ac-mx-1616"]].every(d => d.verified === false));
+}
+
 /* ---------- BOM comparison page: side-by-side solutions ---------- */
 {
   const raw = structuredClone(fixtures.residence);

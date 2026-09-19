@@ -795,6 +795,17 @@ for (const [name, raw] of Object.entries(fixtures)) {
     cat.devices["sonance-blaze-pzc-1008d"].inputs.dante === 4 && cat.devices["sonance-blaze-pzc-1008d"].ampCh === 8);
   t("catalog: unconfirmed specs stay verified:false (DSP MKIII, MX-44/1616)",
     [cat.devices["sonance-dsp-8-130-mkiii"], cat.devices["avpro-ac-mx-44"], cat.devices["avpro-ac-mx-1616"]].every(d => d.verified === false));
+  // round 2: Savant — the AIM placeholder was wrong (never had optical); legacy vs current split
+  const aim = cat.devices["savant-avb-input-module"], aim7 = cat.devices["savant-pav-aim7c"];
+  t("catalog: legacy AIM corrected to pure analog (placeholder optical removed)",
+    aim.inputs.analog === 8 && !("optical" in aim.inputs) && aim.verified === true);
+  t("catalog: current AIM7C is 3 analog + 2 coax + 2 optical",
+    aim7 && aim7.inputs.analog === 3 && aim7.inputs.coax === 2 && aim7.inputs.optical === 2);
+  t("catalog: AOM port count confirmed, current-gen siblings added",
+    cat.devices["savant-avb-output-module"].verified === true &&
+    cat.devices["savant-pav-aom8c"]?.outputs.analog === 8 && !!cat.devices["savant-pav-aombal8c"]);
+  t("catalog: Ecosystem host maxIpAudio filled (6)",
+    cat.licensing.savant.hosts.find(h => h.id === "ip-audio-host").maxIpAudio === 6);
 }
 
 /* ---------- BOM comparison page: side-by-side solutions ---------- */

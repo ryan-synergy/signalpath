@@ -321,6 +321,18 @@ function routerChecks(name, raw) {
 const routed = {};
 for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(name, raw);
 
+/* hop-count regression guards (polish round 2026-09-19: returns route last
+   and pick the least-crossing lane) */
+{
+  const ceiling = { residence: 14, estate: 26, stress: 560 };
+  for (const [name, raw] of Object.entries(fixtures)) {
+    const { job, ix } = loadJob(raw);
+    const p = place(job, ix);
+    const r = route(job, ix, p);
+    t(`${name}: hop count holds the polish ceiling (${r.crossings} ≤ ${ceiling[name]})`, r.crossings <= ceiling[name]);
+  }
+}
+
 /* residence router specifics */
 {
   const { p, r } = routed.residence;

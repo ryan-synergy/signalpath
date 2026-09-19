@@ -1495,7 +1495,7 @@ export function render(job, ix, P, rt, opts = {}) {
   for (const c of P.chips) {
     push(`<rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="2" fill="#1e1e1e"/>`);
     push(`<text x="${c.x + c.w / 2}" y="${c.y + 13}" text-anchor="middle" font-size="10" fill="#eee">${esc(c.type.toUpperCase())}</text>`);
-    push(`<circle cx="${c.x + c.w + 7}" cy="${c.y + c.h / 2}" r="2.4" fill="#3fbf5a"/>`);
+    push(`<circle cx="${c.x + c.w - 6}" cy="${c.y + c.h / 2}" r="1.8" fill="#3fbf5a"/>`);
   }
   push(`</g>`); // end drawing space
 

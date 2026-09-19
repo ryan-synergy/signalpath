@@ -15,7 +15,7 @@
 <div id="summary">running…</div>
 <ul id="out"></ul>
 <script type="module">
-import { loadJob, validate, advise, place, route, render, expandChannels, effectiveHouse, effectiveJob, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
+import { loadJob, validate, advise, place, route, render, expandChannels, effectiveHouse, effectiveJob, trunkCount, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
 import { sniff, importAny, importSiteWalk, importBlueprinted, mergeHouse } from "./importers.js";
 import { pageFlags, sheetCount, renderChannelMap, renderTakeoff, renderWireSchedule, renderExtraPages, wireRuns, takeoffItems, takeoffCSV } from "./pages.js";
 
@@ -751,6 +751,37 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("glyphs: AVR reads as a receiver (knob ring + display slot)",
     svg.includes('stroke="#7a7a7a"') && svg.includes('fill="#0d1116"'));
   t("glyphs: video matrix crossbar is a 3×3 dot grid", (svg.match(/r="1\.3" fill="#8f8f8f"/g) || []).length === 9);
+}
+
+/* ---------- trunk runs: module→amp audio is N individual runs, not one edge ---------- */
+{
+  const { job, ix } = loadJob(fixtures.residence);
+  const s = ix.solutions[0], sol = s.sol;
+  const trunk = sol.connections.find(c => c.from === "sav-out" && c.to === "mdx16");
+  t("trunk: run count derived from zones fed (6), beats the stale authored 2", trunkCount(trunk, s) === 6);
+  t("trunk: an explicit larger count wins (pre-wired spares)", trunkCount({ ...trunk, count: 8 }, s) === 8);
+  t("trunk: ordinary connections stay 1", trunkCount(sol.connections.find(c => c.to === "family-tv" && c.signal === "video") || { from: "x", to: "y", signal: "video" }, s) === 1);
+
+  const catalog = await (await fetch("./catalog.json")).json();
+  const a = advise(job, ix, catalog);
+  const ain = a.io.find(io => io.device === "mdx16" && io.kind === "analog-in");
+  t("trunk: MDX-16 analog budget = 6/8 fed, 2 spare, not over", !!ain && ain.used === 6 && ain.capacity === 8 && !ain.over, JSON.stringify(ain));
+  const mout = a.io.find(io => io.device === "sav-out" && io.kind === "audio-out");
+  t("trunk: output module budget = 6/8 used from catalog", !!mout && mout.used === 6 && mout.capacity === 8 && !mout.over, JSON.stringify(mout));
+
+  // oversubscribe: shrink the amp's analog inputs below the zone count
+  const tight = structuredClone(catalog);
+  tight.devices["anthem-mdx-16"].inputs.analog = 4;
+  const a2 = advise(job, ix, tight);
+  t("trunk: 6 runs into 4 analog inputs → hard over warning",
+    a2.io.some(io => io.device === "mdx16" && io.kind === "analog-in" && io.over));
+
+  const p = place(job, ix), rt = route(job, ix, p);
+  const svg = render(job, ix, p, rt);
+  t("trunk: schematic carries the ×6 bus tick on the trunk", svg.includes(">×6</text>"));
+  const cm = renderChannelMap(job, ix, {});
+  t("trunk: channel map maps each zone to module output → amp input",
+    cm.includes("Out 1 → In 1") && cm.includes("Out 6 → In 6") && cm.includes("Feed ("));
 }
 
 /* ---------- interactive sheet hooks: tap targets baked into the render ---------- */

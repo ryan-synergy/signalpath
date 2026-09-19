@@ -1,126 +1,550 @@
 {
-  "generator": "SignalPath-catalog",
-  "version": 1,
-  "asOf": "2026-09-18",
-  "note": "Seeded from RESEARCH.md §5-6 (verified 2026-09-16). Edit in SignalPath → SETTINGS, not here.",
-
-  "devices": {
-    "anthem-mdx-16": { "brand": "Anthem", "model": "MDX-16", "type": "amp", "zones": 8, "ampCh": 16,
-      "inputs": { "analog": 8, "coax": 2, "optical": 2 }, "outputs": { "optical": 1, "lineOut": 2, "sub": 8 },
-      "flags": ["pcmOnlyDigital", "anyInputAnyZone"], "verified": true,
-      "notes": "Digital ins are PCM-only (bitstream mutes) — pair sources with a 2ch downmix. No HDMI/eARC." },
-    "anthem-mdx-8": { "brand": "Anthem", "model": "MDX-8", "type": "amp", "zones": 4, "ampCh": 8,
-      "inputs": { "analog": 4, "optical": 1 }, "outputs": { "sub": 4 },
-      "flags": ["pcmOnlyDigital"], "verified": true, "notes": "No coax, no line outs, no digital out." },
-    "anthem-mrx-540-8k": { "brand": "Anthem", "model": "MRX 540 8K", "type": "avr", "ampCh": 5, "processing": "7.2",
-      "inputs": { "hdmi": 7, "analog": 5, "coax": 2, "optical": 3 }, "outputs": { "hdmi": 2, "sub": 2 },
-      "flags": ["eARC"], "verified": true, "notes": "Zone 2 line-level only. HDMI out 1 = eARC." },
-    "anthem-mrx-740-8k": { "brand": "Anthem", "model": "MRX 740 8K", "type": "avr", "ampCh": 7, "processing": "11.2",
-      "inputs": { "hdmi": 7, "analog": 5, "coax": 2, "optical": 3 }, "outputs": { "hdmi": 3, "sub": 2 },
-      "flags": ["eARC"], "verified": true, "notes": "Zone-2 HDMI or amp-reassign." },
-    "anthem-mrx-1140-8k": { "brand": "Anthem", "model": "MRX 1140 8K", "type": "avr", "ampCh": 11, "processing": "15.2",
-      "inputs": { "hdmi": 7, "analog": 5, "coax": 2, "optical": 3 }, "outputs": { "hdmi": 3, "sub": 2 },
-      "flags": ["eARC"], "verified": true },
-
-    "avpro-ac-avdm-v3": { "brand": "AVPro Edge", "model": "AC-AVDM-V3", "type": "downmixer",
-      "inputs": { "hdmi": 1 }, "outputs": { "hdmi": 2, "analog": 1, "optical": 1, "coax": 1 },
-      "flags": ["downmix2ch", "arcExtract"], "verified": true,
-      "notes": "Inline HDMI de-embedder; Atmos/DTS-HD → LPCM 2.0. The no-video-distribution bridge." },
-    "avpro-mxnet-1g-avdm-ev2": { "brand": "AVPro Edge", "model": "AC-MXNET-1G-AVDM-EV2", "type": "enc",
-      "inputs": { "hdmi": 1 }, "outputs": { "balancedAnalog": 1 },
-      "flags": ["downmix2ch", "mxnet"], "verified": true,
-      "notes": "MXNet encoder + balanced stereo de-embed in one box; no toslink/coax out." },
-    "avpro-acp-axis2": { "brand": "AVPro Edge", "model": "ACP-AXIS2", "type": "danteBridge",
-      "inputs": { "eArc": 1 }, "outputs": { "dante": 2 }, "flags": ["dante", "poe"], "verified": true,
-      "notes": "eARC → Dante/AES67." },
-    "avpro-ac-mx-88": { "brand": "AVPro Edge", "model": "AC-MX-88", "type": "videoMatrix",
-      "inputs": { "hdmi": 8 }, "outputs": { "hdmi": 8, "analog": 8, "optical": 4 },
-      "flags": ["downmix2ch", "audioMatrix"], "verified": true,
-      "notes": "Per-output analog de-embed is 2ch PCM only." },
-    "avpro-mxnet-sw12": { "brand": "AVPro Edge", "model": "MXNET SW12", "type": "avSwitch",
-      "inputs": { "ports": 12 }, "outputs": {}, "flags": ["mxnet", "poe"], "verified": false,
-      "notes": "MXNet 1G switch — port count per model label; verify SKU sheet." },
-    "avpro-mxnet-cbox-ha": { "brand": "AVPro Edge", "model": "MXNet CBX", "type": "controlBox",
-      "inputs": {}, "outputs": {}, "flags": ["mxnet"], "verified": false },
-
-    "ubiquiti-udm-se": { "brand": "Ubiquiti", "model": "UDM-SE", "type": "gateway",
-      "inputs": {}, "outputs": { "gbe": 8, "sfpPlus": 1 }, "poeBudgetW": 180, "priceUsd": 499,
-      "flags": ["protectNvr"], "verified": true },
-    "ubiquiti-usw-pro-24-poe": { "brand": "Ubiquiti", "model": "USW-Pro-24-PoE", "type": "networkSwitch",
-      "outputs": { "gbe": 24, "sfpPlus": 2 }, "poeBudgetW": 400, "priceUsd": 699,
-      "flags": ["proAvQos", "igmpSnooping"], "verified": true },
-    "ubiquiti-usw-pro-max-24-poe": { "brand": "Ubiquiti", "model": "USW-Pro-Max-24-PoE", "type": "networkSwitch",
-      "outputs": { "gbe": 24, "sfpPlus": 2, "gbe25": 8 }, "poeBudgetW": 400, "priceUsd": 799,
-      "flags": ["proAvQos", "igmpSnooping"], "verified": true,
-      "notes": "MXNet on UniFi = viable, integrator-configured, not AVPro-qualified (~9W/endpoint PoE)." },
-    "ubiquiti-usw-pro-max-48-poe": { "brand": "Ubiquiti", "model": "USW-Pro-Max-48-PoE", "type": "networkSwitch",
-      "outputs": { "gbe": 48, "sfpPlus": 4, "gbe25": 16 }, "poeBudgetW": 720, "priceUsd": 1299,
-      "flags": ["proAvQos", "igmpSnooping"], "verified": true },
-
-    "audiocontrol-m4800d": { "brand": "AudioControl", "model": "M4800D", "type": "amp", "zones": 4, "ampCh": 8,
-      "inputs": { "analog": 4, "digitalCombo": 4, "dante": 16 }, "outputs": { "dante": 16 },
-      "flags": ["dante", "ipControl"], "verified": true, "notes": "No RS-232. 1 local analog per zone." },
-    "audiocontrol-m6800d": { "brand": "AudioControl", "model": "M6800D", "type": "amp", "zones": 8, "ampCh": 16,
-      "inputs": { "analog": 10, "digitalCombo": 2, "dante": 16 }, "outputs": { "dante": 16, "loopOut": 8 },
-      "flags": ["dante", "ipControl"], "verified": true, "notes": "Dante tx presumed 16 (flagged)." },
-    "audiocontrol-d2800": { "brand": "AudioControl", "model": "D2800", "type": "amp", "zones": 4, "ampCh": 8,
-      "inputs": { "analog": 5, "digitalCombo": 1 }, "outputs": {},
-      "flags": ["controlLanOnly"], "verified": true, "notes": "LAN is control/DSP ONLY — never give it a Dante edge." },
-    "audiocontrol-d4600": { "brand": "AudioControl", "model": "D4600", "type": "amp", "zones": 8, "ampCh": 16,
-      "inputs": { "analog": 10 }, "outputs": {},
-      "flags": ["controlLanOnly"], "verified": true },
-    "audiocontrol-cm2-750d": { "brand": "AudioControl", "model": "CM2-750D", "type": "amp", "zones": 2, "ampCh": 2,
-      "inputs": { "analog": 16, "digitalCombo": 2, "dante": 16 }, "outputs": { "dante": 16 },
-      "flags": ["dante", "seventyVolt"], "verified": true,
-      "notes": "Per-ch 70V/100V or 8/4Ω, 750W/ch @70V — the landscape workhorse. Analog counts flagged on CM2/3." },
-    "audiocontrol-bijou-3100": { "brand": "AudioControl", "model": "Bijou 3100", "type": "amp", "zones": 1, "ampCh": 3,
-      "inputs": { "eArc": 1, "optical": 1, "coax": 1, "analog": 1 }, "outputs": {},
-      "flags": ["eARC", "ipControl"], "verified": true, "notes": "Compact zone amp with eARC in — a TV-return path." },
-    "audiocontrol-acp-dante-e-poe": { "brand": "AudioControl", "model": "ACP-DANTE-E-POE", "type": "danteBridge",
-      "inputs": { "analog": 2, "optical": 1 }, "outputs": { "dante": 2 },
-      "flags": ["dante", "poe"], "verified": true, "notes": "Legacy source → Dante on-ramp." }
+ "generator": "SignalPath-catalog",
+ "version": 1,
+ "asOf": "2026-09-18",
+ "note": "Seeded from RESEARCH.md \u00a75-6 (verified 2026-09-16). Edit in SignalPath \u2192 SETTINGS, not here.",
+ "devices": {
+  "anthem-mdx-16": {
+   "brand": "Anthem",
+   "model": "MDX-16",
+   "type": "amp",
+   "zones": 8,
+   "ampCh": 16,
+   "inputs": {
+    "analog": 8,
+    "coax": 2,
+    "optical": 2
+   },
+   "outputs": {
+    "optical": 1,
+    "lineOut": 2,
+    "sub": 8
+   },
+   "flags": [
+    "pcmOnlyDigital",
+    "anyInputAnyZone"
+   ],
+   "verified": true,
+   "notes": "Digital ins are PCM-only (bitstream mutes) \u2014 pair sources with a 2ch downmix. No HDMI/eARC."
   },
-
-  "licensing": {
-    "savant": {
-      "essentials": "Essentials subscription required per host, annual, dealer quote — lapse = dealer can't push changes",
-      "hosts": [
-        { "id": "ip-audio-host", "name": "IP Audio Host (Ecosystem)", "maxVideo": 2, "maxAudio": 4, "maxZones": 6, "maxIpAudio": null, "runtime": "Ecosystem (included)" },
-        { "id": "smart-host", "name": "Smart Host SHR-2000", "maxVideo": 8, "maxAudio": 8, "maxZones": 16, "maxIpAudio": 18, "runtime": "Ecosystem (included)" },
-        { "id": "pro-host", "name": "Pro Host (Mac)", "maxVideo": null, "maxAudio": null, "maxZones": null, "maxIpAudio": 45, "runtime": "Mac Limited ≤16 zones · Unlimited >16 zones (dealer quote)" }
-      ],
-      "notes": [
-        "Runtime license (one-time) + Essentials (annual) per host — both are BOM lines",
-        "45 IP-audio device ceiling applies on every Mac host, even Unlimited",
-        "3rd-party lighting/music/shades → add SFL-3PLMS for the tier"
-      ]
-    },
-    "josh": {
-      "processors": [
-        { "id": "josh-one", "name": "Josh One", "maxDevices": 200, "maxMics": 0, "plan": "$10/mo (+$10 voice+JoshGPT)" },
-        { "id": "josh-micro", "name": "Josh Micro", "maxDevices": 200, "maxMics": 1, "plan": "from $30/mo (JoshGPT incl.)" },
-        { "id": "josh-core", "name": "Josh Core", "maxDevices": 500, "maxMics": 100, "plan": "dealer quote (lifetime avail.)" }
-      ],
-      "notes": [
-        "1 mic per voice room baseline; large rooms take 2+",
-        "Josh Nano requires a Core",
-        ">500 devices or redundancy → dual Core; >1,000 devices or >100 mics → manufacturer review"
-      ]
-    },
-    "control4": {
-      "connect": "Control4 Connect: $249/yr (any full controller) · $99/yr Core Lite · $0 CA-1-only — homeowner-billed, gates app/voice/notifications",
-      "controllers": [
-        { "id": "core-lite", "name": "Core Lite", "maxDevices": 20, "rooms": 2, "streams": 1 },
-        { "id": "core-1", "name": "Core 1", "maxDevices": 30, "rooms": 3, "streams": 2 },
-        { "id": "core-3", "name": "Core 3", "maxDevices": 60, "rooms": 6, "streams": 4 },
-        { "id": "core-5", "name": "Core 5", "maxDevices": 200, "rooms": 8, "streams": 7 },
-        { "id": "ca-10", "name": "CA-10 + Core satellites", "maxDevices": 1000, "rooms": 99, "streams": 0 }
-      ],
-      "notes": [
-        "Driver budget ≈ $150–300 one-time per non-certified integration",
-        "Zigbee nodes > ~70 → add secondary Zigbee controller",
-        "Hardware prices dealer-gated — street figures are estimates"
-      ]
-    }
+  "anthem-mdx-8": {
+   "brand": "Anthem",
+   "model": "MDX-8",
+   "type": "amp",
+   "zones": 4,
+   "ampCh": 8,
+   "inputs": {
+    "analog": 4,
+    "optical": 1
+   },
+   "outputs": {
+    "sub": 4
+   },
+   "flags": [
+    "pcmOnlyDigital"
+   ],
+   "verified": true,
+   "notes": "No coax, no line outs, no digital out."
+  },
+  "anthem-mrx-540-8k": {
+   "brand": "Anthem",
+   "model": "MRX 540 8K",
+   "type": "avr",
+   "ampCh": 5,
+   "processing": "7.2",
+   "inputs": {
+    "hdmi": 7,
+    "analog": 5,
+    "coax": 2,
+    "optical": 3
+   },
+   "outputs": {
+    "hdmi": 2,
+    "sub": 2
+   },
+   "flags": [
+    "eARC"
+   ],
+   "verified": true,
+   "notes": "Zone 2 line-level only. HDMI out 1 = eARC."
+  },
+  "anthem-mrx-740-8k": {
+   "brand": "Anthem",
+   "model": "MRX 740 8K",
+   "type": "avr",
+   "ampCh": 7,
+   "processing": "11.2",
+   "inputs": {
+    "hdmi": 7,
+    "analog": 5,
+    "coax": 2,
+    "optical": 3
+   },
+   "outputs": {
+    "hdmi": 3,
+    "sub": 2
+   },
+   "flags": [
+    "eARC"
+   ],
+   "verified": true,
+   "notes": "Zone-2 HDMI or amp-reassign."
+  },
+  "anthem-mrx-1140-8k": {
+   "brand": "Anthem",
+   "model": "MRX 1140 8K",
+   "type": "avr",
+   "ampCh": 11,
+   "processing": "15.2",
+   "inputs": {
+    "hdmi": 7,
+    "analog": 5,
+    "coax": 2,
+    "optical": 3
+   },
+   "outputs": {
+    "hdmi": 3,
+    "sub": 2
+   },
+   "flags": [
+    "eARC"
+   ],
+   "verified": true
+  },
+  "avpro-ac-avdm-v3": {
+   "brand": "AVPro Edge",
+   "model": "AC-AVDM-V3",
+   "type": "downmixer",
+   "inputs": {
+    "hdmi": 1
+   },
+   "outputs": {
+    "hdmi": 2,
+    "analog": 1,
+    "optical": 1,
+    "coax": 1
+   },
+   "flags": [
+    "downmix2ch",
+    "arcExtract"
+   ],
+   "verified": true,
+   "notes": "Inline HDMI de-embedder; Atmos/DTS-HD \u2192 LPCM 2.0. The no-video-distribution bridge."
+  },
+  "avpro-mxnet-1g-avdm-ev2": {
+   "brand": "AVPro Edge",
+   "model": "AC-MXNET-1G-AVDM-EV2",
+   "type": "enc",
+   "inputs": {
+    "hdmi": 1
+   },
+   "outputs": {
+    "balancedAnalog": 1
+   },
+   "flags": [
+    "downmix2ch",
+    "mxnet"
+   ],
+   "verified": true,
+   "notes": "MXNet encoder + balanced stereo de-embed in one box; no toslink/coax out."
+  },
+  "avpro-acp-axis2": {
+   "brand": "AVPro Edge",
+   "model": "ACP-AXIS2",
+   "type": "danteBridge",
+   "inputs": {
+    "eArc": 1
+   },
+   "outputs": {
+    "dante": 2
+   },
+   "flags": [
+    "dante",
+    "poe"
+   ],
+   "verified": true,
+   "notes": "eARC \u2192 Dante/AES67."
+  },
+  "avpro-ac-mx-88": {
+   "brand": "AVPro Edge",
+   "model": "AC-MX-88",
+   "type": "videoMatrix",
+   "inputs": {
+    "hdmi": 8
+   },
+   "outputs": {
+    "hdmi": 8,
+    "analog": 8,
+    "optical": 4
+   },
+   "flags": [
+    "downmix2ch",
+    "audioMatrix"
+   ],
+   "verified": true,
+   "notes": "Per-output analog de-embed is 2ch PCM only."
+  },
+  "avpro-mxnet-sw12": {
+   "brand": "AVPro Edge",
+   "model": "MXNET SW12",
+   "type": "avSwitch",
+   "inputs": {
+    "ports": 12
+   },
+   "outputs": {},
+   "flags": [
+    "mxnet",
+    "poe"
+   ],
+   "verified": false,
+   "notes": "MXNet 1G switch \u2014 port count per model label; verify SKU sheet."
+  },
+  "avpro-mxnet-cbox-ha": {
+   "brand": "AVPro Edge",
+   "model": "MXNet CBX",
+   "type": "controlBox",
+   "inputs": {},
+   "outputs": {},
+   "flags": [
+    "mxnet"
+   ],
+   "verified": false
+  },
+  "ubiquiti-udm-se": {
+   "brand": "Ubiquiti",
+   "model": "UDM-SE",
+   "type": "gateway",
+   "inputs": {},
+   "outputs": {
+    "gbe": 8,
+    "sfpPlus": 1
+   },
+   "poeBudgetW": 180,
+   "priceUsd": 499,
+   "flags": [
+    "protectNvr"
+   ],
+   "verified": true
+  },
+  "ubiquiti-usw-pro-24-poe": {
+   "brand": "Ubiquiti",
+   "model": "USW-Pro-24-PoE",
+   "type": "networkSwitch",
+   "outputs": {
+    "gbe": 24,
+    "sfpPlus": 2
+   },
+   "poeBudgetW": 400,
+   "priceUsd": 699,
+   "flags": [
+    "proAvQos",
+    "igmpSnooping"
+   ],
+   "verified": true
+  },
+  "ubiquiti-usw-pro-max-24-poe": {
+   "brand": "Ubiquiti",
+   "model": "USW-Pro-Max-24-PoE",
+   "type": "networkSwitch",
+   "outputs": {
+    "gbe": 24,
+    "sfpPlus": 2,
+    "gbe25": 8
+   },
+   "poeBudgetW": 400,
+   "priceUsd": 799,
+   "flags": [
+    "proAvQos",
+    "igmpSnooping"
+   ],
+   "verified": true,
+   "notes": "MXNet on UniFi = viable, integrator-configured, not AVPro-qualified (~9W/endpoint PoE)."
+  },
+  "ubiquiti-usw-pro-max-48-poe": {
+   "brand": "Ubiquiti",
+   "model": "USW-Pro-Max-48-PoE",
+   "type": "networkSwitch",
+   "outputs": {
+    "gbe": 48,
+    "sfpPlus": 4,
+    "gbe25": 16
+   },
+   "poeBudgetW": 720,
+   "priceUsd": 1299,
+   "flags": [
+    "proAvQos",
+    "igmpSnooping"
+   ],
+   "verified": true
+  },
+  "audiocontrol-m4800d": {
+   "brand": "AudioControl",
+   "model": "M4800D",
+   "type": "amp",
+   "zones": 4,
+   "ampCh": 8,
+   "inputs": {
+    "analog": 4,
+    "digitalCombo": 4,
+    "dante": 16
+   },
+   "outputs": {
+    "dante": 16
+   },
+   "flags": [
+    "dante",
+    "ipControl"
+   ],
+   "verified": true,
+   "notes": "No RS-232. 1 local analog per zone."
+  },
+  "audiocontrol-m6800d": {
+   "brand": "AudioControl",
+   "model": "M6800D",
+   "type": "amp",
+   "zones": 8,
+   "ampCh": 16,
+   "inputs": {
+    "analog": 10,
+    "digitalCombo": 2,
+    "dante": 16
+   },
+   "outputs": {
+    "dante": 16,
+    "loopOut": 8
+   },
+   "flags": [
+    "dante",
+    "ipControl"
+   ],
+   "verified": true,
+   "notes": "Dante tx presumed 16 (flagged)."
+  },
+  "audiocontrol-d2800": {
+   "brand": "AudioControl",
+   "model": "D2800",
+   "type": "amp",
+   "zones": 4,
+   "ampCh": 8,
+   "inputs": {
+    "analog": 5,
+    "digitalCombo": 1
+   },
+   "outputs": {},
+   "flags": [
+    "controlLanOnly"
+   ],
+   "verified": true,
+   "notes": "LAN is control/DSP ONLY \u2014 never give it a Dante edge."
+  },
+  "audiocontrol-d4600": {
+   "brand": "AudioControl",
+   "model": "D4600",
+   "type": "amp",
+   "zones": 8,
+   "ampCh": 16,
+   "inputs": {
+    "analog": 10
+   },
+   "outputs": {},
+   "flags": [
+    "controlLanOnly"
+   ],
+   "verified": true
+  },
+  "audiocontrol-cm2-750d": {
+   "brand": "AudioControl",
+   "model": "CM2-750D",
+   "type": "amp",
+   "zones": 2,
+   "ampCh": 2,
+   "inputs": {
+    "analog": 16,
+    "digitalCombo": 2,
+    "dante": 16
+   },
+   "outputs": {
+    "dante": 16
+   },
+   "flags": [
+    "dante",
+    "seventyVolt"
+   ],
+   "verified": true,
+   "notes": "Per-ch 70V/100V or 8/4\u03a9, 750W/ch @70V \u2014 the landscape workhorse. Analog counts flagged on CM2/3."
+  },
+  "audiocontrol-bijou-3100": {
+   "brand": "AudioControl",
+   "model": "Bijou 3100",
+   "type": "amp",
+   "zones": 1,
+   "ampCh": 3,
+   "inputs": {
+    "eArc": 1,
+    "optical": 1,
+    "coax": 1,
+    "analog": 1
+   },
+   "outputs": {},
+   "flags": [
+    "eARC",
+    "ipControl"
+   ],
+   "verified": true,
+   "notes": "Compact zone amp with eARC in \u2014 a TV-return path."
+  },
+  "audiocontrol-acp-dante-e-poe": {
+   "brand": "AudioControl",
+   "model": "ACP-DANTE-E-POE",
+   "type": "danteBridge",
+   "inputs": {
+    "analog": 2,
+    "optical": 1
+   },
+   "outputs": {
+    "dante": 2
+   },
+   "flags": [
+    "dante",
+    "poe"
+   ],
+   "verified": true,
+   "notes": "Legacy source \u2192 Dante on-ramp."
+  },
+  "savant-avb-output-module": {
+   "brand": "Savant",
+   "model": "AVB Audio Output Module",
+   "type": "audioOutputModule",
+   "outputs": {
+    "analog": 8
+   },
+   "verified": false,
+   "notes": "Port count unverified \u2014 edit in Settings to match the SKU you stock."
+  },
+  "savant-avb-input-module": {
+   "brand": "Savant",
+   "model": "AVB Audio Input Module",
+   "type": "audioInputModule",
+   "inputs": {
+    "analog": 8,
+    "optical": 2
+   },
+   "verified": false,
+   "notes": "Port count unverified \u2014 edit in Settings to match the SKU you stock."
   }
+ },
+ "licensing": {
+  "savant": {
+   "essentials": "Essentials subscription required per host, annual, dealer quote \u2014 lapse = dealer can't push changes",
+   "hosts": [
+    {
+     "id": "ip-audio-host",
+     "name": "IP Audio Host (Ecosystem)",
+     "maxVideo": 2,
+     "maxAudio": 4,
+     "maxZones": 6,
+     "maxIpAudio": null,
+     "runtime": "Ecosystem (included)"
+    },
+    {
+     "id": "smart-host",
+     "name": "Smart Host SHR-2000",
+     "maxVideo": 8,
+     "maxAudio": 8,
+     "maxZones": 16,
+     "maxIpAudio": 18,
+     "runtime": "Ecosystem (included)"
+    },
+    {
+     "id": "pro-host",
+     "name": "Pro Host (Mac)",
+     "maxVideo": null,
+     "maxAudio": null,
+     "maxZones": null,
+     "maxIpAudio": 45,
+     "runtime": "Mac Limited \u226416 zones \u00b7 Unlimited >16 zones (dealer quote)"
+    }
+   ],
+   "notes": [
+    "Runtime license (one-time) + Essentials (annual) per host \u2014 both are BOM lines",
+    "45 IP-audio device ceiling applies on every Mac host, even Unlimited",
+    "3rd-party lighting/music/shades \u2192 add SFL-3PLMS for the tier"
+   ]
+  },
+  "josh": {
+   "processors": [
+    {
+     "id": "josh-one",
+     "name": "Josh One",
+     "maxDevices": 200,
+     "maxMics": 0,
+     "plan": "$10/mo (+$10 voice+JoshGPT)"
+    },
+    {
+     "id": "josh-micro",
+     "name": "Josh Micro",
+     "maxDevices": 200,
+     "maxMics": 1,
+     "plan": "from $30/mo (JoshGPT incl.)"
+    },
+    {
+     "id": "josh-core",
+     "name": "Josh Core",
+     "maxDevices": 500,
+     "maxMics": 100,
+     "plan": "dealer quote (lifetime avail.)"
+    }
+   ],
+   "notes": [
+    "1 mic per voice room baseline; large rooms take 2+",
+    "Josh Nano requires a Core",
+    ">500 devices or redundancy \u2192 dual Core; >1,000 devices or >100 mics \u2192 manufacturer review"
+   ]
+  },
+  "control4": {
+   "connect": "Control4 Connect: $249/yr (any full controller) \u00b7 $99/yr Core Lite \u00b7 $0 CA-1-only \u2014 homeowner-billed, gates app/voice/notifications",
+   "controllers": [
+    {
+     "id": "core-lite",
+     "name": "Core Lite",
+     "maxDevices": 20,
+     "rooms": 2,
+     "streams": 1
+    },
+    {
+     "id": "core-1",
+     "name": "Core 1",
+     "maxDevices": 30,
+     "rooms": 3,
+     "streams": 2
+    },
+    {
+     "id": "core-3",
+     "name": "Core 3",
+     "maxDevices": 60,
+     "rooms": 6,
+     "streams": 4
+    },
+    {
+     "id": "core-5",
+     "name": "Core 5",
+     "maxDevices": 200,
+     "rooms": 8,
+     "streams": 7
+    },
+    {
+     "id": "ca-10",
+     "name": "CA-10 + Core satellites",
+     "maxDevices": 1000,
+     "rooms": 99,
+     "streams": 0
+    }
+   ],
+   "notes": [
+    "Driver budget \u2248 $150\u2013300 one-time per non-certified integration",
+    "Zigbee nodes > ~70 \u2192 add secondary Zigbee controller",
+    "Hardware prices dealer-gated \u2014 street figures are estimates"
+   ]
+  }
+ }
 }

@@ -1414,6 +1414,7 @@ export function render(job, ix, P, rt, opts = {}) {
     push(`<text x="${r.x + 14}" y="${r.y + 24}" font-size="20" font-weight="700" fill="#111">${esc(r.name)}</text>`);
     for (const d of r.devices) {
       const dev = s.devices[d.id] || {};
+      push(`<g class="devtile" data-device="${esc(d.id)}">`);
       if (d.kind === "small") {
         const rx = dev.sourceType === "appletv" || dev.sourceType === "streamer" ? 8 : 3;
         push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="${rx}" fill="#1e1e1e"/>`);
@@ -1463,12 +1464,16 @@ export function render(job, ix, P, rt, opts = {}) {
         push(`<text x="${d.x + d.w / 2}" y="${d.y + d.h - 10}" text-anchor="middle" font-size="10.5" fill="#eee">${esc(restName.join(" ") || "")}</text>`);
         push(`<circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 10}" r="2.2" fill="#3fbf5a"/>`);
       }
+      push(`</g>`);
     }
   }
 
   /* zone cards */
   for (const z of P.zones) {
     const gray = z.scope !== "included";
+    push(`<g class="zcard" data-zone="${esc(z.id)}">`);
+    // un-filled shapes only hit-test on their stroke — this invisible fill makes the whole card tappable
+    push(`<rect class="hit" x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="transparent" stroke="none"/>`);
     push(`<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="none" stroke="${gray ? "#b5b5b5" : "#8a8a8a"}" stroke-width="1.4" stroke-dasharray="7 5"/>`);
     push(`<text x="${z.x + z.w / 2}" y="${z.y + 24}" text-anchor="middle" font-size="18" font-weight="700" fill="${gray ? "#999" : "#111"}">${esc(z.name)}</text>`);
     for (const g of z.groups) {
@@ -1489,6 +1494,7 @@ export function render(job, ix, P, rt, opts = {}) {
       }
       push(`<text x="${z.x + g.cx}" y="${z.y + g.captionY}" text-anchor="middle" font-size="11.5" fill="#333">${esc(g.caption)}</text>`);
     }
+    push(`</g>`);
   }
 
   /* annotations: small red notes near their zone */
@@ -1502,7 +1508,7 @@ export function render(job, ix, P, rt, opts = {}) {
   for (const w of rt.wires) {
     const color = w.scope !== "included" ? SIGNAL_COLORS.prewire
       : SIGNAL_COLORS[w.signal === "speaker" ? "audio" : w.signal] || "#555";
-    push(`<path class="wire" data-wire="${esc(w.id)}" d="${wireD(w)}" stroke="${color}"/>`);
+    push(`<path class="wire" data-wire="${esc(w.id)}" data-from="${esc(w.from)}" data-to="${esc(w.to)}" data-signal="${esc(w.signal)}" d="${wireD(w)}" stroke="${color}"/>`);
   }
   push(`</g>`);
 
@@ -1512,6 +1518,13 @@ export function render(job, ix, P, rt, opts = {}) {
     push(`<text x="${c.x + c.w / 2}" y="${c.y + 13}" text-anchor="middle" font-size="10" fill="#eee">${esc(c.type.toUpperCase())}</text>`);
     push(`<circle cx="${c.x + c.w - 6}" cy="${c.y + c.h / 2}" r="1.8" fill="#3fbf5a"/>`);
   }
+
+  /* invisible fat twins over every wire: 12px tap targets for click-to-trace
+     (transparent stroke, so print/export are untouched) */
+  push(`<g fill="none" stroke="transparent" stroke-width="12">`);
+  for (const w of rt.wires)
+    push(`<path class="wirehit" data-wire="${esc(w.id)}" data-from="${esc(w.from)}" data-to="${esc(w.to)}" data-signal="${esc(w.signal)}" d="${wireD(w)}" pointer-events="stroke"/>`);
+  push(`</g>`);
   push(`</g>`); // end drawing space
 
   /* dynamic legend */

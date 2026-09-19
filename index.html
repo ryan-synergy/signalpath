@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SignalPath</title>
+<style>
+  :root {
+    --bar: #14161a; --bar2: #1e2128; --ink: #16181c; --panel: #f7f7f9;
+    --line: #d8dade; --accent: #2b6cb8; --ok: #2f7a3a; --bad: #b32017; --warn: #b8860b;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { font-family: "Avenir Next", Avenir, Futura, "Helvetica Neue", sans-serif; color: var(--ink);
+         display: flex; flex-direction: column; background: #e7e9ee; }
+
+  /* ---- top bar ---- */
+  #topbar { background: var(--bar); color: #e8eaee; display: flex; align-items: center; gap: 10px;
+            padding: 8px 14px; flex: 0 0 auto; }
+  #topbar .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; letter-spacing: 2px; font-size: 14px; }
+  #topbar .logo svg { width: 22px; height: 22px; }
+  #topbar select, #topbar button, #topbar label {
+    background: var(--bar2); color: #e8eaee; border: 1px solid #333842; border-radius: 6px;
+    font: inherit; font-size: 12.5px; padding: 5px 9px; }
+  #topbar button { cursor: pointer; }
+  #topbar button:hover { border-color: #58607a; }
+  #topbar .spacer { flex: 1; }
+  #rulesChip { border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 600; border: 1px solid transparent; }
+  #rulesChip.ok { background: #14301c; color: #7fd695; border-color: #2f7a3a; }
+  #rulesChip.bad { background: #33150f; color: #ff9d8e; border-color: #b32017; cursor: pointer; }
+  #jobName { background: transparent; border: none; color: #fff; font-size: 14px; font-weight: 600; min-width: 130px; }
+  #jobName:focus { outline: 1px solid var(--accent); border-radius: 4px; }
+  label.chk { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+
+  /* ---- main split ---- */
+  #main { flex: 1; display: flex; min-height: 0; }
+  #panel { width: 330px; flex: 0 0 auto; background: var(--panel); border-right: 1px solid var(--line);
+           display: flex; flex-direction: column; min-height: 0; transition: width .15s; }
+  #panel.collapsed { width: 42px; }
+  #panel.collapsed .body, #panel.collapsed .tabs .lbl { display: none; }
+  .tabs { display: flex; align-items: center; border-bottom: 1px solid var(--line); flex: 0 0 auto; }
+  .tabs button { flex: 1; font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 1px;
+                 padding: 10px 2px; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; color: #666; }
+  .tabs button.on { color: var(--accent); border-bottom-color: var(--accent); }
+  #collapse { flex: 0 0 30px; font-size: 13px; color: #888; background: none; border: none; cursor: pointer; padding: 10px 0; }
+  .body { flex: 1; overflow-y: auto; padding: 10px; min-height: 0; }
+
+  /* ---- panel widgets ---- */
+  .row { background: #fff; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; }
+  .row > .head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; }
+  .row > .head .t { font-weight: 600; font-size: 13.5px; flex: 1; }
+  .row > .head .sub { font-size: 11px; color: #777; }
+  .row .fields { border-top: 1px solid var(--line); padding: 9px 10px; display: none; }
+  .row.open .fields { display: block; }
+  .fields .f { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .fields label { font-size: 11px; color: #666; width: 74px; flex: 0 0 auto; }
+  .fields input, .fields select { font: inherit; font-size: 12.5px; padding: 4px 6px; border: 1px solid var(--line);
+                                  border-radius: 5px; flex: 1; min-width: 0; background: #fff; }
+  .fields input[type=checkbox] { flex: 0 0 auto; }
+  .mini { font-size: 11px; color: #999; }
+  .addbtn, .del { font: inherit; font-size: 12px; border-radius: 6px; cursor: pointer; }
+  .addbtn { width: 100%; padding: 8px; background: #eef2f8; border: 1px dashed #9db4d0; color: var(--accent); font-weight: 600; }
+  .del { background: none; border: none; color: #b55; padding: 2px 6px; }
+  .sect { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: #888; margin: 12px 2px 6px; }
+  .badge { font-size: 10px; border-radius: 4px; padding: 1px 5px; background: #eee; color: #666; }
+
+  /* ---- canvas + advisor ---- */
+  #right { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  #canvas { flex: 1; overflow: auto; padding: 16px; min-height: 0; }
+  #canvas svg { width: 100%; height: auto; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.18); border-radius: 3px; }
+  #advisor { flex: 0 0 auto; background: #fff; border-top: 1px solid var(--line); max-height: 130px; overflow-y: auto;
+             padding: 6px 14px; font-size: 12px; }
+  #advisor .item { padding: 3px 0; }
+  #advisor .e { color: var(--bad); } #advisor .w { color: var(--warn); } #advisor .i { color: #444; }
+  #advisor .ok { color: var(--ok); }
+
+  /* ---- import review overlay ---- */
+  #review { position: fixed; inset: 0; background: rgba(10,12,16,.55); display: none; z-index: 50;
+            align-items: center; justify-content: center; }
+  #review.show { display: flex; }
+  #review .card { background: #fff; border-radius: 12px; width: min(680px, 92vw); max-height: 84vh;
+                  display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,.35); }
+  #review .hd { padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  #review .hd .t { font-size: 16px; font-weight: 700; }
+  #review .hd .s { font-size: 12px; color: #777; margin-top: 2px; }
+  #review .bd { padding: 10px 18px; overflow-y: auto; font-size: 12.5px; }
+  #review .bd .w { color: var(--warn); padding: 2px 0; }
+  #review .bd .n { color: #555; padding: 2px 0; }
+  #review .bd .u { color: #999; padding: 1px 0; font-size: 11.5px; }
+  #review table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+  #review td, #review th { text-align: left; padding: 5px 8px; border-bottom: 1px solid #eee; font-size: 12px; }
+  #review th { font-size: 10.5px; letter-spacing: 1px; color: #888; }
+  #review .ft { padding: 12px 18px; border-top: 1px solid var(--line); display: flex; gap: 8px; align-items: center; }
+  #review .ft button, #review .ft select { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 7px;
+    border: 1px solid var(--line); background: #fff; cursor: pointer; }
+  #review .ft .primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <span class="logo">
+    <svg viewBox="0 0 100 100"><defs><clipPath id="lsph"><circle cx="50" cy="50" r="50"/></clipPath></defs>
+      <circle cx="50" cy="50" r="50" fill="#3966A9"/>
+      <g clip-path="url(#lsph)" fill="#fff"><path d="M -2 24 C 34 8 74 12 100 34 C 103 41 96 51 87 50 C 70 37 40 36 -2 38 Z"/><path d="M 102 76 C 66 92 26 88 0 66 C -3 59 4 49 13 50 C 30 63 60 64 102 62 Z"/></g></svg>
+    SIGNALPATH
+  </span>
+  <select id="jobsSel" title="Jobs"></select>
+  <button id="newJob" title="New job">＋</button>
+  <button id="delJob" title="Delete job">🗑</button>
+  <input id="jobName" title="Project name">
+  <select id="solSel" title="Solution"></select>
+  <select id="stageSel"><option value="proposal">PROPOSAL</option><option value="asBuilt">AS-BUILT</option></select>
+  <span class="spacer"></span>
+  <span id="rulesChip" class="ok">✓</span>
+  <label class="chk"><input type="checkbox" id="hideNet"> hide network</label>
+  <button id="importBtn">Import</button><input type="file" id="importFile" accept=".json,.md" hidden>
+  <button id="exportJson">JSON</button>
+  <button id="exportSvg">SVG</button>
+  <button id="exportCsv" title="Takeoff CSV">CSV</button>
+  <button id="printBtn" title="Print packet / save as PDF">Print</button>
+  <button id="toolsBtn" title="Synergy Field Kit">TOOLS</button>
+</div>
+
+<div id="main">
+  <div id="panel">
+    <div class="tabs">
+      <button data-tab="zones" class="on"><span class="lbl">ZONES</span><span class="mini" style="display:none">Z</span></button>
+      <button data-tab="gear"><span class="lbl">GEAR</span></button>
+      <button data-tab="job"><span class="lbl">JOB</span></button>
+      <button data-tab="settings"><span class="lbl">⚙</span></button>
+      <button id="collapse" title="Collapse">⟨⟨</button>
+    </div>
+    <div class="body" id="panelBody"></div>
+  </div>
+  <div id="right">
+    <div id="canvas"></div>
+    <div id="advisor"></div>
+  </div>
+</div>
+
+<div id="review"><div class="card">
+  <div class="hd"><div class="t" id="rvTitle"></div><div class="s" id="rvSub"></div></div>
+  <div class="bd" id="rvBody"></div>
+  <div class="ft">
+    <button class="primary" id="rvNew">Create new job</button>
+    <select id="rvTarget"></select><button id="rvMerge">Update selected job</button>
+    <span style="flex:1"></span><button id="rvCancel">Cancel</button>
+  </div>
+</div></div>
+
+<script type="module">
+import { loadJob, validate, advise, place, route, render } from "./app/engine.js";
+import { importAny, mergeHouse } from "./app/importers.js";
+import { renderExtraPages, sheetCount, pageFlags, takeoffCSV } from "./app/pages.js";
+
+/* ============ IndexedDB jobs store ============ */
+const DB = await new Promise((res, rej) => {
+  const rq = indexedDB.open("signalpath", 1);
+  rq.onupgradeneeded = () => rq.result.createObjectStore("jobs", { keyPath: "id" });
+  rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
+});
+const tx = mode => DB.transaction("jobs", mode).objectStore("jobs");
+const dbAllRaw = () => new Promise(r => { const q = tx("readonly").getAll(); q.onsuccess = () => r(q.result); });
+const dbAll = async () => (await dbAllRaw()).filter(r => r.id !== "__settings");
+const dbPut = rec => new Promise(r => { const q = tx("readwrite").put(rec); q.onsuccess = () => r(); });
+const dbDel = id => new Promise(r => { const q = tx("readwrite").delete(id); q.onsuccess = () => r(); });
+
+/* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
+const SHIPPED = await fetch("./app/catalog.json").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
+  info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
+{
+  const rec = (await dbAllRaw()).find(r => r.id === "__settings");
+  if (rec?.settings) SETTINGS = rec.settings;
+  if (!SETTINGS.catalog) SETTINGS.catalog = structuredClone(SHIPPED);
+}
+const saveSettings = () => dbPut({ id: "__settings", updated: Date.now(), settings: SETTINGS });
+/* job snapshot wins over the live catalog (old jobs advise identically forever) */
+function effectiveCatalog() {
+  const snap = S.job?.job?.catalogSnapshot;
+  const cat = structuredClone(SETTINGS.catalog);
+  if (snap?.devices) cat.devices = { ...cat.devices, ...snap.devices };
+  return cat;
+}
+
+/* ============ state ============ */
+const S = { job: null, id: null, sol: 0, tab: "zones", openRows: new Set() };
+const uid = p => p + "-" + Math.random().toString(36).slice(2, 7);
+const $ = s => document.querySelector(s);
+
+function blankJob(name = "New Job") {
+  return {
+    generator: "SignalPath", schemaVersion: 1,
+    job: { name, client: { name: "Customer Name", address: "Street, City, CA" }, stage: "proposal",
+           drawnBy: "SignalPath", revisions: [{ rev: 1, date: new Date().toISOString().slice(0, 10), description: "Initial proposal", by: "SP" }],
+           catalogSnapshot: { asOf: new Date().toISOString().slice(0, 10) } },
+    house: { areas: [], zones: [] },
+    solutions: [{ id: "sol-a", name: "Proposed System", videoDistribution: "hybrid", platforms: [], auxCounts: {},
+                  racks: [{ id: "rack-main", name: "Equipment Rack", devices: [] }],
+                  localDevices: [], companions: [], connections: [], annotations: [] }],
+  };
+}
+
+/* ============ live pipeline ============ */
+let saveTimer;
+function refresh(save = true) {
+  const sol = S.job.solutions[S.sol] || S.job.solutions[0];
+  S.sol = S.job.solutions.indexOf(sol);
+  let v, a, svg = "", err;
+  try {
+    const { job, ix } = loadJob(S.job);
+    v = validate(job, ix); a = advise(job, ix, effectiveCatalog());
+    const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], company: SETTINGS.company,
+                   sheet: `1 of ${sheetCount(S.job)}` };
+    if (S.job.house.zones.length) {
+      const p = place(job, ix, opts);
+      const rt = route(job, ix, p, opts);
+      svg = render(job, ix, p, rt, opts);
+    }
+  } catch (e) { err = e; console.error(e); }
+
+  $("#canvas").innerHTML = svg || `<div style="color:#888;padding:60px;text-align:center">Add a zone to start drawing${err ? "<br><small>" + err.message + "</small>" : ""}</div>`;
+  const chip = $("#rulesChip");
+  if (err) { chip.className = "bad"; chip.textContent = "engine error"; }
+  else if (v.errors.length) { chip.className = "bad"; chip.textContent = `✗ ${v.errors.length} issue${v.errors.length > 1 ? "s" : ""}`; }
+  else { chip.className = "ok"; chip.textContent = `✓ valid${v.warnings.length ? " · " + v.warnings.length + "⚠" : ""}`; }
+
+  const adv = [];
+  for (const e of v?.errors || []) adv.push(`<div class="item e">✗ ${esc(e.msg)}</div>`);
+  for (const w of v?.warnings || []) adv.push(`<div class="item w">⚠ ${esc(w.msg)}</div>`);
+  for (const io of a?.io || []) if (io.over) adv.push(`<div class="item e">✗ ${esc(io.msg)}</div>`);
+  for (const amp of a?.amps || []) adv.push(`<div class="item i">🔊 ${esc(amp.amp)}: ${amp.zonesUsed}/${amp.zonesTotal ?? "?"} zones${amp.reserved ? ` (${amp.reserved} reserved)` : ""}${amp.spare != null ? ` · ${amp.spare} spare` : ""}</div>`);
+  for (const lic of a?.licensing || []) {
+    adv.push(`<div class="item i">🎛 <b>${esc(lic.platform)}</b> → ${esc(lic.pick)} · ${lic.lines.map(esc).join(" · ")}</div>`);
+    for (const w of lic.warns || []) adv.push(`<div class="item w">⚠ ${esc(lic.platform)}: ${esc(w)}</div>`);
+  }
+  for (const n of a?.notes || []) adv.push(`<div class="item i">🎛 ${esc(n.msg)}</div>`);
+  $("#advisor").innerHTML = adv.join("") || `<div class="item ok">✓ No issues</div>`;
+
+  renderTopbar();
+  renderPanel();
+  if (save) { clearTimeout(saveTimer); saveTimer = setTimeout(persist, 400); }
+}
+async function persist() {
+  // lockfile: freeze the catalog entries this job uses, so it advises the same forever
+  const used = {};
+  for (const sol of S.job.solutions) for (const r of sol.racks || []) for (const d of r.devices || [])
+    if (d.catalogRef && SETTINGS.catalog.devices[d.catalogRef]) used[d.catalogRef] = SETTINGS.catalog.devices[d.catalogRef];
+  S.job.job.catalogSnapshot = { asOf: SETTINGS.catalog.asOf, ...(Object.keys(used).length ? { devices: used } : {}) };
+  await dbPut({ id: S.id, updated: Date.now(), data: S.job });
+  await renderJobsSel();
+}
+const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+
+/* ============ top bar ============ */
+function renderTopbar() {
+  $("#jobName").value = S.job.job.name || "";
+  $("#stageSel").value = (S.job.job.stage || "proposal") === "asBuilt" ? "asBuilt" : "proposal";
+  const sel = $("#solSel");
+  sel.innerHTML = S.job.solutions.map((s, i) => `<option value="${i}">${esc(s.name)}</option>`).join("") + `<option value="__add">＋ new solution…</option>`;
+  sel.value = String(S.sol);
+}
+async function renderJobsSel() {
+  const jobs = (await dbAll()).sort((a, b) => b.updated - a.updated);
+  $("#jobsSel").innerHTML = jobs.map(j => `<option value="${j.id}">${esc(j.data.job.name)}</option>`).join("") +
+    `<optgroup label="Samples"><option value="__residence">Sample Residence</option><option value="__estate">Sample Estate</option><option value="__stress">Stress (25 zones)</option></optgroup>`;
+  $("#jobsSel").value = S.id;
+}
+
+$("#jobName").onchange = e => { S.job.job.name = e.target.value; refresh(); };
+$("#stageSel").onchange = e => { S.job.job.stage = e.target.value; refresh(); };
+$("#hideNet").onchange = () => refresh(false);
+$("#solSel").onchange = e => {
+  if (e.target.value === "__add") {
+    const base = S.job.solutions[S.sol];
+    const copy = structuredClone(base);
+    copy.id = uid("sol"); copy.name = base.name + " (alt)";
+    S.job.solutions.push(copy); S.sol = S.job.solutions.length - 1;
+  } else S.sol = +e.target.value;
+  refresh();
+};
+$("#newJob").onclick = async () => { S.job = blankJob(); S.id = uid("job"); await persist(); refresh(); };
+$("#delJob").onclick = async () => {
+  if (!confirm(`Delete "${S.job.job.name}"?`)) return;
+  await dbDel(S.id);
+  const jobs = await dbAll();
+  if (jobs.length) { S.id = jobs[0].id; S.job = jobs[0].data; } else { S.job = blankJob(); S.id = uid("job"); await persist(); }
+  refresh();
+};
+$("#jobsSel").onchange = async e => {
+  const v = e.target.value;
+  if (v.startsWith("__")) {
+    const raw = await (await fetch(`./mock-system-${v.slice(2)}.json`)).json();
+    S.job = raw; S.id = uid("job"); S.sol = 0; await persist();
+  } else {
+    const rec = (await dbAll()).find(j => j.id === v);
+    if (rec) { S.job = rec.data; S.id = rec.id; S.sol = 0; }
+  }
+  refresh(false);
+};
+$("#exportJson").onclick = () => download(`${S.job.job.name}.json`, JSON.stringify(S.job, null, 2), "application/json");
+$("#exportSvg").onclick = () => { const svg = $("#canvas svg"); if (svg) download(`${S.job.job.name} — schematic.svg`, svg.outerHTML, "image/svg+xml"); };
+$("#exportCsv").onclick = () => { const { job, ix } = loadJob(S.job); download(`${S.job.job.name} — takeoff.csv`, takeoffCSV(job, ix, { solution: S.sol }), "text/csv"); };
+
+/* ---- Field Kit TOOLS switcher (hub manifest, cached; self marked) ---- */
+const KIT_SELF = "signalpath";
+$("#toolsBtn").onclick = () => {
+  const cached = JSON.parse(localStorage.getItem("signalpath.kit") || "null");
+  const draw = kit => {
+    const rows = (kit?.tools || []).map(t => t.id === KIT_SELF
+      ? `<div style="display:flex;align-items:center;padding:10px 4px;border-bottom:1px solid #eee;opacity:.55">
+           <div style="flex:1"><b>${esc(t.name)}</b><div class="mini">${esc(t.desc || "")}</div></div>
+           <span class="mini" style="letter-spacing:1px">YOU'RE HERE</span></div>`
+      : `<a href="${esc(t.url)}" style="display:flex;align-items:center;padding:10px 4px;border-bottom:1px solid #eee;text-decoration:none;color:inherit">
+           <div style="flex:1"><b>${esc(t.name)}</b><div class="mini">${esc(t.desc || "")}</div></div>
+           <span style="color:var(--accent)">→</span></a>`).join("");
+    $("#rvTitle").textContent = "SYNERGY FIELD KIT";
+    $("#rvSub").textContent = kit?.updated ? `manifest updated ${kit.updated}` : "";
+    $("#rvBody").innerHTML = rows || `<div class="mini">Hub unreachable — try again online.</div>`;
+    $("#rvNew").style.display = "none"; $("#rvMerge").style.display = "none"; $("#rvTarget").style.display = "none";
+    $("#review").classList.add("show");
+    $("#rvCancel").onclick = () => { $("#review").classList.remove("show");
+      $("#rvNew").style.display = ""; $("#rvMerge").style.display = ""; $("#rvTarget").style.display = ""; };
+  };
+  if (cached) draw(cached);
+  fetch("https://ryan-synergy.github.io/tools.json", { cache: "no-store" }).then(r => r.json())
+    .then(j => { if (j?.tools) { localStorage.setItem("signalpath.kit", JSON.stringify(j)); draw(j); } })
+    .catch(() => { if (!cached) draw(null); });
+};
+
+/* ---- print packet: sheet 1 + enabled pages, print-CSS one page each ---- */
+$("#printBtn").onclick = () => {
+  try {
+    const { job, ix } = loadJob(S.job);
+    const a = advise(job, ix, effectiveCatalog());
+    const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], company: SETTINGS.company,
+                   sheet: `1 of ${sheetCount(S.job)}` };
+    const p = place(job, ix, opts);
+    const rt = route(job, ix, p, opts);
+    const pagesSvg = [render(job, ix, p, rt, opts), ...renderExtraPages(job, ix, a, opts).map(pg => pg.svg)];
+    const w = window.open("", "_blank");
+    w.document.write(`<!doctype html><html><head><title>${S.job.job.name} — AV Schematic Packet</title><style>
+      @page { size: 17in 11in landscape; margin: 0; }
+      html, body { margin: 0; padding: 0; background: #888; }
+      .pg { width: 100%; page-break-after: always; background: #fff; margin: 0 auto 8px; }
+      .pg svg { display: block; width: 100%; height: auto; }
+      @media print { html, body { background: #fff; } .pg { margin: 0; } }
+    </style></head><body>${pagesSvg.map(s => `<div class="pg">${s}</div>`).join("")}
+    <script>window.onload = () => setTimeout(() => window.print(), 300);<\/script></body></html>`);
+    w.document.close();
+  } catch (e) { alert("Print failed: " + e.message); }
+};
+$("#importBtn").onclick = () => $("#importFile").click();
+$("#importFile").onchange = async e => {
+  const file = e.target.files[0]; if (!file) return;
+  let text = await file.text();
+  const fence = text.match(/```json\s*([\s\S]*?)```/);         // Markdown round-trip: parse the fenced block only
+  if (fence) text = fence[1];
+  try {
+    const res = importAny(JSON.parse(text));
+    if (res.kind === "signalpath") { S.job = res.job; S.id = uid("job"); S.sol = 0; await persist(); refresh(false); }
+    else await showReview(res);
+  } catch (err) { alert("Import failed: " + err.message); }
+  e.target.value = "";
+};
+
+/* ---- lenient review screen: every import lands here before touching a job ---- */
+async function showReview(res) {
+  const j = res.job, sol = j.solutions[0];
+  const KINDS = { sitewalk: "SiteWalk / AVWalk survey", blueprinted: "Blueprinted takeoff (old Savant system)" };
+  $("#rvTitle").textContent = `Import review — ${KINDS[res.kind] || res.kind}`;
+  $("#rvSub").textContent = `${j.job.name} · ${j.house.zones.length} zones · ${sol.racks[0].devices.length} rack devices · ${sol.connections.length} connections${sol.platforms.length ? " · platform: " + sol.platforms[0] : ""}`;
+  const zoneRow = z => {
+    const spk = z.endpoints.filter(e => e.type === "speakers").map(e => e.config).join(" + ");
+    const tv = z.endpoints.find(e => e.type === "display");
+    return `<tr><td><b>${esc(z.name)}</b></td><td>${esc(spk || "—")}</td>
+      <td>${tv ? esc(`${tv.brand || "?"} ${tv.size}"${tv.confirm ? " ⚠" : ""} (${tv.status})`) : "—"}</td>
+      <td class="u">${esc(z.note || "")}</td></tr>`;
+  };
+  $("#rvBody").innerHTML =
+    res.warnings.map(w => `<div class="w">⚠ ${esc(w)}</div>`).join("") +
+    res.notes.map(n => `<div class="n">· ${esc(n)}</div>`).join("") +
+    `<table><tr><th>ZONE</th><th>SPEAKERS</th><th>DISPLAY</th><th>NOTES</th></tr>${j.house.zones.map(zoneRow).join("")}</table>` +
+    (res.unmapped.length ? `<div class="u">Unmapped (kept as reference): ${res.unmapped.map(esc).join(" · ")}</div>` : "");
+  const jobs = await dbAll();
+  $("#rvTarget").innerHTML = jobs.map(r => `<option value="${r.id}">${esc(r.data.job.name)}</option>`).join("");
+  $("#rvMerge").disabled = !jobs.length;
+  $("#review").classList.add("show");
+  return new Promise(done => {
+    const close = () => { $("#review").classList.remove("show"); done(); };
+    $("#rvCancel").onclick = close;
+    $("#rvNew").onclick = async () => { S.job = j; S.id = uid("job"); S.sol = 0; await persist(); refresh(false); close(); };
+    $("#rvMerge").onclick = async () => {
+      const rec = jobs.find(r => r.id === $("#rvTarget").value); if (!rec) return;
+      const changes = mergeHouse(rec.data, j);
+      S.job = rec.data; S.id = rec.id; S.sol = 0; await persist(); refresh(false); close();
+      alert("House updated (Solutions kept):\n" + changes.map(c => `${c.kind}: ${c.zone}${c.type ? " (" + c.type + ")" : ""}`).join("\n"));
+    };
+  });
+}
+function download(name, text, type) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click();
+}
+
+/* ============ panel ============ */
+document.querySelectorAll(".tabs button[data-tab]").forEach(b => b.onclick = () => {
+  S.tab = b.dataset.tab;
+  document.querySelectorAll(".tabs button[data-tab]").forEach(x => x.classList.toggle("on", x === b));
+  renderPanel();
+});
+$("#collapse").onclick = () => {
+  $("#panel").classList.toggle("collapsed");
+  $("#collapse").textContent = $("#panel").classList.contains("collapsed") ? "⟩⟩" : "⟨⟨";
+};
+
+const SPK_CONFIGS = ["none", "mono", "stereo", "2.1", "surround-5.1", "surround-7.1", "soundbar", "soundbar-sub", "landscape"];
+const STATUSES = ["new", "ofe", "prewire"];
+const DEV_TYPES = ["source", "avr", "amp", "videoMatrix", "avSwitch", "avbSwitch", "audioInputModule", "audioOutputModule", "controlBox", "splitter", "host"];
+const SIGNALS = ["video", "audio", "speaker", "network", "audioReturn"];
+
+function field(label, inner) { return `<div class="f"><label>${label}</label>${inner}</div>`; }
+const sel = (cls, opts, val) => `<select class="${cls}">${opts.map(o => `<option ${o === val ? "selected" : ""}>${o}</option>`).join("")}</select>`;
+
+function renderPanel() {
+  const body = $("#panelBody");
+  if (S.tab === "zones") body.innerHTML = zonesHTML();
+  else if (S.tab === "gear") body.innerHTML = gearHTML();
+  else if (S.tab === "settings") body.innerHTML = settingsHTML();
+  else body.innerHTML = jobHTML();
+  wirePanel(body);
+  if (S.tab === "settings") wireSettings(body);
+}
+
+function zonesHTML() {
+  const rows = S.job.house.zones.map((z, i) => {
+    const spk = (z.endpoints || []).find(e => e.type === "speakers");
+    const tv = (z.endpoints || []).find(e => e.type === "display");
+    const sub = [spk && (spk.config || "stereo"), tv && `TV ${tv.size || "?"}"`].filter(Boolean).join(" · ") || "empty";
+    const open = S.openRows.has(z.id);
+    return `<div class="row ${open ? "open" : ""}" data-zid="${z.id}">
+      <div class="head" data-toggle="${z.id}"><span class="t">${esc(z.name)}</span>
+        ${z.scope !== "included" ? `<span class="badge">${z.scope}</span>` : ""}<span class="sub">${esc(sub)}</span></div>
+      <div class="fields">
+        ${field("Name", `<input class="zname" value="${esc(z.name)}">`)}
+        ${field("Scope", sel("zscope", ["included", "prewire", "future"], z.scope || "included"))}
+        ${S.job.house.areas.length ? field("Area", sel("zarea", ["", ...S.job.house.areas.map(a => a.id)], z.area || "")) : ""}
+        <div class="sect">SPEAKERS</div>
+        ${field("Config", sel("spkcfg", SPK_CONFIGS, spk ? (spk.config || "stereo") : "none"))}
+        ${spk ? field("Count", `<input class="spkcount" type="number" min="1" max="12" value="${spk.count || 2}">`) : ""}
+        ${spk ? field("Status", sel("spkstatus", STATUSES, spk.status || "new")) : ""}
+        <div class="sect">DISPLAY</div>
+        ${field("Type", sel("tvtype", ["none", "tv", "projector"], tv ? (tv.displayType || "tv") : "none"))}
+        ${tv ? field("Brand", `<input class="tvbrand" value="${esc(tv.brand || "")}">`) : ""}
+        ${tv ? field("Size", `<input class="tvsize" type="number" min="24" max="220" value="${tv.size || 65}">`) : ""}
+        ${tv ? field("Status", sel("tvstatus", STATUSES.slice(0, 2), tv.status || "new")) : ""}
+        ${tv ? field("Confirm", `<input type="checkbox" class="tvconfirm" ${tv.confirm?.length ? "checked" : ""}> <span class="mini">size needs confirmation</span>`) : ""}
+        <div style="text-align:right"><button class="del zdel">delete zone</button></div>
+      </div>
+    </div>`;
+  }).join("");
+  return rows + `<button class="addbtn" id="addZone">＋ Add zone</button>`;
+}
+
+function gearHTML() {
+  const sol = S.job.solutions[S.sol];
+  const nodes = allNodes();
+  const racks = sol.racks.map(r => `
+    <div class="sect">${esc(r.name.toUpperCase())}</div>
+    ${r.devices.map(d => {
+      const open = S.openRows.has(d.id);
+      return `<div class="row ${open ? "open" : ""}" data-did="${d.id}" data-rid="${r.id}">
+      <div class="head" data-toggle="${d.id}"><span class="t">${esc(d.model || d.id)}</span><span class="sub">${esc(d.type)}${d.zones ? ` · ${d.zones}z` : ""}</span></div>
+      <div class="fields">
+        ${field("Model", `<input class="dmodel" value="${esc(d.model || "")}">`)}
+        ${field("Type", sel("dtype", DEV_TYPES, d.type))}
+        ${d.type === "amp" ? field("Zones", `<input class="dzones" type="number" min="1" max="32" value="${d.zones || 8}">`) : ""}
+        ${field("Status", sel("dstatus", STATUSES.slice(0, 2), d.status || "new"))}
+        <div style="text-align:right"><button class="del ddel">delete device</button></div>
+      </div></div>`;
+    }).join("")}
+    <button class="addbtn adddev" data-rid="${r.id}">＋ Add device to ${esc(r.name)}</button>`).join("");
+
+  const conns = `<div class="sect">CONNECTIONS <span class="badge">${sol.connections.length}</span></div>` +
+    sol.connections.map((c, i) => `<div class="row open" data-ci="${i}"><div class="fields" style="display:block;border-top:none">
+      <div class="f">${sel("cfrom", nodes, c.from)}<span class="mini">→</span>${sel("cto", nodes, c.to)}</div>
+      <div class="f">${sel("csig", SIGNALS, c.signal)}<input class="cch" placeholder="ch" style="max-width:64px" value="${esc(c.channels || "")}">
+        ${sel("cscope", ["included", "prewire", "future"], c.scope || "included")}<button class="del cdel">×</button></div>
+    </div></div>`).join("") +
+    `<button class="addbtn" id="addConn">＋ Add connection</button>`;
+  return racks + conns;
+}
+
+function allNodes() {
+  const sol = S.job.solutions[S.sol];
+  const n = [];
+  for (const r of sol.racks) for (const d of r.devices) n.push(d.id);
+  for (const c of sol.companions || []) n.push(c.id);
+  for (const d of sol.localDevices || []) n.push(d.id);
+  for (const z of S.job.house.zones) for (const e of z.endpoints || []) n.push(e.id);
+  return n;
+}
+
+function jobHTML() {
+  const J = S.job.job;
+  return `
+    <div class="sect">CLIENT</div>
+    <div class="row open"><div class="fields" style="display:block;border-top:none">
+      ${field("Name", `<input class="jclient" value="${esc(J.client?.name || "")}">`)}
+      ${field("Address", `<input class="jaddr" value="${esc(J.client?.address || "")}">`)}
+      ${field("Drawn by", `<input class="jdrawn" value="${esc(J.drawnBy || "")}">`)}
+    </div></div>
+    <div class="sect">SOLUTION</div>
+    <div class="row open"><div class="fields" style="display:block;border-top:none">
+      ${field("Name", `<input class="solname" value="${esc(S.job.solutions[S.sol].name)}">`)}
+      ${field("Platform", sel("solplat", ["", "savant", "josh", "control4"], (S.job.solutions[S.sol].platforms || [])[0] || ""))}
+    </div></div>
+    <div class="sect">PACKET PAGES <span class="mini">sheet 1 always prints</span></div>
+    <div class="row open"><div class="fields" style="display:block;border-top:none">
+      ${["channelMap:Channel Map", "equipment:Equipment & Takeoff", "wireSchedule:Wire Schedule"].map(kv => {
+        const [k, label] = kv.split(":");
+        return `<div class="f"><input type="checkbox" class="pgflag" data-pg="${k}" ${pageFlags(S.job)[k] ? "checked" : ""}> <span>${label}</span></div>`;
+      }).join("")}
+    </div></div>
+    <div class="sect">REVISIONS</div>
+    <div class="row open"><div class="fields" style="display:block;border-top:none">
+      ${(J.revisions || []).map(r => `<div class="mini">Rev ${r.rev} · ${r.date} · ${esc(r.description)} · ${esc(r.by)}</div>`).join("")}
+      <button class="addbtn" id="addRev" style="margin-top:6px">＋ Add revision</button>
+    </div></div>`;
+}
+
+/* ---- settings tab: company, licensing rules, device catalog ---- */
+function settingsHTML() {
+  const co = SETTINGS.company, L = SETTINGS.catalog.licensing || {};
+  const numf = (cls, val, ph = "∞") => `<input class="${cls}" type="number" placeholder="${ph}" style="max-width:58px" value="${val ?? ""}">`;
+  const savant = (L.savant?.hosts || []).map((h, i) => `<div class="f" data-sv="${i}">
+      <input class="svname" value="${esc(h.name)}" style="flex:2">${numf("svzones", h.maxZones)}${numf("svipa", h.maxIpAudio)}</div>`).join("");
+  const josh = (L.josh?.processors || []).map((p, i) => `<div class="f" data-jp="${i}">
+      <input class="jpname" value="${esc(p.name)}" style="flex:2">${numf("jpdev", p.maxDevices)}${numf("jpmic", p.maxMics, "0")}
+      <input class="jpplan" value="${esc(p.plan || "")}" style="flex:1.4"></div>`).join("");
+  const c4 = (L.control4?.controllers || []).map((c, i) => `<div class="f" data-c4="${i}">
+      <input class="c4name" value="${esc(c.name)}" style="flex:2">${numf("c4dev", c.maxDevices)}${numf("c4rooms", c.rooms)}</div>`).join("");
+  const devs = Object.entries(SETTINGS.catalog.devices || {}).map(([id, d]) => {
+    const open = S.openRows.has("cat-" + id);
+    const io = d.inputs || {};
+    return `<div class="row ${open ? "open" : ""}" data-cat="${id}">
+      <div class="head" data-toggle="cat-${id}"><span class="t">${esc(d.brand)} ${esc(d.model)}</span>
+        <span class="sub">${esc(d.type)}${d.zones ? ` · ${d.zones}z` : ""}${d.verified === false ? " · ⚠unverified" : ""}</span></div>
+      <div class="fields">
+        ${field("Model", `<input class="catmodel" value="${esc(d.model)}">`)}
+        ${field("Zones", numf("catzones", d.zones, "-"))}
+        ${field("Inputs", `<span class="mini">analog</span>${numf("catan", io.analog, "0")}<span class="mini">coax</span>${numf("catco", io.coax, "0")}
+          <span class="mini">opt</span>${numf("catop", io.optical, "0")}<span class="mini">hdmi</span>${numf("cathd", io.hdmi, "0")}`)}
+        ${field("Notes", `<input class="catnotes" value="${esc(d.notes || "")}">`)}
+        <div style="text-align:right"><button class="del catdel">delete entry</button></div>
+      </div></div>`;
+  }).join("");
+  return `
+    <div class="sect">COMPANY (title block)</div>
+    <div class="row open"><div class="fields" style="display:block;border-top:none">
+      ${field("Name", `<input class="coname" value="${esc(co.name)}">`)}
+      ${field("Tagline", `<input class="cotag" value="${esc(co.tagline)}">`)}
+      ${field("Info line", `<input class="coinfo" value="${esc(co.info)}">`)}
+    </div></div>
+    <div class="sect">SAVANT HOSTS <span class="mini">name · max zones · IP-audio cap</span></div>
+    <div class="row open"><div class="fields" style="display:block;border-top:none">${savant}
+      ${field("Essentials", `<input class="svess" value="${esc(L.savant?.essentials || "")}">`)}</div></div>
+    <div class="sect">JOSH PROCESSORS <span class="mini">name · devices · mics · plan</span></div>
+    <div class="row open"><div class="fields" style="display:block;border-top:none">${josh}</div></div>
+    <div class="sect">CONTROL4 CONTROLLERS <span class="mini">name · devices · rooms</span></div>
+    <div class="row open"><div class="fields" style="display:block;border-top:none">${c4}
+      ${field("Connect", `<input class="c4conn" value="${esc(L.control4?.connect || "")}">`)}</div></div>
+    <div class="sect">DEVICE CATALOG <span class="badge">${Object.keys(SETTINGS.catalog.devices || {}).length}</span> <span class="mini">asOf ${esc(SETTINGS.catalog.asOf || "")}</span></div>
+    ${devs}
+    <button class="addbtn" id="addCat">＋ Add catalog device</button>
+    <button class="addbtn" id="resetCat" style="margin-top:8px;border-color:#d99;color:#b55">Reset licensing &amp; catalog to shipped defaults</button>`;
+}
+
+function wireSettings(body) {
+  const save = () => { saveSettings(); refresh(false); };
+  const on = (selctor, fn) => body.querySelectorAll(selctor).forEach(el => el.onchange = () => { fn(el); save(); });
+  const num = v => v === "" ? null : +v;
+  const L = SETTINGS.catalog.licensing;
+  on(".coname", el => SETTINGS.company.name = el.value);
+  on(".cotag", el => SETTINGS.company.tagline = el.value);
+  on(".coinfo", el => SETTINGS.company.info = el.value);
+  on(".svess", el => L.savant.essentials = el.value);
+  on(".svname", el => L.savant.hosts[+el.closest("[data-sv]").dataset.sv].name = el.value);
+  on(".svzones", el => L.savant.hosts[+el.closest("[data-sv]").dataset.sv].maxZones = num(el.value));
+  on(".svipa", el => L.savant.hosts[+el.closest("[data-sv]").dataset.sv].maxIpAudio = num(el.value));
+  on(".jpname", el => L.josh.processors[+el.closest("[data-jp]").dataset.jp].name = el.value);
+  on(".jpdev", el => L.josh.processors[+el.closest("[data-jp]").dataset.jp].maxDevices = num(el.value));
+  on(".jpmic", el => L.josh.processors[+el.closest("[data-jp]").dataset.jp].maxMics = num(el.value));
+  on(".jpplan", el => L.josh.processors[+el.closest("[data-jp]").dataset.jp].plan = el.value);
+  on(".c4conn", el => L.control4.connect = el.value);
+  on(".c4name", el => L.control4.controllers[+el.closest("[data-c4]").dataset.c4].name = el.value);
+  on(".c4dev", el => L.control4.controllers[+el.closest("[data-c4]").dataset.c4].maxDevices = num(el.value));
+  on(".c4rooms", el => L.control4.controllers[+el.closest("[data-c4]").dataset.c4].rooms = num(el.value));
+  const catOf = el => SETTINGS.catalog.devices[el.closest("[data-cat]")?.dataset.cat];
+  on(".catmodel", el => catOf(el).model = el.value);
+  on(".catzones", el => { const d = catOf(el); if (el.value === "") delete d.zones; else d.zones = +el.value; });
+  on(".catan", el => (catOf(el).inputs ||= {}).analog = num(el.value) ?? 0);
+  on(".catco", el => (catOf(el).inputs ||= {}).coax = num(el.value) ?? 0);
+  on(".catop", el => (catOf(el).inputs ||= {}).optical = num(el.value) ?? 0);
+  on(".cathd", el => (catOf(el).inputs ||= {}).hdmi = num(el.value) ?? 0);
+  on(".catnotes", el => catOf(el).notes = el.value);
+  body.querySelectorAll(".catdel").forEach(el => el.onclick = () => {
+    const id = el.closest("[data-cat]").dataset.cat;
+    if (!confirm(`Delete catalog entry "${id}"?`)) return;
+    delete SETTINGS.catalog.devices[id]; save(); renderPanel();
+  });
+  const addCat = body.querySelector("#addCat");
+  if (addCat) addCat.onclick = () => {
+    const id = prompt("Catalog id (e.g. sonos-amp):"); if (!id) return;
+    SETTINGS.catalog.devices[id] = { brand: "", model: id, type: "amp", zones: 1, inputs: {}, verified: false };
+    S.openRows.add("cat-" + id); save(); renderPanel();
+  };
+  const resetCat = body.querySelector("#resetCat");
+  if (resetCat) resetCat.onclick = () => {
+    if (!confirm("Replace licensing rules and device catalog with the shipped defaults?")) return;
+    SETTINGS.catalog = structuredClone(SHIPPED); save(); renderPanel();
+  };
+}
+
+/* ---- panel event wiring (delegated per render) ---- */
+function wirePanel(body) {
+  body.querySelectorAll("[data-toggle]").forEach(h => h.onclick = () => {
+    const id = h.dataset.toggle;
+    S.openRows.has(id) ? S.openRows.delete(id) : S.openRows.add(id);
+    renderPanel();
+  });
+  const zoneOf = el => S.job.house.zones.find(z => z.id === el.closest("[data-zid]")?.dataset.zid);
+  const on = (selctor, fn) => body.querySelectorAll(selctor).forEach(el => el.onchange = () => { fn(el); refresh(); });
+
+  /* zones */
+  on(".zname", el => { const z = zoneOf(el); if (z) z.name = el.value; });
+  on(".zscope", el => { const z = zoneOf(el); if (z) z.scope = el.value; });
+  on(".zarea", el => { const z = zoneOf(el); if (z) { if (el.value) z.area = el.value; else delete z.area; } });
+  on(".spkcfg", el => {
+    const z = zoneOf(el); if (!z) return;
+    z.endpoints = z.endpoints || [];
+    let spk = z.endpoints.find(e => e.type === "speakers");
+    if (el.value === "none") { z.endpoints = z.endpoints.filter(e => e.type !== "speakers"); }
+    else if (spk) spk.config = el.value;
+    else z.endpoints.unshift({ id: uid(z.id + "-spk"), type: "speakers", config: el.value, count: 2, status: "new" });
+  });
+  on(".spkcount", el => { const s = zoneOf(el)?.endpoints.find(e => e.type === "speakers"); if (s) s.count = +el.value; });
+  on(".spkstatus", el => { const s = zoneOf(el)?.endpoints.find(e => e.type === "speakers"); if (s) s.status = el.value; });
+  on(".tvtype", el => {
+    const z = zoneOf(el); if (!z) return;
+    z.endpoints = z.endpoints || [];
+    let tv = z.endpoints.find(e => e.type === "display");
+    if (el.value === "none") z.endpoints = z.endpoints.filter(e => e.type !== "display");
+    else if (tv) tv.displayType = el.value;
+    else z.endpoints.push({ id: uid(z.id + "-tv"), type: "display", displayType: el.value, brand: "", size: 65, status: "new" });
+  });
+  on(".tvbrand", el => { const t = zoneOf(el)?.endpoints.find(e => e.type === "display"); if (t) t.brand = el.value; });
+  on(".tvsize", el => { const t = zoneOf(el)?.endpoints.find(e => e.type === "display"); if (t) t.size = +el.value; });
+  on(".tvstatus", el => { const t = zoneOf(el)?.endpoints.find(e => e.type === "display"); if (t) t.status = el.value; });
+  on(".tvconfirm", el => { const t = zoneOf(el)?.endpoints.find(e => e.type === "display"); if (t) { if (el.checked) t.confirm = ["size"]; else delete t.confirm; } });
+  body.querySelectorAll(".zdel").forEach(el => el.onclick = () => {
+    const z = zoneOf(el); if (!z || !confirm(`Delete zone "${z.name}"?`)) return;
+    const eps = new Set((z.endpoints || []).map(e => e.id));
+    S.job.house.zones = S.job.house.zones.filter(x => x !== z);
+    const sol = S.job.solutions[S.sol];
+    sol.connections = sol.connections.filter(c => !eps.has(c.from) && !eps.has(c.to));
+    sol.companions = (sol.companions || []).filter(c => !eps.has(c.serves));
+    sol.localDevices = (sol.localDevices || []).filter(d => d.zone !== z.id);
+    refresh();
+  });
+  const addZone = body.querySelector("#addZone");
+  if (addZone) addZone.onclick = () => {
+    const name = prompt("Zone name:", "New Zone"); if (!name) return;
+    const id = uid("z");
+    S.job.house.zones.push({ id, name, scope: "included",
+      endpoints: [{ id: uid(id + "-spk"), type: "speakers", config: "stereo", count: 2, status: "new" }] });
+    S.openRows.add(id);
+    refresh();
+  };
+
+  /* gear */
+  const devOf = el => {
+    const row = el.closest("[data-did]");
+    const sol = S.job.solutions[S.sol];
+    for (const r of sol.racks) { const d = r.devices.find(d => d.id === row?.dataset.did); if (d) return { d, r }; }
+    return {};
+  };
+  on(".dmodel", el => { const { d } = devOf(el); if (d) d.model = el.value; });
+  on(".dtype", el => { const { d } = devOf(el); if (d) { d.type = el.value; if (el.value === "amp" && !d.zones) d.zones = 8; } });
+  on(".dzones", el => { const { d } = devOf(el); if (d) d.zones = +el.value; });
+  on(".dstatus", el => { const { d } = devOf(el); if (d) d.status = el.value; });
+  body.querySelectorAll(".ddel").forEach(el => el.onclick = () => {
+    const { d, r } = devOf(el); if (!d || !confirm(`Delete "${d.model || d.id}"?`)) return;
+    r.devices = r.devices.filter(x => x !== d);
+    const sol = S.job.solutions[S.sol];
+    sol.connections = sol.connections.filter(c => c.from !== d.id && c.to !== d.id);
+    sol.companions = (sol.companions || []).filter(c => c.serves !== d.id);
+    refresh();
+  });
+  body.querySelectorAll(".adddev").forEach(el => el.onclick = () => {
+    const model = prompt("Device model:", "New Device"); if (!model) return;
+    const sol = S.job.solutions[S.sol];
+    const r = sol.racks.find(r => r.id === el.dataset.rid);
+    const d = { id: uid("dev"), type: "source", model, status: "new" };
+    r.devices.push(d); S.openRows.add(d.id);
+    refresh();
+  });
+  const connOf = el => S.job.solutions[S.sol].connections[+el.closest("[data-ci]")?.dataset.ci];
+  on(".cfrom", el => { const c = connOf(el); if (c) c.from = el.value; });
+  on(".cto", el => { const c = connOf(el); if (c) c.to = el.value; });
+  on(".csig", el => { const c = connOf(el); if (c) c.signal = el.value; });
+  on(".cch", el => { const c = connOf(el); if (c) { if (el.value) c.channels = el.value; else delete c.channels; } });
+  on(".cscope", el => { const c = connOf(el); if (c) { if (el.value !== "included") c.scope = el.value; else delete c.scope; } });
+  body.querySelectorAll(".cdel").forEach(el => el.onclick = () => {
+    const sol = S.job.solutions[S.sol];
+    sol.connections.splice(+el.closest("[data-ci]").dataset.ci, 1);
+    refresh();
+  });
+  const addConn = body.querySelector("#addConn");
+  if (addConn) addConn.onclick = () => {
+    const nodes = allNodes();
+    S.job.solutions[S.sol].connections.push({ from: nodes[0] || "", to: nodes[1] || "", signal: "audio" });
+    refresh();
+  };
+
+  /* job */
+  on(".jclient", el => { S.job.job.client.name = el.value; });
+  on(".jaddr", el => { S.job.job.client.address = el.value; });
+  on(".jdrawn", el => { S.job.job.drawnBy = el.value; });
+  on(".solname", el => { S.job.solutions[S.sol].name = el.value; });
+  on(".solplat", el => { S.job.solutions[S.sol].platforms = el.value ? [el.value] : []; });
+  on(".pgflag", el => { (S.job.job.pages ||= {})[el.dataset.pg] = el.checked; });
+  const addRev = body.querySelector("#addRev");
+  if (addRev) addRev.onclick = () => {
+    const desc = prompt("Revision note:"); if (!desc) return;
+    const revs = S.job.job.revisions ||= [];
+    revs.push({ rev: revs.length + 1, date: new Date().toISOString().slice(0, 10), description: desc, by: S.job.job.drawnBy?.slice(0, 2).toUpperCase() || "SP" });
+    refresh();
+  };
+}
+
+/* ============ boot ============ */
+{
+  const jobs = (await dbAll()).sort((a, b) => b.updated - a.updated);
+  if (jobs.length) { S.id = jobs[0].id; S.job = jobs[0].data; }
+  else {
+    const raw = await (await fetch("./mock-system-residence.json")).json().catch(() => null);
+    S.job = raw || blankJob("Sample Residence");
+    S.id = uid("job");
+    await dbPut({ id: S.id, updated: Date.now(), data: S.job });
+  }
+  await renderJobsSel();
+  refresh(false);
+}
+</script>
+</body>
+</html>

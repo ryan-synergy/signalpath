@@ -1,0 +1,641 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Engine Tests</title>
+<style>
+  body { font-family: "Avenir Next", Avenir, Helvetica, sans-serif; margin: 24px; background: #f7f7f9; color: #16181c; }
+  h1 { font-size: 20px; } .pass { color: #2f7a3a; } .fail { color: #b32017; font-weight: 700; }
+  li { margin: 3px 0; font-size: 14px; } #summary { font-size: 17px; font-weight: 700; margin: 14px 0; }
+  code { background: #ececf0; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>SignalPath Engine — Milestone 0 tests</h1>
+<div id="summary">running…</div>
+<ul id="out"></ul>
+<script type="module">
+import { loadJob, validate, advise, place, route, render, expandChannels, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
+import { sniff, importAny, importSiteWalk, importBlueprinted, mergeHouse } from "./importers.js";
+import { pageFlags, sheetCount, renderChannelMap, renderTakeoff, renderWireSchedule, renderExtraPages, wireRuns, takeoffItems, takeoffCSV } from "./pages.js";
+
+const out = document.getElementById("out");
+let pass = 0, fail = 0;
+const t = (name, cond, detail = "") => {
+  const li = document.createElement("li");
+  li.className = cond ? "pass" : "fail";
+  li.textContent = (cond ? "✓ " : "✗ ") + name + (cond || !detail ? "" : " — " + detail);
+  out.appendChild(li);
+  cond ? pass++ : fail++;
+};
+
+const fixtures = {};
+for (const name of ["residence", "estate", "stress"]) {
+  fixtures[name] = await (await fetch(`../mock-system-${name}.json`)).json();
+}
+
+/* unit: channel expansion */
+t("expandChannels '1-2'", JSON.stringify(expandChannels("1-2")) === "[1,2]");
+t("expandChannels '11'", JSON.stringify(expandChannels("11")) === "[11]");
+t("expandChannels '9-10'", JSON.stringify(expandChannels("9-10")) === "[9,10]");
+
+/* every fixture: loads, validates with zero errors */
+for (const [name, raw] of Object.entries(fixtures)) {
+  const { job, ix } = loadJob(raw);
+  const v = validate(job, ix);
+  t(`${name}: loads (schema v1)`, true);
+  t(`${name}: zero errors`, v.errors.length === 0, JSON.stringify(v.errors.slice(0, 3)));
+  t(`${name}: no orphan endpoints`, !v.errors.some(e => e.code === "orphan-endpoint"));
+}
+
+/* residence expectations */
+{
+  const { job, ix } = loadJob(fixtures.residence);
+  const v = validate(job, ix), a = advise(job, ix);
+  t("residence: confirm-flag warning surfaces (Patio 55\"?)", v.warnings.some(w => w.code === "confirm"));
+  t("residence: no readability warning (7 zones)", !v.warnings.some(w => w.code === "readability"));
+  const mdx = a.amps.find(x => x.amp === "mdx16");
+  t("residence: MDX-16 6/8 zones, 1 reserved", mdx && mdx.zonesUsed === 6 && mdx.zonesTotal === 8 && mdx.reserved === 1, JSON.stringify(mdx));
+}
+
+/* estate expectations */
+{
+  const { job, ix } = loadJob(fixtures.estate);
+  const a = advise(job, ix);
+  const m16 = a.amps.find(x => x.amp === "mdx16");
+  const m8 = a.amps.find(x => x.amp === "mdx8");
+  t("estate: MDX-16 3/8 used", m16 && m16.zonesUsed === 3 && m16.spare === 5, JSON.stringify(m16));
+  t("estate: MDX-8 3/4 used", m8 && m8.zonesUsed === 3 && m8.spare === 1, JSON.stringify(m8));
+}
+
+/* stress expectations */
+{
+  const { job, ix } = loadJob(fixtures.stress);
+  const v = validate(job, ix), a = advise(job, ix);
+  t(`stress: readability warning fires (25 > ${READABILITY_ZONE_CEILING})`, v.warnings.some(w => w.code === "readability"));
+  const used = a.amps.filter(x => x.amp.startsWith("mdx")).reduce((n, x) => n + x.zonesUsed, 0);
+  const spare = a.amps.filter(x => x.amp.startsWith("mdx")).reduce((n, x) => n + x.spare, 0);
+  t("stress: MDX fleet 21 zones used, 3 spare", used === 21 && spare === 3, `used=${used} spare=${spare}`);
+  t("stress: future-scope feed tallied as reserved", a.amps.find(x => x.amp === "mdx-c")?.reserved === 1);
+  t("stress: Savant host note says Pro Host (25 > 16)", a.notes.some(n => n.code === "savant-host" && n.msg.includes("Pro Host")));
+}
+
+/* ---------- placer: geometry properties, not pixel-perfect mocks ---------- */
+
+const overlaps = (a, b) =>
+  a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+/* Chips are allowed inside a rack CONTAINER (the mxnet mock draws ENC chips
+   there) but never on a device, a zone card, or another chip. Everything else
+   is solid vs everything. */
+function firstOverlap(p) {
+  const zones = p.zones.map(z => ({ ...z, _k: "zone " + z.id }));
+  const racks = p.racks.map(r => ({ ...r, _k: "rack " + r.id }));
+  const devices = p.racks.flatMap(r => r.devices.map(d => ({ ...d, _k: "device " + d.id })));
+  const chips = p.chips.map(c => ({ ...c, _k: "chip " + c.id }));
+  const solidPairs = [];
+  const cross = (as, bs) => { for (const a of as) for (const b of bs) if (a !== b && a.id !== b.id) solidPairs.push([a, b]); };
+  cross(zones, zones); cross(racks, racks); cross(zones, racks);
+  cross(chips, zones); cross(chips, devices); cross(chips, chips);
+  for (const [a, b] of solidPairs) if (overlaps(a, b)) return `${a._k} ⇄ ${b._k}`;
+  return null;
+}
+
+/* every fixture: places clean, deterministic, no overlapping tiles */
+for (const [name, raw] of Object.entries(fixtures)) {
+  const { job, ix } = loadJob(raw);
+  const p = place(job, ix);
+  t(`${name}: places (${p.zones.length} zones, ${p.racks.length} racks, ${p.chips.length} chips)`,
+    p.zones.length === job.house.zones.length && p.racks.length === (job.solutions[0].racks || []).length);
+  t(`${name}: no overlapping tiles`, firstOverlap(p) === null, firstOverlap(p) || "");
+  t(`${name}: deterministic`, JSON.stringify(p) === JSON.stringify(place(job, ix)));
+  t(`${name}: racks all in left column`, p.racks.every(r => r.x === p.racks[0]?.x ?? true));
+  t(`${name}: bounds within sheet after fitScale`,
+    p.bounds.w * p.fitScale <= SHEET.content.w + 1 && p.bounds.h * p.fitScale <= SHEET.content.h + 1,
+    JSON.stringify({ bounds: p.bounds, fitScale: p.fitScale }));
+}
+
+/* residence: banding, corridor reservation, boundary-aligned chips, local source */
+{
+  const { job, ix } = loadJob(fixtures.residence);
+  const p = place(job, ix);
+  const bandOf = id => p.zones.find(z => z.id === id).band;
+  t("residence: video zones ride the top band",
+    ["z-family", "z-master", "z-patio"].every(id => bandOf(id) === "top"));
+  t("residence: audio-only zones in the audio band",
+    ["z-kitchen", "z-office", "z-dining", "z-gym"].every(id => bandOf(id) === "audio"));
+  const rack = p.racks[0];
+  t("residence: top band sits above rack, audio band right of rack",
+    p.zones.filter(z => z.band === "top").every(z => z.y + z.h <= rack.y) &&
+    p.zones.filter(z => z.band === "audio").every(z => z.x >= rack.x + rack.w));
+  const top = p.corridors.find(c => c.id === "top"), right = p.corridors.find(c => c.id === "right");
+  t("residence: corridors reserve lane capacity",
+    top.h >= top.lanes * top.pitch && right.w >= right.lanes * right.pitch,
+    JSON.stringify({ top: { lanes: top.lanes, h: top.h }, right: { lanes: right.lanes, w: right.w } }));
+  const fam = p.zones.find(z => z.id === "z-family");
+  const famTv = fam.groups.find(g => g.epId === "family-tv");
+  const balun = p.chips.find(c => c.id === "balun-family");
+  t("residence: balun chip aligned under its display, just below the border",
+    Math.abs((balun.x + balun.w / 2) - (fam.x + famTv.cx)) < 1 && balun.y === fam.y + fam.h + 20,
+    JSON.stringify(balun));
+  const patio = p.zones.find(z => z.id === "z-patio");
+  const patioTv = patio.groups.find(g => g.epId === "patio-tv");
+  t("residence: local Apple TV slotted inside Patio card at the display",
+    patioTv.local?.deviceId === "atv-patio" &&
+    patioTv.local.y + patioTv.local.h < patio.h && patioTv.local.x > 0);
+  t("residence: sources in col A, amp in col C, distribution in col B",
+    rack.devices.find(d => d.id === "cablebox").col === "A" &&
+    rack.devices.find(d => d.id === "mdx16").col === "C" &&
+    rack.devices.find(d => d.id === "axion8").col === "B");
+  t("residence: legend = all five signal rows",
+    JSON.stringify(p.legend.rows) === JSON.stringify(["video", "audio", "audioReturn", "network", "prewire"]),
+    JSON.stringify(p.legend.rows));
+  /* layout stability: appending a zone must not move existing top-band cards */
+  const grown = structuredClone(fixtures.residence);
+  grown.house.zones.push({ id: "z-new", name: "Den", scope: "included",
+    endpoints: [{ id: "den-spk", type: "speakers", config: "stereo", count: 2, status: "new" }] });
+  grown.solutions[0].connections.push({ from: "mdx16", to: "den-spk", signal: "speaker", channels: "13-14" });
+  const g = loadJob(grown);
+  const p2 = place(g.job, g.ix);
+  t("residence: appending a zone leaves existing top-band cards in place",
+    p.zones.filter(z => z.band === "top").every(z => {
+      const z2 = p2.zones.find(q => q.id === z.id);
+      return z2 && z2.x === z.x && z2.y === z.y;
+    }));
+}
+
+/* estate: multi-rack alignment + area clustering (the mxnet-mock properties) */
+{
+  const { job, ix } = loadJob(fixtures.estate);
+  const p = place(job, ix);
+  const dev = id => p.racks.flatMap(r => r.devices).find(d => d.id === id);
+  t("estate: two racks stacked, vertically aligned columns (switch under switch, amp under amp)",
+    p.racks[1].y > p.racks[0].y + p.racks[0].h &&
+    dev("sw-pool").x === dev("sw-main").x && dev("mdx8").x === dev("mdx16").x);
+  t("estate: pool-house zones cluster on the right with area header",
+    ["z-pool", "z-patio1", "z-patio2"].every(id => p.zones.find(z => z.id === id).band === "cluster") &&
+    p.areaHeaders.length === 2 && p.areaHeaders.some(h => h.name === "POOL HOUSE"));
+  const mainRight = Math.max(...p.zones.filter(z => z.band !== "cluster").map(z => z.x + z.w), p.racks[0].x + p.racks[0].w);
+  t("estate: cluster starts clear of the main-house field",
+    p.zones.filter(z => z.band === "cluster").every(z => z.x >= mainRight));
+  t("estate: legend rows = video/audio/network only (dynamic legend)",
+    JSON.stringify(p.legend.rows) === JSON.stringify(["video", "audio", "network"]), JSON.stringify(p.legend.rows));
+  const encChip = p.chips.find(c => c.id === "enc-atv1"), atv = dev("atv1");
+  t("estate: ENC chip beside its rack source", encChip.x > atv.x + atv.w && Math.abs((encChip.y + encChip.h / 2) - (atv.y + atv.h / 2)) < 1);
+}
+
+/* stress: 25 zones still place, drawing shrinks to fit (one-page rule) */
+{
+  const { job, ix } = loadJob(fixtures.stress);
+  const p = place(job, ix);
+  t("stress: fitScale shrinks the drawing onto one page", p.fitScale < 1 && p.fitScale > 0.3, String(p.fitScale));
+  t("stress: every endpoint owns a placed group slot",
+    job.house.zones.every(z => (z.endpoints || []).every(e =>
+      p.zones.find(pz => pz.id === z.id)?.groups.some(g => g.epId === e.id))));
+}
+
+/* ---------- router: the §4 rule set as machine-checked properties ---------- */
+
+function segsOf(w) {
+  const segs = [];
+  for (let i = 1; i < w.pts.length; i++) {
+    const [x1, y1] = w.pts[i - 1], [x2, y2] = w.pts[i];
+    segs.push({ x1, y1, x2, y2, vert: x1 === x2, w });
+  }
+  return segs;
+}
+function findCrossings(wires) {
+  const all = wires.flatMap(segsOf);
+  const found = [];
+  for (const a of all) for (const b of all) {
+    if (a.w.net >= b.w.net || a.vert === b.vert) continue;
+    const v = a.vert ? a : b, h = a.vert ? b : a;
+    const hx1 = Math.min(h.x1, h.x2), hx2 = Math.max(h.x1, h.x2);
+    const vy1 = Math.min(v.y1, v.y2), vy2 = Math.max(v.y1, v.y2);
+    if (v.x1 > hx1 + 1 && v.x1 < hx2 - 1 && h.y1 > vy1 + 1 && h.y1 < vy2 - 1)
+      found.push({ v, h, x: v.x1, y: h.y1 });
+  }
+  return found;
+}
+function routerChecks(name, raw) {
+  const { job, ix } = loadJob(raw);
+  const p = place(job, ix);
+  const r = route(job, ix, p);
+  const conns = job.solutions[0].connections;
+
+  t(`${name}: every connection routed (${r.wires.length}/${conns.length})`, r.wires.length === conns.length);
+  t(`${name}: no unrouted warnings`, !r.warnings.some(w => w.code === "unrouted"), JSON.stringify(r.warnings));
+  t(`${name}: all wires orthogonal`, r.wires.every(w => w.pts.every((pt, i) =>
+    i === 0 || pt[0] === w.pts[i - 1][0] || pt[1] === w.pts[i - 1][1])));
+  t(`${name}: deterministic routing`, JSON.stringify(r) === JSON.stringify(route(job, ix, p)));
+
+  /* wires never pierce devices, chips, or cards (borders are fair game) */
+  const obstacles = [
+    ...p.racks.flatMap(rk => rk.devices.map(d => ({ id: d.id, ...d }))),
+    ...p.chips, ...p.zones,
+  ];
+  let pierce = null;
+  for (const w of r.wires) {
+    const skip = new Set([w.from, w.to, w.insideCard]);
+    if (w.cls === "stub" || w.cls === "local") {
+      const comp = job.solutions[0].companions?.find(c => c.id === w.from);
+      if (comp) skip.add(ix.endpointZone[comp.serves]);
+      skip.add(ix.endpointZone[w.to]);
+    }
+    for (const s of segsOf(w)) {
+      const sx = Math.min(s.x1, s.x2), ex = Math.max(s.x1, s.x2);
+      const sy = Math.min(s.y1, s.y2), ey = Math.max(s.y1, s.y2);
+      for (const o of obstacles) {
+        if (skip.has(o.id)) continue;
+        if (sx < o.x + o.w - 2 && ex > o.x + 2 && sy < o.y + o.h - 2 && ey > o.y + 2)
+          pierce ??= `${w.id} pierces ${o.id}`;
+      }
+    }
+  }
+  t(`${name}: no wire pierces a device/chip/card`, pierce === null, pierce || "");
+
+  /* no co-linear overlap: parallel same-axis segments of different nets keep ≥9px */
+  const all = r.wires.flatMap(segsOf);
+  let laneClash = null;
+  for (const a of all) for (const b of all) {
+    if (a.w.net >= b.w.net || a.vert !== b.vert) continue;
+    const [ac, a1, a2] = a.vert ? [a.x1, Math.min(a.y1, a.y2), Math.max(a.y1, a.y2)] : [a.y1, Math.min(a.x1, a.x2), Math.max(a.x1, a.x2)];
+    const [bc, b1, b2] = b.vert ? [b.x1, Math.min(b.y1, b.y2), Math.max(b.y1, b.y2)] : [b.y1, Math.min(b.x1, b.x2), Math.max(b.x1, b.x2)];
+    if (Math.abs(ac - bc) < 9 && Math.min(a2, b2) - Math.max(a1, b1) > 2)
+      laneClash ??= `${a.w.id} ∥ ${b.w.id} @ ${ac}`;
+  }
+  t(`${name}: no co-linear wire overlaps`, laneClash === null, laneClash || "");
+
+  /* every crossing carries a hop on exactly one of the two wires */
+  const crossings = findCrossings(r.wires);
+  let unhopped = null;
+  for (const c of crossings) {
+    const covered = [c.v.w, c.h.w].some(w => w.hops.some(h =>
+      Math.abs(h.x - c.x) <= (h.orient === "h" ? h.w / 2 + 1 : 2) &&
+      Math.abs(h.y - c.y) <= (h.orient === "v" ? h.w / 2 + 1 : 2)));
+    if (!covered) unhopped ??= `${c.v.w.id} × ${c.h.w.id} @ ${c.x},${c.y}`;
+  }
+  t(`${name}: every crossing is bridged (${crossings.length} crossings)`, unhopped === null, unhopped || "");
+
+  /* sibling nesting: wires of one fan-out never cross each other */
+  let sibling = null;
+  for (const g of r.groups) {
+    const members = r.wires.filter(w => g.nets.includes(w.net));
+    for (const c of findCrossings(members)) sibling ??= `${g.dev}: ${c.v.w.id} × ${c.h.w.id}`;
+  }
+  t(`${name}: no sibling crossings within a fan-out`, sibling === null, sibling || "");
+
+  /* port sides: rack outputs exit RIGHT edges, rack inputs land LEFT edges */
+  const dev = id => p.racks.flatMap(rk => rk.devices).find(d => d.id === id);
+  let portBad = null;
+  for (const w of r.wires) {
+    const fd = dev(w.from), td = dev(w.to);
+    if (fd && w.pts[0][0] !== fd.x + fd.w) portBad ??= `${w.id} leaves ${w.from} not on right edge`;
+    // exception: the inter-rack trunk staples into the RIGHT edge (per spec §4)
+    if (td && w.cls !== "staple" && w.pts[w.pts.length - 1][0] !== td.x) portBad ??= `${w.id} enters ${w.to} not on left edge`;
+  }
+  t(`${name}: outputs right / inputs left on all rack devices (staple exempt)`, portBad === null, portBad || "");
+
+  /* boundary principle: zone feeds die ON the card border, x-aligned with
+     their endpoint (or its chip); only stubs/locals live inside cards */
+  let boundary = null;
+  for (const w of r.wires) {
+    if (!w.cls.startsWith("zone")) continue;
+    const [ex, ey] = w.pts[w.pts.length - 1];
+    const chip = p.chips.find(c => c.id === w.to);
+    if (chip) {
+      if (Math.abs(ex - (chip.x + chip.w / 2)) > 1 || Math.abs(ey - (chip.y + chip.h)) > 1)
+        boundary ??= `${w.id} misses its chip`;
+    } else {
+      const pz = p.zones.find(z => z.id === ix.endpointZone[w.to]);
+      const g = pz.groups.find(g => g.epId === w.to);
+      const onBorder = Math.abs(ey - pz.y) <= 1 || Math.abs(ey - (pz.y + pz.h)) <= 1;
+      const aligned = Math.abs(ex - (pz.x + g.cx)) <= 13; // centerline or straddle offset
+      if (!onBorder || !aligned) boundary ??= `${w.id} lands at ${ex},${ey}`;
+    }
+  }
+  t(`${name}: feeds terminate on borders aligned with their endpoints`, boundary === null, boundary || "");
+
+  return { p, r };
+}
+
+const routed = {};
+for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(name, raw);
+
+/* residence router specifics */
+{
+  const { p, r } = routed.residence;
+  const ret = r.wires.find(w => w.signal === "audioReturn");
+  const savIn = p.racks[0].devices.find(d => d.id === "sav-in");
+  t("residence: audio return wraps to the input module's left edge",
+    ret && ret.pts[ret.pts.length - 1][0] === savIn.x && ret.pts[0][1] === (() => {
+      const pz = p.zones.find(z => z.id === "z-master"); return pz.y + pz.h; })());
+  const local = r.wires.find(w => w.cls === "local");
+  t("residence: Patio local source links to its display inside the card", !!local);
+  const stubs = r.wires.filter(w => w.cls === "stub");
+  t("residence: balun stubs are straight verticals into the border",
+    stubs.length === 2 && stubs.every(w => w.pts.length === 2 && w.pts[0][0] === w.pts[1][0]));
+  const gymFeed = r.wires.find(w => w.to === "gym-spk");
+  t("residence: prewire scope rides the wire (gray Gym feed)", gymFeed.scope === "prewire");
+}
+
+/* estate router specifics */
+{
+  const { p, r } = routed.estate;
+  const trunk = r.wires.find(w => w.from === "sw-main" && w.to === "sw-pool");
+  const swM = p.racks[0].devices.find(d => d.id === "sw-main");
+  const swP = p.racks[1].devices.find(d => d.id === "sw-pool");
+  t("estate: inter-switch trunk staples right edge to right edge",
+    trunk && trunk.pts[0][0] === swM.x + swM.w && trunk.pts[trunk.pts.length - 1][0] === swP.x + swP.w,
+    JSON.stringify(trunk?.pts));
+  const kitchen = r.wires.find(w => w.to === "kitchen-spk"), office = r.wires.find(w => w.to === "office-spk");
+  const cxOf = w => w.pts[w.pts.length - 1][0];
+  t("estate: channel order matches zone order (Kitchen ch3-4 west of Office ch5-6)",
+    cxOf(kitchen) < cxOf(office));
+}
+
+/* ---------- hide-signals view (tech-view slice: hide network wires) ---------- */
+{
+  const { job, ix } = loadJob(fixtures.residence);
+  const opts = { hideSignals: ["network"] };
+  const p = place(job, ix, opts);
+  const rt = route(job, ix, p, opts);
+  const nNet = job.solutions[0].connections.filter(c => c.signal === "network").length;
+  t("hideNet: network wires drop from the drawing",
+    nNet > 0 && rt.wires.length === job.solutions[0].connections.length - nNet,
+    `${rt.wires.length} wires, ${nNet} network`);
+  t("hideNet: legend drops its Network row",
+    !p.legend.rows.includes("network") && p.legend.rows.includes("video"), JSON.stringify(p.legend.rows));
+  t("hideNet: nothing green in the rendered sheet",
+    !render(job, ix, p, rt).includes('stroke="#2f9e44"'));
+  t("hideNet: validation still sees the full system (no view side effects)",
+    validate(job, ix).ok);
+  const p0 = place(job, ix);
+  t("hideNet: default view unchanged (option is opt-in)",
+    JSON.stringify(p0.legend.rows).includes("network"));
+}
+
+/* ---------- print pages 2–4 (per approved mock-pages.svg) ---------- */
+{
+  const { job, ix } = loadJob(fixtures.residence);
+  const CATP = await (await fetch("./catalog.json")).json();
+  const a = advise(job, ix, CATP);
+  const parseOk = svg => !new DOMParser().parseFromString(svg, "image/svg+xml").querySelector("parsererror");
+
+  t("pages: default flags = channel map + equipment on, wire schedule opt-in",
+    JSON.stringify(pageFlags(fixtures.residence)) === JSON.stringify({ channelMap: true, equipment: true, wireSchedule: false }) &&
+    sheetCount(fixtures.residence) === 3);
+
+  const cm = renderChannelMap(job, ix, { sheetLabel: "Sheet 2 of 4" });
+  t("channel map: valid SVG, no leaks", parseOk(cm) && !/NaN|undefined/.test(cm));
+  t("channel map: MDX rows in channel order with gray prewire + spare rows",
+    cm.includes(">Master Bed<") && cm.includes(">1–2<") && cm.includes(">Gym<") && cm.includes("PRE-WIRE") && cm.includes("— spare —"));
+  t("channel map: matrix ports name their balun destinations",
+    cm.includes("Family Room TV · Balun") && cm.includes("HDBaseT"));
+  t("channel map: input module shows the audio return in orange",
+    cm.includes("Master Bed TV — audio return") && cm.includes("#a45a12"));
+  t("channel map: AVR mini-card summarizes the surround zone",
+    cm.includes("Anthem MRX-540") && cm.includes("5.1 set"));
+
+  const tk = renderTakeoff(job, ix, a, { sheetLabel: "Sheet 3 of 4" });
+  t("takeoff: valid SVG, no leaks", parseOk(tk) && !/NaN|undefined/.test(tk));
+  t("takeoff: NEW / OFE grouping with confirm + prewire boxes",
+    tk.includes("NEW — Supplied") && tk.includes("OWNER FURNISHED") && tk.includes(">Turn Table<") &&
+    tk.includes("NEEDS CONFIRMATION") && tk.includes("verify before ordering") && tk.includes("reserved"));
+  t("takeoff: licensing box carries catalog date", tk.includes("catalog as of"));
+  const items = takeoffItems(job, ix);
+  t("takeoff: baluns rolled up as an auto-added pair",
+    items.some(i => i.label.includes("Balun") && i.qty === 2));
+  t("takeoff CSV: one line per rolled item + header",
+    takeoffCSV(job, ix).split("\n").length === items.length + 1);
+
+  const runs = wireRuns(job, ix);
+  const ws = renderWireSchedule(job, ix, { sheetLabel: "Sheet 4 of 4" });
+  t("wire schedule: valid SVG, no leaks", parseOk(ws) && !/NaN|undefined/.test(ws));
+  t("wire schedule: V/N/R/S runs all present, local ATV gets its network drop",
+    ["V-", "N-", "R-", "S-"].every(p => runs.some(r => r.id.startsWith(p))) &&
+    runs.some(r => r.carries.includes("local Apple TV")));
+  t("wire schedule: surround zone splits into speaker set + sub feed",
+    runs.some(r => r.to.includes("Family Room") && r.cable.includes("×5")) &&
+    runs.some(r => r.to.includes("Family Room — sub")));
+  t("wire schedule: gym run is gray prewire with reserved channels",
+    runs.some(r => r.gray && r.to.includes("Gym") && r.term.includes("reserved")));
+  t("wire schedule: totals line rolls up cable counts", ws.includes("home runs") && ws.includes("pre-wire)"));
+
+  const withWs = structuredClone(fixtures.residence);
+  withWs.job.pages = { wireSchedule: true };
+  const pages = renderExtraPages(loadJob(withWs).job, loadJob(withWs).ix, a, {});
+  t("packet: flags drive page list + sheet numbering",
+    pages.length === 3 && pages[2].svg.includes("Sheet 4 of 4") && sheetCount(withWs) === 4);
+  const noPages = structuredClone(fixtures.residence);
+  noPages.job.pages = { channelMap: false, equipment: false };
+  t("packet: all pages off → schematic only, sheet 1 of 1",
+    renderExtraPages(loadJob(noPages).job, loadJob(noPages).ix, a, {}).length === 0 && sheetCount(noPages) === 1);
+}
+
+/* ---------- importers: the one content-sniffed door ---------- */
+{
+  const miniWalk = {
+    schema: 2, client: "Smith", address: "1 Main St", jobType: "Remodel", controlSystem: "Savant",
+    network: { waps: 4, drops: 10 }, cameras: [{}, {}, {}],
+    rack: { location: "Garage closet", sourcesTBD: true, sources: { "Apple TV": 2, "Cable box": 0 } },
+    rooms: [
+      { name: "Family Room", floor: "Main", tv: true, tvSize: "65", tvStatus: "New", audio: "5.1", audStatus: "New", videoFeed: "matrix", wiring: "prewired", localSources: [], exw: {} },
+      { name: "Patio", floor: "Main", tv: false, audio: "tv", landscape: true, satCount: 6, buriedSub: true, exw: {} },
+      { name: "Bed 2", floor: "Upper", tv: true, tvSize: "", tvStatus: "New", audio: "2.0", audStatus: "Existing — keep", videoFeed: "local", localSources: ["Apple TV"], equipLoc: "Behind TV", exw: {} },
+      { name: "Hallway", floor: "Main", tv: false, audio: "tv", exw: {} },
+    ],
+  };
+  const miniBp = {
+    generator: "Blueprinted", client: "Adams, Mike",
+    system: { hostModel: "Savant Pro Host", blueprintVersion: "10.6.1", advisories: ["Legacy host"] },
+    rooms: [
+      { n: 1, name: "Theater", zoneType: "Theater — 5.1 local", tv: true, oldTv: [{ make: "Samsung", model: "UN55D7000", size: 55 }], videoFeed: "matrix", avrs: ["Integra DRX-7.1"], flags: ["Wiring unknown"] },
+      { n: 2, name: "Kitchen", zoneType: "2-ch — house amp", tv: false },
+      { n: 3, name: "Storage", zoneType: "No AV endpoints" },
+    ],
+    rack: [
+      { component: "HDMI Matrix", manufacturer: "AVProConnect", model: "AC-MX88-AUHD-HDBT", category: "Switching" },
+      { component: "Apple TV 1", manufacturer: "Apple", model: "Apple TV 4K", category: "Source" },
+      { component: "House Amp", manufacturer: "Savant", model: "PAV-SMS8", category: "Amplifier" },
+      { component: "Lutron Hub", manufacturer: "Lutron", model: "HQP", category: "Lighting" },
+    ],
+    connections: [
+      { source: "Apple TV 1", sink: "HDMI Matrix", signal: "hdmi" },
+      { source: "HDMI Matrix", sink: "House Amp", signal: "audio" },
+      { source: "Remote", sink: "HDMI Matrix", signal: "ir" },
+    ],
+  };
+
+  t("sniff: routes all three formats + rejects garbage",
+    sniff(fixtures.residence) === "signalpath" && sniff(miniWalk) === "sitewalk" &&
+    sniff(miniBp) === "blueprinted" && sniff({ some: "thing" }) === null);
+
+  { // SiteWalk adapter
+    const r = importSiteWalk(miniWalk);
+    const j = r.job, z = id => j.house.zones.find(z => z.id === id);
+    t("sitewalk: 3 AV rooms map, no-AV room skipped", j.house.zones.length === 3 && r.unmapped.some(u => u.includes("Hallway")));
+    t("sitewalk: floors become areas", j.house.areas.length === 2 && z("z-family-room").area === "area-main");
+    t("sitewalk: 5.1 walk → surround-5.1 endpoint", z("z-family-room").endpoints.some(e => e.config === "surround-5.1"));
+    t("sitewalk: landscape carries sat/sub counts", z("z-patio").endpoints.some(e => e.config === "landscape" && e.satCount === 6 && e.buriedSub));
+    t("sitewalk: Existing—keep → OFE; blank TV size → confirm flag",
+      z("z-bed-2").endpoints.find(e => e.type === "speakers").status === "ofe" &&
+      z("z-bed-2").endpoints.find(e => e.type === "display").confirm?.includes("size"));
+    t("sitewalk: local source lands as an at-display localDevice",
+      j.solutions[0].localDevices.some(d => d.zone === "z-bed-2" && d.location === "at-display"));
+    t("sitewalk: rack sources seeded, platform + aux counts picked up",
+      j.solutions[0].racks[0].devices.length === 2 &&
+      j.solutions[0].platforms[0] === "savant" && j.solutions[0].auxCounts.cameras === 3);
+    t("sitewalk: sources-TBD warning surfaces", r.warnings.some(w => w.includes("TBD")));
+    const { job, ix } = loadJob(j);
+    const p = place(job, ix);
+    t("sitewalk: imported job loads and places", p.zones.length === 3);
+  }
+  { // Blueprinted adapter
+    const r = importBlueprinted(miniBp);
+    const j = r.job, sol = j.solutions[0];
+    t("blueprinted: AV rooms map, No-AV zone skipped", j.house.zones.length === 2);
+    const th = j.house.zones.find(z => z.id === "z-theater");
+    t("blueprinted: theater → 5.1 OFE + old TV brand/size carried",
+      th.endpoints.some(e => e.config === "surround-5.1" && e.status === "ofe") &&
+      th.endpoints.some(e => e.type === "display" && e.brand === "Samsung" && e.size === 55 && e.status === "ofe"));
+    t("blueprinted: matrix categorized as videoMatrix; lighting skipped",
+      sol.racks[0].devices.some(d => d.type === "videoMatrix") && sol.racks[0].devices.length === 3);
+    t("blueprinted: rack wiring carried over (video+audio), IR skipped",
+      sol.connections.length === 2 && sol.connections.some(c => c.signal === "video") && sol.connections.some(c => c.signal === "audio"));
+    t("blueprinted: platform=savant, advisories + flags surface",
+      sol.platforms[0] === "savant" && r.warnings.some(w => w.includes("Legacy host")) && r.warnings.some(w => w.includes("Wiring unknown")));
+  }
+  { // re-import merge: House refreshes, Solutions and endpoint ids survive
+    const target = structuredClone(fixtures.residence);
+    const walk = structuredClone(miniWalk);
+    walk.rooms.push({ name: "Kitchen", floor: "Main", tv: false, audio: "2.1", audStatus: "New", exw: {} });
+    const changes = mergeHouse(target, importSiteWalk(walk).job);
+    const kitchen = target.house.zones.find(z => z.name === "Kitchen");
+    t("merge: matched zone updates in place, endpoint id stable",
+      kitchen.endpoints[0].id === "kitchen-spk" && kitchen.endpoints[0].config === "2.1");
+    t("merge: new zones added, unmatched kept, solutions untouched",
+      target.house.zones.some(z => z.name === "Bed 2") &&
+      changes.some(c => c.kind === "kept" && c.zone === "Gym") &&
+      target.solutions[0].connections.length === fixtures.residence.solutions[0].connections.length);
+    t("merge: connections to refreshed endpoints still resolve",
+      target.solutions[0].connections.some(c => c.to === "kitchen-spk"));
+  }
+  { // the one door rejects strangers
+    let threw = false;
+    try { importAny({ hello: 1 }); } catch { threw = true; }
+    t("importAny: unrecognized file throws a clear error", threw);
+  }
+}
+
+/* ---------- catalog + licensing advisor ---------- */
+{
+  const CAT = await (await fetch("./catalog.json")).json();
+  t("catalog: loads with devices and licensing",
+    Object.keys(CAT.devices).length >= 15 && CAT.licensing.savant && CAT.licensing.josh && CAT.licensing.control4,
+    `${Object.keys(CAT.devices).length} devices`);
+  t("catalog: MDX-16 I/O matches the verified manual (8 analog / 2 coax / 2 optical)",
+    CAT.devices["anthem-mdx-16"].inputs.analog === 8 && CAT.devices["anthem-mdx-16"].inputs.coax === 2 && CAT.devices["anthem-mdx-16"].inputs.optical === 2);
+
+  const withPlatforms = (fix, platforms) => {
+    const j = structuredClone(fix); j.solutions[0].platforms = platforms; return loadJob(j);
+  };
+  { // Savant tiering: 7-zone residence fits the Smart Host; 25-zone stress needs the Pro Host
+    const { job, ix } = withPlatforms(fixtures.residence, ["savant"]);
+    const lic = advise(job, ix, CAT).licensing.find(l => l.platform === "savant");
+    t("advisor: 7-zone residence → Smart Host", lic?.pick?.includes("Smart Host"), lic?.pick);
+    const s2 = withPlatforms(fixtures.stress, ["savant"]);
+    const lic2 = advise(s2.job, s2.ix, CAT).licensing.find(l => l.platform === "savant");
+    t("advisor: 25-zone stress → Pro Host (Mac)", lic2?.pick?.includes("Pro Host"), lic2?.pick);
+  }
+  { // Control4: 7 rooms exceeds Core 3's 6-room cap → Core 5, with Connect line
+    const { job, ix } = withPlatforms(fixtures.residence, ["control4"]);
+    const lic = advise(job, ix, CAT).licensing.find(l => l.platform === "control4");
+    t("advisor: 7-room residence → Core 5 + Connect fee", lic?.pick === "Core 5" && lic.lines.some(l => l.includes("$249")), lic?.pick);
+  }
+  { // Josh: small device count, no voice rooms → Josh One
+    const { job, ix } = withPlatforms(fixtures.residence, ["josh"]);
+    const lic = advise(job, ix, CAT).licensing.find(l => l.platform === "josh");
+    t("advisor: residence app-only → Josh One", lic?.pick === "Josh One", lic?.pick);
+    const j2 = structuredClone(fixtures.residence);
+    j2.solutions[0].platforms = ["josh"]; j2.solutions[0].auxCounts = { voiceRooms: 5 };
+    const l2 = loadJob(j2);
+    const lic2 = advise(l2.job, l2.ix, CAT).licensing.find(l => l.platform === "josh");
+    t("advisor: 5 voice rooms forces a Josh Core", lic2?.pick?.includes("Core"), lic2?.pick);
+  }
+  { // typed port budget: overload the MDX-16's 12 audio inputs → io over-budget flag
+    const bad = structuredClone(fixtures.residence);
+    for (let i = 0; i < 13; i++) {
+      bad.solutions[0].racks[0].devices.push({ id: `src${i}`, type: "source", model: `Src ${i}`, status: "new", audioOnly: true });
+      bad.solutions[0].connections.push({ from: `src${i}`, to: "mdx16", signal: "audio" });
+    }
+    const { job, ix } = loadJob(bad);
+    const a = advise(job, ix, CAT);
+    t("advisor: 14 audio feeds into MDX-16 (12 inputs) → over-budget flag",
+      a.io.some(x => x.device === "mdx16" && x.over), JSON.stringify(a.io.filter(x => x.over)));
+    t("advisor: PCM-only digital-input note surfaces for the MDX",
+      a.notes.some(n => n.code === "pcm-only"));
+  }
+  { // no catalog → legacy behavior intact
+    const { job, ix } = withPlatforms(fixtures.stress, ["savant"]);
+    const a = advise(job, ix);
+    t("advisor: without a catalog the legacy Savant hint remains",
+      a.notes.some(n => n.code === "savant-host" && n.msg.includes("Pro Host")) && a.licensing.length === 0);
+  }
+}
+
+/* ---------- render: the finished sheet ---------- */
+for (const [name, raw] of Object.entries(fixtures)) {
+  const { job, ix } = loadJob(raw);
+  const p = place(job, ix), rt = route(job, ix, p);
+  const svg = render(job, ix, p, rt);
+  const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+  t(`${name}: render parses as valid SVG`, !doc.querySelector("parsererror"), doc.querySelector("parsererror")?.textContent?.slice(0, 120) || "");
+  t(`${name}: render has no NaN/undefined leaks`, !/NaN|undefined/.test(svg));
+  t(`${name}: every routed wire is drawn`, doc.querySelectorAll("path.wire").length === rt.wires.length,
+    `${doc.querySelectorAll("path.wire").length}/${rt.wires.length}`);
+  t(`${name}: render deterministic`, svg === render(job, ix, p, rt));
+}
+{
+  const { job, ix } = loadJob(fixtures.residence);
+  const p = place(job, ix), rt = route(job, ix, p);
+  const svg = render(job, ix, p, rt);
+  t("residence: title block carries customer, project, stage, revision",
+    svg.includes("Customer Name") && svg.includes("Sample Residence") && svg.includes("PROPOSAL") && svg.includes("Initial proposal"));
+  t("residence: legend renders all five labels",
+    ["Video", "Audio", "Audio Return", "Network", "Pre-wire"].every(l => svg.includes(`>${l}</text>`)));
+  // channel strip: 5 zones used (blue), 1 prewire-reserved (gray)
+  const used = (svg.match(/fill="#3b82c4"/g) || []).length;
+  const res = (svg.match(/height="11" fill="#8c8c8c"/g) || []).length;
+  t("residence: MDX-16 strip = 5 used / 1 reserved / spares outlined", used === 5 && res === 1, `used=${used} res=${res}`);
+  t("residence: annotation renders in red near the Gym", svg.includes("Gym pre-wired only"));
+  t("residence: TV footprints carry brand and size", svg.includes(">New Sony</text>") && svg.includes(">75&quot;</text>"));
+}
+
+{
+  const bad = structuredClone(fixtures.residence);
+  bad.solutions[0].connections = bad.solutions[0].connections.filter(c => c.to !== "kitchen-spk");
+  const { job, ix } = loadJob(bad);
+  t("negative: removing Kitchen feed → orphan-endpoint error",
+    validate(job, ix).errors.some(e => e.code === "orphan-endpoint" && e.msg.includes("kitchen-spk")));
+}
+{
+  const bad = structuredClone(fixtures.residence);
+  bad.solutions[0].connections.find(c => c.to === "office-spk").channels = "5-6"; // collide with kitchen
+  const { job, ix } = loadJob(bad);
+  t("negative: duplicate channels → ch-collision error",
+    validate(job, ix).errors.some(e => e.code === "ch-collision"));
+}
+{
+  const bad = structuredClone(fixtures.estate);
+  bad.solutions[0].companions[0].serves = "nope";
+  const { job, ix } = loadJob(bad);
+  t("negative: companion serving missing id → bad-serves error",
+    validate(job, ix).errors.some(e => e.code === "bad-serves"));
+}
+
+document.getElementById("summary").innerHTML =
+  fail === 0 ? `<span class="pass">ALL ${pass} TESTS PASS</span>` : `<span class="fail">${fail} FAILED</span> · ${pass} passed`;
+document.title = fail === 0 ? `✓ ${pass} pass` : `✗ ${fail} fail`;
+</script>
+</body>
+</html>

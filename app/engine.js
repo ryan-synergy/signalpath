@@ -1418,6 +1418,7 @@ export function render(job, ix, P, rt, opts = {}) {
         const rx = dev.sourceType === "appletv" || dev.sourceType === "streamer" ? 8 : 3;
         push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="${rx}" fill="#1e1e1e"/>`);
         push(`<circle cx="${d.x + 9}" cy="${d.y + d.h / 2}" r="2.3" fill="#3fbf5a"/>`);
+        push(faceGlyph(dev, d.x + d.w - 18, d.y + d.h / 2));
         push(`<text x="${d.x + d.w / 2}" y="${d.y + d.h + 15}" text-anchor="middle" font-size="12" fill="#333">${esc(d.model)}</text>`);
       } else if (d.kind === "amp") {
         push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="3" fill="#1c1c1c" stroke="#0d0d0d"/>`);
@@ -1446,6 +1447,19 @@ export function render(job, ix, P, rt, opts = {}) {
         push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="3" fill="#262626" stroke="#101010"/>`);
         const [brand, ...restName] = String(d.model || "").split(" ");
         push(`<text x="${d.x + d.w / 2}" y="${d.y + 17}" text-anchor="middle" font-size="11" fill="#ddd">${esc(brand)}</text>`);
+        // faceplate identity cues (squint-test assists, never the identifier)
+        const my = d.y + d.h / 2 + 3;
+        if (dev.type === "avr") {
+          push(`<rect x="${d.x + 14}" y="${my - 5}" width="34" height="10" rx="2" fill="#0d1116" stroke="#3a3f46" stroke-width="0.8"/>`);
+          push(`<circle cx="${d.x + d.w - 24}" cy="${my}" r="8" fill="#161616" stroke="#7a7a7a" stroke-width="1.3"/>`);
+          push(`<line x1="${d.x + d.w - 24}" y1="${my - 2}" x2="${d.x + d.w - 24}" y2="${my - 7}" stroke="#9a9a9a" stroke-width="1.3"/>`);
+        } else if (dev.type === "videoMatrix") {
+          for (let gi = 0; gi < 3; gi++) for (let gj = 0; gj < 3; gj++)
+            push(`<circle cx="${d.x + d.w / 2 - 6 + gj * 6}" cy="${my - 6 + gi * 6}" r="1.3" fill="#8f8f8f"/>`);
+        } else if (dev.type === "avSwitch") {
+          for (let gi = 0; gi < 6; gi++)
+            push(`<rect x="${d.x + d.w / 2 - 19 + gi * 6.5}" y="${my - 2}" width="4" height="4" fill="none" stroke="#8f8f8f" stroke-width="0.9"/>`);
+        }
         push(`<text x="${d.x + d.w / 2}" y="${d.y + d.h - 10}" text-anchor="middle" font-size="10.5" fill="#eee">${esc(restName.join(" ") || "")}</text>`);
         push(`<circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 10}" r="2.2" fill="#3fbf5a"/>`);
       }
@@ -1464,9 +1478,10 @@ export function render(job, ix, P, rt, opts = {}) {
         push(`<text x="${gx + g.w / 2}" y="${gy + g.h / 2 - 3}" text-anchor="middle" font-size="11" fill="#233">${esc(g.brand)}</text>`);
         push(`<text x="${gx + g.w / 2}" y="${gy + g.h / 2 + 13}" text-anchor="middle" font-size="12" font-weight="600" fill="#233">${esc(g.sizeText)}</text>`);
         if (g.local) {
-          const l = g.local;
+          const l = g.local, ldev = s.locals[l.deviceId] || {};
           push(`<rect x="${z.x + l.x}" y="${z.y + l.y}" width="${l.w}" height="${l.h}" rx="8" fill="#1e1e1e"/>`);
-          push(`<circle cx="${z.x + l.x + l.w - 11}" cy="${z.y + l.y + l.h / 2}" r="2.4" fill="#cfcfcf"/>`);
+          push(faceGlyph(ldev, z.x + l.x + l.w - 15, z.y + l.y + l.h / 2) ||
+               `<circle cx="${z.x + l.x + l.w - 11}" cy="${z.y + l.y + l.h / 2}" r="2.4" fill="#cfcfcf"/>`);
           push(`<text x="${z.x + l.x + l.w / 2}" y="${z.y + l.y + l.h / 2 + 3}" text-anchor="middle" font-size="8.5" fill="#bbb">${esc(l.label)}</text>`);
         }
       } else {
@@ -1563,6 +1578,31 @@ export function render(job, ix, P, rt, opts = {}) {
 }
 
 /* icon layouts per speaker config (positions relative to the group rect) */
+/* small-tile faceplate cue, centered at (cx, cy) — one quiet glyph per source
+   type so a rack of black boxes passes the squint test */
+function faceGlyph(dev, cx, cy) {
+  switch (dev.sourceType) {
+    case "appletv":
+      return `<rect x="${cx - 8}" y="${cy - 5.5}" width="16" height="11" rx="3" fill="none" stroke="#fff" stroke-width="1"/>` +
+             `<text x="${cx}" y="${cy + 3}" text-anchor="middle" font-size="7.5" font-weight="600" fill="#fff">tv</text>`;
+    case "streamer":
+      return `<text x="${cx}" y="${cy + 4}" text-anchor="middle" font-size="12" fill="#cfcfcf">♪</text>`;
+    case "turntable":
+      return `<circle cx="${cx - 2}" cy="${cy}" r="7.5" fill="#2d2d2d" stroke="#6a6a6a" stroke-width="1"/>` +
+             `<circle cx="${cx - 2}" cy="${cy}" r="1.4" fill="#8f8f8f"/>` +
+             `<line x1="${cx + 7}" y1="${cy - 7}" x2="${cx + 2.5}" y2="${cy - 0.5}" stroke="#8f8f8f" stroke-width="1.3"/>`;
+    case "cable":
+      return `<rect x="${cx - 9}" y="${cy - 5}" width="18" height="10" rx="1.5" fill="#08130a" stroke="#1e3320" stroke-width="0.8"/>` +
+             `<text x="${cx}" y="${cy + 3}" text-anchor="middle" font-size="7" font-family="Menlo, monospace" fill="#3fbf5a">02</text>`;
+    case "kaleidescape":
+      return `<path d="M${cx - 4} ${cy - 5}L${cx + 5} ${cy}L${cx - 4} ${cy + 5}Z" fill="#cfcfcf"/>`;
+  }
+  if (dev.type === "avbSwitch")
+    return [0, 1, 2, 3].map(i =>
+      `<rect x="${cx - 12 + i * 6.5}" y="${cy - 2}" width="4" height="4" fill="none" stroke="#8f8f8f" stroke-width="0.9"/>`).join("");
+  return "";
+}
+
 function speakerGlyphs(ep, gx, gy, gw) {
   const cfg = ep?.config || "stereo";
   const use = (id, x, y) => `<use href="#${id}" x="${gx + x}" y="${gy + y}"/>`;

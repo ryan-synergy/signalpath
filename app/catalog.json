@@ -422,24 +422,33 @@
   },
   "savant-avb-output-module": {
    "brand": "Savant",
-   "model": "AVB Audio Output Module",
+   "model": "Analog Audio Output Module (AOM-D16U-00 / AOM-BAL16-00)",
    "type": "audioOutputModule",
+   "inputs": {},
    "outputs": {
     "analog": 8
    },
-   "verified": false,
-   "notes": "Port count unverified \u2014 edit in Settings to match the SKU you stock."
+   "flags": [
+    "legacy",
+    "avbBackplane"
+   ],
+   "verified": true,
+   "notes": "CORRECTED verified flag only (port count was already right). Legacy AVB backplane output card \u2014 8 stereo pairs / 16 RCA jacks unbalanced (AOM-D16U-00, also branded AOM-016U) or 8 balanced stereo pairs on screw-down connectors (AOM-BAL16-00). Pre-amp/line level only, no on-board amplification. Lives in a Savant SVS rack chassis. Still fielded; NOT the current spec path \u2014 see savant-pav-aom8c."
   },
   "savant-avb-input-module": {
    "brand": "Savant",
-   "model": "AVB Audio Input Module",
+   "model": "Analog Audio Input Module (AIM-0A16-05 / AIM-BAL16-01)",
    "type": "audioInputModule",
    "inputs": {
-    "analog": 8,
-    "optical": 2
+    "analog": 8
    },
-   "verified": false,
-   "notes": "Port count unverified \u2014 edit in Settings to match the SKU you stock."
+   "outputs": {},
+   "flags": [
+    "legacy",
+    "avbBackplane"
+   ],
+   "verified": true,
+   "notes": "CORRECTED (was inputs: {analog:8, optical:2}, verified:false). This is the legacy AVB backplane input card \u2014 8 unbalanced stereo RCA inputs (AIM-0A16-05, 16 RCA jacks) or 8 balanced stereo inputs (AIM-BAL16-01). PURE ANALOG \u2014 no coax, no optical, no digital of any kind; the optical:2 in the old placeholder was never real on this SKU. Lives in a Savant SVS rack chassis, no PoE, no standalone control ports. Still fielded in older installs; NOT what Savant sells for new AVB audio designs \u2014 see savant-pav-aim7c for the current spec path."
   },
   "sonance-blaze-pzc-508": {
    "brand": "Sonance",
@@ -673,6 +682,125 @@
    ],
    "verified": false,
    "notes": "16x16, 18Gbps, full HDMI 2.0 spec, 3 audio-extraction operating modes (Bound to Input / Bound to Output / Independent Matrix). Distributor listings mention 'digital coax audio outputs' but I could not confirm an exact per-output analog/optical/coax de-embed count from a manufacturer spec sheet \u2014 left out of the schema rather than guessed. Confirm from AVPro's own AC-MX-1616 datasheet before using for capacity math."
+  },
+  "savant-pav-aim7c": {
+   "brand": "Savant",
+   "model": "PAV-AIM7C-00",
+   "type": "audioInputModule",
+   "inputs": {
+    "analog": 3,
+    "coax": 2,
+    "optical": 2
+   },
+   "outputs": {},
+   "flags": [
+    "poe",
+    "avb",
+    "ipAudio",
+    "currentSpecPath"
+   ],
+   "verified": true,
+   "notes": "CURRENT Savant spec path for local-source-to-AVB-network audio input, replacing the legacy AIM-0A16 backplane card. \"7 Source Audio Input IP Transmitter\": 3x analog stereo RCA + 2x coax S/PDIF + 2x optical Toslink = 7 total sources, encoded and sent over a standard AVB-capable IP network (no proprietary backplane). Standalone PoE-powered box, not a rack card. Also has 2x RS-232 + 6x IR control ports for source control. GOTCHA: nearly 3x fewer analog inputs than the legacy card it replaces \u2014 a straight 1:1 module swap on an existing job will likely come up short on analog sources."
+  },
+  "savant-pav-aom8c": {
+   "brand": "Savant",
+   "model": "PAV-AOM8C-00",
+   "type": "audioOutputModule",
+   "inputs": {},
+   "outputs": {
+    "analog": 8
+   },
+   "flags": [
+    "poe",
+    "avb",
+    "ipAudio",
+    "currentSpecPath"
+   ],
+   "verified": true,
+   "notes": "CURRENT Savant spec path for AVB-network-to-zone audio output, replacing the legacy AOM-D16U backplane card. Marketed as \"16-Channel Audio Output IP Receiver\" = 8 stereo pairs, unbalanced RCA/screw-terminal, any-stream-to-any-output routing. Receives up to 8 AVB streams from the network and can route any stream to any of the 8 stereo outputs (matrix-style, not fixed-assignment). PoE, max 15W draw (fits 802.3af). Supports mute/volume/PEQ/mono-sum/up to 160ms delay per output, plus GPIO to trigger an external amp. Balanced version: see savant-pav-aombal8c."
+  },
+  "savant-pav-aombal8c": {
+   "brand": "Savant",
+   "model": "PAV-AOMBAL8C-00",
+   "type": "audioOutputModule",
+   "inputs": {},
+   "outputs": {
+    "analog": 8
+   },
+   "flags": [
+    "poe",
+    "avb",
+    "ipAudio",
+    "currentSpecPath",
+    "balanced"
+   ],
+   "verified": true,
+   "notes": "Balanced-output sibling of the PAV-AOM8C-00 \u2014 same 8-stereo-pair count and up-to-8-stream AVB routing, but 8 stereo pairs of balanced (Euroblock/screw-down) output instead of unbalanced RCA. Use for long commercial runs or noisy electrical environments."
+  },
+  "savant-ip-audio-125": {
+   "brand": "Savant",
+   "model": "IP Audio 125 (PAV-SIPA125SM-10)",
+   "type": "host",
+   "zones": 6,
+   "ampCh": 4,
+   "inputs": {},
+   "outputs": {
+    "analog": 1,
+    "optical": 1
+   },
+   "flags": [
+    "poe",
+    "avb",
+    "ipAudio",
+    "hasHost",
+    "hasMusicServer",
+    "currentSpecPath"
+   ],
+   "verified": false,
+   "notes": "All-in-one amplified host: 4 amplified zones @125W/ch + 2 pre-amp (line-level) zones, built-in Savant Music 2.0 server (1 stream), functions as an Ecosystem/IP-Audio-Host-tier host for licensing purposes. 2U rack-mountable. Scales with additional units behind a Smart/Pro Host and a supported AVB switch. verified:false because the exact pre-amp zone output connector split (1 RCA + 1 Toslink, by analogy with the confirmed IP Audio 50 V2 spec below) was not independently confirmed for the 125 specifically \u2014 confirm from the official QRG (009-1584-01) before relying on the outputs field."
+  },
+  "savant-ip-audio-50v2": {
+   "brand": "Savant",
+   "model": "IP Audio 50 V2 (PAV-SIPA50SMV2-00)",
+   "type": "host",
+   "zones": 6,
+   "ampCh": 4,
+   "inputs": {
+    "analog": 2,
+    "digitalCombo": 2
+   },
+   "outputs": {
+    "analog": 1,
+    "optical": 1
+   },
+   "flags": [
+    "poe",
+    "avb",
+    "ipAudio",
+    "hasHost",
+    "hasMusicServer",
+    "currentSpecPath"
+   ],
+   "verified": true,
+   "notes": "All-in-one amplified host, smaller sibling of the IP Audio 125: 4 amplified zones @50W/ch (rated, 8\u03a9) + 2 pre-amp zones (one RCA, one Toslink out \u2014 explicitly confirmed, not the same zone). 4 local audio inputs (2 analog + 2 digital) feeding the amp/AVB network in addition to whatever arrives over AVB. Built-in Savant Music 2.0 server. Max power draw 225W."
+  },
+  "savant-pav-sms2001": {
+   "brand": "Savant",
+   "model": "Savant Music Server 2 (PAV-SMS2001)",
+   "type": "source",
+   "inputs": {},
+   "outputs": {
+    "coax": 1,
+    "optical": 1
+   },
+   "flags": [
+    "poe",
+    "avb",
+    "ipAudio",
+    "currentSpecPath"
+   ],
+   "verified": true,
+   "notes": "All-native AVB music streamer/source \u2014 1x Ethernet port carries AVB to feed amps/AOMs directly over the network, plus 1x physical coax and 1x physical optical output for feeding a legacy (non-AVB) zone amp or AVR directly. PoE, max 15W. Supersedes the legacy SMS-1001/SMS-100AM single-stream servers and the older SMS-002A SmartMedia Server (500GB local storage, 2 simultaneous streams \u2014 EOL, see Unresolved)."
   }
  },
  "licensing": {
@@ -685,7 +813,7 @@
      "maxVideo": 2,
      "maxAudio": 4,
      "maxZones": 6,
-     "maxIpAudio": null,
+     "maxIpAudio": 6,
      "runtime": "Ecosystem (included)"
     },
     {

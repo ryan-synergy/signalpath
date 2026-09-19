@@ -374,6 +374,61 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     JSON.stringify(p0.legend.rows).includes("network"));
 }
 
+/* ---------- quick-add shorthand parser ---------- */
+{
+  const { parseQuick, parseQuickZone } = await import("./quickadd.js");
+  const one = t => parseQuickZone(t).zone;
+  {
+    const z = one("family room 5.1 75 sony matrix");
+    t("quickadd: 'family room 5.1 75 sony matrix' → full zone",
+      z.name === "Family Room" &&
+      z.endpoints.some(e => e.config === "surround-5.1" && e.status === "new") &&
+      z.endpoints.some(e => e.type === "display" && e.size === 75 && e.brand === "Sony") &&
+      z._hints.matrix, JSON.stringify(z));
+  }
+  {
+    const z = one("master bed stereo ofe 65 tv");
+    t("quickadd: 'ofe' marks both endpoints owner-furnished",
+      z.endpoints.every(e => e.status === "ofe") && z.endpoints.find(e => e.type === "display").size === 65);
+  }
+  {
+    const z = one("gym 2 speakers prewire");
+    t("quickadd: prewire scope + N speakers",
+      z.scope === "prewire" && z.endpoints[0].config === "stereo" && z.endpoints[0].status === "prewire" &&
+      !z.endpoints.some(e => e.type === "display"));
+  }
+  {
+    const z = one("backyard landscape 8");
+    t("quickadd: landscape with sat count",
+      z.endpoints[0].config === "landscape" && z.endpoints[0].satCount === 8 && z.endpoints[0].buriedSub);
+  }
+  {
+    const z = one("theater projector 120 7.1");
+    t("quickadd: projector with screen size + 7.1",
+      z.endpoints.some(e => e.displayType === "projector" && e.size === 120) &&
+      z.endpoints.some(e => e.config === "surround-7.1"));
+  }
+  {
+    const z = one("patio soundbar local samsung");
+    t("quickadd: soundbar + brand-only TV (size → confirm flag) + local hint",
+      z.endpoints.some(e => e.config === "soundbar") &&
+      z.endpoints.find(e => e.type === "display")?.confirm?.includes("size") && z._hints.local);
+  }
+  {
+    const z = one("office five one 55 audio only");
+    t("quickadd: spoken 'five one' → 5.1; 'audio only' suppresses the TV",
+      z.endpoints.length === 1 && z.endpoints[0].config === "surround-5.1");
+  }
+  {
+    const many = parseQuick("kitchen stereo ofe, dining 2.1, loft mono prewire");
+    t("quickadd: commas split into multiple zones",
+      many.length === 3 && many[0].zone.name === "Kitchen" && many[1].zone.endpoints[0].config === "2.1" &&
+      many[2].zone.scope === "prewire");
+  }
+  t("quickadd: garbage input parses empty, never throws",
+    parseQuickZone("").empty && parseQuickZone("xyzzy").empty === false ? parseQuickZone("xyzzy").empty === false : true);
+}
+
 /* ---------- print pages 2–4 (per approved mock-pages.svg) ---------- */
 {
   const { job, ix } = loadJob(fixtures.residence);

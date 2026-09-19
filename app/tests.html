@@ -15,9 +15,9 @@
 <div id="summary">running…</div>
 <ul id="out"></ul>
 <script type="module">
-import { loadJob, validate, advise, place, route, render, expandChannels, effectiveHouse, effectiveJob, trunkCount, autoLinkCatalog, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
+import { loadJob, validate, advise, place, route, render, expandChannels, effectiveHouse, effectiveJob, trunkCount, autoLinkCatalog, indexJob, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
 import { sniff, importAny, importSiteWalk, importBlueprinted, mergeHouse } from "./importers.js";
-import { pageFlags, sheetCount, renderChannelMap, renderTakeoff, renderWireSchedule, renderExtraPages, wireRuns, takeoffItems, takeoffCSV } from "./pages.js";
+import { pageFlags, sheetCount, renderChannelMap, renderTakeoff, renderWireSchedule, renderExtraPages, renderBomCompare, wireRuns, takeoffItems, takeoffCSV } from "./pages.js";
 
 const out = document.getElementById("out");
 let pass = 0, fail = 0;
@@ -448,8 +448,8 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
   const a = advise(job, ix, CATP);
   const parseOk = svg => !new DOMParser().parseFromString(svg, "image/svg+xml").querySelector("parsererror");
 
-  t("pages: default flags = channel map + equipment on, wire schedule opt-in",
-    JSON.stringify(pageFlags(fixtures.residence)) === JSON.stringify({ channelMap: true, equipment: true, wireSchedule: false }) &&
+  t("pages: default flags = channel map + equipment on, wire schedule + comparison opt-in",
+    JSON.stringify(pageFlags(fixtures.residence)) === JSON.stringify({ channelMap: true, equipment: true, wireSchedule: false, bomCompare: false }) &&
     sheetCount(fixtures.residence) === 3);
 
   const cm = renderChannelMap(job, ix, { sheetLabel: "Sheet 2 of 4" });
@@ -782,6 +782,44 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const cm = renderChannelMap(job, ix, {});
   t("trunk: channel map maps each zone to module output → amp input",
     cm.includes("Out 1 → In 1") && cm.includes("Out 6 → In 6") && cm.includes("Feed ("));
+}
+
+/* ---------- BOM comparison page: side-by-side solutions ---------- */
+{
+  const raw = structuredClone(fixtures.residence);
+  raw.solutions.push(structuredClone(raw.solutions[0]));
+  const solB = raw.solutions[1];
+  solB.id = "sol-b"; solB.name = "Better Rooms";
+  solB.overrides = { endpoints: { "family-tv": { size: 85 } } };            // per-solution override
+  solB.racks[0].devices.push({ id: "sub-amp", type: "amp", model: "AudioControl CM2-750D", status: "new", zones: 2 }); // extra gear in B
+
+  t("bom: page flag defaults off, sheetCount counts it only with 2+ solutions", (() => {
+    const f1 = pageFlags(raw);
+    raw.job.pages = { bomCompare: true };
+    const n2 = sheetCount(raw);
+    const single = structuredClone(raw); single.solutions = [single.solutions[0]];
+    return !f1.bomCompare && n2 === 4 && sheetCount(single) === 3;
+  })());
+
+  const { job, ix } = loadJob(raw);
+  const a = advise(job, ix, await (await fetch("./catalog.json")).json());
+  const svg = renderBomCompare(job, ix, a, {});
+  t("bom: parses as valid SVG", !new DOMParser().parseFromString(svg, "image/svg+xml").querySelector("parsererror"));
+  t("bom: both solution columns named", svg.includes("Proposed System") && svg.includes("Better Rooms"));
+  t("bom: override surfaces as a line-item difference (75\" vs 85\")",
+    svg.includes("Sony 75&quot; Display") && svg.includes("Sony 85&quot; Display"));
+  t("bom: extra device in B shows and diff counter reports", svg.includes("CM2-750D") && /\d+ line items? differ/.test(svg));
+  t("bom: zone scope summary row present", svg.includes("Zones (included / pre-wire / future)"));
+
+  // the double-patch trap: callers pass the ACTIVE solution's effective job — columns must come from rawJob
+  const effB = effectiveJob(raw, 1), ixB = indexJob(effB);
+  const svg2 = renderBomCompare(effB, ixB, a, { rawJob: raw });
+  t("bom: active-solution overrides never leak into other columns (rawJob wins)",
+    svg2.includes("Sony 75&quot; Display") && svg2.includes("Sony 85&quot; Display"));
+
+  const pages = renderExtraPages(raw, ix, a, { rawJob: raw });
+  t("bom: renderExtraPages includes the comparison sheet when flagged",
+    pages.some(p => p.title === "Solution Comparison") && pages.length === 3);
 }
 
 /* ---------- catalog auto-link: saved jobs self-heal their catalogRefs ---------- */

@@ -83,6 +83,34 @@ export function effectiveJob(job, solIndex = 0) {
    A module→amp audio trunk is drawn once but IS one analog run per zone the
    amp feeds — that count is derived truth, not authored. An explicit
    conn.count still wins when larger (e.g. pre-wired spare runs). */
+/* ---------- catalog auto-link ----------
+   Fill missing catalogRefs by matching device models to catalog entries.
+   Deliberately conservative: exact normalized matches (plus 8K/4K-suffix
+   tolerance and known aliases) with matching type — never fuzzy prefixes,
+   which would happily link an Axion 8 to an AC-MX-88. Existing refs are
+   never touched, even stale ones (they carry the author's intent). */
+export function autoLinkCatalog(job, catalog) {
+  const devs = catalog?.devices;
+  if (!devs) return 0;
+  const norm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const keys = {};
+  for (const [id, c] of Object.entries(devs)) {
+    const cand = [norm((c.brand || "") + c.model), norm(c.model)];
+    for (const k of cand.concat(cand.map(k => k.replace(/(8k|4k)$/, "")))) if (k) (keys[k] ||= new Set()).add(id);
+  }
+  const ALIAS = { savantinputmodule: "savant-avb-input-module", savantavbinputmodule: "savant-avb-input-module",
+                  savantoutputmodule: "savant-avb-output-module", savantavboutputmodule: "savant-avb-output-module" };
+  let n = 0;
+  for (const sol of job.solutions || []) for (const r of sol.racks || []) for (const d of r.devices || []) {
+    if (d.catalogRef) continue;
+    const k = norm(d.model);
+    const hit = keys[k];
+    const id = (ALIAS[k] && devs[ALIAS[k]] && ALIAS[k]) || (hit?.size === 1 ? [...hit][0] : null);
+    if (id && devs[id].type === d.type) { d.catalogRef = id; n++; }
+  }
+  return n;
+}
+
 export function trunkCount(conn, s) {
   const from = s.devices[conn.from], to = s.devices[conn.to];
   let derived = 0;
@@ -1712,14 +1740,14 @@ export function advise(job, ix = indexJob(job), catalog = null) {
         const audioCap = (cat.inputs?.analog || 0) + (cat.inputs?.coax || 0) + (cat.inputs?.optical || 0) + (cat.inputs?.digitalCombo || 0);
         const videoCap = cat.inputs?.hdmi || 0;
         if (audioCap && audioIn > audioCap)
-          out.io.push({ device: d.id, kind: "audio-in", used: audioIn, capacity: audioCap, over: true,
+          out.io.push({ solution: sol.id, device: d.id, kind: "audio-in", used: audioIn, capacity: audioCap, over: true,
             msg: `${d.model || d.id}: ${audioIn} audio feeds into ${audioCap} inputs (${cat.model}) — needs another input path` });
-        else if (audioCap && audioIn) out.io.push({ device: d.id, kind: "audio-in", used: audioIn, capacity: audioCap, over: false });
+        else if (audioCap && audioIn) out.io.push({ solution: sol.id, device: d.id, kind: "audio-in", used: audioIn, capacity: audioCap, over: false });
         // analog trunk runs vs dedicated analog inputs — the "enough inputs to feed the amp" check
         const analogRuns = inbound.filter(c => c.signal === "audio" && s.devices[c.from]?.type === "audioOutputModule")
           .reduce((n, c) => n + trunkCount(c, s), 0);
         if (analogRuns && cat.inputs?.analog != null)
-          out.io.push({ device: d.id, kind: "analog-in", used: analogRuns, capacity: cat.inputs.analog,
+          out.io.push({ solution: sol.id, device: d.id, kind: "analog-in", used: analogRuns, capacity: cat.inputs.analog,
             over: analogRuns > cat.inputs.analog,
             msg: analogRuns > cat.inputs.analog
               ? `${d.model || d.id}: ${analogRuns} analog runs into ${cat.inputs.analog} analog inputs (${cat.model}) — over capacity`
@@ -1729,18 +1757,18 @@ export function advise(job, ix = indexJob(job), catalog = null) {
           .reduce((n, c) => n + trunkCount(c, s), 0);
         const outRunCap = cat.outputs?.analog || 0;
         if (outRunCap && d.type === "audioOutputModule")
-          out.io.push({ device: d.id, kind: "audio-out", used: outRuns, capacity: outRunCap,
+          out.io.push({ solution: sol.id, device: d.id, kind: "audio-out", used: outRuns, capacity: outRunCap,
             over: outRuns > outRunCap,
             msg: outRuns > outRunCap
               ? `${d.model || d.id}: ${outRuns} output runs of ${outRunCap} available (${cat.model}) — over capacity`
               : `${d.model || d.id}: ${outRuns}/${outRunCap} outputs used · ${outRunCap - outRuns} spare` });
         if (videoCap && videoIn > videoCap)
-          out.io.push({ device: d.id, kind: "video-in", used: videoIn, capacity: videoCap, over: true,
+          out.io.push({ solution: sol.id, device: d.id, kind: "video-in", used: videoIn, capacity: videoCap, over: true,
             msg: `${d.model || d.id}: ${videoIn} video feeds into ${videoCap} HDMI inputs (${cat.model})` });
         const outbound = (sol.connections || []).filter(c => c.from === d.id && c.signal === "video").length;
         const outCap = cat.outputs?.hdmi ?? d.io?.out ?? 0;
         if (outCap && d.type === "videoMatrix" && outbound > outCap)
-          out.io.push({ device: d.id, kind: "video-out", used: outbound, capacity: outCap, over: true,
+          out.io.push({ solution: sol.id, device: d.id, kind: "video-out", used: outbound, capacity: outCap, over: true,
             msg: `${d.model || d.id}: ${outbound} video outputs of ${outCap} available` });
         if (cat.flags?.includes("pcmOnlyDigital") && inbound.some(c => c.signal === "audio"))
           out.notes.push({ code: "pcm-only", msg: `${d.model || d.id}: digital inputs are PCM-only — bitstream sources need a 2ch downmix (AC-AVDM-V3 / AVDM-EV2)` });
@@ -1766,7 +1794,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
         const warns = [];
         if (pick?.maxIpAudio != null && audioZones > pick.maxIpAudio)
           warns.push(`${audioZones} audio zones exceeds the ${pick.maxIpAudio} IP-audio device ceiling`);
-        out.licensing.push({ platform: "savant", pick: pick?.name, lines, warns, notes: L.notes || [] });
+        out.licensing.push({ solution: sol.id, platform: "savant", pick: pick?.name, lines, warns, notes: L.notes || [] });
       }
       if (platforms.includes("josh")) {
         const L = catalog.licensing.josh;
@@ -1774,7 +1802,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
         const pick = (L.processors || []).find(p => devEstimate <= p.maxDevices && needMics <= (p.maxMics ?? 0)) ||
           (L.processors || [])[(L.processors || []).length - 1];
         const dual = pick && (devEstimate > pick.maxDevices || needMics > (pick.maxMics ?? 0));
-        out.licensing.push({ platform: "josh", pick: dual ? `2× ${pick?.name}` : pick?.name,
+        out.licensing.push({ solution: sol.id, platform: "josh", pick: dual ? `2× ${pick?.name}` : pick?.name,
           lines: [`~${devEstimate} devices · ${needMics} voice rooms → ${dual ? "dual " : ""}${pick?.name} (${pick?.plan})`],
           warns: dual ? ["over single-processor limits — dual Core / manufacturer review"] : [],
           notes: L.notes || [] });
@@ -1785,7 +1813,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
           (L.controllers || [])[(L.controllers || []).length - 1];
         const warns = [];
         if (pick && devEstimate > pick.maxDevices * 0.8) warns.push(`~${devEstimate} devices is within 20% of the ${pick.name} cap (${pick.maxDevices}) — consider the next tier`);
-        out.licensing.push({ platform: "control4", pick: pick?.name,
+        out.licensing.push({ solution: sol.id, platform: "control4", pick: pick?.name,
           lines: [`~${devEstimate} devices / ${zc} rooms → ${pick?.name}`, L.connect], warns, notes: L.notes || [] });
       }
     } else if (platforms.includes("savant")) {

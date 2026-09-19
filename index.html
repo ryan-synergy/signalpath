@@ -193,7 +193,7 @@
 </div></div>
 
 <script type="module">
-import { loadJob, validate, advise, place, route, render, effectiveJob } from "./app/engine.js";
+import { loadJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog } from "./app/engine.js";
 import { importAny, mergeHouse } from "./app/importers.js";
 import { renderExtraPages, sheetCount, pageFlags, takeoffCSV } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
@@ -218,6 +218,8 @@ let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   const rec = (await dbAllRaw()).find(r => r.id === "__settings");
   if (rec?.settings) SETTINGS = rec.settings;
   if (!SETTINGS.catalog) SETTINGS.catalog = structuredClone(SHIPPED);
+  else for (const [id, d] of Object.entries(SHIPPED.devices || {}))   // shipped catalog grows over time:
+    if (!SETTINGS.catalog.devices[id]) SETTINGS.catalog.devices[id] = structuredClone(d); // new entries join, user edits win
 }
 const saveSettings = () => dbPut({ id: "__settings", updated: Date.now(), settings: SETTINGS });
 /* job snapshot wins over the live catalog (old jobs advise identically forever) */
@@ -253,6 +255,7 @@ function refresh(save = true) {
   S.sol = S.job.solutions.indexOf(sol);
   let v, a, svg = "", err;
   try {
+    autoLinkCatalog(S.job, effectiveCatalog());                // self-heal: fill missing catalog links by model
     const { job, ix } = loadJob(effectiveJob(S.job, S.sol));   // active solution's overrides applied
     S.view = { job, ix };                                      // interactive sheet resolves names from here
     v = validate(job, ix); a = advise(job, ix, effectiveCatalog());
@@ -273,14 +276,16 @@ function refresh(save = true) {
   else { chip.className = "ok"; chip.textContent = `✓ valid${v.warnings.length ? " · " + v.warnings.length + "⚠" : ""}`; }
 
   const adv = [];
+  const activeSolId = S.job.solutions[S.sol]?.id;
+  const mine = e => !e.solution || e.solution === activeSolId;   // advisor speaks for the ACTIVE solution only
   for (const e of v?.errors || []) adv.push(`<div class="item e">✗ ${esc(e.msg)}</div>`);
   for (const w of v?.warnings || []) adv.push(`<div class="item w">⚠ ${esc(w.msg)}</div>`);
-  for (const io of a?.io || []) {
+  for (const io of (a?.io || []).filter(mine)) {
     if (io.over) adv.push(`<div class="item e">✗ ${esc(io.msg)}</div>`);
     else if (io.msg && (io.kind === "analog-in" || io.kind === "audio-out")) adv.push(`<div class="item i">🔌 ${esc(io.msg)}</div>`);
   }
-  for (const amp of a?.amps || []) adv.push(`<div class="item i">🔊 ${esc(amp.amp)}: ${amp.zonesUsed}/${amp.zonesTotal ?? "?"} zones${amp.reserved ? ` (${amp.reserved} reserved)` : ""}${amp.spare != null ? ` · ${amp.spare} spare` : ""}</div>`);
-  for (const lic of a?.licensing || []) {
+  for (const amp of (a?.amps || []).filter(mine)) adv.push(`<div class="item i">🔊 ${esc(amp.amp)}: ${amp.zonesUsed}/${amp.zonesTotal ?? "?"} zones${amp.reserved ? ` (${amp.reserved} reserved)` : ""}${amp.spare != null ? ` · ${amp.spare} spare` : ""}</div>`);
+  for (const lic of (a?.licensing || []).filter(mine)) {
     adv.push(`<div class="item i">🎛 <b>${esc(lic.platform)}</b> → ${esc(lic.pick)} · ${lic.lines.map(esc).join(" · ")}</div>`);
     for (const w of lic.warns || []) adv.push(`<div class="item w">⚠ ${esc(lic.platform)}: ${esc(w)}</div>`);
   }

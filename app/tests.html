@@ -15,7 +15,7 @@
 <div id="summary">running…</div>
 <ul id="out"></ul>
 <script type="module">
-import { loadJob, validate, advise, place, route, render, expandChannels, effectiveHouse, effectiveJob, trunkCount, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
+import { loadJob, validate, advise, place, route, render, expandChannels, effectiveHouse, effectiveJob, trunkCount, autoLinkCatalog, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
 import { sniff, importAny, importSiteWalk, importBlueprinted, mergeHouse } from "./importers.js";
 import { pageFlags, sheetCount, renderChannelMap, renderTakeoff, renderWireSchedule, renderExtraPages, wireRuns, takeoffItems, takeoffCSV } from "./pages.js";
 
@@ -782,6 +782,30 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const cm = renderChannelMap(job, ix, {});
   t("trunk: channel map maps each zone to module output → amp input",
     cm.includes("Out 1 → In 1") && cm.includes("Out 6 → In 6") && cm.includes("Feed ("));
+}
+
+/* ---------- catalog auto-link: saved jobs self-heal their catalogRefs ---------- */
+{
+  const catalog = await (await fetch("./catalog.json")).json();
+  const raw = structuredClone(fixtures.residence);
+  const devsOf = j => j.solutions[0].racks[0].devices;
+  for (const d of devsOf(raw)) delete d.catalogRef;            // simulate an old saved job
+  const n = autoLinkCatalog(raw, catalog);
+  const ref = id => devsOf(raw).find(d => d.id === id)?.catalogRef;
+  t("autolink: relinks the known gear on an old job", n >= 4, `linked ${n}`);
+  t("autolink: exact match (Anthem MDX-16)", ref("mdx16") === "anthem-mdx-16");
+  t("autolink: 8K-suffix tolerance (Anthem MRX-540 → MRX 540 8K)", ref("mrx540") === "anthem-mrx-540-8k");
+  t("autolink: Savant module aliases", ref("sav-in") === "savant-avb-input-module" && ref("sav-out") === "savant-avb-output-module");
+  t("autolink: no fuzzy links — Axion 8 stays unlinked (not an AC-MX-88)", ref("axion8") == null);
+  t("autolink: generic sources stay unlinked", ref("cablebox") == null && ref("atv-rack") == null);
+  t("autolink: idempotent", autoLinkCatalog(raw, catalog) === 0);
+
+  const stress = structuredClone(fixtures.stress);
+  const sw1 = stress.solutions[0].racks[0].devices.find(d => d.id === "sw1");
+  autoLinkCatalog(stress, catalog);
+  t("autolink: never touches an existing ref, even a stale one", sw1.catalogRef === "avpro-mxnet-sw24");
+  t("autolink: stress Savant Input Module picked up via alias",
+    stress.solutions[0].racks[0].devices.find(d => d.id === "sav-in").catalogRef === "savant-avb-input-module");
 }
 
 /* ---------- interactive sheet hooks: tap targets baked into the render ---------- */

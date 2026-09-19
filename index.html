@@ -70,6 +70,21 @@
   .sect { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: #888; margin: 12px 2px 6px; }
   .badge { font-size: 10px; border-radius: 4px; padding: 1px 5px; background: #eee; color: #666; }
 
+  /* ---- quick-add bar ---- */
+  #qa { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
+  #qa .line { display: flex; gap: 6px; }
+  #qaInput { flex: 1; font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; min-width: 0; }
+  #qaMic, #qaGo { font: inherit; font-size: 13px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px;
+                  background: #fff; cursor: pointer; }
+  #qaMic.rec { background: var(--bad); color: #fff; border-color: var(--bad); }
+  #qaGo { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  #qaChips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; min-height: 0; }
+  #qaChips .qc { font-size: 11px; border-radius: 999px; padding: 2px 9px; background: #eef2f8; color: #23507e; border: 1px solid #c7d6ea; }
+  #qaChips .qc.name { background: #16181c; color: #fff; border-color: #16181c; }
+  #qaChips .qc.scope { background: #f0f0f2; color: #777; border-color: #ccc; }
+  #qaChips .qc.hint { background: #fdf3d8; color: #7a5a12; border-color: #e2c78a; }
+  #qa .ex { font-size: 10.5px; color: #999; margin-top: 5px; }
+
   /* ---- canvas + advisor ---- */
   #right { flex: 1; display: flex; flex-direction: column; min-width: 0; }
   #canvas { flex: 1; overflow: auto; padding: 16px; min-height: 0; }
@@ -159,6 +174,7 @@
 import { loadJob, validate, advise, place, route, render } from "./app/engine.js";
 import { importAny, mergeHouse } from "./app/importers.js";
 import { renderExtraPages, sheetCount, pageFlags, takeoffCSV } from "./app/pages.js";
+import { parseQuick } from "./app/quickadd.js";
 
 /* ============ IndexedDB jobs store ============ */
 const DB = await new Promise((res, rej) => {
@@ -440,6 +456,12 @@ function renderPanel() {
 }
 
 function zonesHTML() {
+  const qa = `<div id="qa">
+    <div class="line"><input id="qaInput" placeholder="family room 5.1 75 sony matrix…" autocomplete="off">
+      <button id="qaMic" title="Dictate">🎤</button><button id="qaGo">Add</button></div>
+    <div id="qaChips"></div>
+    <div class="ex">shorthand: name + config (5.1, stereo, 2.1, soundbar, landscape 8) + TV size + brand · "ofe" "prewire" "no tv" · comma = next zone</div>
+  </div>`;
   const rows = S.job.house.zones.map((z, i) => {
     const spk = (z.endpoints || []).find(e => e.type === "speakers");
     const tv = (z.endpoints || []).find(e => e.type === "display");
@@ -466,7 +488,7 @@ function zonesHTML() {
       </div>
     </div>`;
   }).join("");
-  return rows + `<button class="addbtn" id="addZone">＋ Add zone</button>`;
+  return qa + rows + `<button class="addbtn" id="addZone">＋ Add zone</button>`;
 }
 
 function gearHTML() {
@@ -685,6 +707,65 @@ function wirePanel(body) {
     S.openRows.add(id);
     refresh();
   };
+
+  /* quick-add: shorthand / dictation with live parse-preview chips */
+  const qaInput = body.querySelector("#qaInput");
+  if (qaInput) {
+    const chipsEl = body.querySelector("#qaChips");
+    const drawChips = () => {
+      if (!qaInput.value.trim()) { chipsEl.innerHTML = ""; return; }
+      chipsEl.innerHTML = parseQuick(qaInput.value)
+        .flatMap((p, i) => [...(i ? ['<span class="mini" style="align-self:center">|</span>'] : []),
+          ...p.chips.map(c => `<span class="qc ${c.kind}">${esc(c.label)}</span>`)]).join("");
+    };
+    qaInput.oninput = drawChips;
+    const commit = () => {
+      const parses = parseQuick(qaInput.value).filter(p => !p.empty);
+      if (!parses.length) return;
+      for (const p of parses) {
+        const z = p.zone, hints = z._hints || {}; delete z._hints;
+        const oldId = z.id;
+        while (S.job.house.zones.some(x => x.id === z.id)) z.id += "b";
+        if (z.id !== oldId) for (const ep of z.endpoints) ep.id = ep.id.replace(oldId, z.id);
+        const notes = [];
+        if (hints.matrix) notes.push("video: matrix feed");
+        if (hints.local) {
+          notes.push("video: local source");
+          S.job.solutions[S.sol].localDevices.push({ id: uid(z.id + "-src"), type: "source",
+            sourceType: "appletv", model: "Apple TV", status: "new", zone: z.id, location: "at-display" });
+        }
+        if (notes.length) z.note = notes.join(" · ");
+        S.job.house.zones.push(z);
+        S.openRows.add(z.id);
+      }
+      qaInput.value = "";
+      refresh();
+    };
+    body.querySelector("#qaGo").onclick = commit;
+    qaInput.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); commit(); } };
+    const mic = body.querySelector("#qaMic");
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) mic.style.display = "none";
+    else {
+      let rec = null;
+      mic.onclick = () => {
+        if (rec) { rec.stop(); return; }
+        rec = new SR();
+        rec.continuous = true; rec.interimResults = true; rec.lang = "en-US";
+        mic.classList.add("rec");
+        let base = qaInput.value ? qaInput.value + " " : "";
+        rec.onresult = ev => {
+          let txt = "";
+          for (const r of ev.results) txt += r[0].transcript;
+          qaInput.value = base + txt;
+          drawChips();
+        };
+        rec.onend = () => { mic.classList.remove("rec"); rec = null; };
+        rec.onerror = () => { mic.classList.remove("rec"); rec = null; };
+        rec.start();
+      };
+    }
+  }
 
   /* gear */
   const devOf = el => {

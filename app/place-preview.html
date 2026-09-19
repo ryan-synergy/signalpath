@@ -1,0 +1,172 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Placer Preview</title>
+<style>
+  body { font-family: "Avenir Next", Avenir, Helvetica, sans-serif; margin: 16px; background: #eceef2; }
+  .bar { margin-bottom: 10px; } button { font: inherit; padding: 4px 14px; margin-right: 6px; }
+  button.on { background: #2b6cb8; color: #fff; border: 1px solid #1d4d85; border-radius: 4px; }
+  svg { background: #fff; box-shadow: 0 1px 6px rgba(0,0,0,.15); width: 100%; height: auto; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <button data-f="residence">Residence</button>
+  <button data-f="estate">Estate</button>
+  <button data-f="stress">Stress (25 zones)</button>
+  <button id="heatBtn" title="Channel congestion: how many wires share each corridor (green sparse → red crowded)">Congestion</button>
+  <span id="meta" style="font-size:13px;color:#555"></span>
+</div>
+<div id="host"></div>
+<script type="module">
+/* Debug view of place() + route() output: tiles plus routed wires with hop
+   arcs. Scaffolding for engine development — not the render layer. */
+import { loadJob, place, route, SHEET, SIGNAL_COLORS } from "./engine.js";
+
+const NS = "http://www.w3.org/2000/svg";
+const el = (n, attrs, text) => {
+  const e = document.createElementNS(NS, n);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (text != null) e.textContent = text;
+  return e;
+};
+
+let heat = false, cur = "residence";
+
+async function show(name) {
+  cur = name;
+  document.querySelectorAll("button[data-f]").forEach(b => b.classList.toggle("on", b.dataset.f === name));
+  document.getElementById("heatBtn").classList.toggle("on", heat);
+  const raw = await (await fetch(`../mock-system-${name}.json`)).json();
+  const { job, ix } = loadJob(raw);
+  const p = place(job, ix);
+  const rt = route(job, ix, p, { debug: true });
+  const s = p.fitScale;
+  const nRelax = rt.warnings.filter(w => w.code === "route-relaxed").length;
+  const nFall = rt.warnings.filter(w => w.code === "route-fallback" || w.code === "unrouted").length;
+  const maxD = heat ? maxDensity(rt.channels) : 0;
+  document.getElementById("meta").textContent =
+    `fitScale ${s.toFixed(2)} · ${rt.wires.length} wires · ${rt.crossings} hops` +
+    (nRelax ? ` · ${nRelax} relaxed` : "") + (nFall ? ` · ⚠ ${nFall} fallback` : "") +
+    (heat ? ` · congestion max ${maxD} wires/channel` : "") +
+    (p.warnings.length ? ` · ⚠ ${p.warnings.map(w => w.code).join(", ")}` : "");
+
+  const svg = el("svg", { viewBox: `0 0 ${SHEET.width} ${SHEET.height}`, "font-family": "'Avenir Next', Avenir, sans-serif" });
+  svg.appendChild(el("rect", { x: 0, y: 0, width: SHEET.width, height: SHEET.height, fill: "#fff" }));
+  svg.appendChild(el("rect", { ...rekt(SHEET.outerFrame), fill: "none", stroke: "#444", "stroke-width": 1.5 }));
+  svg.appendChild(el("rect", { ...rekt(SHEET.content), fill: "none", stroke: "#bbb" }));
+  svg.appendChild(el("rect", { ...rekt(SHEET.titleBlock), fill: "#f4f5f8", stroke: "#bbb" }));
+
+  const g = el("g", { transform: `translate(${SHEET.content.x} ${SHEET.content.y}) scale(${s})` });
+  svg.appendChild(g);
+
+  for (const c of p.corridors)
+    g.appendChild(el("rect", { x: c.x, y: c.y, width: c.w, height: c.h, fill: "#fdf3d8", opacity: .6 }));
+  for (const h of p.areaHeaders)
+    g.appendChild(el("text", { x: h.cx, y: h.y, "text-anchor": "middle", "font-size": 13, "letter-spacing": 4, fill: "#8a8a8a", "font-weight": 600 }, h.name));
+
+  for (const r of p.racks) {
+    g.appendChild(el("rect", { x: r.x, y: r.y, width: r.w, height: r.h, fill: "none", stroke: "#8a8a8a", "stroke-width": 1.4, "stroke-dasharray": "7 5" }));
+    g.appendChild(el("text", { x: r.x + 14, y: r.y + 24, "font-size": 20, "font-weight": 700 }, r.name));
+    for (const d of r.devices) {
+      g.appendChild(el("rect", { x: d.x, y: d.y, width: d.w, height: d.h, rx: 3, fill: d.kind === "small" ? "#1e1e1e" : "#262626" }));
+      g.appendChild(el("text", { x: d.x + d.w / 2, y: d.y + d.h + 14, "text-anchor": "middle", "font-size": 11, fill: "#333" }, d.model));
+    }
+  }
+
+  for (const z of p.zones) {
+    const gray = z.scope !== "included";
+    g.appendChild(el("rect", { x: z.x, y: z.y, width: z.w, height: z.h, fill: "none", stroke: gray ? "#b5b5b5" : "#8a8a8a", "stroke-width": 1.4, "stroke-dasharray": "7 5" }));
+    g.appendChild(el("text", { x: z.x + z.w / 2, y: z.y + 24, "text-anchor": "middle", "font-size": 18, "font-weight": 700, fill: gray ? "#999" : "#111" }, z.name));
+    for (const grp of z.groups) {
+      g.appendChild(el("rect", { x: z.x + grp.x, y: z.y + grp.y, width: grp.w, height: grp.h, fill: grp.kind === "display" ? "#b9cfe4" : "#d8d8d8", stroke: "#667" }));
+      g.appendChild(el("text", { x: z.x + grp.cx, y: z.y + grp.captionY, "text-anchor": "middle", "font-size": 11.5, fill: "#333" }, grp.caption));
+      if (grp.local) {
+        g.appendChild(el("rect", { x: z.x + grp.local.x, y: z.y + grp.local.y, width: grp.local.w, height: grp.local.h, rx: 8, fill: "#1e1e1e" }));
+      }
+    }
+  }
+
+  /* wires: orthogonal runs with hop arcs at crossings (spec §4 conventions:
+     vertical hops bulge right, horizontal hops bulge up) */
+  const wireLayer = el("g", { fill: "none", "stroke-width": 2.2, "stroke-linecap": "round" });
+  for (const w of rt.wires) {
+    const color = (w.scope !== "included") ? SIGNAL_COLORS.prewire
+      : SIGNAL_COLORS[w.signal === "speaker" ? "audio" : w.signal] || "#555";
+    wireLayer.appendChild(el("path", { d: wirePath(w), stroke: color, opacity: w.cls.endsWith("fallback") ? .45 : 1 }));
+  }
+  g.appendChild(wireLayer);
+
+  /* congestion overlay (SimCity traffic-density style): each registered channel
+     segment tinted by how many wires run beside it — green sparse → red crowded */
+  if (heat && rt.channels) {
+    const layer = el("g", { fill: "none", "stroke-linecap": "butt", opacity: .38 });
+    const draw = (segs, horiz) => {
+      for (const seg of segs) {
+        const d = density(segs, seg);
+        const hue = Math.max(0, 120 - (d - 1) * 15);            // 1 wire = green, 9+ = red
+        const attrs = { stroke: `hsl(${hue} 85% 45%)`, "stroke-width": 9,
+          d: horiz ? `M${seg.a1} ${seg.c}L${seg.a2} ${seg.c}` : `M${seg.c} ${seg.a1}L${seg.c} ${seg.a2}` };
+        layer.appendChild(el("path", attrs));
+      }
+    };
+    draw(rt.channels.h, true);
+    draw(rt.channels.v, false);
+    g.appendChild(layer);
+  }
+
+  for (const c of p.chips) {
+    g.appendChild(el("rect", { x: c.x, y: c.y, width: c.w, height: c.h, rx: 2, fill: "#1e1e1e" }));
+    g.appendChild(el("text", { x: c.x + c.w / 2, y: c.y + 13, "text-anchor": "middle", "font-size": 10, fill: "#eee" }, c.type.toUpperCase()));
+  }
+
+  const lg = p.legend;
+  svg.appendChild(el("rect", { x: lg.x, y: lg.y, width: lg.w, height: lg.h, fill: "#fff", stroke: "#777" }));
+  svg.appendChild(el("text", { x: lg.x + 12, y: lg.y + 16, "font-size": 10, "font-weight": 700, fill: "#555", "letter-spacing": 1 }, "LEGEND · " + lg.rows.join(" · ")));
+
+  const host = document.getElementById("host");
+  host.innerHTML = ""; host.appendChild(svg);
+}
+const rekt = r => ({ x: r.x, y: r.y, width: r.w, height: r.h });
+
+/* how many same-axis segments (self included) run within ±2.5 lane pitches
+   of this one with overlapping span — the local "traffic" in that corridor */
+const CHAN_WIN = 30;
+const density = (segs, s) =>
+  segs.reduce((n, o) => n + (Math.abs(o.c - s.c) <= CHAN_WIN && Math.min(o.a2, s.a2) - Math.max(o.a1, s.a1) > 0 ? 1 : 0), 0);
+const maxDensity = ch => {
+  let m = 0;
+  for (const [segs] of [[ch.h], [ch.v]]) for (const s of segs) m = Math.max(m, density(segs, s));
+  return m;
+};
+
+/* build an SVG path for a wire, splicing hop arcs into their segments:
+   vertical hops bulge RIGHT (sweep 1 downward, 0 upward);
+   horizontal hops bulge UP (sweep 0 right→left, 1 left→right) */
+function wirePath(w) {
+  let d = `M${w.pts[0][0]} ${w.pts[0][1]}`;
+  for (let i = 1; i < w.pts.length; i++) {
+    const [x1, y1] = w.pts[i - 1], [x2, y2] = w.pts[i];
+    const hops = (w.hops || []).filter(h => h.si === i - 1)
+      .sort((a, b) => x1 === x2 ? (y2 > y1 ? a.y - b.y : b.y - a.y) : (x2 > x1 ? a.x - b.x : b.x - a.x));
+    for (const h of hops) {
+      const r = h.w / 2;
+      if (x1 === x2) { // vertical
+        const dir = y2 > y1 ? 1 : -1, sweep = y2 > y1 ? 1 : 0;
+        d += `L${x1} ${h.y - dir * r}A${r} ${r} 0 0 ${sweep} ${x1} ${h.y + dir * r}`;
+      } else {         // horizontal
+        const dir = x2 > x1 ? 1 : -1, sweep = x2 > x1 ? 1 : 0;
+        d += `L${h.x - dir * r} ${y1}A${r} ${r} 0 0 ${sweep} ${h.x + dir * r} ${y1}`;
+      }
+    }
+    d += `L${x2} ${y2}`;
+  }
+  return d;
+}
+document.querySelectorAll("button[data-f]").forEach(b => b.onclick = () => show(b.dataset.f));
+document.getElementById("heatBtn").onclick = () => { heat = !heat; show(cur); };
+show("residence");
+</script>
+</body>
+</html>

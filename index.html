@@ -623,6 +623,12 @@ function zonesHTML() {
 function gearHTML() {
   const sol = S.job.solutions[S.sol];
   const nodes = allNodes();
+  // catalog link: powers the port-budget advisor + snapshot lockfile (same-type entries listed first)
+  const catDevs = Object.entries(effectiveCatalog().devices || {});
+  const catSel = d => `<select class="dcat"><option value="">— not linked —</option>${catDevs
+    .slice().sort((a, b) => ((b[1].type === d.type) - (a[1].type === d.type)) ||
+      String((a[1].brand || "") + a[1].model).localeCompare(String((b[1].brand || "") + b[1].model)))
+    .map(([id, c]) => `<option value="${id}" ${d.catalogRef === id ? "selected" : ""}>${esc([c.brand, c.model].filter(Boolean).join(" "))}${c.verified === false ? " ⚠" : ""}${c.type === d.type ? "" : " · " + esc(c.type)}</option>`).join("")}</select>`;
   const racks = sol.racks.map(r => `
     <div class="sect">${esc(r.name.toUpperCase())}</div>
     ${r.devices.map(d => {
@@ -632,6 +638,7 @@ function gearHTML() {
       <div class="fields">
         ${field("Model", `<input class="dmodel" value="${esc(d.model || "")}">`)}
         ${field("Type", sel("dtype", DEV_TYPES, d.type))}
+        ${field("Catalog", catSel(d))}
         ${d.type === "amp" ? field("Zones", `<input class="dzones" type="number" min="1" max="32" value="${d.zones || 8}">`) : ""}
         ${field("Status", sel("dstatus", STATUSES.slice(0, 2), d.status || "new"))}
         <div style="text-align:right"><button class="del ddel">delete device</button></div>
@@ -929,6 +936,16 @@ function wirePanel(body) {
     return {};
   };
   on(".dmodel", el => { const { d } = devOf(el); if (d) d.model = el.value; });
+  on(".dcat", el => {
+    const { d } = devOf(el); if (!d) return;
+    if (!el.value) { delete d.catalogRef; return; }
+    d.catalogRef = el.value;
+    const c = effectiveCatalog().devices[el.value];
+    if (!c) return;
+    if (!d.model || d.model === "New Device") d.model = [c.brand, c.model].filter(Boolean).join(" ");
+    if (c.type && d.type !== c.type) d.type = c.type;   // the catalog knows what this box is
+    if (c.zones && c.type === "amp") d.zones = c.zones;
+  });
   on(".dtype", el => { const { d } = devOf(el); if (d) { d.type = el.value; if (el.value === "amp" && !d.zones) d.zones = 8; } });
   on(".dzones", el => { const { d } = devOf(el); if (d) d.zones = +el.value; });
   on(".dstatus", el => { const { d } = devOf(el); if (d) d.status = el.value; });

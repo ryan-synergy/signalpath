@@ -227,7 +227,8 @@ export function takeoffItems(job, ix, opts = {}) {
 
 export function takeoffCSV(job, ix, opts = {}) {
   const rows = takeoffItems(job, ix, opts);
-  const q = s => `"${String(s ?? "").replace(/"/g, '""')}"`;
+  // quote + neutralize spreadsheet formula injection (a model named "=..." must open as text)
+  const q = s => { let v = String(s ?? ""); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; return `"${v.replace(/"/g, '""')}"`; };
   return ["Status,Qty,Item,Location"].concat(rows.map(r => [r.status.toUpperCase(), r.qty, q(r.label), q(r.where)].join(","))).join("\n");
 }
 

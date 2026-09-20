@@ -942,6 +942,8 @@ for (const [name, raw] of Object.entries(fixtures)) {
     catalog.devices["sonos-amp"].verified === true && catalog.devices["sonos-amp"].flags.includes("sonos") &&
     catalog.devices["sonos-port"].outputs.coax === 1 &&
     catalog.devices["sonos-connect"]?.verified === false && !!catalog.devices["sonos-arc-ultra"]);
+  t("sonos: Beam Ultra pre-ship entry present, honestly unverified",
+    catalog.devices["sonos-beam-ultra"]?.verified === false && catalog.devices["sonos-beam-ultra"].flags.includes("sonos"));
   // lip-sync note: TV audio into a Port (line-in encoder) needs delay tuning
   sol.localDevices.push({ id: "port-patio", type: "source", model: "Sonos Port", catalogRef: "sonos-port", zone: "z-patio", location: "at-display" });
   sol.connections.push({ from: "patio-tv", to: "port-patio", signal: "audioReturn" }, { from: "port-patio", to: "sav-avb", signal: "network" });

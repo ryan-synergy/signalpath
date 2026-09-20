@@ -882,7 +882,7 @@
     "speakerEndpoint"
    ],
    "verified": true,
-   "notes": "Mid-tier soundbar. Single HDMI eARC input (backward compatible with ARC-only TVs). Ships with an optical adapter in the box for TVs with no ARC/eARC \u2014 GOTCHA: using the optical adapter drops Dolby Atmos entirely (optical can't carry the Dolby Digital Plus/TrueHD bitstream Atmos needs), falls back to 5.1/stereo. Has its own Ethernet port for wired network. 5.0.2-channel driver array; supports Atmos via HDMI eARC/ARC using Dolby Digital Plus (lossy) or, over eARC only, Dolby TrueHD (lossless)."
+   "notes": "Mid-tier soundbar. Single HDMI eARC input (backward compatible with ARC-only TVs). Ships with an optical adapter in the box for TVs with no ARC/eARC \u2014 GOTCHA: using the optical adapter drops Dolby Atmos entirely (optical can't carry the Dolby Digital Plus/TrueHD bitstream Atmos needs), falls back to 5.1/stereo. Has its own Ethernet port for wired network. 5.0.2-channel driver array; supports Atmos via HDMI eARC/ARC using Dolby Digital Plus (lossy) or, over eARC only, Dolby TrueHD (lossless). NOTE 2026-09: Beam Ultra ($699, ships 9/29) supersedes at the mid-tier \u2014 check whether Gen 2 continues at a lower price before quoting."
   },
   "sonos-ray": {
    "brand": "Sonos",
@@ -997,6 +997,21 @@
    ],
    "verified": false,
    "notes": "LEGACY \u2014 same May-2020 software freeze as Connect above, S1-only, no HDMI (predates ARC). ~55W/ch into 8\u03a9 (secondary-source figure, not re-verified this round). Direct functional predecessor to the current Amp, minus HDMI ARC. Still fielded; eligible for Sonos Trade Up (30% off new hardware when recycled) \u2014 worth mentioning to clients holding onto one. Do not spec new."
+  },
+  "sonos-beam-ultra": {
+   "brand": "Sonos",
+   "model": "Beam Ultra",
+   "type": "amp",
+   "inputs": {
+    "hdmi": 1
+   },
+   "outputs": {},
+   "flags": [
+    "sonos",
+    "atmos"
+   ],
+   "verified": false,
+   "notes": "The 'Gambit' rumor made real: announced 2026-09-01, ships 2026-09-29, $699. 7.1.2 Dolby Atmos w/ dedicated up-firing drivers, redesigned center + AI Speech Enhancement, Trueplay. FCC (S59/RM059): BT + WiFi 2.4/5/6GHz 2x2. Beam Gen 2 form factor (~25.6in). PRE-SHIP entry: eARC-vs-ARC, DTS, ethernet speed, optical-adapter behavior and Sub/Era pairing all unconfirmed until spec sheets land after 9/29 \u2014 verify before spec'ing."
   }
  },
  "licensing": {

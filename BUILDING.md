@@ -135,6 +135,7 @@ Print = new window, `@page 17in 11in landscape`, one SVG per page, `print()`. Pa
 - **Wire tracing:** canvas click delegation; `elementsFromPoint` cycles overlapping wires in a bundle; selection dims everything else (`.wiresel`), glows both endpoints, shows a tooltip with human names. Tap zone card → open + flash its ZONES row; tap device tile → GEAR. (Testing gotcha: dispatch synthetic clicks on the *target element* with `bubbles: true`, not on the canvas — `e.target` is wrong otherwise.)
 - **Quick-add (`app/quickadd.js`):** pure parser for `"family room 5.1 75 sony matrix"` → zone. Spoken-form normalization ("five point one" → 5.1), brand list, scope/OFE/local/matrix/remote tokens, landscape N, projector N, comma/"then" batching. UI adds live preview chips + Web Speech dictation.
 - **Importers (`app/importers.js`):** `sniff` by key shape, adapters for SiteWalk surveys and Blueprinted (Savant config) exports, and `mergeHouse` for re-import: match zones by name, keep endpoint ids stable so connections/overrides survive, never delete unmatched.
+- **The import door is a trust boundary.** `importAny` runs `stripUnsafe` (recursively deletes `__proto__`/`constructor`/`prototype` keys — JSON.parse happily creates them as own properties) and, for native files, `assertJobShape`: reject anything missing its identity skeleton (schema version, `job` block, `house.zones`, at least one solution, ids on every zone/endpoint), but *normalize* missing lists to empty. Reject-vs-normalize matters: a malformed file must never replace a working job and then get autosaved over it, while a hand-edited file missing an optional array should just work.
 
 ## 8. Dev + deploy loop
 
@@ -151,6 +152,7 @@ Print = new window, `@page 17in 11in landscape`, one SVG per page, `print()`. Pa
 6. **DOM `outerHTML` doesn't entity-encode quotes in text nodes** — regex tests like `/85"/` will match `x="475"`. Use DOM queries or precise matchers in tests.
 7. **Draw what installers mean, not what graphs imply:** an Apple TV puck inside a room tile *is* the connection — drawing a wire there is noise. Model the exemption, not the edge.
 8. **Sparse overrides beat solution copies.** Copies fork; patches keyed by stable ids survive re-imports and diff cleanly.
+9. **Hardening checklist for a static app** (all guarded by tests): one *full* `esc()` everywhere — `&<>"` — because a quote-less escaper is safe in text nodes but not in `value="…"` attributes; escape even "internal" sinks like the print window `<title>` and error messages (they carry user strings); CSV cells starting with `=+-@` get an apostrophe prefix (spreadsheet formula injection); every IndexedDB request promise must reject on `onerror` or a failed save hangs silently — and the DB open itself needs a fallback (in-memory Map + a one-time "export your work" warning) so private-browsing mode doesn't kill boot; stored settings merge defensively (a partial `__settings` record must not brick startup); external URLs (kit manifest) pass a scheme allowlist before becoming `href`s.
 
 ## 10. Order of construction (what to build when)
 

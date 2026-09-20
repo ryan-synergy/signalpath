@@ -204,12 +204,19 @@ const DB = await new Promise((res, rej) => {
   const rq = indexedDB.open("signalpath", 1);
   rq.onupgradeneeded = () => rq.result.createObjectStore("jobs", { keyPath: "id" });
   rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
-});
+}).catch(e => { console.error("IndexedDB unavailable — falling back to in-memory store", e); return null; });
+const MEM = new Map();                                     // session-only fallback (private mode, denied storage)
 const tx = mode => DB.transaction("jobs", mode).objectStore("jobs");
-const dbAllRaw = () => new Promise(r => { const q = tx("readonly").getAll(); q.onsuccess = () => r(q.result); });
+const dbAllRaw = () => DB
+  ? new Promise((r, j) => { const q = tx("readonly").getAll(); q.onsuccess = () => r(q.result); q.onerror = () => j(q.error); })
+  : Promise.resolve([...MEM.values()]);
 const dbAll = async () => (await dbAllRaw()).filter(r => r.id !== "__settings");
-const dbPut = rec => new Promise(r => { const q = tx("readwrite").put(rec); q.onsuccess = () => r(); });
-const dbDel = id => new Promise(r => { const q = tx("readwrite").delete(id); q.onsuccess = () => r(); });
+const dbPut = rec => DB
+  ? new Promise((r, j) => { const q = tx("readwrite").put(rec); q.onsuccess = () => r(); q.onerror = () => j(q.error); })
+  : (MEM.set(rec.id, rec), Promise.resolve());
+const dbDel = id => DB
+  ? new Promise((r, j) => { const q = tx("readwrite").delete(id); q.onsuccess = () => r(); q.onerror = () => j(q.error); })
+  : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
 const SHIPPED = await fetch("./app/catalog.json").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
@@ -217,10 +224,16 @@ let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
   const rec = (await dbAllRaw()).find(r => r.id === "__settings");
-  if (rec?.settings) SETTINGS = rec.settings;
-  if (!SETTINGS.catalog) SETTINGS.catalog = structuredClone(SHIPPED);
-  else for (const [id, d] of Object.entries(SHIPPED.devices || {}))   // shipped catalog grows over time:
-    if (!SETTINGS.catalog.devices[id]) SETTINGS.catalog.devices[id] = structuredClone(d); // new entries join, user edits win
+  if (rec?.settings && typeof rec.settings === "object") {            // partial/corrupt stored settings must not brick boot
+    SETTINGS = { ...SETTINGS, ...rec.settings };
+    if (!SETTINGS.company || typeof SETTINGS.company !== "object") SETTINGS.company = { name: "SYNERGY", tagline: "", info: "" };
+  }
+  if (!SETTINGS.catalog || typeof SETTINGS.catalog !== "object") SETTINGS.catalog = structuredClone(SHIPPED);
+  else {
+    if (!SETTINGS.catalog.devices || typeof SETTINGS.catalog.devices !== "object") SETTINGS.catalog.devices = {};
+    for (const [id, d] of Object.entries(SHIPPED.devices || {}))      // shipped catalog grows over time:
+      if (!SETTINGS.catalog.devices[id]) SETTINGS.catalog.devices[id] = structuredClone(d); // new entries join, user edits win
+  }
 }
 const saveSettings = () => dbPut({ id: "__settings", updated: Date.now(), settings: SETTINGS });
 /* job snapshot wins over the live catalog (old jobs advise identically forever) */
@@ -269,7 +282,7 @@ function refresh(save = true) {
     }
   } catch (e) { err = e; console.error(e); }
 
-  $("#canvas").innerHTML = svg || `<div style="color:#888;padding:60px;text-align:center">Add a zone to start drawing${err ? "<br><small>" + err.message + "</small>" : ""}</div>`;
+  $("#canvas").innerHTML = svg || `<div style="color:#888;padding:60px;text-align:center">Add a zone to start drawing${err ? "<br><small>" + esc(err.message) + "</small>" : ""}</div>`;
   hideTip(); applySel(); syncGlow();
   const chip = $("#rulesChip");
   if (err) { chip.className = "bad"; chip.textContent = "engine error"; }
@@ -297,16 +310,24 @@ function refresh(save = true) {
   renderPanel();
   if (save) { clearTimeout(saveTimer); saveTimer = setTimeout(persist, 400); }
 }
+let saveWarned = false;
 async function persist() {
-  // lockfile: freeze the catalog entries this job uses, so it advises the same forever
-  const used = {};
-  for (const sol of S.job.solutions) for (const r of sol.racks || []) for (const d of r.devices || [])
-    if (d.catalogRef && SETTINGS.catalog.devices[d.catalogRef]) used[d.catalogRef] = SETTINGS.catalog.devices[d.catalogRef];
-  S.job.job.catalogSnapshot = { asOf: SETTINGS.catalog.asOf, ...(Object.keys(used).length ? { devices: used } : {}) };
-  await dbPut({ id: S.id, updated: Date.now(), data: S.job });
-  await renderJobsSel();
+  try {
+    // lockfile: freeze the catalog entries this job uses, so it advises the same forever
+    const used = {};
+    for (const sol of S.job.solutions) for (const r of sol.racks || []) for (const d of r.devices || [])
+      if (d.catalogRef && SETTINGS.catalog.devices[d.catalogRef]) used[d.catalogRef] = SETTINGS.catalog.devices[d.catalogRef];
+    S.job.job.catalogSnapshot = { asOf: SETTINGS.catalog.asOf, ...(Object.keys(used).length ? { devices: used } : {}) };
+    await dbPut({ id: S.id, updated: Date.now(), data: S.job });
+    await renderJobsSel();
+    if (!DB && !saveWarned) { saveWarned = true; alert("Heads up: browser storage is unavailable, so autosave only lasts for this tab. Use Export JSON to keep your work."); }
+  } catch (e) {
+    console.error("autosave failed", e);
+    if (!saveWarned) { saveWarned = true; alert("Autosave failed (storage error). Your work is only in this tab — use Export JSON to keep it."); }
+  }
 }
-const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const safeUrl = u => /^https?:\/\//i.test(String(u || "")) ? u : "#";   // external links only ever from the kit manifest
 
 /* ============ top bar ============ */
 function renderTopbar() {
@@ -363,13 +384,14 @@ $("#exportCsv").onclick = () => { const { job, ix } = loadJob(effectiveJob(S.job
 /* ---- Field Kit TOOLS switcher (hub manifest, cached; self marked) ---- */
 const KIT_SELF = "signalpath";
 $("#toolsBtn").onclick = () => {
-  const cached = JSON.parse(localStorage.getItem("signalpath.kit") || "null");
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem("signalpath.kit") || "null"); } catch { /* corrupt cache = no cache */ }
   const draw = kit => {
     const rows = (kit?.tools || []).map(t => t.id === KIT_SELF
       ? `<div style="display:flex;align-items:center;padding:10px 4px;border-bottom:1px solid #eee;opacity:.55">
            <div style="flex:1"><b>${esc(t.name)}</b><div class="mini">${esc(t.desc || "")}</div></div>
            <span class="mini" style="letter-spacing:1px">YOU'RE HERE</span></div>`
-      : `<a href="${esc(t.url)}" style="display:flex;align-items:center;padding:10px 4px;border-bottom:1px solid #eee;text-decoration:none;color:inherit">
+      : `<a href="${esc(safeUrl(t.url))}" style="display:flex;align-items:center;padding:10px 4px;border-bottom:1px solid #eee;text-decoration:none;color:inherit">
            <div style="flex:1"><b>${esc(t.name)}</b><div class="mini">${esc(t.desc || "")}</div></div>
            <span style="color:var(--accent)">→</span></a>`).join("");
     $("#rvTitle").textContent = "SYNERGY FIELD KIT";
@@ -397,7 +419,7 @@ $("#printBtn").onclick = () => {
     const rt = route(job, ix, p, opts);
     const pagesSvg = [render(job, ix, p, rt, opts), ...renderExtraPages(job, ix, a, opts).map(pg => pg.svg)];
     const w = window.open("", "_blank");
-    w.document.write(`<!doctype html><html><head><title>${S.job.job.name} — AV Schematic Packet</title><style>
+    w.document.write(`<!doctype html><html><head><title>${esc(S.job.job.name)} — AV Schematic Packet</title><style>
       @page { size: 17in 11in landscape; margin: 0; }
       html, body { margin: 0; padding: 0; background: #888; }
       .pg { width: 100%; page-break-after: always; background: #fff; margin: 0 auto 8px; }

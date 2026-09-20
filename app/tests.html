@@ -16,7 +16,7 @@
 <ul id="out"></ul>
 <script type="module">
 import { loadJob, validate, advise, place, route, render, expandChannels, effectiveHouse, effectiveJob, trunkCount, autoLinkCatalog, indexJob, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
-import { sniff, importAny, importSiteWalk, importBlueprinted, mergeHouse } from "./importers.js";
+import { sniff, importAny, importSiteWalk, importBlueprinted, mergeHouse, stripUnsafe, assertJobShape } from "./importers.js";
 import { pageFlags, sheetCount, renderChannelMap, renderTakeoff, renderWireSchedule, renderExtraPages, renderBomCompare, wireRuns, takeoffItems, takeoffCSV } from "./pages.js";
 
 const out = document.getElementById("out");
@@ -1115,6 +1115,58 @@ for (const [name, raw] of Object.entries(fixtures)) {
     !!rt.channels && rt.channels.h.length > 0 && rt.channels.v.length > 0 &&
     ["c", "a1", "a2"].every(k => k in rt.channels.h[0]));
   t("debug: channels stay private outside debug mode", !route(job, ix, p).channels);
+}
+
+/* ---------- hardening: hostile input must stay data ---------- */
+{
+  // 1. Markup in user strings never reaches the SVG live
+  const j = structuredClone(fixtures.residence);
+  j.house.zones[0].name = `<img src=x onerror=alert(1)> "breakout`;
+  j.job.client = { name: `<script>alert(2)<\/script>`, address: "1 Evil St, Nowhere" };
+  j.solutions[0].racks[0].devices[0].model = `Model "X" <b>`;
+  const { job, ix } = loadJob(j);
+  const p = place(job, ix);
+  const svg = render(job, ix, p, route(job, ix, p), {});
+  t("hardening: hostile zone/client/model strings are escaped in the SVG",
+    !svg.includes("<img src=x") && !svg.includes("<script>alert") && !svg.includes(`Model "X" <b>`) &&
+    svg.includes("&lt;img") && svg.includes("&quot;breakout"));
+  const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+  t("hardening: SVG stays well-formed XML under hostile names",
+    !doc.querySelector("parsererror") && doc.querySelector("svg") != null);
+
+  // 2. CSV export neutralizes spreadsheet formulas and doubles quotes
+  const j2 = structuredClone(fixtures.residence);
+  j2.solutions[0].racks[0].devices[0].model = `=HYPERLINK("http://evil")`;
+  const v2 = loadJob(j2);
+  const csv = takeoffCSV(v2.job, v2.ix, { solution: 0 });
+  t("hardening: CSV formula injection is neutralized with a leading apostrophe",
+    csv.includes(`"'=HYPERLINK(""http://evil"")"`) && !csv.includes(`"=HYPERLINK`));
+
+  // 3. Prototype pollution is stripped at the import door
+  const hostile = JSON.parse(`{"generator":"SignalPath","schemaVersion":1,
+    "job":{"name":"x","__proto__":{"polluted":true}},
+    "house":{"zones":[{"id":"z1","name":"A","endpoints":[]}]},
+    "solutions":[{"id":"s1","racks":[],"connections":[],"__proto__":{"alsoPolluted":1}}]}`);
+  const res = importAny(hostile);
+  t("hardening: importAny strips __proto__ keys and pollutes nothing",
+    res.kind === "signalpath" && ({}).polluted === undefined && ({}).alsoPolluted === undefined &&
+    !Object.keys(res.job.job).includes("__proto__"));
+
+  // 4. Structurally broken native files are rejected, not adopted
+  const throws = raw => { try { importAny(raw); return false; } catch { return true; } };
+  t("hardening: native import rejects missing solutions / zones / bad schema",
+    throws({ generator: "SignalPath", schemaVersion: 1, job: {}, house: { zones: [] }, solutions: [] }) &&
+    throws({ generator: "SignalPath", schemaVersion: 1, job: {}, house: {}, solutions: [{}] }) &&
+    throws({ generator: "SignalPath", schemaVersion: 2, job: {}, house: { zones: [] }, solutions: [{}] }) &&
+    throws({ generator: "SignalPath", schemaVersion: 1, job: {}, house: { zones: [{ name: "no id" }] }, solutions: [{}] }));
+
+  // 5. …but lenient where identity isn't at stake: missing lists are normalized
+  const loose = { generator: "SignalPath", schemaVersion: 1, job: { name: "ok" },
+    house: { zones: [{ id: "z1", name: "A" }] }, solutions: [{ id: "s1" }] };
+  const ok = importAny(loose);
+  t("hardening: missing endpoint/rack/connection lists normalize to empty",
+    Array.isArray(ok.job.house.zones[0].endpoints) && Array.isArray(ok.job.solutions[0].racks) &&
+    Array.isArray(ok.job.solutions[0].connections) && Array.isArray(ok.job.solutions[0].localDevices));
 }
 
 document.getElementById("summary").innerHTML =

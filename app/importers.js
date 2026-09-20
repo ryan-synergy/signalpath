@@ -8,6 +8,42 @@ const uid = p => p + "-" + Math.random().toString(36).slice(2, 7);
 const slug = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || uid("z");
 const today = () => new Date().toISOString().slice(0, 10);
 
+/* Imported JSON is untrusted. Two defenses before anything touches app state:
+   strip prototype-pollution key names everywhere, and require the skeleton a
+   native file must have before it may replace a working job. */
+const UNSAFE_KEYS = ["__proto__", "constructor", "prototype"];
+export function stripUnsafe(v, depth = 0) {
+  if (depth > 64 || !v || typeof v !== "object") return v;
+  if (Array.isArray(v)) { for (const x of v) stripUnsafe(x, depth + 1); return v; }
+  for (const k of Object.keys(v)) {
+    if (UNSAFE_KEYS.includes(k)) delete v[k];
+    else stripUnsafe(v[k], depth + 1);
+  }
+  return v;
+}
+
+export function assertJobShape(job) {
+  const bad = m => { throw new Error("SignalPath file rejected: " + m); };
+  if (job.schemaVersion !== 1) bad("unsupported schemaVersion " + job.schemaVersion);
+  if (!job.job || typeof job.job !== "object") bad("missing job block");
+  if (!job.house || !Array.isArray(job.house.zones)) bad("missing house.zones");
+  if (!Array.isArray(job.solutions) || !job.solutions.length) bad("missing solutions");
+  for (const z of job.house.zones) {
+    if (!z || typeof z.id !== "string" || !z.id) bad("zone without id");
+    if (!Array.isArray(z.endpoints)) z.endpoints = [];
+    for (const e of z.endpoints) if (!e || typeof e.id !== "string" || !e.id) bad(`endpoint without id in zone ${z.id}`);
+  }
+  for (const sol of job.solutions) {
+    if (!sol || typeof sol !== "object") bad("bad solution entry");
+    if (!Array.isArray(sol.racks)) sol.racks = [];
+    if (!Array.isArray(sol.connections)) sol.connections = [];
+    if (!Array.isArray(sol.localDevices)) sol.localDevices = sol.localDevices == null ? [] : bad("localDevices is not a list");
+    for (const r of sol.racks) if (!Array.isArray(r.devices)) r.devices = [];
+    for (const c of sol.connections) if (!c || typeof c !== "object") bad("bad connection entry");
+  }
+  return job;
+}
+
 /* ---------- sniffing ---------- */
 export function sniff(raw) {
   if (!raw || typeof raw !== "object") return null;
@@ -208,8 +244,9 @@ export function importBlueprinted(raw) {
 
 /* ---------- the one door ---------- */
 export function importAny(raw) {
+  stripUnsafe(raw);
   const kind = sniff(raw);
-  if (kind === "signalpath") return { kind, job: raw, notes: [], warnings: [], unmapped: [] };
+  if (kind === "signalpath") return { kind, job: assertJobShape(raw), notes: [], warnings: [], unmapped: [] };
   if (kind === "sitewalk") return importSiteWalk(raw);
   if (kind === "blueprinted") return importBlueprinted(raw);
   throw new Error("Unrecognized file — expected SignalPath, SiteWalk/AVWalk, or Blueprinted JSON");

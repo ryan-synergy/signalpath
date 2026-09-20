@@ -283,7 +283,7 @@ function refresh(save = true) {
   for (const w of v?.warnings || []) adv.push(`<div class="item w">⚠ ${esc(w.msg)}</div>`);
   for (const io of (a?.io || []).filter(mine)) {
     if (io.over) adv.push(`<div class="item e">✗ ${esc(io.msg)}</div>`);
-    else if (io.msg && (io.kind === "analog-in" || io.kind === "audio-out")) adv.push(`<div class="item i">🔌 ${esc(io.msg)}</div>`);
+    else if (io.msg && (io.kind === "analog-in" || io.kind === "audio-out" || io.kind === "return-in")) adv.push(`<div class="item i">🔌 ${esc(io.msg)}</div>`);
   }
   for (const amp of (a?.amps || []).filter(mine)) adv.push(`<div class="item i">🔊 ${esc(amp.amp)}: ${amp.zonesUsed}/${amp.zonesTotal ?? "?"} zones${amp.reserved ? ` (${amp.reserved} reserved)` : ""}${amp.spare != null ? ` · ${amp.spare} spare` : ""}</div>`);
   for (const lic of (a?.licensing || []).filter(mine)) {

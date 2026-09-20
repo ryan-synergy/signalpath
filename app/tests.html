@@ -784,6 +784,67 @@ for (const [name, raw] of Object.entries(fixtures)) {
     cm.includes("Out 1 → In 1") && cm.includes("Out 6 → In 6") && cm.includes("Feed ("));
 }
 
+/* ---------- audio returns: digital-input budget + local return encoders ---------- */
+{
+  const catalog = await (await fetch("./catalog.json")).json();
+
+  // digital return budget: MDX-16 = 2 coax + 2 optical = 4
+  const rawA = structuredClone(fixtures.residence);
+  rawA.solutions[0].connections.push(
+    { from: "family-tv", to: "mdx16", signal: "audioReturn" },
+    { from: "patio-tv", to: "mdx16", signal: "audioReturn" });
+  {
+    const { job, ix } = loadJob(rawA);
+    const rio = advise(job, ix, catalog).io.find(io => io.device === "mdx16" && io.kind === "return-in");
+    t("returns: digital input budget counted (2/4, not over)", !!rio && rio.used === 2 && rio.capacity === 4 && !rio.over, JSON.stringify(rio));
+  }
+  rawA.solutions[0].connections.push(
+    { from: "master-tv", to: "mdx16", signal: "audioReturn" },
+    { from: "family-tv", to: "mdx16", signal: "audioReturn" },
+    { from: "patio-tv", to: "mdx16", signal: "audioReturn" });
+  {
+    const { job, ix } = loadJob(rawA);
+    t("returns: 5 returns into 4 digital inputs → over-capacity warning",
+      advise(job, ix, catalog).io.some(io => io.device === "mdx16" && io.kind === "return-in" && io.over));
+  }
+
+  // local return encoder: patio TV → at-display encoder → AVB switch backhaul
+  const rawB = structuredClone(fixtures.residence);
+  rawB.solutions[0].localDevices.push({ id: "ret-enc", type: "danteBridge", model: "ACP-DANTE-E-POE",
+    catalogRef: "audiocontrol-acp-dante-e-poe", zone: "z-patio", location: "at-display" });
+  rawB.solutions[0].connections.push(
+    { from: "patio-tv", to: "ret-enc", signal: "audioReturn" },
+    { from: "ret-enc", to: "sav-avb", signal: "network" });
+  const { job, ix } = loadJob(rawB);
+  const p = place(job, ix);
+  const patio = p.zones.find(z => z.id === "z-patio");
+  const disp = patio.groups.find(g => g.kind === "display");
+  t("returns: patio card stacks TWO local pucks (ATV + encoder), staggered",
+    disp.locals?.length === 2 && disp.locals[1].x > disp.locals[0].x && disp.locals[1].y > disp.locals[0].y);
+  const rt = route(job, ix, p);
+  t("returns: everything routes (stub + backhaul, no fallbacks)",
+    rt.wires.length === job.solutions[0].connections.length &&
+    !rt.warnings.some(w => w.code === "unrouted" || w.code === "route-fallback"),
+    JSON.stringify(rt.warnings.slice(0, 3)));
+  const stub = rt.wires.find(w => w.id === "patio-tv→ret-enc");
+  const bh = rt.wires.find(w => w.id === "ret-enc→sav-avb");
+  t("returns: TV→encoder is an in-card stub, backhaul rides as network",
+    stub?.cls === "local" && bh?.signal === "network" && bh.cls === "return");
+  const svg = render(job, ix, p, rt);
+  t("returns: backhaul draws network green, stub draws return orange",
+    new DOMParser().parseFromString(svg, "image/svg+xml").querySelector('path.wire[data-wire="ret-enc→sav-avb"]')?.getAttribute("stroke") === "#2f9e44" &&
+    new DOMParser().parseFromString(svg, "image/svg+xml").querySelector('path.wire[data-wire="patio-tv→ret-enc"]')?.getAttribute("stroke") === "#e8842c");
+  t("returns: healthy encoder → no backhaul warning",
+    !validate(job, ix).warnings.some(w => w.code === "return-no-backhaul"));
+  const rawC = structuredClone(rawB);
+  rawC.solutions[0].connections = rawC.solutions[0].connections.filter(c => !(c.from === "ret-enc"));
+  {
+    const { job: j2, ix: i2 } = loadJob(rawC);
+    t("returns: encoder without backhaul → warning (silently dead return)",
+      validate(j2, i2).warnings.some(w => w.code === "return-no-backhaul"));
+  }
+}
+
 /* ---------- grayscale (B&W-safe) render mode ---------- */
 {
   const { job, ix } = loadJob(fixtures.residence);

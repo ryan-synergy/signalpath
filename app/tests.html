@@ -845,6 +845,33 @@ for (const [name, raw] of Object.entries(fixtures)) {
   }
 }
 
+/* ---------- fully local zones: guest-room Apple TV, no wire needed ---------- */
+{
+  // exactly what quick-add "guest room local 55" produces: TV + local ATV, ZERO connections
+  const raw = structuredClone(fixtures.residence);
+  raw.house.zones.push({ id: "z-guest", name: "Guest Room", scope: "included",
+    endpoints: [{ id: "guest-tv", type: "display", displayType: "tv", brand: "", size: 55, status: "new" }] });
+  raw.solutions[0].localDevices.push({ id: "guest-atv", type: "source", sourceType: "appletv",
+    model: "Apple TV", status: "new", zone: "z-guest", location: "at-display" });
+  const { job, ix } = loadJob(raw);
+  t("local zone: display with an at-display source validates fed — no wire required",
+    !validate(job, ix).errors.some(e => e.code === "orphan-endpoint" && e.msg.includes("guest-tv")));
+  const p = place(job, ix);
+  const rt = route(job, ix, p);
+  const guest = p.zones.find(z => z.id === "z-guest");
+  t("local zone: puck still drawn in the card, no wires touch the room",
+    guest.groups.some(g => g.locals?.some(l => l.deviceId === "guest-atv")) &&
+    !rt.wires.some(w => w.id.includes("guest")));
+  // a display with NO local source still flags as orphan
+  const bare = structuredClone(raw);
+  bare.solutions[0].localDevices = bare.solutions[0].localDevices.filter(d => d.id !== "guest-atv");
+  {
+    const { job: j2, ix: i2 } = loadJob(bare);
+    t("local zone: remove the local source → orphan error returns",
+      validate(j2, i2).errors.some(e => e.msg.includes("guest-tv")));
+  }
+}
+
 /* ---------- Sonos patterns: soundbar stubs, local amps, network-fed audio ---------- */
 {
   const catalog = await (await fetch("./catalog.json")).json();

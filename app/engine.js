@@ -216,6 +216,13 @@ export function validate(job, ix = indexJob(job)) {
         E("amp-over", `${ampId}: ${feeds.length} zones assigned, capacity ${amp.zones}`);
     }
 
+    // a local return encoder with no backhaul is a silently dead return in the field
+    for (const c of sol.connections || []) {
+      if (c.signal === "audioReturn" && s.locals[c.to] &&
+          !(sol.connections || []).some(o => o.from === c.to && s.devices[o.to]))
+        W("return-no-backhaul", `${c.to}: local return encoder has no backhaul to the rack`);
+    }
+
     // scope coherence: prewire/future zone endpoints should have matching-scope feeds
     for (const c of sol.connections || []) {
       const zid = ix.endpointZone[c.to];
@@ -320,20 +327,29 @@ function zoneCard(zone, localsInZone) {
     g.cx = x + g.w / 2;
     let bottom = g.y + g.h;
     if (g.kind === "display" && localsInZone.length) {
-      g.local = { x: g.cx - PL.smallTile.w / 2, y: bottom + 12, ...PL.smallTile, deviceId: localsInZone[0].id, label: localsInZone[0].model };
-      bottom = g.local.y + g.local.h + PL.captionH;
+      // at-display devices stack under the display, staggered right like a fanned
+      // deck (a room can hold a local source AND a return encoder)
+      g.locals = localsInZone.map((ld, k) => ({
+        x: g.cx - PL.smallTile.w / 2 + k * 26, y: bottom + 12 + k * (PL.smallTile.h + 8),
+        ...PL.smallTile, deviceId: ld.id, label: ld.model,
+      }));
+      g.local = g.locals[0]; // back-compat alias
+      const last = g.locals[g.locals.length - 1];
+      bottom = last.y + last.h + PL.captionH;
     }
     g.captionY = bottom + PL.captionH;
     contentBottom = Math.max(contentBottom, g.captionY);
     x += g.w + PL.groupGapX;
   }
-  const w = Math.max(PL.cardMinW, x - PL.groupGapX + PL.cardPad);
+  let contentRight = x - PL.groupGapX;
+  for (const g of groups) for (const l of g.locals || []) contentRight = Math.max(contentRight, l.x + l.w);
+  const w = Math.max(PL.cardMinW, contentRight + PL.cardPad);
   const h = Math.max(PL.cardMinH, contentBottom + PL.cardBottomPad);
   // widen: center content when min width won
-  const innerW = x - PL.groupGapX - PL.cardPad;
+  const innerW = contentRight - PL.cardPad;
   if (w > innerW + 2 * PL.cardPad - 1) {
     const shift = (w - innerW) / 2 - PL.cardPad;
-    for (const g of groups) { g.x += shift; g.cx += shift; if (g.local) g.local.x += shift; }
+    for (const g of groups) { g.x += shift; g.cx += shift; for (const l of g.locals || []) l.x += shift; }
   }
   return { w, h, groups };
 }
@@ -435,7 +451,7 @@ export function place(job, ix = indexJob(job), opts = {}) {
     if (fCol === "B" && (toZoneSide || s.companions[c.to])) bcDemand++;
     if (fCol === "B" && tCol === "B") { bcDemand++; abDemand++; }
     if (fCol === "B" && tCol === "C") bcDemand++;
-    if (ix.endpointsById[c.from]) abDemand++;                       // audio return descends the AB gap
+    if (ix.endpointsById[c.from] || (s.locals[c.from] && devColOf[c.to] != null)) abDemand++; // returns + local backhauls descend the AB gap
     if (s.companions[c.from] && devColOf[s.companions[c.from].serves] === "A") abDemand++; // ENC-chip outputs
   }
   const gapAB = Math.max(80, abDemand * 12 + 24);
@@ -450,7 +466,8 @@ export function place(job, ix = indexJob(job), opts = {}) {
   for (const c of visConns) {
     const zid = epZoneOf(c.to) || epZoneOf(c.from);
     if (!zid) continue;
-    if (s.locals[c.from]) continue; // local link lives inside the card
+    if (s.locals[c.from] && ix.endpointsById[c.to]) continue; // local link lives inside the card
+    if (s.locals[c.to] && ix.endpointZone[c.from] === s.locals[c.to].zone) continue; // display → local encoder stub
     // a chip parked at the card (balun/DEC serving an endpoint) feeds it via a
     // short stub — the corridor crossing was already counted on the feed INTO the chip
     if (s.companions[c.from] && ix.endpointsById[s.companions[c.from].serves]) continue;
@@ -660,6 +677,13 @@ export function route(job, ix, placement, opts = {}) {
   const chipById = {}; for (const c of P.chips) chipById[c.id] = c;
   const zoneByEp = epId => P.zones.find(z => z.id === ix.endpointZone[epId]);
   const slotOf = epId => { const pz = zoneByEp(epId); const g = pz.groups.find(g => g.epId === epId); return { pz, g, cx: pz.x + g.cx }; };
+  const localSlotOf = id => {
+    const ld = s.locals[id]; if (!ld) return null;
+    const pz = P.zones.find(z => z.id === ld.zone); if (!pz) return null;
+    for (const g of pz.groups) for (const l of g.locals || (g.local ? [g.local] : []))
+      if (l.deviceId === id) return { pz, l, cx: pz.x + l.x + l.w / 2 };
+    return null;
+  };
   const rackRight = P.racks.length ? Math.max(...P.racks.map(r => r.x + r.w)) : 0;
   const rackTop = P.racks.length ? Math.min(...P.racks.map(r => r.y)) : 0;
   const rackBottom = P.racks.length ? Math.max(...P.racks.map(r => r.y + r.h)) : 0;
@@ -875,9 +899,19 @@ export function route(job, ix, placement, opts = {}) {
     } else if (s.locals[conn.from] && ix.endpointsById[conn.to]) {
       // in-room source touches its display: the local-source exception
       const { pz, g } = slotOf(conn.to);
-      const lt = pz.groups.flatMap(gr => gr.local ? [gr.local] : []).find(l => l.deviceId === conn.from);
+      const lt = pz.groups.flatMap(gr => gr.locals || (gr.local ? [gr.local] : [])).find(l => l.deviceId === conn.from);
       if (lt) commit(conn, "local", [[pz.x + lt.x + lt.w / 2, pz.y + lt.y], [pz.x + g.cx, pz.y + g.y + g.h]], { insideCard: pz.id });
       else out.warnings.push({ code: "no-local-slot", msg: `local ${conn.from} has no slot` });
+      done.add(i);
+    } else if (ix.endpointsById[conn.from] && s.locals[conn.to]) {
+      // display → local return encoder: the return is handled AT the TV;
+      // a short stub beside the local-source stub, inside the card
+      const { pz, g } = slotOf(conn.from);
+      const lt = localSlotOf(conn.to);
+      if (lt && lt.pz === pz) {
+        const x1 = pz.x + g.cx + 14;
+        commit(conn, "local", [[x1, pz.y + g.y + g.h], [x1, lt.pz.y + lt.l.y]], { insideCard: pz.id });
+      } else out.warnings.push({ code: "no-local-slot", msg: `local ${conn.to} has no slot at ${conn.from}` });
       done.add(i);
     }
   });
@@ -940,7 +974,7 @@ export function route(job, ix, placement, opts = {}) {
     if (fromDev && toDev) { routeRackToRack(conn, fromDev, toDev); done.add(i); return; }
     if (fromDev && toChip) { routeDevToChip(conn, fromDev, toChip); done.add(i); return; }
     if (fromChip && toDev) { routeChipToDev(conn, fromChip, toDev); done.add(i); return; }
-    if (ix.endpointsById[conn.from] && toDev) return; // audio returns route LAST (pass 4c) so they can dodge the corridor
+    if ((ix.endpointsById[conn.from] || s.locals[conn.from]) && toDev) return; // returns + local backhauls route LAST (pass 4c)
     out.warnings.push({ code: "unrouted", msg: `no route class for ${wireId(conn)}` });
   });
 
@@ -1351,12 +1385,14 @@ export function route(job, ix, placement, opts = {}) {
   }
 
   function routeReturn(conn, b) {
-    // audio return: starts at the border aligned with the display, wraps to the
-    // input module's LEFT edge — least-hops around the corridor bundles
-    const { pz, cx } = slotOf(conn.from);
-    const compChip = (sol.companions || []).find(c => c.serves === conn.from);
+    // audio return: starts at the border aligned with the display (or the local
+    // encoder's puck for network backhauls), wraps to the target's LEFT edge —
+    // least-hops around the corridor bundles
+    const ls = localSlotOf(conn.from);
+    const { pz, cx } = ls ? { pz: ls.pz, cx: ls.cx } : slotOf(conn.from);
+    const compChip = ls ? null : (sol.companions || []).find(c => c.serves === conn.from);
     const chipHalf = compChip ? (chipById[compChip.id]?.w ?? 0) / 2 + 8 : 0;
-    const sx0 = feedsToEp[conn.from] ? cx + Math.max(RT.lane, chipHalf) : cx;
+    const sx0 = ls ? cx : (feedsToEp[conn.from] ? cx + Math.max(RT.lane, chipHalf) : cx);
     const skip = new Set([pz.id, b.id]);
     const corTop = P.corridors.find(c => c.id === "top");
     // hug the strip just under the source card, above the corridor's feed lanes
@@ -1438,7 +1474,7 @@ export function route(job, ix, placement, opts = {}) {
   visConns.forEach((conn, i) => {
     if (done.has(i)) return;
     const toDev = devById[conn.to];
-    if (ix.endpointsById[conn.from] && toDev) { routeReturn(conn, toDev); done.add(i); return; }
+    if ((ix.endpointsById[conn.from] || s.locals[conn.from]) && toDev) { routeReturn(conn, toDev); done.add(i); return; }
     out.warnings.push({ code: "unrouted", msg: `no route class for ${wireId(conn)}` });
   });
 
@@ -1648,8 +1684,8 @@ export function render(job, ix, P, rt, opts = {}) {
         push(`<rect x="${gx}" y="${gy}" width="${g.w}" height="${g.h}" fill="url(#tvg)" stroke="#556" stroke-width="1.2"/>`);
         push(`<text x="${gx + g.w / 2}" y="${gy + g.h / 2 - 3}" text-anchor="middle" font-size="11" fill="#233">${esc(g.brand)}</text>`);
         push(`<text x="${gx + g.w / 2}" y="${gy + g.h / 2 + 13}" text-anchor="middle" font-size="12" font-weight="600" fill="#233">${esc(g.sizeText)}</text>`);
-        if (g.local) {
-          const l = g.local, ldev = s.locals[l.deviceId] || {};
+        for (const l of g.locals || (g.local ? [g.local] : [])) {
+          const ldev = s.locals[l.deviceId] || {};
           push(`<rect x="${z.x + l.x}" y="${z.y + l.y}" width="${l.w}" height="${l.h}" rx="8" fill="#1e1e1e"/>`);
           push(faceGlyph(ldev, z.x + l.x + l.w - 15, z.y + l.y + l.h / 2) ||
                `<circle cx="${z.x + l.x + l.w - 11}" cy="${z.y + l.y + l.h / 2}" r="2.4" fill="#cfcfcf"/>`);
@@ -1880,6 +1916,15 @@ export function advise(job, ix = indexJob(job), catalog = null) {
             msg: analogRuns > cat.inputs.analog
               ? `${d.model || d.id}: ${analogRuns} analog runs into ${cat.inputs.analog} analog inputs (${cat.model}) — over capacity`
               : `${d.model || d.id}: ${analogRuns}/${cat.inputs.analog} analog inputs fed · ${cat.inputs.analog - analogRuns} spare` });
+        // audio returns land on DIGITAL inputs (optical/coax/eARC) — budget them
+        const retIn = inbound.filter(c => c.signal === "audioReturn").length;
+        const retCap = (cat.inputs?.optical || 0) + (cat.inputs?.coax || 0) + (cat.inputs?.digitalCombo || 0) + (cat.inputs?.earc || 0);
+        if (retIn && retCap)
+          out.io.push({ solution: sol.id, device: d.id, kind: "return-in", used: retIn, capacity: retCap,
+            over: retIn > retCap,
+            msg: retIn > retCap
+              ? `${d.model || d.id}: ${retIn} audio returns into ${retCap} digital inputs (${cat.model}) — over capacity`
+              : `${d.model || d.id}: ${retIn}/${retCap} digital return inputs used` });
         // module side of the trunk: outputs consumed = runs leaving
         const outRuns = (sol.connections || []).filter(c => c.from === d.id && c.signal === "audio")
           .reduce((n, c) => n + trunkCount(c, s), 0);

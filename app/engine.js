@@ -793,6 +793,16 @@ export function route(job, ix, placement, opts = {}) {
   };
   const takeLeftPort = (dev, desired) => takePort(leftPorts, dev, desired);
   const takeRightPort = (dev, desired) => takePort(rightPorts, dev, desired);
+  // non-mutating variant: candidates that may lose the cost comparison peek,
+  // and only the winner claims (a considered-but-rejected west wrap once ate
+  // both lanes of a 22px tile and walled off a later backhaul)
+  const peekPort = (store, dev, desired) => {
+    const list = store[dev.id] || [];
+    const [min, max] = portSpan(dev);
+    let y = Math.max(min, Math.min(max, desired)), tries = 0;
+    while (list.some(u => Math.abs(u - y) < 10) && tries++ < 20) { y += RT.lane; if (y > max) y = min; }
+    return y;
+  };
 
   /* --- shared lane scanner: a lane is only taken when the whole path built on
      it clears obstacles and the registry (joint validation) --- */
@@ -1252,7 +1262,7 @@ export function route(job, ix, placement, opts = {}) {
       const gap = b.col === "C" ? gapBCx : gapABx;
       const [tmin, tmax] = portSpan(b);
       const tyDesired = Math.max(tmin, Math.min(tmax, sy));
-      let committed = null;
+      let committed = null, sywCache = null;   // west-wrap exit port: taken at most once per connection
       for (let k = 0; k <= Math.ceil((tmax - tmin) / RT.lane) + 1 && !committed; k++) {
         for (const sgn of k ? [1, -1] : [1]) {
           const ty = tyDesired + sgn * k * RT.lane;
@@ -1279,11 +1289,29 @@ export function route(job, ix, placement, opts = {}) {
             x => segBlocked(x, Math.min(my, ty), x, Math.max(my, ty), skip), gap) : null;
           if (my != null && abx != null && bcx != null && Math.abs(abx - bcx) > 6)
             cands.push([[sx, sy], [abx, sy], [abx, my], [bcx, my], [bcx, ty], [b.x, ty]]);
-          for (const cand of cands) {
-            if (!cand || pathBlocked(cand, skip) || !pathRegisterable(cand, nWire)) continue;
+          const base = cands.find(c => c && !pathBlocked(c, skip) && pathRegisterable(c, nWire));
+          let chosen = base;
+          // an A-column feed may instead wrap the WEST margin — out the left
+          // edge, down the outside, in at port height. Taken only when it
+          // saves ≥2 crossings over the gap descent (user redline: the AVB
+          // feed collected four hops crossing the input-module feed band)
+          if (a.col === "A" && base && (ty < a.y - 4 || ty > a.y + a.h + 4)) {
+            // the exit is a LEFT-edge port and must say so — the left-port
+            // manager spaces it clear of later westward arrivals at this tile
+            // (reusing the right-port y once walled off a backhaul's only door)
+            const syw = sywCache ??= peekPort(leftPorts, a, ty > a.y ? a.y + 4 : a.y + a.h - 4);   // hug the far edge; arrivals keep the center lane
+            const wx = alloc(usedV, westMarginX[1], Math.min(syw, ty), Math.max(syw, ty), nWire, -1,
+              x => segBlocked(x, Math.min(syw, ty), x, Math.max(syw, ty), skip), westMarginX);
+            const west = wx != null ? [[a.x, syw], [wx, syw], [wx, ty], [b.x, ty]] : null;
+            if (west && !pathBlocked(west, skip) && pathRegisterable(west, nWire) &&
+                countCrossings(west) + 2 <= countCrossings(base)) {
+              chosen = west;
+              (leftPorts[a.id] ||= []).push(syw);   // the winner claims its exit port
+            }
+          }
+          if (chosen) {
             (leftPorts[b.id] ||= []).push(ty);
-            committed = commit(conn, "intra", cand);
-            break;
+            committed = commit(conn, "intra", chosen);
           }
           if (committed) break;
         }
@@ -1293,8 +1321,24 @@ export function route(job, ix, placement, opts = {}) {
         tryCommit(conn, "intra", [[[sx, sy], [(sx + b.x) / 2, sy], [(sx + b.x) / 2, ty], [b.x, ty]]], skip);
       }
     } else {
-      // same column (or leftward): wrap over the top of the column
-      const ty = takeLeftPort(b, sy);
+      // same column: stacked neighbors deserve a tight STAPLE — out the edge
+      // facing the target, straight up/down the near gap channel, in the
+      // target's right edge. The over-the-top wrap (the only template before
+      // the 2026-09-20 redline) sent an adjacent feed on a lap of the whole
+      // column and salted the AB gap with crossings; it stays as the fallback
+      // and for leftward cross-column runs.
+      const sameCol = Math.abs(b.x - a.x) < 8 && rackOf(a) === rackOf(b);
+      let staple = null, sy2 = null, ty2 = null;
+      if (sameCol) {
+        const above = b.y < a.y;
+        sy2 = peekPort(rightPorts, a, above ? a.y + 12 : a.y + a.h - 12);
+        ty2 = peekPort(rightPorts, b, above ? b.y + b.h - 12 : b.y + 12);
+        const gx = alloc(usedV, sx + 14, Math.min(sy2, ty2), Math.max(sy2, ty2), nWire, +1,
+          x => segBlocked(x, Math.min(sy2, ty2), x, Math.max(sy2, ty2), skip), [sx + 8, sx + 44]);
+        const cand = gx != null ? [[sx, sy2], [gx, sy2], [gx, ty2], [b.x + b.w, ty2]] : null;
+        if (cand && !pathBlocked(cand, skip) && pathRegisterable(cand, nWire)) staple = cand;
+      }
+      const ty = peekPort(leftPorts, b, sy);
       const rack = rackOf(b) || rackOf(a);
       const overY = alloc(usedH, rack.y + 26, gapABx[0], gapBCx[1], nWire, +1,
         y => segBlocked(gapABx[0], y, gapBCx[1], y, skip), [rack.y + 26, rack.y + PL.rackPadTop - 4]);
@@ -1302,10 +1346,15 @@ export function route(job, ix, placement, opts = {}) {
         x => overY != null && segBlocked(x, overY, x, sy, skip), gapBCx);
       const dnX = alloc(usedV, (gapABx[0] + gapABx[1]) / 2, overY ?? rack.y, ty, nWire, 0,
         x => overY != null && segBlocked(x, overY, x, ty, skip), gapABx);
-      tryCommit(conn, "wrap", [
-        overY != null && upX != null && dnX != null ?
-          [[sx, sy], [upX, sy], [upX, overY], [dnX, overY], [dnX, ty], [b.x, ty]] : null,
-      ], skip);
+      const wrap = overY != null && upX != null && dnX != null ?
+        [[sx, sy], [upX, sy], [upX, overY], [dnX, overY], [dnX, ty], [b.x, ty]] : null;
+      const wrapOk = wrap && !pathBlocked(wrap, skip) && pathRegisterable(wrap, nWire) ? wrap : null;
+      // staple wins ties — it is shorter and hugs the tiles; wrap only when it
+      // measurably crosses less. The winner claims its ports (peeked above).
+      const pick = staple && (!wrapOk || countCrossings(staple) <= countCrossings(wrapOk)) ? staple : wrapOk;
+      if (pick === staple && staple) { (rightPorts[a.id] ||= []).push(sy2); (rightPorts[b.id] ||= []).push(ty2); }
+      else if (pick) (leftPorts[b.id] ||= []).push(ty);
+      tryCommit(conn, pick === staple ? "staple" : "wrap", [pick], skip);
     }
   }
 
@@ -1425,7 +1474,7 @@ export function route(job, ix, placement, opts = {}) {
     // gather every valid (lane, channel) candidate and take the one that costs
     // the fewest hops — returns route last, so the corridor is fully known
     let best = null, bestCost = Infinity, seen = 0;
-    const rdbg = info => { if (opts.debug) { const k = wireId(conn); ((out.debug ||= {})[k] ||= []).length < 80 && out.debug[k].push(info); } };
+    const rdbg = info => { if (opts.debug) { const k = wireId(conn); ((out.debug ||= {})[k] ||= []).length < 400 && out.debug[k].push(info); } };
     // the target is exempt from segBlocked so the final approach may land on its
     // edge — but that exemption must not let EARLIER segments pierce its body
     // (seen live: a lane at card height crossed the module, wrapped the west
@@ -1461,10 +1510,11 @@ export function route(job, ix, placement, opts = {}) {
           Math.min(y, ty), Math.max(y, ty), nWire, range === gapABx ? 0 : -1,
           x => segBlocked(x, Math.min(y, ty), x, Math.max(y, ty), skip), range);
         if (wx == null) { rdbg({ y, r: range === gapABx ? "ab" : "west", fail: "alloc" }); continue; }
-        const cand = buildCands(y, wx).find(c => !hitsTarget(c) && !pathBlocked(c, skip) && pathRegisterable(c, nWire));
+        const list = buildCands(y, wx);
+        const cand = list.find(c => !hitsTarget(c) && !pathBlocked(c, skip) && pathRegisterable(c, nWire));
         if (!cand) {
-          const c0 = buildCands(y, wx)[0];
-          rdbg({ y, wx, r: range === gapABx ? "ab" : "west", fail: hitsTarget(c0) ? "pierces-target" : pathBlocked(c0, skip) ? "blocked:" + pathBlocked(c0, skip) : "registry" });
+          rdbg({ y, wx, r: range === gapABx ? "ab" : "west",
+            fail: list.map(c => hitsTarget(c) ? "pierce" : (pathBlocked(c, skip) || "registry")).join("|") });
           continue;
         }
         // hops dominate; congestion breaks ties toward emptier corridors

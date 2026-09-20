@@ -289,11 +289,13 @@ function routerChecks(name, raw) {
   let portBad = null;
   for (const w of r.wires) {
     const fd = dev(w.from), td = dev(w.to);
-    if (fd && w.pts[0][0] !== fd.x + fd.w) portBad ??= `${w.id} leaves ${w.from} not on right edge`;
-    // exception: the inter-rack trunk staples into the RIGHT edge (per spec §4)
+    // exceptions: a west-wrap exits the LEFT edge heading west (2026-09-20 redline)
+    const westExit = fd && w.pts[0][0] === fd.x && w.pts[1][0] < fd.x;
+    if (fd && !westExit && w.pts[0][0] !== fd.x + fd.w) portBad ??= `${w.id} leaves ${w.from} not on right edge`;
+    // exception: staples (inter-rack trunk / stacked same-column neighbors) enter the RIGHT edge
     if (td && w.cls !== "staple" && w.pts[w.pts.length - 1][0] !== td.x) portBad ??= `${w.id} enters ${w.to} not on left edge`;
   }
-  t(`${name}: outputs right / inputs left on all rack devices (staple exempt)`, portBad === null, portBad || "");
+  t(`${name}: outputs right / inputs left on all rack devices (staple + west-wrap exempt)`, portBad === null, portBad || "");
 
   /* boundary principle: zone feeds die ON the card border, x-aligned with
      their endpoint (or its chip); only stubs/locals live inside cards */
@@ -324,7 +326,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
 /* hop-count regression guards (polish round 2026-09-19: returns route last
    and pick the least-crossing lane) */
 {
-  const ceiling = { residence: 14, estate: 29, stress: 340 };  // residence 12→14 2026-09-20: return pierce fix — the old "cheap" route cheated through the target module
+  const ceiling = { residence: 7, estate: 25, stress: 301 };  // re-baselined 2026-09-20: same-column staple + A-col west-wrap templates (user redline) — residence 14→7, estate 29→25, stress 334→301
   for (const [name, raw] of Object.entries(fixtures)) {
     const { job, ix } = loadJob(raw);
     const p = place(job, ix);
@@ -1144,6 +1146,26 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t(`${name}: no return/backhaul pierces its target device body`, pierced.length === 0,
       pierced.map(w => `${w.from}→${w.to}`).join(", "));
   }
+}
+
+/* ---------- stacked-neighbor staple + west wrap (user redlines 2026-09-20) ---------- */
+{
+  const { job, ix } = loadJob(structuredClone(fixtures.residence));
+  const p = place(job, ix);
+  const rt = route(job, ix, p);
+  const tiles = {}; for (const r of p.racks) for (const d of r.devices) tiles[d.id] = d;
+  // same-column stacked neighbors take the tight staple, not a lap of the column
+  const am = rt.wires.find(w => w.from === "axion8" && w.to === "mrx540");
+  const a = tiles.axion8, m = tiles.mrx540;
+  const xs = am.pts.map(pt => pt[0]), ys = am.pts.map(pt => pt[1]);
+  t("staple: axion→mrx hugs the near gap (no over-the-top lap, no AB-gap descent)",
+    Math.min(...xs) >= a.x + a.w - 1 && Math.max(...xs) <= a.x + a.w + 50 &&
+    Math.min(...ys) > m.y && Math.max(...ys) < a.y + a.h);
+  // the A-column AVB trunk wraps the west margin instead of raking the
+  // input-module feed band (was 4 hops; west costs at most 2)
+  const ao = rt.wires.find(w => w.from === "sav-avb" && w.to === "sav-out");
+  t("west wrap: sav-avb→sav-out exits west and stays out of the AB gap",
+    Math.min(...ao.pts.map(pt => pt[0])) < tiles["sav-avb"].x);
 }
 
 /* ---------- hardening: hostile input must stay data ---------- */

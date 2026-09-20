@@ -669,8 +669,8 @@
     "downmix2ch",
     "audioMatrix"
    ],
-   "verified": false,
-   "notes": "4x4, 18Gbps, dual audio de-embed (Toslink 7CH + balanced analog 2CH, same family architecture as AC-MX-88) \u2014 PDF pass 2026-09-20 confirmed the port TYPES but no text source publishes the per-output COUNTS for this SKU; the last remaining unverified AVPro spec. Check the rear panel before relying on de-embed counts."
+   "verified": true,
+   "notes": "4x4, 18Gbps, dual audio de-embed per output: 4x Toslink (up to 7CH PCM/DD/DTS) + 4x balanced 5-pin analog (2CH PCM). Rear panel confirmed from AVPro cut sheet 2026-09-20: AUDIO 1-4 blocks, each TOS + L+/L-/gnd/R+/R-. Extracted audio has 3 modes: bind to input, bind to output, or independent matrix. Per-output audio delay up to 630ms."
   },
   "avpro-ac-mx-1616": {
    "brand": "AVPro Edge",

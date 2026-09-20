@@ -992,9 +992,15 @@ for (const [name, raw] of Object.entries(fixtures)) {
     cat.devices["sonance-dsp-2-750-mkiii"].verified === true);
   t("catalog: M6800D analog corrected 10→8 (busses are digital)",
     cat.devices["audiocontrol-m6800d"].inputs.analog === 8 && cat.devices["audiocontrol-m6800d"].verified === true);
-  t("catalog: MX-1616 confirmed (16 analog de-embeds, no digital out); MX-44 stays honestly unverified",
+  t("catalog: MX-1616 confirmed (16 analog de-embeds, no digital out)",
     cat.devices["avpro-ac-mx-1616"].verified === true && cat.devices["avpro-ac-mx-1616"].outputs.analog === 16 &&
-    !cat.devices["avpro-ac-mx-1616"].outputs.optical && cat.devices["avpro-ac-mx-44"].verified === false);
+    !cat.devices["avpro-ac-mx-1616"].outputs.optical);
+  t("catalog: MX-44 rear panel confirmed (4x Toslink + 4x balanced analog de-embed)",
+    cat.devices["avpro-ac-mx-44"].verified === true && cat.devices["avpro-ac-mx-44"].outputs.optical === 4 &&
+    cat.devices["avpro-ac-mx-44"].outputs.analog === 4);
+  t("catalog: only the known intentional unverifieds remain (pre-ship / legacy / placeholder)",
+    JSON.stringify(Object.keys(cat.devices).filter(k => !cat.devices[k].verified).sort()) ===
+    JSON.stringify(["avpro-mxnet-cbox-ha", "savant-ip-audio-125", "sonos-beam-ultra", "sonos-connect", "sonos-connect-amp"]));
   t("catalog: SW24 lineage settled (legacy 370W, SW24P successor present)",
     cat.devices["avpro-mxnet-sw24"].poeBudgetW === 370 && cat.devices["avpro-mxnet-sw24"].flags.includes("legacy") &&
     cat.devices["avpro-mxnet-sw24p"]?.verified === true);

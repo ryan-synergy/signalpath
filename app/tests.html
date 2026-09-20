@@ -845,6 +845,33 @@ for (const [name, raw] of Object.entries(fixtures)) {
   }
 }
 
+/* ---------- room remotes: corner glyph, billable rollup, overrides, quick-add ---------- */
+{
+  const { parseQuick } = await import("./quickadd.js");
+  const raw = structuredClone(fixtures.residence);
+  raw.house.zones.find(z => z.id === "z-family").remote = "savant";
+  raw.house.zones.find(z => z.id === "z-master").remote = "savant";
+  raw.house.zones.find(z => z.id === "z-patio").remote = "appletv";
+  const { job, ix } = loadJob(raw);
+  const p = place(job, ix), rt = route(job, ix, p);
+  const svg = render(job, ix, p, rt);
+  t("remotes: corner glyphs render with labels", (svg.match(/>SAVANT<\/text>/g) || []).length === 2 && svg.includes(">ATV</text>"));
+  const items = takeoffItems(job, ix, {});
+  const sav = items.find(i => i.label === "Savant Pro Remote");
+  t("remotes: billable remotes roll up (2× Savant), Apple TV remote never quoted",
+    sav?.qty === 2 && sav.where.includes("Family") && !items.some(i => /remote/i.test(i.label) && i.label !== "Savant Pro Remote"));
+  raw.solutions.push(structuredClone(raw.solutions[0]));
+  raw.solutions[1].id = "sol-b"; raw.solutions[1].name = "Better";
+  raw.solutions[1].overrides = { zones: { "z-patio": { remote: "savant" } } };
+  t("remotes: per-solution override upgrades a room's remote",
+    effectiveJob(raw, 1).house.zones.find(z => z.id === "z-patio").remote === "savant" &&
+    effectiveJob(raw, 0).house.zones.find(z => z.id === "z-patio").remote === "appletv");
+  const q1 = parseQuick("theater 7.1 savant remote")[0];
+  const q2 = parseQuick("guest room local 55 atv remote")[0];
+  t("remotes: quick-add tokens parse", q1.zone.remote === "savant" && q1.zone.name === "Theater" &&
+    q2.zone.remote === "appletv" && q2.zone._hints.local === true);
+}
+
 /* ---------- fully local zones: guest-room Apple TV, no wire needed ---------- */
 {
   // exactly what quick-add "guest room local 55" produces: TV + local ATV, ZERO connections

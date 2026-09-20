@@ -23,6 +23,8 @@ export const SIGNAL_DASHES = {
   prewire: { stroke: "#9a9a9a", dash: "5 4" },
 };
 
+export const REMOTE_LABELS = { savant: "SAVANT", appletv: "ATV", josh: "JOSH", factory: "OEM" };
+
 export const READABILITY_ZONE_CEILING = 24; // one 11x17 page, per spec §"Readability budget"
 
 /* ---------- load & index ---------- */
@@ -650,7 +652,7 @@ export function place(job, ix = indexJob(job), opts = {}) {
 
 function placeZone(out, zone, card, x, y, band) {
   out.zones.push({
-    id: zone.id, name: zone.name, scope: zone.scope || "included", band,
+    id: zone.id, name: zone.name, scope: zone.scope || "included", band, remote: zone.remote,
     x, y, w: card.w, h: card.h,
     groups: card.groups.map(g => ({ ...g })),
   });
@@ -1696,6 +1698,16 @@ export function render(job, ix, P, rt, opts = {}) {
     push(`<rect class="hit" x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="transparent" stroke="none"/>`);
     push(`<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="none" stroke="${gray ? "#b5b5b5" : "#8a8a8a"}" stroke-width="1.4" stroke-dasharray="7 5"/>`);
     push(`<text x="${z.x + z.w / 2}" y="${z.y + 24}" text-anchor="middle" font-size="18" font-weight="700" fill="${gray ? "#999" : "#111"}">${esc(z.name)}</text>`);
+    // room remote, top-right corner: what the client picks up in this room
+    const rem = REMOTE_LABELS[z.remote];
+    if (rem) {
+      const rx = z.x + z.w - 24, ry = z.y + 9;
+      push(`<rect x="${rx}" y="${ry}" width="11" height="22" rx="5" fill="#2d2d2d" stroke="#8a8a8a" stroke-width="0.8"/>`);
+      push(`<circle cx="${rx + 5.5}" cy="${ry + 5}" r="1.5" fill="#8f8f8f"/>`);
+      push(`<circle cx="${rx + 5.5}" cy="${ry + 10}" r="1.2" fill="#6a6a6a"/>`);
+      push(`<rect x="${rx + 3.5}" y="${ry + 14}" width="4" height="4" rx="1" fill="#6a6a6a"/>`);
+      push(`<text x="${rx + 5.5}" y="${ry + 33}" text-anchor="middle" font-size="7" letter-spacing="0.5" fill="#8a8a8a">${rem}</text>`);
+    }
     for (const g of z.groups) {
       const gx = z.x + g.x, gy = z.y + g.y;
       if (g.kind === "display") {

@@ -209,6 +209,12 @@ export function takeoffItems(job, ix, opts = {}) {
       }
     }
   }
+  // billable room remotes (Apple TV / factory remotes ship with the gear — drawn, never quoted)
+  const REMOTE_BOM = { savant: "Savant Pro Remote", josh: "Josh Remote" };
+  for (const z of job.house.zones) {
+    const lbl = REMOTE_BOM[z.remote];
+    if (lbl && (z.scope || "included") === "included") items.push({ label: lbl, status: "new", where: z.name });
+  }
   // roll up identical label+status
   const rolled = [];
   for (const it of items) {

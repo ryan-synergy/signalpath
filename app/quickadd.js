@@ -37,6 +37,14 @@ export function parseQuickZone(text) {
   if (eat(/\bofe\b|\bexisting\b|\bowner\b/)) ofe = true;
   if (eat(/\blocal\b/)) local = true;
   if (eat(/\bmatrix\b|\bdistributed\b/)) matrix = true;
+
+  // room remote: "savant remote", "atv remote", "josh remote", "factory remote"
+  const rm = eat(/\b(savant|josh|apple\s*tv|appletv|atv|apple|factory|oem)\s+remote\b/);
+  if (rm) {
+    const k = rm[1].replace(/\s+/g, "");
+    zone.remote = k === "savant" ? "savant" : k === "josh" ? "josh" : (k === "factory" || k === "oem") ? "factory" : "appletv";
+    chips.push({ kind: "hint", label: (zone.remote === "appletv" ? "Apple TV" : zone.remote === "factory" ? "factory" : zone.remote) + " remote" });
+  }
   const noTv = !!eat(/\bno\s*tv\b|\baudio\s*only\b/);
 
   // landscape with optional sat count: "landscape 8" / "landscape"

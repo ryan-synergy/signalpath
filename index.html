@@ -607,6 +607,7 @@ function zonesHTML() {
       <div class="fields">
         ${field("Name", `<input class="zname" value="${esc(z.name)}">`)}
         ${fieldO("Scope", sel("zscope", ["included", "prewire", "future"], zEff.scope || "included"), "zones", z.id, "scope")}
+        ${fieldO("Remote", sel("zremote", ["none", "savant", "appletv", "josh", "factory"], zEff.remote || "none"), "zones", z.id, "remote")}
         ${S.job.house.areas.length ? field("Area", sel("zarea", ["", ...S.job.house.areas.map(a => a.id)], z.area || "")) : ""}
         <div class="sect">SPEAKERS</div>
         ${spk ? fieldO("Config", sel("spkcfg", SPK_CONFIGS, spk.config || "stereo"), "endpoints", spkH.id, "config")
@@ -827,6 +828,11 @@ function wirePanel(body) {
   });
   on(".zname", el => { const z = zoneOf(el); if (z) z.name = el.value; });
   on(".zscope", el => { const z = zoneOf(el); setF("zones", z, "scope", el.value); });
+  on(".zremote", el => {
+    const z = zoneOf(el); if (!z) return;
+    if (scopeSol) setF("zones", z, "remote", el.value);      // "none" override = explicitly no remote in this solution
+    else if (el.value === "none") delete z.remote; else z.remote = el.value;
+  });
   on(".zarea", el => { const z = zoneOf(el); if (z) { if (el.value) z.area = el.value; else delete z.area; } });
   on(".spkcfg", el => {
     const z = zoneOf(el); if (!z) return;

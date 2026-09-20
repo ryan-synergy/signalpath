@@ -187,10 +187,16 @@ export function validate(job, ix = indexJob(job)) {
       if (!SIGNAL_COLORS[c.signal]) E("bad-signal", `unknown signal "${c.signal}" on ${c.from}→${c.to}`);
     }
 
-    // orphan endpoints: every endpoint must be fed (be `to` of >=1 edge)
+    // orphan endpoints: every endpoint must be fed (be `to` of >=1 edge) —
+    // except a display sharing its zone with an at-display local source: the
+    // puck inside the card IS the feed, no wire needed (guest-room Apple TV)
     const fed = new Set((sol.connections || []).map(c => c.to));
+    const localFedZones = new Set(Object.values(s.locals)
+      .filter(d => d.type === "source" && d.location === "at-display").map(d => d.zone));
     for (const eid of Object.keys(ix.endpointsById)) {
-      if (!fed.has(eid)) E("orphan-endpoint", `endpoint never fed: ${eid} (${ix.endpointZone[eid]})`);
+      if (fed.has(eid)) continue;
+      if (ix.endpointsById[eid].type === "display" && localFedZones.has(ix.endpointZone[eid])) continue;
+      E("orphan-endpoint", `endpoint never fed: ${eid} (${ix.endpointZone[eid]})`);
     }
     // sources should feed something
     const used = new Set((sol.connections || []).map(c => c.from));

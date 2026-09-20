@@ -110,7 +110,7 @@ A structured **channel router**, not a maze solver. Wires travel in registered l
 
 **Debugging infrastructure is not optional.** `route({debug:true})` exports registered channel segments; `place-preview.html` draws placement boxes, routed wires, and a congestion heat overlay. The `rdbg` candidate log (why each return candidate was rejected: `blocked:z19` etc.) is what cracked every hard routing bug.
 
-**Regression guards:** hop-ceiling tests per fixture (currently residence 12 / estate 29 / stress 340, zero fallbacks). Any routing change that raises a ceiling must justify itself.
+**Regression guards:** hop-ceiling tests per fixture (currently residence 14 / estate 29 / stress 340, zero fallbacks), plus a geometric never-pierce test: no return/backhaul segment other than the final approach may intersect its target tile. That guard exists because of a real bug: the target tile is exempt from `segBlocked` so the final approach can land on its edge, and that exemption silently blessed a lane that crossed the module's *body*, wrapped the west margin, and re-entered from the left — scoring loved it because cheating through the target costs zero crossings. Any routing change that raises a ceiling must justify itself (the 12→14 residence re-baseline was the price of fixing that pierce).
 
 ## 5. The catalog (`app/catalog.json`)
 

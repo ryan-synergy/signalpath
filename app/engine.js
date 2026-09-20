@@ -1426,6 +1426,18 @@ export function route(job, ix, placement, opts = {}) {
     // the fewest hops — returns route last, so the corridor is fully known
     let best = null, bestCost = Infinity, seen = 0;
     const rdbg = info => { if (opts.debug) { const k = wireId(conn); ((out.debug ||= {})[k] ||= []).length < 80 && out.debug[k].push(info); } };
+    // the target is exempt from segBlocked so the final approach may land on its
+    // edge — but that exemption must not let EARLIER segments pierce its body
+    // (seen live: a lane at card height crossed the module, wrapped the west
+    // margin, and re-entered from the left)
+    const hitsTarget = cand => {
+      for (let i = 1; i < cand.length - 1; i++) {
+        const [x1, y1] = cand[i - 1], [x2, y2] = cand[i];
+        if (Math.min(x1, x2) < b.x + b.w && Math.max(x1, x2) > b.x &&
+            Math.min(y1, y2) < b.y + b.h && Math.max(y1, y2) > b.y) return true;
+      }
+      return false;
+    };
     // a stacked card directly below can wall off the straight descent — jog
     // through the row strip into the cluster gutter beside the card, then drop
     const buildCands = (y, wx) => {
@@ -1449,10 +1461,10 @@ export function route(job, ix, placement, opts = {}) {
           Math.min(y, ty), Math.max(y, ty), nWire, range === gapABx ? 0 : -1,
           x => segBlocked(x, Math.min(y, ty), x, Math.max(y, ty), skip), range);
         if (wx == null) { rdbg({ y, r: range === gapABx ? "ab" : "west", fail: "alloc" }); continue; }
-        const cand = buildCands(y, wx).find(c => !pathBlocked(c, skip) && pathRegisterable(c, nWire));
+        const cand = buildCands(y, wx).find(c => !hitsTarget(c) && !pathBlocked(c, skip) && pathRegisterable(c, nWire));
         if (!cand) {
           const c0 = buildCands(y, wx)[0];
-          rdbg({ y, wx, r: range === gapABx ? "ab" : "west", fail: pathBlocked(c0, skip) ? "blocked:" + pathBlocked(c0, skip) : "registry" });
+          rdbg({ y, wx, r: range === gapABx ? "ab" : "west", fail: hitsTarget(c0) ? "pierces-target" : pathBlocked(c0, skip) ? "blocked:" + pathBlocked(c0, skip) : "registry" });
           continue;
         }
         // hops dominate; congestion breaks ties toward emptier corridors
@@ -1474,10 +1486,10 @@ export function route(job, ix, placement, opts = {}) {
             Math.min(y, ty), Math.max(y, ty), nWire, range === gapABx ? 0 : -1,
             x => segBlocked(x, Math.min(y, ty), x, Math.max(y, ty), skip), range);
           if (wx == null) { rdbg({ band2: y, r: range === gapABx ? "ab" : "west", fail: "alloc" }); continue; }
-          const cand = buildCands(y, wx).find(c => !pathBlocked(c, skip) && pathRegisterable(c, nWire));
+          const cand = buildCands(y, wx).find(c => !hitsTarget(c) && !pathBlocked(c, skip) && pathRegisterable(c, nWire));
           if (!cand) {
             const c0 = buildCands(y, wx)[0];
-            rdbg({ band2: y, wx, r: range === gapABx ? "ab" : "west", fail: pathBlocked(c0, skip) ? "blocked:" + pathBlocked(c0, skip) : "registry" });
+            rdbg({ band2: y, wx, r: range === gapABx ? "ab" : "west", fail: hitsTarget(c0) ? "pierces-target" : pathBlocked(c0, skip) ? "blocked:" + pathBlocked(c0, skip) : "registry" });
             continue;
           }
           const cost = countCrossings(cand) * 100 + pathCongestion(cand);

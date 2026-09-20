@@ -324,7 +324,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
 /* hop-count regression guards (polish round 2026-09-19: returns route last
    and pick the least-crossing lane) */
 {
-  const ceiling = { residence: 12, estate: 29, stress: 340 };  // re-baselined 2026-09-19: amps-bottom layout
+  const ceiling = { residence: 14, estate: 29, stress: 340 };  // residence 12→14 2026-09-20: return pierce fix — the old "cheap" route cheated through the target module
   for (const [name, raw] of Object.entries(fixtures)) {
     const { job, ix } = loadJob(raw);
     const p = place(job, ix);
@@ -1121,6 +1121,29 @@ for (const [name, raw] of Object.entries(fixtures)) {
     !!rt.channels && rt.channels.h.length > 0 && rt.channels.v.length > 0 &&
     ["c", "a1", "a2"].every(k => k in rt.channels.h[0]));
   t("debug: channels stay private outside debug mode", !route(job, ix, p).channels);
+}
+
+/* ---------- returns must never pierce their target (user redline 2026-09-20) ---------- */
+{
+  // the target-tile segBlocked exemption is for the final approach only; a lane
+  // crossing the module body then wrapping the margin is a collision, not a route
+  for (const name of ["residence", "estate", "stress"]) {
+    const { job, ix } = loadJob(structuredClone(fixtures[name]));
+    const p = place(job, ix);
+    const rt = route(job, ix, p);
+    const tiles = {}; for (const r of p.racks) for (const d of r.devices) tiles[d.id] = d;
+    const pierced = rt.wires.filter(w => {
+      const b = tiles[w.to]; if (!b || !w.pts || (w.signal !== "audioReturn" && w.signal !== "network")) return false;
+      for (let i = 1; i < w.pts.length - 1; i++) {
+        const [x1, y1] = w.pts[i - 1], [x2, y2] = w.pts[i];
+        if (Math.min(x1, x2) < b.x + b.w && Math.max(x1, x2) > b.x &&
+            Math.min(y1, y2) < b.y + b.h && Math.max(y1, y2) > b.y) return true;
+      }
+      return false;
+    });
+    t(`${name}: no return/backhaul pierces its target device body`, pierced.length === 0,
+      pierced.map(w => `${w.from}→${w.to}`).join(", "));
+  }
 }
 
 /* ---------- hardening: hostile input must stay data ---------- */

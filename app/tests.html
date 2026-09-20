@@ -845,6 +845,45 @@ for (const [name, raw] of Object.entries(fixtures)) {
   }
 }
 
+/* ---------- Sonos patterns: soundbar stubs, local amps, network-fed audio ---------- */
+{
+  const catalog = await (await fetch("./catalog.json")).json();
+  const raw = structuredClone(fixtures.residence);
+  const sol = raw.solutions[0];
+
+  // patio becomes a Sonos room: soundbar fed by the TV (eARC), no rack speaker run
+  const patio = raw.house.zones.find(z => z.id === "z-patio");
+  patio.endpoints.find(e => e.type === "speakers").config = "soundbar";
+  sol.connections = sol.connections.filter(c => !(c.from === "mdx16" && c.to === "patio-spk"));
+  sol.connections.push({ from: "patio-tv", to: "patio-spk", signal: "audio" });
+
+  // master goes local-amp: Sonos Amp behind the TV drives the ceiling pair
+  sol.localDevices.push({ id: "amp-master", type: "amp", model: "Sonos Amp", catalogRef: "sonos-amp", zone: "z-master", location: "at-display" });
+  sol.connections = sol.connections.filter(c => !(c.from === "mdx16" && c.to === "master-spk"));
+  sol.connections.push({ from: "amp-master", to: "master-spk", signal: "speaker" });
+
+  const { job, ix } = loadJob(raw);
+  t("sonos: validates clean (soundbar + local amp both count as fed)", validate(job, ix).errors.length === 0,
+    JSON.stringify(validate(job, ix).errors.slice(0, 2)));
+  const p = place(job, ix);
+  const rt = route(job, ix, p);
+  t("sonos: everything routes, no fallbacks", rt.wires.length === sol.connections.length &&
+    !rt.warnings.some(w => w.code === "unrouted" || w.code === "route-fallback"), JSON.stringify(rt.warnings.slice(0, 3)));
+  const sb = rt.wires.find(w => w.id === "patio-tv→patio-spk");
+  const la = rt.wires.find(w => w.id === "amp-master→master-spk");
+  t("sonos: TV→soundbar and local-amp→speakers are in-card stubs",
+    sb?.cls === "local" && sb.insideCard === "z-patio" && la?.cls === "local" && la.insideCard === "z-master");
+  const runs = wireRuns(job, ix, {});
+  t("sonos: no phantom home runs (no S pull to patio or master, local amp gets its Cat6 drop)",
+    !runs.some(r => r.prefix === "S" && (r.to.includes("Patio") || r.to.includes("Master"))) &&
+    runs.some(r => r.prefix === "N" && r.to.includes("Master") && r.carries.includes("Sonos Amp")));
+  const a = advise(job, ix, catalog);
+  t("sonos: LAN note fires once (local Sonos gear counts)",
+    a.notes.filter(n => n.code === "sonos-net").length === 1);
+  t("sonos: base residence has no Sonos note",
+    !advise(...(() => { const { job: j, ix: i } = loadJob(fixtures.residence); return [j, i]; })(), catalog).notes.some(n => n.code === "sonos-net"));
+}
+
 /* ---------- grayscale (B&W-safe) render mode ---------- */
 {
   const { job, ix } = loadJob(fixtures.residence);

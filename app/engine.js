@@ -409,6 +409,7 @@ export function place(job, ix = indexJob(job), opts = {}) {
   for (const c of visConns) {
     const zid = ix.endpointZone[c.to] || (s.companions[c.to] && ix.endpointZone[s.companions[c.to].serves]);
     if (!zid || s.locals[c.from]) continue;
+    if (ix.endpointsById[c.from] && ix.endpointZone[c.from] === zid) continue; // in-room link needs no strip lane
     if (s.companions[c.from] && ix.endpointsById[s.companions[c.from].serves]) continue; // chip stub
     zoneInbound[zid] = (zoneInbound[zid] || 0) + 1;
   }
@@ -451,7 +452,7 @@ export function place(job, ix = indexJob(job), opts = {}) {
     if (fCol === "B" && (toZoneSide || s.companions[c.to])) bcDemand++;
     if (fCol === "B" && tCol === "B") { bcDemand++; abDemand++; }
     if (fCol === "B" && tCol === "C") bcDemand++;
-    if (ix.endpointsById[c.from] || (s.locals[c.from] && devColOf[c.to] != null)) abDemand++; // returns + local backhauls descend the AB gap
+    if ((ix.endpointsById[c.from] || s.locals[c.from]) && devColOf[c.to] != null) abDemand++; // returns + local backhauls descend the AB gap (in-room links don't)
     if (s.companions[c.from] && devColOf[s.companions[c.from].serves] === "A") abDemand++; // ENC-chip outputs
   }
   const gapAB = Math.max(80, abDemand * 12 + 24);
@@ -468,6 +469,7 @@ export function place(job, ix = indexJob(job), opts = {}) {
     if (!zid) continue;
     if (s.locals[c.from] && ix.endpointsById[c.to]) continue; // local link lives inside the card
     if (s.locals[c.to] && ix.endpointZone[c.from] === s.locals[c.to].zone) continue; // display → local encoder stub
+    if (ix.endpointsById[c.from] && ix.endpointZone[c.from] === ix.endpointZone[c.to]) continue; // display → in-room soundbar
     // a chip parked at the card (balun/DEC serving an endpoint) feeds it via a
     // short stub — the corridor crossing was already counted on the feed INTO the chip
     if (s.companions[c.from] && ix.endpointsById[s.companions[c.from].serves]) continue;
@@ -902,6 +904,16 @@ export function route(job, ix, placement, opts = {}) {
       const lt = pz.groups.flatMap(gr => gr.locals || (gr.local ? [gr.local] : [])).find(l => l.deviceId === conn.from);
       if (lt) commit(conn, "local", [[pz.x + lt.x + lt.w / 2, pz.y + lt.y], [pz.x + g.cx, pz.y + g.y + g.h]], { insideCard: pz.id });
       else out.warnings.push({ code: "no-local-slot", msg: `local ${conn.from} has no slot` });
+      done.add(i);
+    } else if (ix.endpointsById[conn.from] && ix.endpointsById[conn.to] &&
+               ix.endpointZone[conn.from] === ix.endpointZone[conn.to]) {
+      // display feeds an in-room speaker (soundbar via eARC): connector inside
+      // the card — down from the display, across, up into the speaker group
+      const a = slotOf(conn.from), t = slotOf(conn.to);
+      const pz = a.pz;
+      const yb = pz.y + Math.max(a.g.y + a.g.h, t.g.y + t.g.h) + 8;
+      commit(conn, "local", [[pz.x + a.g.cx - 14, pz.y + a.g.y + a.g.h], [pz.x + a.g.cx - 14, yb],
+        [pz.x + t.g.cx, yb], [pz.x + t.g.cx, pz.y + t.g.y + t.g.h]], { insideCard: pz.id });
       done.add(i);
     } else if (ix.endpointsById[conn.from] && s.locals[conn.to]) {
       // display → local return encoder: the return is handled AT the TV;
@@ -1952,6 +1964,11 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       if (Object.values(s.devices).some(d => catalog.devices[d.catalogRef]?.flags?.includes("avb")))
         out.notes.push({ code: "avb-switch", solution: sol.id,
           msg: "AVB/IP audio gear on this job — requires an Avnu-certified AVB switch (e.g. Netgear M4250 AV Line); an uncertified switch breaks AVB stream sync silently" });
+      // Sonos distributes over the LAN — every player wants a wired drop where possible
+      const allSolDevs = [...Object.values(s.devices), ...Object.values(s.locals)];
+      if (allSolDevs.some(d => catalog.devices[d.catalogRef]?.flags?.includes("sonos")))
+        out.notes.push({ code: "sonos-net", solution: sol.id,
+          msg: "Sonos on the job — audio distributes over the LAN; hardwire every Sonos device where possible (Cat6 drop per device)" });
     }
 
     /* -- licensing advisor per platform -- */

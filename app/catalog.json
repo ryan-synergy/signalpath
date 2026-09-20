@@ -801,6 +801,42 @@
    ],
    "verified": true,
    "notes": "All-native AVB music streamer/source \u2014 1x Ethernet port carries AVB to feed amps/AOMs directly over the network, plus 1x physical coax and 1x physical optical output for feeding a legacy (non-AVB) zone amp or AVR directly. PoE, max 15W. Supersedes the legacy SMS-1001/SMS-100AM single-stream servers and the older SMS-002A SmartMedia Server (500GB local storage, 2 simultaneous streams \u2014 EOL, see Unresolved)."
+  },
+  "sonos-amp": {
+   "brand": "Sonos",
+   "model": "Amp",
+   "type": "amp",
+   "zones": 1,
+   "ampCh": 2,
+   "inputs": {
+    "earc": 1,
+    "analog": 1
+   },
+   "outputs": {
+    "sub": 1
+   },
+   "flags": [
+    "sonos"
+   ],
+   "verified": false,
+   "notes": "One stereo zone, 125W/ch class-D. HDMI ARC + analog line-in. Rack OR at-display behind a TV driving local speakers. Audio arrives over the LAN (no trunk needed). Placeholder \u2014 research round in flight; verify before quoting."
+  },
+  "sonos-port": {
+   "brand": "Sonos",
+   "model": "Port",
+   "type": "source",
+   "inputs": {
+    "analog": 1
+   },
+   "outputs": {
+    "analog": 1,
+    "coax": 1
+   },
+   "flags": [
+    "sonos"
+   ],
+   "verified": false,
+   "notes": "Two-way bridge: line-in encodes a source INTO Sonos; line/coax out decodes a Sonos stream to a legacy amp or input module. Rack or at-TV. Placeholder \u2014 research round in flight."
   }
  },
  "licensing": {

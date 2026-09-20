@@ -322,6 +322,7 @@ export function wireRuns(job, ix, opts = {}) {
           carries: gray ? "PRE-WIRE — coil & label" : "Sub feed", color: gray ? null : "#1a5fa0",
           term: `${amp?.model || c.from} sub out`, count: 1, gray });
     } else if (c.signal === "audioReturn" && fromEp) {
+      if (s.locals[c.to] || ix.endpointsById[c.to]) continue;   // handled at the TV (local encoder / soundbar) — no pull
       const z = zoneOf(ix, c.from);
       runs.push({ prefix: "R", cable: "Optical (Toslink)", from: `${z?.name} — TV location`, to: rackName,
         carries: "Audio return", color: "#a45a12", term: s.devices[c.to]?.model || c.to, count: 1, gray });

@@ -1969,6 +1969,13 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       if (allSolDevs.some(d => catalog.devices[d.catalogRef]?.flags?.includes("sonos")))
         out.notes.push({ code: "sonos-net", solution: sol.id,
           msg: "Sonos on the job — audio distributes over the LAN; hardwire every Sonos device where possible (Cat6 drop per device)" });
+      // TV audio into a Sonos line-in (Port/Connect) buffers ≥75ms once grouped —
+      // an installer-tuned delay, not a plug-and-play eARC replacement
+      const sonosLineIn = id => { const c2 = catalog.devices[(s.locals[id] || s.devices[id])?.catalogRef];
+        return c2?.flags?.includes("sonos") && c2.type === "source"; };
+      if ((sol.connections || []).some(c => ix.endpointsById[c.from] && sonosLineIn(c.to)))
+        out.notes.push({ code: "sonos-lipsync", solution: sol.id,
+          msg: "TV audio encoded via Sonos line-in buffers ≥75ms when grouped — set Group Audio Delay per room (fw 10.6.2+); expect tuning, not plug-and-play" });
     }
 
     /* -- licensing advisor per platform -- */

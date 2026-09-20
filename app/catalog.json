@@ -1,7 +1,7 @@
 {
  "generator": "SignalPath-catalog",
  "version": 1,
- "asOf": "2026-09-19",
+ "asOf": "2026-09-20",
  "note": "Seeded from RESEARCH.md \u00a75-6 (verified 2026-09-16). Edit in SignalPath \u2192 SETTINGS, not here.",
  "devices": {
   "anthem-mdx-16": {
@@ -804,22 +804,26 @@
   },
   "sonos-amp": {
    "brand": "Sonos",
-   "model": "Amp",
+   "model": "Amp (Gen 2, AMPG1US1)",
    "type": "amp",
    "zones": 1,
    "ampCh": 2,
    "inputs": {
-    "earc": 1,
-    "analog": 1
+    "analog": 1,
+    "hdmi": 1
    },
    "outputs": {
     "sub": 1
    },
    "flags": [
-    "sonos"
+    "arc",
+    "lineInShareable",
+    "parallelSpeakerPairsOk",
+    "sonos",
+    "wifiOrEthernet"
    ],
-   "verified": false,
-   "notes": "One stereo zone, 125W/ch class-D. HDMI ARC + analog line-in. Rack OR at-display behind a TV driving local speakers. Audio arrives over the LAN (no trunk needed). Placeholder \u2014 research round in flight; verify before quoting."
+   "verified": true,
+   "notes": "One stereo zone, 2 amplified channels. 125W/ch RMS @8\u03a9 (0.1% THD), roughly doubles into 4\u03a9 (4\u03a9 minimum load) \u2014 GOTCHA: several retailers title the SKU '250W' (125x2 summed, not per-channel); don't let that inflate a per-channel power figure in capacity math. 1x HDMI **ARC** input (not eARC) for TV sound \u2014 note the Amp is 2-channel only, so even over ARC it plays TV audio as a stereo downmix, no Atmos object/height decoding (contrast with the Arc Ultra/Beam Gen 2 soundbars below, which DO decode Atmos because they have the driver array for it). 1x stereo RCA line-in (turntable/CD), shareable/groupable to play on other Sonos rooms subject to the same 75ms line-in buffering as the Port (see headline note above). Auto-detecting sub output, adjustable 50\u2013110Hz crossover. Dual 10/100 Ethernet (NOT gigabit \u2014 irrelevant for the Amp's own low-bitrate audio stream, but a hard ceiling if daisy-chaining other gear off it) or WiFi. Each of the 2 channels can drive 2 pairs of 8\u03a9 speakers wired in parallel (4\u03a9 net) \u2014 i.e. up to 4 speakers total (2 pairs) off one Amp, but they're all ONE volume zone; a second physical area needing independent volume needs its own Amp or a volume-control speaker selector downstream. NO 70V/100V capability \u2014 confirmed absent from every spec source found; Sonos amps are low-Z consumer-grade only, never spec this for a 70V distributed run."
   },
   "sonos-port": {
    "brand": "Sonos",
@@ -833,10 +837,166 @@
     "coax": 1
    },
    "flags": [
+    "bidirectional",
+    "lineInShareable",
+    "sonos",
+    "trigger12v"
+   ],
+   "verified": true,
+   "notes": "Bidirectional bridge box, not just a one-way source: the SAME unit simultaneously (a) ingests a legacy analog source (turntable, CD player, an AVR's 2ch preout) via its 1x stereo RCA line-in and makes it available/groupable across the Sonos system, AND (b) decodes whatever the Sonos system is playing back out to a legacy zone amp/receiver via 1x stereo RCA line-out + 1x digital coax out (NO optical out \u2014 coax only). Also has a 12V trigger output (200mA) to power on a downstream amp, not counted in the port totals above. Dual 10/100 Ethernet, no PoE. LIP-SYNC GOTCHA (see headline note): minimum 75ms buffered latency on the line-in path the moment it's grouped with other rooms, by design, for multiroom sync \u2014 stacks with the TV's own ~100\u2013150ms video-processing delay if used to encode TV audio. Sonos added Group Audio Delay + Audio Delay compensation settings in app/firmware 10.6.2 specifically for this; treat as 'viable with per-room tuning,' not 'automatically lip-synced out of the box.' No successor SKU found as of this research date \u2014 'Port 2' appears to be unfounded/no active rumor (see Unresolved)."
+  },
+  "sonos-arc-ultra": {
+   "brand": "Sonos",
+   "model": "Arc Ultra",
+   "type": "amp",
+   "zones": 1,
+   "inputs": {
+    "hdmi": 1
+   },
+   "outputs": {},
+   "flags": [
+    "atmos",
+    "bluetooth",
+    "eARC",
+    "noDirectSourceInputs",
+    "sonos",
+    "speakerEndpoint"
+   ],
+   "verified": true,
+   "notes": "Current flagship soundbar. Single HDMI eARC port ONLY \u2014 no HDMI inputs of any kind, no optical, no analog. Every external source must be routed through the TV and back down the single eARC connection; you cannot patch a second source directly into the bar. 9.1.4-channel driver array (up to that config with 2x Era 300 surrounds + Sub 4). Bluetooth streaming supported as a secondary input path. Pairs with Sub 4 and Era 100/300 as surrounds (see those entries) \u2014 when an Era is bonded as a surround, its own line-in is disabled (see sonos-era-300 notes)."
+  },
+  "sonos-beam-gen2": {
+   "brand": "Sonos",
+   "model": "Beam (Gen 2)",
+   "type": "amp",
+   "zones": 1,
+   "inputs": {
+    "hdmi": 1
+   },
+   "outputs": {},
+   "flags": [
+    "atmos",
+    "eARC",
+    "opticalAdapterIncluded",
+    "sonos",
+    "speakerEndpoint"
+   ],
+   "verified": true,
+   "notes": "Mid-tier soundbar. Single HDMI eARC input (backward compatible with ARC-only TVs). Ships with an optical adapter in the box for TVs with no ARC/eARC \u2014 GOTCHA: using the optical adapter drops Dolby Atmos entirely (optical can't carry the Dolby Digital Plus/TrueHD bitstream Atmos needs), falls back to 5.1/stereo. Has its own Ethernet port for wired network. 5.0.2-channel driver array; supports Atmos via HDMI eARC/ARC using Dolby Digital Plus (lossy) or, over eARC only, Dolby TrueHD (lossless)."
+  },
+  "sonos-ray": {
+   "brand": "Sonos",
+   "model": "Ray",
+   "type": "amp",
+   "zones": 1,
+   "inputs": {
+    "optical": 1
+   },
+   "flags": [
+    "irPassthrough",
+    "noAtmos",
+    "noHdmi",
+    "sonos",
+    "speakerEndpoint"
+   ],
+   "verified": true,
+   "notes": "Budget/entry soundbar. NO HDMI at all \u2014 optical (Toslink) digital input only, ships with the optical cable in box. No eARC/ARC means no Dolby Atmos support \u2014 format ceiling is Stereo PCM, Dolby Digital 5.1, DTS Digital Surround. Has a built-in IR receiver so the TV's own remote still controls volume/power despite no HDMI-CEC link. Has its own Ethernet port. Good fit for a secondary/bedroom TV zone where the budget doesn't support eARC gear; wrong choice anywhere Atmos or multi-source HDMI switching matters."
+  },
+  "sonos-sub4": {
+   "brand": "Sonos",
+   "model": "Sub 4",
+   "type": "amp",
+   "zones": 0,
+   "inputs": {},
+   "outputs": {},
+   "flags": [
+    "sonos",
+    "speakerEndpoint",
+    "wireless"
+   ],
+   "verified": true,
+   "notes": "Wireless subwoofer, no line-level or HDMI ports at all \u2014 pairs over WiFi (802.11a/b/g/n/ac/ax) to an Arc Ultra/Arc/Beam or a stereo pair; has an optional 10/100 Ethernet port for a wired network connection but nothing an integrator patches into. Dual force-cancelling 5x8\" woofers, ~25Hz extension, dual Class-D amps on board. Zero port-capacity relevance for the trunk checker \u2014 included here purely so the BOM/notes list doesn't have to invent a device for it."
+  },
+  "sonos-era-300-surround": {
+   "brand": "Sonos",
+   "model": "Era 300",
+   "type": "amp",
+   "zones": 1,
+   "inputs": {
+    "analog": 1
+   },
+   "outputs": {},
+   "flags": [
+    "lineInViaAdapter",
+    "sonos",
+    "speakerEndpoint",
+    "surroundCapable"
+   ],
+   "verified": true,
+   "notes": "Line-in requires a separately-sold USB-C adapter (Sonos Line-In Adapter: 3.5mm-to-USB-C, or the Combo Adapter which adds an Ethernet port) \u2014 there is no line-in jack on the speaker itself. GOTCHA: line-in is automatically DISABLED whenever the Era 300 is bonded as a home-theater surround speaker (paired behind an Arc/Arc Ultra/Beam) \u2014 you cannot use a surround-paired Era 300 as a line-in zone at the same time; it's one role or the other. Two Era 300s pair as rear surrounds for Atmos height content."
+  },
+  "sonos-era-100-surround": {
+   "brand": "Sonos",
+   "model": "Era 100",
+   "type": "amp",
+   "zones": 1,
+   "inputs": {
+    "analog": 1
+   },
+   "outputs": {},
+   "flags": [
+    "lineInViaAdapter",
+    "sonos",
+    "speakerEndpoint",
+    "surroundCapable"
+   ],
+   "verified": true,
+   "notes": "Same line-in-via-separately-sold-USB-C-adapter and same surround-disables-line-in gotcha as the Era 300 (see that entry). Smaller/cheaper stereo bookshelf speaker, used as budget surrounds behind a Beam/Ray or as standalone stereo/line-in zones where cost matters more than the 300's spatial driver array."
+  },
+  "sonos-connect": {
+   "brand": "Sonos",
+   "model": "Connect (legacy)",
+   "type": "source",
+   "inputs": {
+    "analog": 1,
+    "coax": 1,
+    "optical": 1
+   },
+   "outputs": {
+    "analog": 1,
+    "coax": 1
+   },
+   "flags": [
+    "legacy",
+    "noHdmi",
+    "s1Only",
     "sonos"
    ],
    "verified": false,
-   "notes": "Two-way bridge: line-in encodes a source INTO Sonos; line/coax out decodes a Sonos stream to a legacy amp or input module. Rack or at-TV. Placeholder \u2014 research round in flight."
+   "notes": "LEGACY \u2014 sold 2006\u20132015, no software updates or new features since May 2020 (bug/security fixes only, 'for as long as possible' per Sonos). Runs S1 controller only \u2014 cannot share a system with current S2-era gear (Amp, Port, Arc Ultra, etc.) without a split/bridged setup. Still fielded in older installs; do not spec new, and flag to the client that it's on a frozen software branch. Port counts here are from general/secondary sources, NOT freshly re-verified against a primary spec this round \u2014 confirm before relying on them; functionally it's the predecessor these numbers approximate the Port's analog+digital in/out pattern minus any HDMI (Connect predates HDMI entirely)."
+  },
+  "sonos-connect-amp": {
+   "brand": "Sonos",
+   "model": "Connect:Amp (legacy)",
+   "type": "amp",
+   "zones": 1,
+   "ampCh": 2,
+   "inputs": {
+    "analog": 1,
+    "coax": 1,
+    "optical": 1
+   },
+   "outputs": {
+    "sub": 1
+   },
+   "flags": [
+    "legacy",
+    "noHdmi",
+    "s1Only",
+    "sonos"
+   ],
+   "verified": false,
+   "notes": "LEGACY \u2014 same May-2020 software freeze as Connect above, S1-only, no HDMI (predates ARC). ~55W/ch into 8\u03a9 (secondary-source figure, not re-verified this round). Direct functional predecessor to the current Amp, minus HDMI ARC. Still fielded; eligible for Sonos Trade Up (30% off new hardware when recycled) \u2014 worth mentioning to clients holding onto one. Do not spec new."
   }
  },
  "licensing": {

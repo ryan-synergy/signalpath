@@ -984,8 +984,20 @@ for (const [name, raw] of Object.entries(fixtures)) {
     cat.devices["audiocontrol-bijou-3100"].outputs.lineOut === 2);
   t("catalog: Blaze Dante gotcha encoded (8ch amp, 4ch Dante)",
     cat.devices["sonance-blaze-pzc-1008d"].inputs.dante === 4 && cat.devices["sonance-blaze-pzc-1008d"].ampCh === 8);
-  t("catalog: unconfirmed specs stay verified:false (DSP MKIII, MX-44/1616)",
-    [cat.devices["sonance-dsp-8-130-mkiii"], cat.devices["avpro-ac-mx-44"], cat.devices["avpro-ac-mx-1616"]].every(d => d.verified === false));
+  // PDF verification pass 2026-09-20: manuals settled what web text couldn't
+  t("catalog: Sonance MKIII inputs manual-confirmed (hybrid module, one type at a time)",
+    cat.devices["sonance-dsp-2-150-mkiii"].verified === true && cat.devices["sonance-dsp-2-150-mkiii"].inputs.analog === 1 &&
+    cat.devices["sonance-dsp-2-150-mkiii"].inputs.optical === 1 &&
+    cat.devices["sonance-dsp-8-130-mkiii"].verified === true && cat.devices["sonance-dsp-8-130-mkiii"].inputs.analog === 4 &&
+    cat.devices["sonance-dsp-2-750-mkiii"].verified === true);
+  t("catalog: M6800D analog corrected 10→8 (busses are digital)",
+    cat.devices["audiocontrol-m6800d"].inputs.analog === 8 && cat.devices["audiocontrol-m6800d"].verified === true);
+  t("catalog: MX-1616 confirmed (16 analog de-embeds, no digital out); MX-44 stays honestly unverified",
+    cat.devices["avpro-ac-mx-1616"].verified === true && cat.devices["avpro-ac-mx-1616"].outputs.analog === 16 &&
+    !cat.devices["avpro-ac-mx-1616"].outputs.optical && cat.devices["avpro-ac-mx-44"].verified === false);
+  t("catalog: SW24 lineage settled (legacy 370W, SW24P successor present)",
+    cat.devices["avpro-mxnet-sw24"].poeBudgetW === 370 && cat.devices["avpro-mxnet-sw24"].flags.includes("legacy") &&
+    cat.devices["avpro-mxnet-sw24p"]?.verified === true);
   // round 2: Savant — the AIM placeholder was wrong (never had optical); legacy vs current split
   const aim = cat.devices["savant-avb-input-module"], aim7 = cat.devices["savant-pav-aim7c"];
   t("catalog: legacy AIM corrected to pure analog (placeholder optical removed)",

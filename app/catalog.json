@@ -163,7 +163,7 @@
     "poe"
    ],
    "verified": true,
-   "notes": "eARC \u2192 Dante/AES67."
+   "notes": "eARC \u2192 Dante/AES67. Supersedes the discontinued ACP-DANTE-ETV (eARC + Toslink selectable \u2192 2ch Dante, PoE or USB-C 5V, 1/2/5ms latency)."
   },
   "avpro-ac-mx-88": {
    "brand": "AVPro Edge",
@@ -182,7 +182,7 @@
     "audioMatrix"
    ],
    "verified": true,
-   "notes": "Per-output analog de-embed is 2ch PCM only."
+   "notes": "Per-output analog de-embed is 2ch PCM only. PDF-pass 2026-09-20: 4x Toslink de-embed CONFIRMED (Markertek spec + AVPro cut sheet), 8x balanced analog 1:1 per output; extraction modes bind-to-input / bind-to-output / independent matrix."
   },
   "avpro-mxnet-sw12": {
    "brand": "AVPro Edge",
@@ -200,7 +200,7 @@
     "poe"
    ],
    "verified": true,
-   "notes": "12 ports are NOT 12 endpoint ports: 8x GbE PoE+ endpoint + 4x 10G SFP+ uplink/aggregation. 370W PoE budget.",
+   "notes": "12 ports are NOT 12 endpoint ports: 8x GbE PoE+ endpoint + 4x 10G SFP+ uplink/aggregation. 370W PoE budget. SKU transitioning to AC-MXNET-SW8P \u2014 identical hardware, renamed to match the true 8-endpoint-port count.",
    "poeBudgetW": 370
   },
   "avpro-mxnet-cbox-ha": {
@@ -311,7 +311,7 @@
    "zones": 8,
    "ampCh": 16,
    "inputs": {
-    "analog": 10,
+    "analog": 8,
     "digitalCombo": 2,
     "dante": 16
    },
@@ -324,7 +324,7 @@
     "ipControl"
    ],
    "verified": true,
-   "notes": "Dante tx presumed 16 (flagged)."
+   "notes": "Dante tx presumed 16 (flagged). MANUAL-CONFIRMED (M6400/M6800 user manual): analog inputs are per-zone stereo RCA (8 zones = 8 stereo ins) with hard-wired loop outs; the 2 bus inputs are DIGITAL (coax/Toslink selectable) \u2014 analog count corrected from 10 to 8."
   },
   "audiocontrol-d2800": {
    "brand": "AudioControl",
@@ -537,14 +537,16 @@
    "zones": 2,
    "ampCh": 2,
    "inputs": {
-    "analog": 2
+    "analog": 1,
+    "coax": 1,
+    "optical": 1
    },
    "outputs": {},
    "flags": [
     "anyInputAnyZone"
    ],
-   "verified": false,
-   "notes": "150W/ch @8\u03a9, 224W/ch @4\u03a9, bridgeable for more power. SonARC v2 DSP. Base unit ships with analog line inputs/loop-outs; digital (coax/optical) input requires an optional Sonance input module \u2014 confirm exact base analog input port count from the full datasheet PDF before relying on it for capacity math (channel count & power confirmed via sonance.com product page, but I could not open the datasheet PDF to verify the literal input-connector count)."
+   "verified": true,
+   "notes": "MANUAL-CONFIRMED (2023 DSP 2-150 MKIII manual + datasheet): factory Hybrid Input/Output Module = 1 stereo RCA analog in + loop out + 1 coax + 1 Toslink \u2014 USE ONLY ONE INPUT TYPE at a time (selectable, not simultaneous sources). 150W/ch @8\u03a9, 224W @4\u03a9, bridged 473W. SonARC v2 DSP. Half-width 1U."
   },
   "sonance-dsp-8-130-mkiii": {
    "brand": "Sonance",
@@ -559,8 +561,8 @@
    "flags": [
     "anyInputAnyZone"
    ],
-   "verified": false,
-   "notes": "130W/ch, Class-D, stable to 2\u03a9. GOTCHA: ships standard with only 2 analog input modules (4 inputs, routed to zones 1-4 by default) \u2014 the other 4 channels need additional optional Sonance Analog/Digital/Hybrid input modules to feed independently, or they inherit/loop a fed zone. Confirm exact module configuration per job before assuming all 8 channels have independent feeds."
+   "verified": true,
+   "notes": "MANUAL-CONFIRMED (2023 DSP 8-130 MKIII manual): rear panel carries 4 stereo RCA analog input pairs STANDARD (1L-4L/1R-4R \u2014 all 8 channels fed as 4 stereo sources) + non-buffered loop outs. CORRECTS the distributor claim of shipping half-populated. Manual prose references coax/optical digital inputs but the rear-panel figure shows analog only \u2014 digital arrives via optional DIM/HIM modules, count unpublished. 130W/ch Class-D, stable to 2\u03a9, bridgeable. 1RU."
   },
   "sonance-dsp-2-750-mkiii": {
    "brand": "Sonance",
@@ -569,15 +571,17 @@
    "zones": 2,
    "ampCh": 2,
    "inputs": {
-    "analog": 2
+    "analog": 1,
+    "coax": 1,
+    "optical": 1
    },
    "outputs": {},
    "flags": [
     "seventyVolt",
     "anyInputAnyZone"
    ],
-   "verified": false,
-   "notes": "750W/ch @4\u03a9 or 70V (70V is the default mode), 2 channels bridgeable. The landscape/garden workhorse \u2014 pairs with Sonance Garden Series (8 satellites + 1 sub per amp, expandable to 16 satellites + 2 subs). Successor to the DSP 2-750 MKII. Analog input count not independently confirmed from a full datasheet; power/channel count confirmed via manufacturer/distributor listings."
+   "verified": true,
+   "notes": "MANUAL-CONFIRMED (2023 DSP 2-750 MKIII manual, rear-panel diagram): analog stereo in + loop out + 1 coax + 1 Toslink \u2014 'Use Only One Type Of Input Connection'. 750W/ch @4\u03a9 or 70V (70V is default mode), bridgeable. The landscape/garden workhorse \u2014 pairs with Sonance Garden Series (8 sats + 1 sub per amp, expandable 16+2)."
   },
   "audiocontrol-acp-dante-d-poe": {
    "brand": "AudioControl",
@@ -640,13 +644,14 @@
     "gbe": 24,
     "sfpPlus": 4
    },
-   "poeBudgetW": null,
+   "poeBudgetW": 370,
    "flags": [
+    "legacy",
     "mxnet",
     "poe"
    ],
    "verified": true,
-   "notes": "24x GbE PoE+ endpoint ports + 4x 10G SFP+ uplink/aggregation, 364Gb/s switching fabric. This IS a real, current AVPro model \u2014 the catalog's prior suspicion about 'MXNET SW24' being wrong was unfounded (see Discrepancies). A newer 'SW24E' variant also appears in some distributor listings; could not confirm if it has superseded plain SW24 (see Unresolved) \u2014 PoE wattage budget not confirmed, left null rather than guessed."
+   "notes": "DISCONTINUED (AVPro Global) \u2014 replaced by AC-MXNET-SW24P (same 24x GbE PoE+ + 4x 10G SFP+). 370W PoE budget confirmed. Still fielded; for new designs spec the SW24P, or the SW24E economy variant (Layer 2.5, 4x 1G SFP stacking, also 370W)."
   },
   "avpro-ac-mx-44": {
    "brand": "AVPro Edge",
@@ -665,7 +670,7 @@
     "audioMatrix"
    ],
    "verified": false,
-   "notes": "4x4, 18Gbps, dual audio de-embedding (balanced analog + Toslink) per output, built-in scalers, adjustable audio delay \u2014 same family/architecture as the AC-MX-88 already in the catalog. Per-output analog/optical counts inferred from the AC-MX-88 pattern (1:1 with outputs) but not independently confirmed for this SKU \u2014 verify before relying on it."
+   "notes": "4x4, 18Gbps, dual audio de-embed (Toslink 7CH + balanced analog 2CH, same family architecture as AC-MX-88) \u2014 PDF pass 2026-09-20 confirmed the port TYPES but no text source publishes the per-output COUNTS for this SKU; the last remaining unverified AVPro spec. Check the rear panel before relying on de-embed counts."
   },
   "avpro-ac-mx-1616": {
    "brand": "AVPro Edge",
@@ -675,13 +680,14 @@
     "hdmi": 16
    },
    "outputs": {
-    "hdmi": 16
+    "hdmi": 16,
+    "analog": 16
    },
    "flags": [
     "audioMatrix"
    ],
-   "verified": false,
-   "notes": "16x16, 18Gbps, full HDMI 2.0 spec, 3 audio-extraction operating modes (Bound to Input / Bound to Output / Independent Matrix). Distributor listings mention 'digital coax audio outputs' but I could not confirm an exact per-output analog/optical/coax de-embed count from a manufacturer spec sheet \u2014 left out of the schema rather than guessed. Confirm from AVPro's own AC-MX-1616 datasheet before using for capacity math."
+   "verified": true,
+   "notes": "CONFIRMED (Markertek AC-MX-1616 Gen 2 spec): 16x16 HDMI 18Gbps, 16x balanced analog de-embed (5-pin terminal, ships with 16 extraction cables), 3 extraction modes (bind input / bind output / independent matrix). NO Toslink/coax digital de-embed \u2014 the distributor 'digital coax outputs' blurb was wrong."
   },
   "savant-pav-aim7c": {
    "brand": "Savant",
@@ -1012,6 +1018,22 @@
    ],
    "verified": false,
    "notes": "The 'Gambit' rumor made real: announced 2026-09-01, ships 2026-09-29, $699. 7.1.2 Dolby Atmos w/ dedicated up-firing drivers, redesigned center + AI Speech Enhancement, Trueplay. FCC (S59/RM059): BT + WiFi 2.4/5/6GHz 2x2. Beam Gen 2 form factor (~25.6in). PRE-SHIP entry: eARC-vs-ARC, DTS, ethernet speed, optical-adapter behavior and Sub/Era pairing all unconfirmed until spec sheets land after 9/29 \u2014 verify before spec'ing."
+  },
+  "avpro-mxnet-sw24p": {
+   "brand": "AVPro Edge",
+   "model": "AC-MXNET-SW24P",
+   "type": "networkSwitch",
+   "outputs": {
+    "gbe": 24,
+    "sfpPlus": 4
+   },
+   "poeBudgetW": 370,
+   "flags": [
+    "mxnet",
+    "poe"
+   ],
+   "verified": true,
+   "notes": "Current successor to the discontinued AC-MXNET-SW24: 24x GbE PoE+ endpoint ports, 4x 10G SFP+ uplink/aggregation, 370W PoE budget. Sibling AC-MXNET-SW24E = economy Layer 2.5 variant (4x 1G SFP stacking, same 370W) for smaller deployments."
   }
  },
  "licensing": {

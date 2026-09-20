@@ -882,6 +882,20 @@ for (const [name, raw] of Object.entries(fixtures)) {
     a.notes.filter(n => n.code === "sonos-net").length === 1);
   t("sonos: base residence has no Sonos note",
     !advise(...(() => { const { job: j, ix: i } = loadJob(fixtures.residence); return [j, i]; })(), catalog).notes.some(n => n.code === "sonos-net"));
+
+  // research round merged: verified Amp/Port + soundbar family + legacy Connect gear
+  t("sonos: catalog research merged (verified Amp, Port both-ways, legacy flagged)",
+    catalog.devices["sonos-amp"].verified === true && catalog.devices["sonos-amp"].flags.includes("sonos") &&
+    catalog.devices["sonos-port"].outputs.coax === 1 &&
+    catalog.devices["sonos-connect"]?.verified === false && !!catalog.devices["sonos-arc-ultra"]);
+  // lip-sync note: TV audio into a Port (line-in encoder) needs delay tuning
+  sol.localDevices.push({ id: "port-patio", type: "source", model: "Sonos Port", catalogRef: "sonos-port", zone: "z-patio", location: "at-display" });
+  sol.connections.push({ from: "patio-tv", to: "port-patio", signal: "audioReturn" }, { from: "port-patio", to: "sav-avb", signal: "network" });
+  {
+    const { job: j3, ix: i3 } = loadJob(raw);
+    t("sonos: TV→Port encoding fires the 75ms lip-sync note",
+      advise(j3, i3, catalog).notes.some(n => n.code === "sonos-lipsync"));
+  }
 }
 
 /* ---------- grayscale (B&W-safe) render mode ---------- */

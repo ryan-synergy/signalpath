@@ -290,7 +290,7 @@ function refresh(save = true) {
     adv.push(`<div class="item i">🎛 <b>${esc(lic.platform)}</b> → ${esc(lic.pick)} · ${lic.lines.map(esc).join(" · ")}</div>`);
     for (const w of lic.warns || []) adv.push(`<div class="item w">⚠ ${esc(lic.platform)}: ${esc(w)}</div>`);
   }
-  for (const n of (a?.notes || []).filter(mine)) adv.push(`<div class="item i">${n.code === "avb-switch" ? "🌐" : "🎛"} ${esc(n.msg)}</div>`);
+  for (const n of (a?.notes || []).filter(mine)) adv.push(`<div class="item i">${n.code === "avb-switch" || n.code === "sonos-net" ? "🌐" : "🎛"} ${esc(n.msg)}</div>`);
   $("#advisor").innerHTML = adv.join("") || `<div class="item ok">✓ No issues</div>`;
 
   renderTopbar();

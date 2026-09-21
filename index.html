@@ -538,7 +538,7 @@ function startReroute(x, y) {
   if (!selWire || !S.view?.p || !svg) return;
   svg.querySelector("#altghost")?.remove();
   ALTS = routeAlternates(S.view.job, S.view.ix, S.view.p, S.view.opts, selWire);
-  if (ALTS.length <= 1) { showTip(x, y, `<b>${esc(selWire)}</b><div class="mini">This wire has no legal alternate routes — it stays on auto.</div>`); return; }
+  if (ALTS.length <= 1) { showTip(x, y, `<b>${esc(selWire)}</b><div class="mini">No alternates for this wire yet. Rerouting works on audio returns / network backhauls and box-to-box runs inside the rack — zone feeds route as a nested group with their siblings, so moving one would tangle the rest.</div>`); return; }
   const NS = "http://www.w3.org/2000/svg";
   const g = document.createElementNS(NS, "g"); g.id = "altghost";
   ALTS.forEach((a, i) => {

@@ -66,7 +66,7 @@ Canonical 11×17 sheet (`SHEET` constants). Rack occupies the left/center: **thr
 
 The one placement rule that took a redline to learn: **amps bottom-anchor to the rack bottom** (col C stacks upward from the bottom edge, two-phase: lay out A/B first to find the rack height, then position C from the bottom), and **the audio/zone band bottom-aligns with the rack bottom** (dry-layout the band, then shift it down, wrapping upward). This mirrors real racks and makes speaker-wire routing dramatically cleaner.
 
-Zone cards carry their glyphs' relative geometry: display rect, speaker group, stacked `locals` pucks (staggered +26 px per pair), remote corner pill (top-right, user-picked). `place` copies `zone.remote` through.
+Zone cards carry their glyphs' relative geometry: display rect, speaker group, stacked `locals` pucks (staggered +26 px per pair), remote corner pill (top-right, user-picked). `place` copies `zone.remote` through. **Audio-only cards are `compact`**: content-driven size (tighter padding, 13px title, width floors at the name plus the remote pill), growing back the moment a display or puck moves in. Compact broke a hidden invariant: uniform card widths were what kept the vertical escape gutters between columns clear, so cluster and audio-band rows now advance on a **column grid** (cell = the cluster's widest card) instead of each card's own width — cards stay small, gutters stay routable.
 
 ### 2.5 `route(job, ix, placed, opts)` → polylines + hops
 The router is the hardest 40% of the project. See §4.
@@ -110,7 +110,7 @@ A structured **channel router**, not a maze solver. Wires travel in registered l
 
 **Debugging infrastructure is not optional.** `route({debug:true})` exports registered channel segments; `place-preview.html` draws placement boxes, routed wires, and a congestion heat overlay. The `rdbg` candidate log (why each return candidate was rejected: `blocked:z19` etc.) is what cracked every hard routing bug.
 
-**Regression guards:** hop-ceiling tests per fixture (currently residence 7 / estate 25 / stress 301, zero fallbacks), plus a geometric never-pierce test: no return/backhaul segment other than the final approach may intersect its target tile. That guard exists because of a real bug: the target tile is exempt from `segBlocked` so the final approach can land on its edge, and that exemption silently blessed a lane that crossed the module's *body*, wrapped the west margin, and re-entered from the left — scoring loved it because cheating through the target costs zero crossings. Any routing change that raises a ceiling must justify itself (the 12→14 residence re-baseline was the price of fixing that pierce).
+**Regression guards:** hop-ceiling tests per fixture (currently residence 7 / estate 24 / stress 309, zero fallbacks), plus a geometric never-pierce test: no return/backhaul segment other than the final approach may intersect its target tile. That guard exists because of a real bug: the target tile is exempt from `segBlocked` so the final approach can land on its edge, and that exemption silently blessed a lane that crossed the module's *body*, wrapped the west margin, and re-entered from the left — scoring loved it because cheating through the target costs zero crossings. Any routing change that raises a ceiling must justify itself (the 12→14 residence re-baseline was the price of fixing that pierce).
 
 ## 5. The catalog (`app/catalog.json`)
 

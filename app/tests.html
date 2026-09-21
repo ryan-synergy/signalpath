@@ -326,7 +326,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
 /* hop-count regression guards (polish round 2026-09-19: returns route last
    and pick the least-crossing lane) */
 {
-  const ceiling = { residence: 7, estate: 25, stress: 301 };  // re-baselined 2026-09-20: same-column staple + A-col west-wrap templates (user redline) — residence 14→7, estate 29→25, stress 334→301
+  const ceiling = { residence: 7, estate: 24, stress: 309 };  // re-baselined 2026-09-21: compact audio cards + cluster column grid (stress +8 accepted for ~50% smaller cards)
   for (const [name, raw] of Object.entries(fixtures)) {
     const { job, ix } = loadJob(raw);
     const p = place(job, ix);
@@ -1146,6 +1146,30 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t(`${name}: no return/backhaul pierces its target device body`, pierced.length === 0,
       pierced.map(w => `${w.from}→${w.to}`).join(", "));
   }
+}
+
+/* ---------- compact audio-only zone cards (user redline 2026-09-21) ---------- */
+{
+  const { job, ix } = loadJob(structuredClone(fixtures.residence));
+  const p = place(job, ix);
+  const kitchen = p.zones.find(z => z.id === "z-kitchen");     // stereo pair, no TV
+  const master = p.zones.find(z => z.id === "z-master");       // has a display
+  t("compact: audio-only card shrinks to content (was 130x140)",
+    kitchen.compact === true && kitchen.w < 110 && kitchen.h < 110);
+  t("compact: display cards keep their size and are not flagged",
+    !master.compact && master.h >= 140);
+  const svg = render(job, ix, p, route(job, ix, p));
+  const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+  const title = [...doc.querySelectorAll("g.zcard text")].find(t2 => t2.textContent === "Kitchen");
+  t("compact: card title steps down to 13px", title?.getAttribute("font-size") === "13");
+  // the card still grows back when something moves in (local puck)
+  const j2 = structuredClone(fixtures.residence);
+  const kz = j2.house.zones.find(z => z.id === "z-kitchen");
+  kz.endpoints.push({ id: "kitchen-tv", type: "display", size: 43, status: "new" });
+  const v2 = loadJob(j2);
+  const p2 = place(v2.job, v2.ix);
+  t("compact: adding a display expands the card again",
+    !p2.zones.find(z => z.id === "z-kitchen").compact);
 }
 
 /* ---------- stacked-neighbor staple + west wrap (user redlines 2026-09-20) ---------- */

@@ -1770,6 +1770,17 @@ export function render(job, ix, P, rt, opts = {}) {
         } else if (dev.type === "avSwitch") {
           for (let gi = 0; gi < 6; gi++)
             push(`<rect x="${d.x + d.w / 2 - 19 + gi * 6.5}" y="${my - 2}" width="4" height="4" fill="none" stroke="#8f8f8f" stroke-width="0.9"/>`);
+        } else if (dev.type === "audioInputModule" || dev.type === "audioOutputModule") {
+          // mirrored module cues: jack field sits on the side the signals live —
+          // input = left cluster with an arrow flowing IN, output = right
+          // cluster with the arrow flowing OUT (matches where wires attach)
+          const inMod = dev.type === "audioInputModule";
+          const jx = inMod ? d.x + 26 : d.x + d.w - 44;
+          for (let gi = 0; gi < 2; gi++) for (let gj = 0; gj < 4; gj++)
+            push(`<circle cx="${jx + gj * 6}" cy="${my - 3 + gi * 6}" r="1.4" fill="#8f8f8f"/>`);
+          const ax = inMod ? d.x + 10 : d.x + d.w - 20;
+          push(`<line x1="${ax}" y1="${my}" x2="${ax + 9}" y2="${my}" stroke="#8f8f8f" stroke-width="1.1"/>`);
+          push(`<path d="M${ax + 9} ${my}l-3.2 -2.4v4.8z" fill="#8f8f8f"/>`);
         }
         push(`<text x="${d.x + d.w / 2}" y="${d.y + d.h - 10}" text-anchor="middle" font-size="10.5" fill="#eee">${esc(restName.join(" ") || "")}</text>`);
         push(`<circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 10}" r="2.2" fill="#3fbf5a"/>`);

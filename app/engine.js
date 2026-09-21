@@ -512,13 +512,17 @@ export function place(job, ix = indexJob(job), opts = {}) {
   let rackRight = PL.marginX;
   for (const r of sol.racks || []) {
     const cols = { A: rackY + PL.rackPadTop, B: rackY + PL.rackPadTop };
-    const placed = [], cTiles = [];
+    const placed = [], cTiles = [], aBottom = [];
     let maxTileBottom = rackY + PL.rackPadTop;
     for (const d of r.devices || []) {
       const t = deviceTileSpec(d, Math.max(inCount[d.id] || 0, inCount["out:" + d.id] || 0));
       // amps (col C) anchor to the rack BOTTOM (mock rule: distribution exits
       // high toward the top band, speaker audio exits low toward the audio band)
       if (t.col === "C") { cTiles.push({ d, t }); continue; }
+      // AVB / switching gear anchors bottom-LEFT (user rule: sources dress the
+      // top of the rack, network infrastructure lives low) — same two-phase
+      // treatment the amps get
+      if (t.col === "A" && d.type === "avbSwitch") { aBottom.push({ d, t }); continue; }
       const x = t.col === "A" ? PL.colA : colBx;
       placed.push({ id: d.id, model: d.model, kind: t.kind, col: t.col, x, y: cols[t.col], w: t.w, h: t.h, type: d.type });
       maxTileBottom = Math.max(maxTileBottom, cols[t.col] + t.h + (t.kind === "small" ? PL.captionH : 0));
@@ -526,13 +530,20 @@ export function place(job, ix = indexJob(job), opts = {}) {
     }
     const usedC = cTiles.length > 0;
     const cTotal = cTiles.reduce((n, { t }) => n + t.h, 0) + 20 * Math.max(0, cTiles.length - 1);
+    const aTotal = aBottom.reduce((n, { t }) => n + t.h + PL.captionH, 0) + 12 * Math.max(0, aBottom.length - 1);
     const w = (usedC ? colCx + PL.ampTile.w : colBx + PL.chassisTile.w) + PL.rackPadBottom - PL.marginX;
     const h = Math.max(maxTileBottom - rackY + PL.rackPadBottom,
-                       usedC ? PL.rackPadTop + cTotal + PL.rackPadBottom + 40 : 0);
+                       usedC ? PL.rackPadTop + cTotal + PL.rackPadBottom + 40 : 0,
+                       aBottom.length ? (cols.A - rackY) + aTotal + PL.rackPadBottom + 8 : 0);
     let cy = rackY + h - PL.rackPadBottom - cTotal;
     for (const { d, t } of cTiles) {
       placed.push({ id: d.id, model: d.model, kind: t.kind, col: "C", x: colCx, y: cy, w: t.w, h: t.h, type: d.type });
       cy += t.h + 20;
+    }
+    let ay = rackY + h - PL.rackPadBottom - aTotal;
+    for (const { d, t } of aBottom) {
+      placed.push({ id: d.id, model: d.model, kind: t.kind, col: "A", x: PL.colA, y: ay, w: t.w, h: t.h, type: d.type });
+      ay += t.h + PL.captionH + 12;
     }
     out.racks.push({ id: r.id, name: r.name, x: PL.marginX, y: rackY, w, h, devices: placed });
     rackRight = Math.max(rackRight, PL.marginX + w);

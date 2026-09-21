@@ -1148,6 +1148,48 @@ for (const [name, raw] of Object.entries(fixtures)) {
   }
 }
 
+/* ---------- guided rerouting (user request 2026-09-21) ---------- */
+{
+  const { routeAlternates } = await import("./engine.js");
+  // 1. a between-hint pins the return's lane to the strip between two devices
+  const raw = structuredClone(fixtures.residence);
+  const rconn = raw.solutions[0].connections.find(c => c.signal === "audioReturn");
+  rconn.routeHint = { ch: "ab", between: ["axion8", "sav-in"] };
+  const { job, ix } = loadJob(raw);
+  const p = place(job, ix);
+  const rt = route(job, ix, p);
+  const tiles = {}; for (const r of p.racks) for (const d of r.devices) tiles[d.id] = d;
+  const w = rt.wires.find(x => x.signal === "audioReturn");
+  const laneYs = w.pts.filter((pt, i) => i > 0 && w.pts[i - 1][1] === pt[1] && Math.abs(w.pts[i - 1][0] - pt[0]) > 60).map(pt => pt[1]);
+  t("reroute: between-hint runs the return through the axion|input-module strip",
+    laneYs.some(y => y > tiles.axion8.y + tiles.axion8.h && y < tiles["sav-in"].y) &&
+    Math.min(...w.pts.map(pt => pt[0])) > 100 &&
+    !rt.warnings.some(x => x.code === "hint-unroutable"));
+  // 2. a stale/bogus hint warns and falls back to auto — never unrouted
+  const raw2 = structuredClone(fixtures.residence);
+  raw2.solutions[0].connections.find(c => c.signal === "audioReturn").routeHint = { between: ["ghost-1", "ghost-2"] };
+  const v2 = loadJob(raw2);
+  const rt2 = route(v2.job, v2.ix, place(v2.job, v2.ix));
+  t("reroute: bogus hint warns hint-unroutable and falls back to auto",
+    rt2.wires.find(x => x.signal === "audioReturn")?.pts?.length >= 2 &&
+    rt2.warnings.some(x => x.code === "hint-unroutable"));
+  t("reroute: validate flags a hint that names removed gear",
+    validate(v2.job, v2.ix).warnings.some(x => x.code === "route-hint-stale"));
+  // 3. routeAlternates offers distinct legal routes, and a chosen hint is deterministic
+  const v3 = loadJob(structuredClone(fixtures.residence));
+  const p3 = place(v3.job, v3.ix);
+  const wid = v3.job.solutions[0].connections.find(c => c.signal === "audioReturn");
+  const alts = routeAlternates(v3.job, v3.ix, p3, {}, `${wid.from}→${wid.to}`);
+  t("reroute: alternates picker gets ≥2 distinct legal routes incl. Auto",
+    alts.length >= 2 && alts[0].label === "Auto" &&
+    alts.every(a => a.pts.length >= 2 && typeof a.d === "string" && typeof a.crossings === "number"));
+  const pickA = alts[alts.length - 1];
+  wid.routeHint = pickA.hint;
+  const rt4 = route(v3.job, v3.ix, p3);
+  t("reroute: applying a picked hint reproduces that exact path",
+    JSON.stringify(rt4.wires.find(x => x.id === `${wid.from}→${wid.to}`).pts) === JSON.stringify(pickA.pts));
+}
+
 /* ---------- module faceplate glyphs (user redline 2026-09-21) ---------- */
 {
   const { job, ix } = loadJob(structuredClone(fixtures.residence));

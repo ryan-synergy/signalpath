@@ -114,6 +114,12 @@
              padding: 6px 11px; border-radius: 6px; pointer-events: none; display: none;
              box-shadow: 0 4px 14px rgba(0,0,0,.35); max-width: 300px; }
   #wiretip .mini { color: #9a9a9a; }
+  #wiretip .altrow { cursor: pointer; padding: 3px 0 1px; color: #b9a8ff; }
+  #wiretip .altrow:hover { color: #fff; }
+  .altpath { fill: none; stroke: #7b2ff2; stroke-width: 3.5; stroke-dasharray: 7 5; opacity: .55; cursor: pointer; pointer-events: stroke; }
+  .altpath:hover { opacity: 1; }
+  .altbub { fill: #7b2ff2; cursor: pointer; }
+  .altnum { fill: #fff; font-size: 11px; font-weight: 700; cursor: pointer; pointer-events: none; }
   @keyframes rowflash { 0% { background: #fdeedd; } 100% { background: #fff; } }
   .row.flash { animation: rowflash 1.2s ease-out; }
   #advisor { flex: 0 0 auto; background: #fff; border-top: 1px solid var(--line); max-height: 130px; overflow-y: auto;
@@ -194,7 +200,7 @@
 </div></div>
 
 <script type="module">
-import { loadJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog } from "./app/engine.js";
+import { loadJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates } from "./app/engine.js";
 import { importAny, mergeHouse } from "./app/importers.js";
 import { renderExtraPages, sheetCount, pageFlags, takeoffCSV } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
@@ -279,6 +285,7 @@ function refresh(save = true) {
       const p = place(job, ix, opts);
       const rt = route(job, ix, p, opts);
       svg = render(job, ix, p, rt, opts);
+      S.view.p = p; S.view.opts = opts;                        // reroute picker re-runs the router from these
     }
   } catch (e) { err = e; console.error(e); }
 
@@ -518,7 +525,48 @@ function applySel() {
     g?.classList.add("selnode");
   }
 }
-function clearSel() { selWire = null; hideTip(); applySel(); }
+function clearSel() { selWire = null; hideTip(); applySel(); $("#canvas svg")?.querySelector("#altghost")?.remove(); }
+
+/* ---- guided rerouting: pick from legal alternate routes for the selected wire ---- */
+let ALTS = null;
+const connOf = wid => { const [f, t] = String(wid).split("→");
+  return (S.job.solutions[S.sol].connections || []).find(c => c.from === f && c.to === t); };
+function startReroute(x, y) {
+  const svg = $("#canvas svg");
+  if (!selWire || !S.view?.p || !svg) return;
+  svg.querySelector("#altghost")?.remove();
+  ALTS = routeAlternates(S.view.job, S.view.ix, S.view.p, S.view.opts, selWire);
+  if (ALTS.length <= 1) { showTip(x, y, `<b>${esc(selWire)}</b><div class="mini">This wire has no legal alternate routes — it stays on auto.</div>`); return; }
+  const NS = "http://www.w3.org/2000/svg";
+  const g = document.createElementNS(NS, "g"); g.id = "altghost";
+  ALTS.forEach((a, i) => {
+    const p = document.createElementNS(NS, "path");
+    p.setAttribute("d", a.d); p.setAttribute("class", "altpath"); p.dataset.alt = i;
+    g.appendChild(p);
+    const [bx, by] = a.pts[Math.min(1, a.pts.length - 1)];
+    const c = document.createElementNS(NS, "circle");
+    c.setAttribute("cx", bx); c.setAttribute("cy", by); c.setAttribute("r", 9);
+    c.setAttribute("class", "altbub"); c.dataset.alt = i;
+    const t = document.createElementNS(NS, "text");
+    t.setAttribute("x", bx); t.setAttribute("y", by + 3.5); t.setAttribute("class", "altnum"); t.dataset.alt = i;
+    t.setAttribute("text-anchor", "middle"); t.textContent = i + 1;
+    g.appendChild(c); g.appendChild(t);
+  });
+  svg.appendChild(g);
+  showTip(x, y, `<b>Pick a route</b> <span class="mini">— tap a dashed path or a line below</span>` +
+    ALTS.map((a, i) => `<div class="altrow" data-alt="${i}">${i + 1} · ${esc(a.label)} <span class="mini">(${a.crossings} sheet hops)</span></div>`).join(""));
+}
+function applyAlt(i) {
+  const a = ALTS?.[i]; if (!a) return;
+  const conn = connOf(selWire); if (!conn) return;
+  if (a.hint) conn.routeHint = a.hint; else delete conn.routeHint;
+  clearSel(); refresh();
+}
+tip.addEventListener("click", e => {
+  if (e.target.closest("#rrGo")) { startReroute(parseInt(tip.style.left) || 200, parseInt(tip.style.top) || 200); return; }
+  const row = e.target.closest(".altrow");
+  if (row) applyAlt(+row.dataset.alt);
+});
 
 function syncGlow() {
   const svg = $("#canvas svg"); if (!svg) return;
@@ -544,6 +592,9 @@ function openGear(did) { switchTab("gear"); S.openRows.add(did); renderPanel(); 
 
 $("#canvas").addEventListener("click", e => {
   if (!$("#canvas svg")) return;
+  // ghost alternates (reroute picker) swallow the tap
+  const alt = e.target.closest(".altpath, .altbub, .altnum");
+  if (alt) { applyAlt(+alt.dataset.alt); return; }
   // wires first (their fat hit-twins sit on top); overlapping bundles cycle per tap
   const ids = [...new Set(document.elementsFromPoint(e.clientX, e.clientY)
     .filter(el => el.classList?.contains("wirehit") || el.classList?.contains("wire"))
@@ -555,7 +606,8 @@ $("#canvas").addEventListener("click", e => {
     applySel();
     const p = $("#canvas svg").querySelector(`path.wire[data-wire="${selWire}"]`);
     showTip(e.clientX, e.clientY,
-      `<b>${esc(nodeName(p.dataset.from))}</b> → <b>${esc(nodeName(p.dataset.to))}</b> · ${esc(p.dataset.signal)}${ids.length > 1 ? ` <span class="mini">(${idx + 2 > ids.length ? 1 : idx + 2}/${ids.length} here — tap to cycle)</span>` : ""}`);
+      `<b>${esc(nodeName(p.dataset.from))}</b> → <b>${esc(nodeName(p.dataset.to))}</b> · ${esc(p.dataset.signal)}${connOf(selWire)?.routeHint ? ' · <span class="mini">custom route</span>' : ""}${ids.length > 1 ? ` <span class="mini">(${idx + 2 > ids.length ? 1 : idx + 2}/${ids.length} here — tap to cycle)</span>` : ""}` +
+      `<div id="rrGo" class="altrow">⟲ Reroute…</div>`);
     return;
   }
   const dev = e.target.closest("[data-device]");

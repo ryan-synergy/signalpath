@@ -18,6 +18,7 @@ No build step, no dependencies, no server. Pure static HTML + ES modules.
 - **Quick-add / dictation entry:** type or speak `family room 5.1 75 sony matrix, patio landscape 8 prewire` and get parsed zones with preview chips.
 - **Importers** for SiteWalk survey JSON and Blueprinted (Savant config) exports, with non-destructive re-import merge.
 - **Interactive sheet:** tap a wire to trace it end-to-end, tap a zone card or device tile to jump to its editor row.
+- **Guided rerouting:** don't like a wire's path? Tap it → Reroute → pick from ghost previews of every legal alternate (with live crossing counts). Choices are stored as topological hints, so they survive re-layout and re-import.
 - **Autosave** to IndexedDB (with an in-memory fallback and a warning when browser storage is unavailable); native JSON and Markdown round-trip import/export; SVG export.
 - **Hardened against hostile input:** every user string is escaped before it reaches the SVG or the editor DOM, imported JSON is structurally validated and stripped of prototype-pollution keys before it can replace a job, and CSV exports neutralize spreadsheet formula injection.
 
@@ -49,7 +50,7 @@ mock-system-*.json      Three fixtures: residence (typical), estate (large), str
 
 ## Tests
 
-Open `app/tests.html` in a served browser tab. 286 assertions run on load and report pass/fail with a summary line. The suite covers the data model, validation, advisor budgets, placement geometry, router hop ceilings per fixture (regression guards), render output, importers, quick-add parsing, catalog integrity, and print pages. **All tests green is the bar for every change.**
+Open `app/tests.html` in a served browser tab. 291 assertions run on load and report pass/fail with a summary line. The suite covers the data model, validation, advisor budgets, placement geometry, router hop ceilings per fixture (regression guards), render output, importers, quick-add parsing, catalog integrity, and print pages. **All tests green is the bar for every change.**
 
 ## Architecture in one paragraph
 

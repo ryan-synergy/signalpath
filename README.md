@@ -49,7 +49,7 @@ mock-system-*.json      Three fixtures: residence (typical), estate (large), str
 
 ## Tests
 
-Open `app/tests.html` in a served browser tab. 276 assertions run on load and report pass/fail with a summary line. The suite covers the data model, validation, advisor budgets, placement geometry, router hop ceilings per fixture (regression guards), render output, importers, quick-add parsing, catalog integrity, and print pages. **All tests green is the bar for every change.**
+Open `app/tests.html` in a served browser tab. 280 assertions run on load and report pass/fail with a summary line. The suite covers the data model, validation, advisor budgets, placement geometry, router hop ceilings per fixture (regression guards), render output, importers, quick-add parsing, catalog integrity, and print pages. **All tests green is the bar for every change.**
 
 ## Architecture in one paragraph
 

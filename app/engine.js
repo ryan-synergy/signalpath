@@ -653,15 +653,20 @@ export function place(job, ix = indexJob(job), opts = {}) {
   const present = [...new Set(visConns.map(c => (c.scope || "included") !== "included" ? "prewire" : c.signal === "speaker" ? "audio" : c.signal))];
   const order = ["video", "audio", "audioReturn", "network", "prewire"];
   const rows = order.filter(k => present.includes(k));
-  const lw = 24 + rows.length * PL.legendRowW;
-  out.legend = { rows, w: lw, h: PL.legendH, x: SHEET.content.x + SHEET.content.w - lw - 60, y: SHEET.content.y + SHEET.content.h - PL.legendH - 6 };
+  // zone annotations ride the legend as numbered keynotes (CAD style): the
+  // full sentence lives here, the zone card wears only the circled number
+  const notes = (sol.annotations || []).map((a, i) => ({ n: i + 1, text: a.text, near: a.near }));
+  const noteW = notes.length ? Math.max(...notes.map(n => n.text.length)) * 5.4 + 58 : 0;
+  const lw = Math.max(24 + rows.length * PL.legendRowW, noteW);
+  const lh = PL.legendH + (notes.length ? notes.length * 15 + 10 : 0);
+  out.legend = { rows, notes, w: lw, h: lh, x: SHEET.content.x + SHEET.content.w - lw - 60, y: SHEET.content.y + SHEET.content.h - lh - 6 };
 
   /* -- bounds + fit scale (one-page rule: drawing scales, never splits) -- */
   const rects = [...out.zones, ...out.racks, ...out.chips];
   const maxX = Math.max(...rects.map(r => r.x + r.w), PL.marginX);
   const maxY = Math.max(...rects.map(r => r.y + r.h), PL.topY);
   out.bounds = { x: 0, y: 0, w: maxX + PL.marginX, h: maxY + 40 };
-  out.fitScale = Math.min(1, SHEET.content.w / out.bounds.w, (SHEET.content.h - PL.legendH - 20) / out.bounds.h);
+  out.fitScale = Math.min(1, SHEET.content.w / out.bounds.w, (SHEET.content.h - out.legend.h - 20) / out.bounds.h);
   if (out.fitScale < 0.75) out.warnings.push({ code: "scale", msg: `drawing fits at ${Math.round(out.fitScale * 100)}% — captions may print small` });
 
   return out;
@@ -1808,10 +1813,12 @@ export function render(job, ix, P, rt, opts = {}) {
     push(`</g>`);
   }
 
-  /* annotations: small red notes near their zone */
-  for (const a of sol.annotations || []) {
+  /* annotations render as keynotes: circled number on the zone card (top-left
+     corner), full sentence in the legend's NOTES block */
+  const keynote = n => n <= 20 ? String.fromCharCode(0x2460 + n - 1) : `(${n})`;
+  for (const a of P.legend.notes || []) {
     const z = P.zones.find(z => z.id === a.near);
-    if (z) push(`<text x="${z.x + z.w / 2}" y="${z.y + z.h + 52}" text-anchor="middle" font-size="10" fill="#b32017">${esc(a.text)}</text>`);
+    if (z) push(`<text x="${z.x + 9}" y="${z.y + 17}" font-size="11" font-weight="700" fill="${bw ? "#333" : "#b32017"}">${keynote(a.n)}</text>`);
   }
 
   /* wires (under chips so badges sit inline on their runs) */
@@ -1866,6 +1873,15 @@ export function render(job, ix, P, rt, opts = {}) {
     push(`<path d="M${x} ${lg.y + 36}H${x + 32}" stroke="${st ? st.stroke : SIGNAL_COLORS[k]}" stroke-width="3" fill="none"${st?.dash ? ` stroke-dasharray="${st.dash}"` : ""}/>`);
     push(`<text x="${x + 38}" y="${lg.y + 40}" font-size="11.5" fill="#333">${LEGEND_LABELS[k] || k}</text>`);
   });
+  if (lg.notes?.length) {
+    // NOTES block: red caveats stay red (dark in grayscale), numbered to match
+    // the circled markers on their zone cards
+    push(`<line x1="${lg.x}" y1="${lg.y + PL.legendH - 4}" x2="${lg.x + lg.w}" y2="${lg.y + PL.legendH - 4}" stroke="#bbb" stroke-width="0.7"/>`);
+    push(`<text x="${lg.x + 12}" y="${lg.y + PL.legendH + 10}" font-size="9" font-weight="700" fill="#555" letter-spacing="1">NOTES</text>`);
+    lg.notes.forEach((a, i) => {
+      push(`<text x="${lg.x + 54}" y="${lg.y + PL.legendH + 10 + i * 15}" font-size="10" fill="${bw ? "#333" : "#b32017"}">${keynote(a.n)}  ${esc(a.text)}</text>`);
+    });
+  }
 
   /* title block (vertical right edge, per the approved mock) */
   const tb = { x: SHEET.titleBlock.x, y: SHEET.titleBlock.y, w: 156, h: SHEET.titleBlock.h };

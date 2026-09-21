@@ -187,6 +187,9 @@ export function validate(job, ix = indexJob(job)) {
       if (!nodeInSolution(s, ix, c.from)) E("bad-conn", `connection from missing node: ${c.from}`);
       if (!nodeInSolution(s, ix, c.to)) E("bad-conn", `connection to missing node: ${c.to}`);
       if (!SIGNAL_COLORS[c.signal]) E("bad-signal", `unknown signal "${c.signal}" on ${c.from}→${c.to}`);
+      // a custom-route hint that names vanished devices is stale, not fatal
+      if (c.routeHint?.between && !c.routeHint.between.every(id => s.devices[id]))
+        W("route-hint-stale", `${c.from}→${c.to}: custom route references removed gear — will route automatically`);
     }
 
     // orphan endpoints: every endpoint must be fed (be `to` of >=1 edge) —
@@ -708,6 +711,8 @@ export function route(job, ix, placement, opts = {}) {
   const hiddenSignals = new Set(opts.hideSignals || []);
   const visConns = (sol.connections || []).filter(c => !hiddenSignals.has(c.signal));
   const out = { wires: [], groups: [], warnings: [] };
+  const rackDevById = {};
+  for (const rk of P.racks) for (const dd of rk.devices) rackDevById[dd.id] = dd;
   const dbg = (o, entry) => {
     if (!opts.debug) return;
     (out.debug ||= {});
@@ -1277,6 +1282,8 @@ export function route(job, ix, placement, opts = {}) {
   function routeRackToRack(conn, a, b) {
     const sx = a.x + a.w, skip = new Set([a.id, b.id]);
     const rackOf = t => P.racks.find(r => r.devices.some(d => d.id === t.id));
+    const hov = opts.hintOverride?.[wireId(conn)];
+    const rHint = hov !== undefined ? (hov || null) : (conn.routeHint || null);
     // right-edge ↔ right-edge staple (inter-rack switch trunk, or same-column wrap target)
     if (b.x <= a.x && b.x + b.w >= a.x + a.w * 0.5 && rackOf(a) !== rackOf(b)) {
       // stacked racks, aligned columns: tight staple beside the aligned devices
@@ -1332,7 +1339,7 @@ export function route(job, ix, placement, opts = {}) {
           // (user redline: an ATV feed hooking out the left edge reads backwards).
           // The wrap is for infrastructure trunks (AVB switch etc.) dodging a
           // busy feed band.
-          if (a.col === "A" && a.type !== "source" && base && (ty < a.y - 4 || ty > a.y + a.h + 4)) {
+          if (a.col === "A" && a.type !== "source" && base && rHint?.ch !== "ab" && (ty < a.y - 4 || ty > a.y + a.h + 4)) {
             // the exit is a LEFT-edge port and must say so — the left-port
             // manager spaces it clear of later westward arrivals at this tile
             // (reusing the right-port y once walled off a backhaul's only door)
@@ -1340,12 +1347,15 @@ export function route(job, ix, placement, opts = {}) {
             const wx = alloc(usedV, westMarginX[1], Math.min(syw, ty), Math.max(syw, ty), nWire, -1,
               x => segBlocked(x, Math.min(syw, ty), x, Math.max(syw, ty), skip), westMarginX);
             const west = wx != null ? [[a.x, syw], [wx, syw], [wx, ty], [b.x, ty]] : null;
+            // an explicit hint takes the wrap whenever it is legal; unhinted
+            // wires still need to earn the detour (≥2 crossings saved)
             if (west && !pathBlocked(west, skip) && pathRegisterable(west, nWire) &&
-                countCrossings(west) + 2 <= countCrossings(base)) {
+                (rHint?.ch === "west" || countCrossings(west) + 2 <= countCrossings(base))) {
               chosen = west;
               (leftPorts[a.id] ||= []).push(syw);   // the winner claims its exit port
             }
           }
+          if (rHint?.ch === "west" && chosen !== null && chosen === base) out.warnings.push({ code: "hint-unroutable", msg: wireId(conn) });
           if (chosen) {
             (leftPorts[b.id] ||= []).push(ty);
             committed = commit(conn, "intra", chosen);
@@ -1387,8 +1397,12 @@ export function route(job, ix, placement, opts = {}) {
         [[sx, sy], [upX, sy], [upX, overY], [dnX, overY], [dnX, ty], [b.x, ty]] : null;
       const wrapOk = wrap && !pathBlocked(wrap, skip) && pathRegisterable(wrap, nWire) ? wrap : null;
       // staple wins ties — it is shorter and hugs the tiles; wrap only when it
-      // measurably crosses less. The winner claims its ports (peeked above).
-      const pick = staple && (!wrapOk || countCrossings(staple) <= countCrossings(wrapOk)) ? staple : wrapOk;
+      // measurably crosses less. A hint overrides the comparison (when legal).
+      // The winner claims its ports (peeked above).
+      let pick = staple && (!wrapOk || countCrossings(staple) <= countCrossings(wrapOk)) ? staple : wrapOk;
+      if (rHint?.ch === "staple" && staple) pick = staple;
+      else if (rHint?.ch === "wrap" && wrapOk) pick = wrapOk;
+      else if ((rHint?.ch === "staple" || rHint?.ch === "wrap") && pick) out.warnings.push({ code: "hint-unroutable", msg: wireId(conn) });
       if (pick === staple && staple) { (rightPorts[a.id] ||= []).push(sy2); (rightPorts[b.id] ||= []).push(ty2); }
       else if (pick) (leftPorts[b.id] ||= []).push(ty);
       tryCommit(conn, pick === staple ? "staple" : "wrap", [pick], skip);
@@ -1541,50 +1555,57 @@ export function route(job, ix, placement, opts = {}) {
       }
       return list;
     };
-    scanLane(laneLo, +1, [laneLo, laneHi], gapABx[0], sx0, nWire, y => {
-      for (const range of [gapABx, westMarginX]) {
-        const wx = alloc(usedV, range === gapABx ? (range[0] + range[1]) / 2 : range[1],
-          Math.min(y, ty), Math.max(y, ty), nWire, range === gapABx ? 0 : -1,
-          x => segBlocked(x, Math.min(y, ty), x, Math.max(y, ty), skip), range);
-        if (wx == null) { rdbg({ y, r: range === gapABx ? "ab" : "west", fail: "alloc" }); continue; }
-        const list = buildCands(y, wx);
-        const cand = list.find(c => !hitsTarget(c) && !pathBlocked(c, skip) && pathRegisterable(c, nWire));
-        if (!cand) {
-          rdbg({ y, wx, r: range === gapABx ? "ab" : "west",
-            fail: list.map(c => hitsTarget(c) ? "pierce" : (pathBlocked(c, skip) || "registry")).join("|") });
-          continue;
-        }
-        // hops dominate; congestion breaks ties toward emptier corridors
-        const cost = countCrossings(cand) * 100 + pathCongestion(cand);
-        if (cost < bestCost) { best = cand; bestCost = cost; }
-        seen++;
-      }
-      return seen >= 30; // dense sheets bury the easy lanes — sample wide before giving up
-    });
-    // tall racks put the only clear crossing BELOW everything — the near-card
-    // scan can exhaust its sample budget before ever reaching it
-    if (!best) {
-      let seen2 = 0;
-      // the first 340px below the rack belong to the amp dive strips — a return
-      // crossing the whole sheet must duck BENEATH them
-      scanLane(rackBottom + 24, +1, [rackBottom + 24, rackBottom + 560], gapABx[0], sx0, nWire, y => {
-        for (const range of [gapABx, westMarginX]) {
+    const scan = (band, rangesArr, budget, tag) => {
+      let n = 0;
+      scanLane(band[0], +1, band, gapABx[0], sx0, nWire, y => {
+        for (const range of rangesArr) {
           const wx = alloc(usedV, range === gapABx ? (range[0] + range[1]) / 2 : range[1],
             Math.min(y, ty), Math.max(y, ty), nWire, range === gapABx ? 0 : -1,
             x => segBlocked(x, Math.min(y, ty), x, Math.max(y, ty), skip), range);
-          if (wx == null) { rdbg({ band2: y, r: range === gapABx ? "ab" : "west", fail: "alloc" }); continue; }
-          const cand = buildCands(y, wx).find(c => !hitsTarget(c) && !pathBlocked(c, skip) && pathRegisterable(c, nWire));
+          if (wx == null) { rdbg({ [tag]: y, r: range === gapABx ? "ab" : "west", fail: "alloc" }); continue; }
+          const list = buildCands(y, wx);
+          const cand = list.find(c => !hitsTarget(c) && !pathBlocked(c, skip) && pathRegisterable(c, nWire));
           if (!cand) {
-            const c0 = buildCands(y, wx)[0];
-            rdbg({ band2: y, wx, r: range === gapABx ? "ab" : "west", fail: hitsTarget(c0) ? "pierces-target" : pathBlocked(c0, skip) ? "blocked:" + pathBlocked(c0, skip) : "registry" });
+            rdbg({ [tag]: y, wx, r: range === gapABx ? "ab" : "west",
+              fail: list.map(c => hitsTarget(c) ? "pierce" : (pathBlocked(c, skip) || "registry")).join("|") });
             continue;
           }
+          // hops dominate; congestion breaks ties toward emptier corridors
           const cost = countCrossings(cand) * 100 + pathCongestion(cand);
           if (cost < bestCost) { best = cand; bestCost = cost; }
-          seen2++;
+          n++;
         }
-        return seen2 >= 12;
+        return n >= budget;
       });
+    };
+    // guided rerouting: a hint pins the channel range and/or the lane band
+    // (between two named rack devices). Hints are advisory — if the pinned
+    // route can't exist, warn honestly and fall back to the free search.
+    const ov = opts.hintOverride?.[wireId(conn)];
+    const hint = ov !== undefined ? (ov || null) : (conn.routeHint || null);
+    let hintBand = null, hintBad = false;
+    if (hint?.between) {
+      const d1 = rackDevById[hint.between[0]], d2 = rackDevById[hint.between[1]];
+      if (d1 && d2) {
+        const gTop = Math.min(d1.y + d1.h, d2.y + d2.h) + 4, gBot = Math.max(d1.y, d2.y) - 4;
+        if (gBot - gTop >= 8) hintBand = [gTop, gBot]; else hintBad = true;
+      } else hintBad = true;
+    }
+    const hintRanges = hint?.ch === "west" ? [westMarginX] : hint?.ch === "ab" ? [gapABx] : [gapABx, westMarginX];
+    if (hint && !hintBad) {
+      if (hintBand) scan(hintBand, hintRanges, 30, "y");
+      else {
+        scan([laneLo, laneHi], hintRanges, 30, "y");
+        if (!best) scan([rackBottom + 24, rackBottom + 560], hintRanges, 12, "band2");
+      }
+    }
+    if (hint && !best) out.warnings.push({ code: "hint-unroutable", msg: wireId(conn) });
+    if (!best) {
+      scan([laneLo, laneHi], [gapABx, westMarginX], 30, "y");
+      // tall racks put the only clear crossing BELOW everything — the near-card
+      // scan can exhaust its sample budget before ever reaching it; the first
+      // 340px below the rack belong to the amp dive strips, duck BENEATH them
+      if (!best) scan([rackBottom + 24, rackBottom + 560], [gapABx, westMarginX], 12, "band2");
     }
     tryCommit(conn, "return", [best], skip);
   }
@@ -1672,6 +1693,49 @@ const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").re
 // SVG path for a routed wire with hop arcs spliced in:
 // vertical hops bulge RIGHT (sweep 1 downward, 0 upward);
 // horizontal hops bulge UP (sweep 0 right→left, 1 left→right)
+/* ---------- guided rerouting: legal alternates for one wire ----------
+   Re-runs the router with forced hints and returns the distinct successful
+   paths. Hints are topological (channel choice / between two rack devices),
+   so a chosen hint survives re-layout, re-import, and router upgrades. */
+export function routeAlternates(job, ix, placed, opts, wid) {
+  const [from, to] = String(wid).split("→");
+  const devs = placed.racks.flatMap(r => r.devices);
+  const toDev = devs.find(d => d.id === to);
+  const fromDev = devs.find(d => d.id === from);
+  if (!toDev) return [];                                 // zone-feed classes have no hint vocabulary yet
+  const menu = [{ label: "Auto", hint: null }];
+  const sameCol = fromDev && Math.abs(toDev.x - fromDev.x) < 8;
+  if (fromDev && sameCol) {
+    menu.push({ label: "Staple beside the column", hint: { ch: "staple" } },
+               { label: "Wrap over the top", hint: { ch: "wrap" } });
+  } else {
+    menu.push({ label: "Via the A|B gap", hint: { ch: "ab" } },
+               { label: "Via the west margin", hint: { ch: "west" } });
+    // returns can also be pinned to the strip between two stacked devices
+    if (!fromDev) {
+      const colDevs = devs.filter(d => d.col === toDev.col).sort((a, b) => a.y - b.y);
+      for (let i = 0; i + 1 < colDevs.length; i++) {
+        const a = colDevs[i], b = colDevs[i + 1];
+        if (b.y - (a.y + a.h) > 14)
+          menu.push({ label: `Between ${a.model || a.id} and ${b.model || b.id}`,
+                      hint: { ch: "ab", between: [a.id, b.id] } });
+      }
+    }
+  }
+  const alts = [], seen = new Set();
+  for (const m of menu) {
+    const rt = route(job, ix, placed, { ...opts, hintOverride: { [wid]: m.hint || false } });
+    const w = rt.wires.find(x => x.id === wid);
+    if (!w || !w.pts || w.pts.length < 2) continue;
+    if (m.hint && rt.warnings.some(x => x.code === "hint-unroutable" && x.msg === wid)) continue;
+    const key = JSON.stringify(w.pts);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    alts.push({ label: m.label, hint: m.hint, pts: w.pts, d: wireD(w), crossings: rt.crossings });
+  }
+  return alts;
+}
+
 export function wireD(w) {
   let d = `M${w.pts[0][0]} ${w.pts[0][1]}`;
   for (let i = 1; i < w.pts.length; i++) {

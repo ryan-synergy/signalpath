@@ -1317,7 +1317,11 @@ export function route(job, ix, placement, opts = {}) {
           // edge, down the outside, in at port height. Taken only when it
           // saves ≥2 crossings over the gap descent (user redline: the AVB
           // feed collected four hops crossing the input-module feed band)
-          if (a.col === "A" && base && (ty < a.y - 4 || ty > a.y + a.h + 4)) {
+          // media sources never west-wrap — a source's feed exits RIGHT, always
+          // (user redline: an ATV feed hooking out the left edge reads backwards).
+          // The wrap is for infrastructure trunks (AVB switch etc.) dodging a
+          // busy feed band.
+          if (a.col === "A" && a.type !== "source" && base && (ty < a.y - 4 || ty > a.y + a.h + 4)) {
             // the exit is a LEFT-edge port and must say so — the left-port
             // manager spaces it clear of later westward arrivals at this tile
             // (reusing the right-port y once walled off a backhaul's only door)

@@ -326,7 +326,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
 /* hop-count regression guards (polish round 2026-09-19: returns route last
    and pick the least-crossing lane) */
 {
-  const ceiling = { residence: 7, estate: 24, stress: 309 };  // re-baselined 2026-09-21: compact audio cards + cluster column grid (stress +8 accepted for ~50% smaller cards)
+  const ceiling = { residence: 5, estate: 24, stress: 309 };  // re-baselined 2026-09-21: AVB/switching bottom-anchored in col A — residence 7→5 (trunk to output module is now a straight neighbor run)
   for (const [name, raw] of Object.entries(fixtures)) {
     const { job, ix } = loadJob(raw);
     const p = place(job, ix);
@@ -1234,11 +1234,14 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("staple: axion→mrx hugs the near gap (no over-the-top lap, no AB-gap descent)",
     Math.min(...xs) >= a.x + a.w - 1 && Math.max(...xs) <= a.x + a.w + 50 &&
     Math.min(...ys) > m.y && Math.max(...ys) < a.y + a.h);
-  // the A-column AVB trunk wraps the west margin instead of raking the
-  // input-module feed band (was 4 hops; west costs at most 2)
+  // AVB switch bottom-anchors in col A (user rack rule), so its trunk to the
+  // output module is a short direct run — no west wrap, no feed-band raking
   const ao = rt.wires.find(w => w.from === "sav-avb" && w.to === "sav-out");
-  t("west wrap: sav-avb→sav-out exits west and stays out of the AB gap",
-    Math.min(...ao.pts.map(pt => pt[0])) < tiles["sav-avb"].x);
+  const avb = tiles["sav-avb"], rack0 = p.racks[0];
+  t("avb bottom-left: switch sits in the lower half of the rack",
+    avb.y + avb.h / 2 > rack0.y + rack0.h / 2);
+  t("avb bottom-left: trunk to the output module is short and direct (≤3 points, exits right)",
+    ao.pts.length <= 3 && ao.pts[0][0] === avb.x + avb.w);
 }
 
 /* ---------- hardening: hostile input must stay data ---------- */

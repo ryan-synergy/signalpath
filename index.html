@@ -111,8 +111,10 @@
   #canvas .zcard.selnode > rect.hit { stroke: #e8842c; stroke-width: 2.2; fill: rgba(232,132,44,.06); }
   #canvas .zcard.zglow > rect.hit { stroke: #e8842c99; stroke-width: 2; fill: rgba(232,132,44,.04); }
   #wiretip { position: fixed; z-index: 40; background: #16181c; color: #eee; font-size: 12px;
-             padding: 6px 11px; border-radius: 6px; pointer-events: none; display: none;
+             padding: 6px 11px; border-radius: 6px; display: none;
              box-shadow: 0 4px 14px rgba(0,0,0,.35); max-width: 300px; }
+  /* the tip is interactive now (Reroute lives in it) — pointer-events:none
+     would let taps fall through to the canvas and clear the selection */
   #wiretip .mini { color: #9a9a9a; }
   #wiretip .altrow { cursor: pointer; padding: 3px 0 1px; color: #b9a8ff; }
   #wiretip .altrow:hover { color: #fff; }

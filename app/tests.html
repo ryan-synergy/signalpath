@@ -1148,6 +1148,21 @@ for (const [name, raw] of Object.entries(fixtures)) {
   }
 }
 
+/* ---------- source feeds always exit RIGHT (user redline 2026-09-21) ---------- */
+{
+  // media sources are exempt from the west-wrap: signal flow reads left→right,
+  // so a source's output leaving its LEFT edge is wrong in every layout
+  for (const name of ["residence", "estate", "stress"]) {
+    const { job, ix } = loadJob(structuredClone(fixtures[name]));
+    const p = place(job, ix);
+    const rt = route(job, ix, p);
+    const tiles = {}; for (const r of p.racks) for (const d of r.devices) tiles[d.id] = d;
+    const bad = rt.wires.filter(w => tiles[w.from]?.type === "source" && w.pts &&
+      w.pts[0][0] !== tiles[w.from].x + tiles[w.from].w).map(w => w.from + "→" + w.to);
+    t(`${name}: every media-source feed exits the right edge`, bad.length === 0, bad.join(", "));
+  }
+}
+
 /* ---------- keynote annotations (user redline 2026-09-21) ---------- */
 {
   const { job, ix } = loadJob(structuredClone(fixtures.residence));

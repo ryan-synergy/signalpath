@@ -1148,6 +1148,21 @@ for (const [name, raw] of Object.entries(fixtures)) {
   }
 }
 
+/* ---------- keynote annotations (user redline 2026-09-21) ---------- */
+{
+  const { job, ix } = loadJob(structuredClone(fixtures.residence));
+  const p = place(job, ix);
+  const svg = render(job, ix, p, route(job, ix, p));
+  const noteText = (job.solutions[0].annotations || [])[0]?.text || "";
+  t("keynotes: fixture still carries the gym annotation", noteText.length > 0);
+  t("keynotes: full sentence lives in the legend NOTES block, not floating on canvas",
+    svg.includes("NOTES") && svg.split(esc4(noteText)).length === 2);
+  t("keynotes: circled number appears twice — zone card marker + legend entry",
+    svg.split("①").length === 3);
+  t("keynotes: legend grew to house the note", p.legend.notes.length >= 1 && p.legend.h > 56);
+  function esc4(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+}
+
 /* ---------- compact audio-only zone cards (user redline 2026-09-21) ---------- */
 {
   const { job, ix } = loadJob(structuredClone(fixtures.residence));

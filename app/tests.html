@@ -1148,6 +1148,25 @@ for (const [name, raw] of Object.entries(fixtures)) {
   }
 }
 
+/* ---------- module faceplate glyphs (user redline 2026-09-21) ---------- */
+{
+  const { job, ix } = loadJob(structuredClone(fixtures.residence));
+  const p = place(job, ix);
+  const svg = render(job, ix, p, route(job, ix, p));
+  const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+  const tileArrows = id => {
+    const g = [...doc.querySelectorAll("g.devtile")].find(t2 => t2.dataset.device === id);
+    return { jacks: g.querySelectorAll('circle[r="1.4"]').length, arrows: g.querySelectorAll("path[d*='l-3.2']").length,
+             firstJackX: +([...g.querySelectorAll('circle[r="1.4"]')][0]?.getAttribute("cx") || 0) };
+  };
+  const inm = tileArrows("sav-in"), outm = tileArrows("sav-out");
+  const tin = p.racks.flatMap(r => r.devices).find(d => d.id === "sav-in");
+  t("modules: input module wears a left jack field + inward arrow",
+    inm.jacks === 8 && inm.arrows === 1 && inm.firstJackX < tin.x + tin.w / 2);
+  t("modules: output module mirrors it — right jack field + outward arrow",
+    outm.jacks === 8 && outm.arrows === 1 && outm.firstJackX > tin.x + tin.w / 2);
+}
+
 /* ---------- source feeds always exit RIGHT (user redline 2026-09-21) ---------- */
 {
   // media sources are exempt from the west-wrap: signal flow reads left→right,

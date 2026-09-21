@@ -329,9 +329,15 @@ function zoneCard(zone, localsInZone) {
   for (const ep of zone.endpoints || []) {
     if (ep.type === "display") groups.push({ epId: ep.id, kind: "display", ...displaySize(ep) });
   }
-  let x = PL.cardPad, contentBottom = 0;
+  // audio-only cards (speaker pair, no display, no pucks) size to content —
+  // the TV-card minimums left them mostly air (user redline). They grow back
+  // the moment a display or local device moves in.
+  const compact = !groups.some(g => g.kind === "display") && !localsInZone.length;
+  const pad = compact ? 14 : PL.cardPad;
+  const titleH = compact ? 28 : PL.cardTitleH;
+  let x = pad, contentBottom = 0;
   for (const g of groups) {
-    g.x = x; g.y = PL.cardTitleH;
+    g.x = x; g.y = titleH;
     g.cx = x + g.w / 2;
     let bottom = g.y + g.h;
     if (g.kind === "display" && localsInZone.length) {
@@ -351,15 +357,19 @@ function zoneCard(zone, localsInZone) {
   }
   let contentRight = x - PL.groupGapX;
   for (const g of groups) for (const l of g.locals || []) contentRight = Math.max(contentRight, l.x + l.w);
-  const w = Math.max(PL.cardMinW, contentRight + PL.cardPad);
-  const h = Math.max(PL.cardMinH, contentBottom + PL.cardBottomPad);
+  // a compact card still fits its own name (13px title, ~7px/char)
+  const nameW = compact ? Math.ceil(String(zone.name || "").length * 7) + 2 * pad : 0;
+  const minW = compact ? Math.max(72, nameW + (zone.remote ? 40 : 0)) : PL.cardMinW;   // corner remote pill needs clear air beside the title
+  const minH = compact ? 0 : PL.cardMinH;
+  const w = Math.max(minW, contentRight + pad);
+  const h = Math.max(minH, contentBottom + (compact ? 12 : PL.cardBottomPad));
   // widen: center content when min width won
-  const innerW = contentRight - PL.cardPad;
-  if (w > innerW + 2 * PL.cardPad - 1) {
-    const shift = (w - innerW) / 2 - PL.cardPad;
+  const innerW = contentRight - pad;
+  if (w > innerW + 2 * pad - 1) {
+    const shift = (w - innerW) / 2 - pad;
     for (const g of groups) { g.x += shift; g.cx += shift; for (const l of g.locals || []) l.x += shift; }
   }
-  return { w, h, groups };
+  return { w, h, groups, compact };
 }
 
 function deviceTileSpec(d, inCount = 0) {
@@ -537,13 +547,17 @@ export function place(job, ix = indexJob(job), opts = {}) {
   {
     const bandX = rackRight + rightCorridorW;
     const bandMaxW = Math.max(680, Math.ceil(Math.sqrt(primary.audio.length)) * 170);
+    // column grid: compact cards vary in width, but rows must advance on a
+    // shared cell pitch or the inter-column gutters (return/dive escape
+    // channels) get pierced by a lower row's card
+    const cellW = Math.max(0, ...primary.audio.map(z => cardOf[z.id].w));
     const dry = [];                                   // dry layout first, then bottom-align the block
     let x = bandX, y = 0, rowH = 0, bandH = 0;
     for (const z of primary.audio) {
       const c = cardOf[z.id];
-      if (x + c.w > bandX + bandMaxW && x > bandX) { y += rowH + PL.rowGapY; x = bandX; rowH = 0; }
+      if (x + cellW > bandX + bandMaxW && x > bandX) { y += rowH + PL.rowGapY; x = bandX; rowH = 0; }
       dry.push({ z, c, x, y });
-      x += c.w + PL.cardGapX; rowH = Math.max(rowH, c.h); bandH = Math.max(bandH, y + c.h);
+      x += cellW + PL.cardGapX; rowH = Math.max(rowH, c.h); bandH = Math.max(bandH, y + c.h);
     }
     const bandTopMin = topBandBottom + topCorridorH + (out.racks.length ? 100 : 0);
     const y0 = Math.max(bandTopMin, (out.racks.length ? rackBottom : bandTopMin + bandH) - bandH);
@@ -557,21 +571,24 @@ export function place(job, ix = indexJob(job), opts = {}) {
     // gutter before each cluster sized for the feeds that must rise through it
     clusterX += Math.max(PL.areaGapX, (clusterInbound[cl.areaId] || 0) * 12 + 32);
     const startX = clusterX;
+    // same column-grid rule as the audio band: fixed cell pitch keeps the
+    // vertical escape gutters clear through every row of the cluster
+    const cellW = Math.max(0, ...[...cl.video, ...cl.audio].map(z => cardOf[z.id].w));
     let x = startX, y = PL.topY, rowH = 0, right = startX, rowZones = [];
     for (const z of cl.video) {
       const c = cardOf[z.id];
-      if (x + c.w > startX + PL.secondaryClusterMaxW && x > startX) { y += rowH + rowGapFor(rowZones); x = startX; rowH = 0; rowZones = []; }
+      if (x + cellW > startX + PL.secondaryClusterMaxW && x > startX) { y += rowH + rowGapFor(rowZones); x = startX; rowH = 0; rowZones = []; }
       placeZone(out, z, c, x, y, "cluster");
       rowZones.push(z);
-      x += c.w + PL.cardGapX; rowH = Math.max(rowH, c.h); right = Math.max(right, x - PL.cardGapX);
+      x += cellW + PL.cardGapX; rowH = Math.max(rowH, c.h); right = Math.max(right, x - PL.cardGapX - (cellW - c.w));
     }
     y += (cl.video.length ? rowH + Math.max(70, rowGapFor(rowZones) - 12) : 0); x = startX; rowH = 0; rowZones = [];
     for (const z of cl.audio) {
       const c = cardOf[z.id];
-      if (x + c.w > startX + PL.secondaryClusterMaxW && x > startX) { y += rowH + rowGapFor(rowZones); x = startX; rowH = 0; rowZones = []; }
+      if (x + cellW > startX + PL.secondaryClusterMaxW && x > startX) { y += rowH + rowGapFor(rowZones); x = startX; rowH = 0; rowZones = []; }
       placeZone(out, z, c, x, y, "cluster");
       rowZones.push(z);
-      x += c.w + PL.cardGapX; rowH = Math.max(rowH, c.h); right = Math.max(right, x - PL.cardGapX);
+      x += cellW + PL.cardGapX; rowH = Math.max(rowH, c.h); right = Math.max(right, x - PL.cardGapX - (cellW - c.w));
     }
     out.areaHeaders.push({ areaId: cl.areaId, name: (cl.name || "").toUpperCase(), cx: (startX + right) / 2, y: PL.areaHeaderY });
     out.clusters.push({ areaId: cl.areaId, x0: startX, x1: right });
@@ -653,7 +670,7 @@ export function place(job, ix = indexJob(job), opts = {}) {
 function placeZone(out, zone, card, x, y, band) {
   out.zones.push({
     id: zone.id, name: zone.name, scope: zone.scope || "included", band, remote: zone.remote,
-    x, y, w: card.w, h: card.h,
+    x, y, w: card.w, h: card.h, compact: card.compact || false,
     groups: card.groups.map(g => ({ ...g })),
   });
 }
@@ -1759,7 +1776,7 @@ export function render(job, ix, P, rt, opts = {}) {
     // un-filled shapes only hit-test on their stroke — this invisible fill makes the whole card tappable
     push(`<rect class="hit" x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="transparent" stroke="none"/>`);
     push(`<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="none" stroke="${gray ? "#b5b5b5" : "#8a8a8a"}" stroke-width="1.4" stroke-dasharray="7 5"/>`);
-    push(`<text x="${z.x + z.w / 2}" y="${z.y + 24}" text-anchor="middle" font-size="18" font-weight="700" fill="${gray ? "#999" : "#111"}">${esc(z.name)}</text>`);
+    push(`<text x="${z.x + z.w / 2}" y="${z.y + (z.compact ? 19 : 24)}" text-anchor="middle" font-size="${z.compact ? 13 : 18}" font-weight="700" fill="${gray ? "#999" : "#111"}">${esc(z.name)}</text>`);
     // room remote, top-right corner: what the client picks up in this room
     const rem = REMOTE_LABELS[z.remote];
     if (rem) {

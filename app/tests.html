@@ -15,7 +15,7 @@
 <div id="summary">running…</div>
 <ul id="out"></ul>
 <script type="module">
-import { loadJob, validate, advise, place, route, render, expandChannels, effectiveHouse, effectiveJob, trunkCount, autoLinkCatalog, indexJob, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
+import { loadJob, validate, advise, place, route, render, routeAlternates, expandChannels, effectiveHouse, effectiveJob, trunkCount, autoLinkCatalog, indexJob, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
 import { sniff, importAny, importSiteWalk, importBlueprinted, mergeHouse, stripUnsafe, assertJobShape } from "./importers.js";
 import { pageFlags, sheetCount, renderChannelMap, renderTakeoff, renderWireSchedule, renderExtraPages, renderBomCompare, wireRuns, takeoffItems, takeoffCSV } from "./pages.js";
 
@@ -1166,6 +1166,60 @@ for (const [name, raw] of Object.entries(fixtures)) {
   r.solutions[0].connections.push({ from: "cablebox", to: "patio-tv", signal: "video" });
   const v2 = loadJob(r); const rt2 = route(v2.job, v2.ix, place(v2.job, v2.ix));
   t("router: a column-A source feeds a top-band TV without falling back", rt2.wires.find(w => w.from === "cablebox" && w.to === "patio-tv")?.cls === "zone-west");
+}
+
+/* ---------- harness style + zone-feed rerouting (2026-09-27) ---------- */
+{
+  const PAD = 2;
+  const inside = (x1, y1, x2, y2, o) => Math.min(x1, x2) < o.x + o.w - PAD && Math.max(x1, x2) > o.x + PAD && Math.min(y1, y2) < o.y + o.h - PAD && Math.max(y1, y2) > o.y + PAD;
+  const clean = (p, rt) => { const bodies = [...p.racks.flatMap(r => r.devices), ...p.chips, ...p.zones];
+    return rt.wires.every(w => !w.pts || w.insideCard || w.cls === "local" || w.pts.every((q, i) => i === 0 || !bodies.some(o => inside(...w.pts[i - 1], ...q, o)))); };
+  for (const name of ["residence", "estate", "stress"]) {
+    const { job, ix } = loadJob(structuredClone(fixtures[name]));
+    const p = place(job, ix);
+    const off = route(job, ix, p), on = route(job, ix, p, { harness: true });
+    t(`harness style: ${name} bundles feeds and crosses less`, on.wires.some(w => w.bundleOf) && on.crossings <= off.crossings, `${off.crossings} → ${on.crossings}`);
+    t(`harness style: ${name} stays legal (no bodies crossed, nothing unrouted)`, clean(p, on) && !on.warnings.some(w => w.code === "unrouted" || w.code === "route-fallback"));
+  }
+  // the setting rides on the job, so print / export / reroute all agree
+  const j = structuredClone(fixtures.residence); j.job.harnessStyle = true;
+  const v = loadJob(j), pv = place(v.job, v.ix);
+  t("harness style: job.harnessStyle turns it on without an opt", route(v.job, v.ix, pv).wires.some(w => w.bundleOf));
+  t("harness style: an explicit opt still wins", !route(v.job, v.ix, pv, { harness: false }).wires.some(w => w.bundleOf));
+  // only a source with 3+ zone runs of a signal bundles by choice
+  const on = route(v.job, v.ix, pv);
+  const runs = {}; for (const w of on.wires) if (/^zone-(west|east)$/.test(w.cls)) runs[w.from + "|" + w.signal] = (runs[w.from + "|" + w.signal] || 0) + 1;
+  t("harness style: a source with fewer than 3 room runs never bundles by choice",
+    on.wires.filter(w => w.bundleOf).every(w => runs[w.from + "|" + w.signal] >= 3));
+
+  // zone-feed rerouting: feeds now have a hint vocabulary
+  const { job, ix } = loadJob(structuredClone(fixtures.residence));
+  const p = place(job, ix);
+  const rt = route(job, ix, p);
+  const feeds = rt.wires.filter(w => /^zone-(west|east)$/.test(w.cls));
+  const menus = feeds.map(w => routeAlternates(job, ix, p, {}, w.id));
+  t("reroute: most residence zone feeds offer alternates", menus.filter(m => m.length > 1).length >= Math.ceil(feeds.length * 0.75), `${menus.filter(m => m.length > 1).length}/${feeds.length}`);
+  let legal = true, honored = true;
+  feeds.forEach((w, k) => menus[k].slice(1).forEach(a => {
+    const r2 = route(job, ix, p, { hintOverride: { [w.id]: a.hint } });
+    if (!clean(p, r2)) legal = false;
+    if (JSON.stringify(r2.wires.find(x => x.id === w.id).pts) !== JSON.stringify(a.pts)) honored = false;
+  }));
+  t("reroute: every zone-feed alternate is legal on the whole sheet", legal);
+  t("reroute: a picked zone-feed alternate draws exactly as previewed", honored);
+  const east = feeds.find(w => w.cls === "zone-east" && menus[feeds.indexOf(w)].some(a => a.hint?.land));
+  const top = east && menus[feeds.indexOf(east)].find(a => a.hint?.land);
+  t("reroute: a land hint lands on the named card edge", !!top &&
+    (() => { const pz = p.zones.find(z => top.pts.at(-1)[0] > z.x && top.pts.at(-1)[0] < z.x + z.w && Math.abs(top.pts.at(-1)[1] - (top.hint.land === "top" ? z.y : z.y + z.h)) < 1); return !!pz; })());
+  // bundle: true rides a sibling even with harness style off; bundle:false opts out with it on
+  // (the first feed of a group routes first — it IS the trunk, so its menu has no "ride" option)
+  const sib = feeds.find((w, k) => menus[k].some(a => a.hint?.bundle === true));
+  t("reroute: a bundle hint joins the harness", !!sib && !!route(job, ix, p, { hintOverride: { [sib.id]: { bundle: true } } }).wires.find(x => x.id === sib.id).bundleOf);
+  const bundled = on.wires.find(w => w.bundleOf);
+  t("reroute: an own-run hint leaves the harness", !route(v.job, v.ix, pv, { hintOverride: { [bundled.id]: { bundle: false } } }).wires.find(x => x.id === bundled.id).bundleOf);
+  const bogus = route(job, ix, p, { hintOverride: { [feeds[0].id]: { ch: "staple" } } });
+  t("reroute: a hint the feed can't honor warns and routes automatically",
+    bogus.warnings.some(w => w.code === "hint-unroutable" && w.msg === feeds[0].id) && bogus.wires.find(x => x.id === feeds[0].id)?.pts?.length > 1);
 }
 
 /* ---------- catalog lockfile: frozen until the user updates (2026-09-27) ---------- */

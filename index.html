@@ -165,6 +165,7 @@
   <span class="spacer"></span>
   <span id="rulesChip" class="ok">✓</span>
   <label class="chk"><input type="checkbox" id="hideNet"> hide network</label>
+  <label class="chk" title="Harness style (saved with the job): a source's runs to 3+ rooms share one trunk and break out near each room, like an electrical drawing"><input type="checkbox" id="harnessMode"> harness</label>
   <label class="chk" title="B&amp;W-safe: dash patterns carry signal identity for office laser printers"><input type="checkbox" id="bwMode"> B/W</label>
   <button id="importBtn">Import</button><input type="file" id="importFile" accept=".json,.md" hidden>
   <button id="exportJson">JSON</button>
@@ -286,6 +287,7 @@ function refresh(save = true) {
   const sol = S.job.solutions[S.sol] || S.job.solutions[0];
   S.sol = S.job.solutions.indexOf(sol);
   let v, a, svg = "", err, routeWarn = [], placeWarn = [];
+  $("#harnessMode").checked = !!S.job.job.harnessStyle;     // a per-job drawing choice: follows job switches
   try {
     autoLinkCatalog(S.job, effectiveCatalog());                // self-heal: fill missing catalog links by model
     const { job, ix } = loadJob(effectiveJob(S.job, S.sol));   // active solution's overrides applied
@@ -321,7 +323,7 @@ function refresh(save = true) {
   for (const w of routeWarn.filter(w => w.code === "unrouted")) adv.push(`<div class="item e">✗ wire not drawn: ${esc(w.msg)}</div>`);
   const fb = routeWarn.filter(w => w.code === "route-fallback").map(w => w.msg);
   if (fb.length) adv.push(`<div class="item w">⚠ ${fb.length} wire${fb.length > 1 ? "s have" : " has"} no clean path on this layout — drawn best-effort and may cross gear: ${esc(fb.slice(0, 4).join(", "))}${fb.length > 4 ? "…" : ""}</div>`);
-  for (const w of routeWarn.filter(w => w.code === "hint-unroutable")) adv.push(`<div class="item w">⚠ custom route for ${esc(w.msg)} can't be honored on this layout — routed automatically</div>`);
+  for (const w of new Map(routeWarn.filter(w => w.code === "hint-unroutable").map(w => [w.msg, w])).values()) adv.push(`<div class="item w">⚠ custom route for ${esc(w.msg)} can't be honored on this layout — routed automatically</div>`);
   for (const w of placeWarn) adv.push(`<div class="item w">⚠ ${esc(w.msg)}</div>`);
   const drift = catalogDrift(S.job, SETTINGS.catalog);
   if (drift.length) adv.push(`<div class="item i">📦 The catalog has newer specs for ${drift.length} device${drift.length > 1 ? "s" : ""} on this job (${esc(drift.slice(0, 3).map(d => d.model).join(", "))}${drift.length > 3 ? "…" : ""}) — this job still uses the specs it was quoted with. JOB tab → Update catalog specs.</div>`);
@@ -377,6 +379,7 @@ $("#jobName").onchange = e => { S.job.job.name = e.target.value; refresh(); };
 $("#stageSel").onchange = e => { S.job.job.stage = e.target.value; refresh(); };
 $("#hideNet").onchange = () => refresh(false);
 $("#bwMode").onchange = () => refresh(false);
+$("#harnessMode").onchange = e => { if (e.target.checked) S.job.job.harnessStyle = true; else delete S.job.job.harnessStyle; refresh(); };
 $("#solSel").onchange = e => {
   if (e.target.value === "__add") {
     const base = S.job.solutions[S.sol];
@@ -590,7 +593,7 @@ function startReroute(x, y) {
   clearGhosts();
   const list = routeAlternates(S.view.job, S.view.ix, S.view.p, S.view.opts, selWire);
   ALTS = Object.assign(list, { wid: selWire });   // bound to THIS wire — a stale ghost can't retarget another
-  if (ALTS.length <= 1) { showTip(x, y, `<b>${esc(selWire)}</b><div class="mini">No alternates for this wire yet. Rerouting works on audio returns / network backhauls and box-to-box runs inside the rack — zone feeds route as a nested group with their siblings, so moving one would tangle the rest.</div>`); return; }
+  if (ALTS.length <= 1) { showTip(x, y, `<b>${esc(selWire)}</b><div class="mini">No other legal route exists for this wire on this layout — every alternate either crosses gear or lands where Auto already does.</div>`); return; }
   const NS = "http://www.w3.org/2000/svg";
   const g = document.createElementNS(NS, "g"); g.id = "altghost";
   ALTS.forEach((a, i) => {

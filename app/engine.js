@@ -1142,6 +1142,17 @@ export function route(job, ix, placement, opts = {}) {
   // feeds with no lane of their own wait for the harness pass (after 4b), when
   // every sibling they could ride along with has been committed
   const harnessQueue = [];
+  // harness style (job setting): feeds from a source with 3+ zone runs of one
+  // signal ride a shared trunk even when they could route alone — the
+  // electrical-drawing look on busy sheets. A per-wire hint can opt in/out.
+  const harnessStyle = opts.harness ?? !!job.job?.harnessStyle;
+  const hintOf = conn => { const ov = opts.hintOverride?.[wireId(conn)]; return ov !== undefined ? (ov || null) : (conn.routeHint || null); };
+  const zoneFeedCount = (plan, signal) => [...plan.west, ...plan.east].filter(x => x.c.signal === signal).length;   // room runs only, not rack patches
+  const wantsBundle = (plan, o) => {
+    const h = hintOf(o.c);
+    if (h?.bundle === false || h?.ch || h?.land) return false;   // a pinned shape is an own run
+    return h?.bundle === true || (harnessStyle && zoneFeedCount(plan, o.c.signal) >= 3);
+  };
   const westNetsByDev = {};
   const allWest = plans.flatMap(plan => plan.west.map(o => ({ plan, o }))); // plan order (farthest-first within device) — measured better than global river order
   for (const { plan, o } of allWest) {
@@ -1151,6 +1162,8 @@ export function route(job, ix, placement, opts = {}) {
     {
       const { tx, landY, cardBot } = o.t;
       const land = landY ?? cardBot;                 // chip bottom or card bottom border
+      if (wantsBundle(plan, o) && bundleOnto({ o, d, sx, tx, land, cls: "zone-west" }, true)) { done.add(o.i); continue; }
+      const zh = hintOf(o.c);
       const skip = new Set([d.id, o.t.chipId].filter(Boolean));
       // riser channel by source column: colA rises in the A|B gap beside it,
       // colB in the B|C gap, colC/right in the right corridor. (colA used to
@@ -1160,15 +1173,18 @@ export function route(job, ix, placement, opts = {}) {
       const corTop = P.corridors.find(c => c.id === "top");
       const laneLo = land + 14;
       const laneHi = (corTop?.y ?? land) + (corTop?.h ?? 200) - 8;
-      let pts = null, usedRelax = false;
+      let pts = null, usedRelax = false, usedCh = null;
       // riser channels in preference order: the column/corridor channel, then the
       // gutter east of the whole top band (row-1 targets in a multi-row band are
       // reachable only via the between-rows strip entered from the band's east end).
       // If nesting starves the wire, retry with the sibling constraint relaxed —
       // a bridged sibling crossing beats unroutable geometry (last resort).
+      // A "gutter" hint (guided rerouting) tries the band-end gutter first.
       const topBandRightX = Math.max(...P.zones.filter(z => z.band === "top").map(z => z.x + z.w), rackRight);
+      const chans = [{ ch: "col", r: rr }, { ch: "gutter", r: [topBandRightX + 8, topBandRightX + 90] }];
+      if (zh?.ch === "gutter") chans.reverse();
       for (const relax of [false, true]) {
-        for (const rrTry of [rr, [topBandRightX + 8, topBandRightX + 90]]) {
+        for (const { ch, r: rrTry } of chans) {
           scanLane(laneHi, -1, [laneLo, laneHi], Math.min(tx, rrTry[0]), Math.max(tx, rrTry[1]), nWire, y => {
             const riserX = alloc(usedV, rrTry[0], Math.min(y, o.portY), Math.max(y, o.portY), nWire, +1,
               x => segBlocked(x, Math.min(y, o.portY), x, Math.max(y, o.portY), skip), rrTry);
@@ -1181,10 +1197,12 @@ export function route(job, ix, placement, opts = {}) {
             pts = cand;
             return true;
           });
-          if (pts) break;
+          if (pts) { usedCh = ch; break; }
         }
         if (pts) { usedRelax = relax; break; }
       }
+      if ((zh?.ch && zh.ch !== usedCh) || zh?.land) out.warnings.push({ code: "hint-unroutable", msg: wireId(o.c) });
+      if (zh?.bundle === true) out.warnings.push({ code: "hint-unroutable", msg: wireId(o.c) });   // asked to bundle, rode alone
       if (pts && !usedRelax) westNets.push(commit(o.c, "zone-west", pts, { group: d.id + "-west" }).net);
       else if (pts) { commit(o.c, "zone-west", pts, { group: d.id + "-west", relaxed: true }); out.warnings.push({ code: "route-relaxed", msg: wireId(o.c) }); }
       else harnessQueue.push({ o, d, sx, tx, land, cls: "zone-west" });
@@ -1205,11 +1223,15 @@ export function route(job, ix, placement, opts = {}) {
     const riserTrack = {};
     for (const o of plan.east) {
       const { tx, landY, cardTop, cardBot } = o.t;
+      if (wantsBundle(plan, o) && bundleOnto({ o, d, sx, tx, land: landY ?? cardBot, cls: "zone-east" }, true)) { done.add(o.i); continue; }
+      const zh = hintOf(o.c);
+      // guided rerouting: land on the card's top or bottom edge (chips have one entry)
+      const side = landY == null && (zh?.land === "top" || zh?.land === "bottom") ? zh.land : null;
       const skip = new Set([d.id, o.t.chipId].filter(Boolean));
 
       const finishFrom = (px, py, prefix, inverted = false, relax = false) => {
         const sibNets = relax ? [] : eastNets;
-        const above = py < cardTop;
+        const above = side ? side === "top" : py < cardTop;
         const land = landY ?? (above ? cardTop : cardBot);
         let pts = [...prefix, [px, py], [tx, py], [tx, land]];
         if (!pathBlocked(pts, skip) && pathRegisterable(pts, nWire) && !crossesSiblings(pts, sibNets)) return pts;
@@ -1338,6 +1360,8 @@ export function route(job, ix, placement, opts = {}) {
       if (pts) { if (dp !== 0) (rightPorts[d.id] ||= []).push(pv); break; }
       }
       if (!pts) o.portY = basePort;
+      if (zh && (zh.bundle === true || zh.ch || (zh.land && (!side || !pts || pts[pts.length - 1][1] !== (side === "top" ? cardTop : cardBot)))))
+        out.warnings.push({ code: "hint-unroutable", msg: wireId(o.c) });   // the pinned shape couldn't exist; auto took over
       if (pts && !usedRelax) eastNets.push(commit(o.c, "zone-east", pts, { group: d.id + "-east" }).net);
       else if (pts) { commit(o.c, "zone-east", pts, { group: d.id + "-east", relaxed: true }); out.warnings.push({ code: "route-relaxed", msg: wireId(o.c) }); }
       else {
@@ -1366,16 +1390,28 @@ export function route(job, ix, placement, opts = {}) {
      source device, same signal) as ONE conductor — it takes the sibling's net,
      so the shared run is a single line the registry and hop pass treat as one —
      and breaks out as close to its own destination as the geometry allows.
-     Render draws the shared trunk heavier with a ×N count. Only feeds that
-     would otherwise fall back are bundled, so clean sheets never change. */
+     Render draws the shared trunk heavier with a ×N count. Without harness
+     style only feeds that would otherwise fall back are bundled, so clean
+     sheets never change; with it (or a per-wire hint) the 4a/4b passes call
+     bundleOnto first and route alone only when no breakout exists. */
   for (const h of harnessQueue) {
+    if (bundleOnto(h, false)) continue;
     const { o, d, sx, tx, land } = h;
+    commit(o.c, h.cls + "-fallback", [[sx, o.portY], [tx, o.portY], [tx, land]], { group: d.id });
+    out.warnings.push({ code: "route-fallback", msg: wireId(o.c), why: h.why });
+  }
+
+  function bundleOnto(h, proactive) {
+    const { o, d, tx } = h;
     const t = o.t;
     const skip = new Set([t.chipId].filter(Boolean));
     // landings: a chip is entered from below; a card from below or above
     const lands = t.landY != null ? [{ y: t.landY, below: true }] : [{ y: t.cardBot, below: true }, { y: t.cardTop, below: false }];
     let best = null, bestCost = Infinity;
-    const leaders = out.wires.filter(w => w.from === o.c.from && w.signal === o.c.signal && !w.cls.endsWith("-fallback") && w.pts?.length > 1);
+    // by choice, ride only another zone feed (a rack-to-rack patch is not a
+    // trunk that reads as "to the rooms"); as a last resort, any sibling
+    const leaders = out.wires.filter(w => w.from === o.c.from && w.signal === o.c.signal && !w.cls.endsWith("-fallback") && w.pts?.length > 1 &&
+      (!proactive || w.cls === "zone-west" || w.cls === "zone-east"));
     for (const L of leaders) {
       for (let i = 0; i + 1 < L.pts.length; i++) {
         const [a, b] = [L.pts[i], L.pts[i + 1]];
@@ -1402,22 +1438,21 @@ export function route(job, ix, placement, opts = {}) {
             if (branch.length < 2) continue;
             const len = branch.reduce((n, q, k) => k ? n + Math.abs(q[0] - branch[k - 1][0]) + Math.abs(q[1] - branch[k - 1][1]) : n, 0);
             if (len >= bestCost) continue;   // can't beat the best even with zero hops
-            if (pathBlocked(branch, skip) || !pathRegisterable(branch, L.net)) continue;
+            // the target chip is exempt only for the final landing leg — a
+            // breakout dropping off a trunk above it must not pass through it
+            if (pathBlocked(branch, skip) || (skip.size && pathBlocked(branch.slice(0, -1), null)) || !pathRegisterable(branch, L.net)) continue;
             const cost = countCrossings(branch) * 100 + len;   // fewest hops, then the shortest breakout
             if (cost < bestCost) { bestCost = cost; best = { L, i, B, branch }; }
           }
         }
       }
     }
-    if (best) {
-      const { L, i, B, branch } = best;
-      const trunk = [...L.pts.slice(0, i + 1), B];
-      commit(o.c, h.cls, [...trunk, ...branch.slice(1)], { net: L.net, group: d.id + "-harness", bundleOf: L.bundleOf || L.id, trunkLen: trunk.length });
-      out.warnings.push({ code: "route-bundled", msg: wireId(o.c) });
-    } else {
-      commit(o.c, h.cls + "-fallback", [[sx, o.portY], [tx, o.portY], [tx, land]], { group: d.id });
-      out.warnings.push({ code: "route-fallback", msg: wireId(o.c), why: h.why });
-    }
+    if (!best) return false;
+    const { L, i, B, branch } = best;
+    const trunk = [...L.pts.slice(0, i + 1), B];
+    commit(o.c, h.cls, [...trunk, ...branch.slice(1)], { net: L.net, group: d.id + "-harness", bundleOf: L.bundleOf || L.id, trunkLen: trunk.length });
+    out.warnings.push({ code: "route-bundled", msg: wireId(o.c), ...(proactive ? { chosen: true } : {}) });
+    return true;
   }
 
   function tryCommit(conn, cls, cands, skip) {
@@ -1920,26 +1955,45 @@ export function routeAlternates(job, ix, placed, opts, wid) {
   const devs = placed.racks.flatMap(r => r.devices);
   const toDev = devs.find(d => d.id === to);
   const fromDev = devs.find(d => d.id === from);
-  if (!toDev) return [];                                 // zone-feed classes have no hint vocabulary yet
   const menu = [{ label: "Auto", hint: null }];
-  // must mirror routeRackToRack's same-column test (same x AND same rack), or
-  // aligned devices in stacked racks get a menu their router can't honor
-  const rackOfId = id => placed.racks.find(r => r.devices.some(d => d.id === id));
-  const sameCol = fromDev && Math.abs(toDev.x - fromDev.x) < 8 && rackOfId(fromDev.id) === rackOfId(toDev.id);
-  if (fromDev && sameCol) {
-    menu.push({ label: "Staple beside the column", hint: { ch: "staple" } },
-               { label: "Wrap over the top", hint: { ch: "wrap" } });
+  if (!toDev) {
+    // zone feeds: the vocabulary is the riser channel (west feeds), the card
+    // edge they land on (east feeds), and whether they ride a harness
+    if (!fromDev) return [];
+    const base = route(job, ix, placed, { ...opts, hintOverride: { [wid]: false } });
+    const w = base.wires.find(x => x.id === wid);
+    if (!w) return [];
+    const cls = w.cls.replace(/-fallback$/, "");
+    if (!/^zone-(west|east)$/.test(cls)) return [];
+    // harness choices first: a pinned shape is also an own run, and the
+    // de-dupe below keeps the first label for a given path
+    if (base.wires.some(x => x.id !== wid && x.from === w.from && x.signal === w.signal && /^zone-(west|east)$/.test(x.cls)))
+      menu.push({ label: "Ride the harness with its siblings", hint: { bundle: true } },
+                { label: "Own run (out of the harness)", hint: { bundle: false } });
+    if (cls === "zone-west") menu.push({ label: "Riser beside the rack", hint: { ch: "col" } },
+                                       { label: "Riser past the room band", hint: { ch: "gutter" } });
+    else menu.push({ label: "Land on the card's top edge", hint: { land: "top" } },
+                   { label: "Land on the card's bottom edge", hint: { land: "bottom" } });
   } else {
-    menu.push({ label: "Via the A|B gap", hint: { ch: "ab" } },
-               { label: "Via the west margin", hint: { ch: "west" } });
-    // returns can also be pinned to the strip between two stacked devices
-    if (!fromDev) {
-      const colDevs = devs.filter(d => d.col === toDev.col).sort((a, b) => a.y - b.y);
-      for (let i = 0; i + 1 < colDevs.length; i++) {
-        const a = colDevs[i], b = colDevs[i + 1];
-        if (b.y - (a.y + a.h) > 14)
-          menu.push({ label: `Between ${a.model || a.id} and ${b.model || b.id}`,
-                      hint: { ch: "ab", between: [a.id, b.id] } });
+    // must mirror routeRackToRack's same-column test (same x AND same rack), or
+    // aligned devices in stacked racks get a menu their router can't honor
+    const rackOfId = id => placed.racks.find(r => r.devices.some(d => d.id === id));
+    const sameCol = fromDev && Math.abs(toDev.x - fromDev.x) < 8 && rackOfId(fromDev.id) === rackOfId(toDev.id);
+    if (fromDev && sameCol) {
+      menu.push({ label: "Staple beside the column", hint: { ch: "staple" } },
+                 { label: "Wrap over the top", hint: { ch: "wrap" } });
+    } else {
+      menu.push({ label: "Via the A|B gap", hint: { ch: "ab" } },
+                 { label: "Via the west margin", hint: { ch: "west" } });
+      // returns can also be pinned to the strip between two stacked devices
+      if (!fromDev) {
+        const colDevs = devs.filter(d => d.col === toDev.col).sort((a, b) => a.y - b.y);
+        for (let i = 0; i + 1 < colDevs.length; i++) {
+          const a = colDevs[i], b = colDevs[i + 1];
+          if (b.y - (a.y + a.h) > 14)
+            menu.push({ label: `Between ${a.model || a.id} and ${b.model || b.id}`,
+                        hint: { ch: "ab", between: [a.id, b.id] } });
+        }
       }
     }
   }

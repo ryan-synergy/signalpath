@@ -89,22 +89,25 @@ function exercise(raw, label, strict = false) {
       const { job, ix } = loadJob(eff);
       validate(job, ix);
       const a = advise(job, ix, catalog);
-      for (const opts of [{ solution: si }, { solution: si, grayscale: true, hideSignals: ["network"] }]) {
+      for (const opts of [{ solution: si }, { solution: si, grayscale: true, hideSignals: ["network"] }, { solution: si, harness: true }]) {
         if (!job.house.zones.length) continue;
         const p = place(job, ix, opts);
         const rt = route(job, ix, p, opts);
         svgCheck(render(job, ix, p, rt, opts), `sheet sol${si}${opts.grayscale ? " bw" : ""}`);
         if (!opts.grayscale) {
-          problems.push(...geometryProblems(p, rt).slice(0, 3));
+          const fb0 = METRIC.fallbackWires;
+          problems.push(...geometryProblems(p, rt).slice(0, 3).map(x => opts.harness ? "harness: " + x : x));
+          if (opts.harness) METRIC.fallbackWires = fb0;   // the metric tracks the default drawing
           // a well-formed job must route every wire — "unrouted" means a wire silently vanished
           if (strict) for (const w of rt.warnings.filter(w => w.code === "unrouted")) problems.push(`${w.code}: ${w.msg}`);
-          if (rt.warnings.some(w => w.code === "route-fallback")) METRIC.jobsWithFallback++;
+          if (!opts.harness && rt.warnings.some(w => w.code === "route-fallback")) METRIC.jobsWithFallback++;
         }
         for (const w of rt.wires) if (w.pts) for (const pt of w.pts)
           if (!Number.isFinite(pt[0]) || !Number.isFinite(pt[1])) { problems.push(`non-finite wire point on ${w.id}`); break; }
         if (!opts.grayscale) {
           // reroute: alternates must be legal and a picked hint must reproduce its preview
-          const cands = rt.wires.filter(w => w.pts && (w.signal === "audioReturn" || w.cls === "intra" || w.cls === "staple" || w.cls === "wrap")).slice(0, 2);
+          const cands = [...rt.wires.filter(w => w.pts && (w.signal === "audioReturn" || w.cls === "intra" || w.cls === "staple" || w.cls === "wrap")).slice(0, 2),
+                         ...rt.wires.filter(w => w.pts && /^zone-(west|east)$/.test(w.cls)).slice(0, 2)];
           for (const w of cands) {
             const alts = routeAlternates(job, ix, p, opts, w.id);
             for (const alt of alts.slice(1, 3)) {
@@ -114,7 +117,11 @@ function exercise(raw, label, strict = false) {
               conn.routeHint = alt.hint;
               const { job: jj, ix: ii } = loadJob(j2);
               const pp = place(jj, ii, opts);
-              const again = route(jj, ii, pp, opts).wires.find(x => x.id === w.id);
+              const rt2 = route(jj, ii, pp, opts);
+              const again = rt2.wires.find(x => x.id === w.id);
+              const fb1 = METRIC.fallbackWires;
+              problems.push(...geometryProblems(pp, rt2).slice(0, 2).map(x => `reroute "${alt.label}" on ${w.id}: ${x}`));
+              METRIC.fallbackWires = fb1;
               if (JSON.stringify(again?.pts) !== JSON.stringify(alt.pts)) problems.push(`reroute "${alt.label}" on ${w.id} does not reproduce its preview`);
             }
           }

@@ -4,6 +4,9 @@
    name, Solutions kept). Lenient by design: unknown fields land in notes and
    the review list — never a hard failure. Pure module, no DOM. */
 
+import { productName } from "./names.js";
+import { setVideo, setSpeakers, nextFreeOutputs } from "./hookup.js";
+
 const uid = p => p + "-" + Math.random().toString(36).slice(2, 7);
 const slug = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || uid("z");
 const today = () => new Date().toISOString().slice(0, 10);
@@ -97,7 +100,7 @@ const swStatus = s => {
 };
 
 export function importSiteWalk(raw) {
-  const notes = [], warnings = [], unmapped = [];
+  const notes = [], warnings = [], unmapped = [], walk = {};
   const job = skeletonJob(raw.client ? `${raw.client} Residence` : "Site Walk Import", raw.client, raw.address);
   const sol = job.solutions[0];
 
@@ -109,7 +112,10 @@ export function importSiteWalk(raw) {
   const newId = idMaker();
 
   for (const r of rooms) {
-    const zname = String(r.zoneName || r.name || "Zone").trim() || "Zone";
+    // the room is the zone; a walk's shared audio-zone label ("Main Level" over
+    // Kitchen + Dining) means those rooms play together off one amp zone
+    const zname = String(r.name || r.zoneName || "Zone").trim() || "Zone";
+    const audioZone = String(r.zoneName || "").trim();
     const zid = newId("z-" + slug(zname));
     const zone = { id: zid, name: zname, scope: "included", endpoints: [] };
     if (floors.length > 1 && floorOf(r)) zone.area = "area-" + slug(floorOf(r));
@@ -117,7 +123,7 @@ export function importSiteWalk(raw) {
 
     // speakers
     const audio = r.audio || "tv";
-    if (!SW_AUDIO[audio] && audio !== "tv") unmapped.push(`${zname}: audio "${audio}" not recognized — no speakers added`);
+    if (!SW_AUDIO[audio] && audio !== "tv" && audio !== "none") unmapped.push(`${zname}: audio "${audio}" not recognized — no speakers added`);
     if (SW_AUDIO[audio]) {
       const ep = { id: zid + "-spk", type: "speakers", config: SW_AUDIO[audio], status: swStatus(r.audStatus) };
       if (SW_AUDIO[audio] === "stereo") ep.count = 2;
@@ -147,6 +153,7 @@ export function importSiteWalk(raw) {
           model: src, status: "new", zone: zid, location: (r.equipLoc || "").toLowerCase().includes("rack") ? "remote" : "at-display" });
       }
     }
+    if (audioZone && audioZone !== zname) znotes.push(`audio zone: ${audioZone}`);
     if (r.isTheater) znotes.push("theater room");
     if (r.wiring) znotes.push(`wiring: ${r.wiring}`);
     if (r.notes) znotes.push(r.notes);
@@ -155,6 +162,10 @@ export function importSiteWalk(raw) {
     if (znotes.length) zone.note = znotes.join(" · ");
     if (!zone.endpoints.length) { unmapped.push(`${zname}: no AV endpoints — skipped`); continue; }
     job.house.zones.push(zone);
+    // how the walk says this room is fed — drawFromWalk turns it into gear + wiring
+    walk[zid] = { video: r.tv ? r.videoFeed || "none" : "none", audioFeed: r.audioFeed || "house",
+      passiveBar: /^soundbar/.test(audio) && r.barType === "passive", audioZone,
+      local: /behind|cabinet|room|local/i.test(String(r.equipLoc || "")) };
   }
 
   // rack sources → starter devices
@@ -176,9 +187,126 @@ export function importSiteWalk(raw) {
   sol.auxCounts = { cameras: (raw.cameras || []).length, waps: raw.network?.waps || 0 };
   if (raw.network?.waps) notes.push(`${raw.network.waps} WAPs, ${raw.network.drops || 0} drops`);
   if (raw.notes) notes.push(raw.notes);
-  notes.push("Distribution gear and feeds are not part of a walk — add them in GEAR");
 
-  return { kind: "sitewalk", job, notes, warnings, unmapped };
+  return { kind: "sitewalk", job, notes, warnings, unmapped, walk };
+}
+
+/* ---------- drawing the rack from a walk ----------
+   A walk records rooms, not boxes. The field rules turn it into a first draft:
+   TVs "on system" → MXNet (an encoder per rack source, a decoder per TV);
+   house-fed speaker zones → multi-zone amps (8 zones each), behind Savant AVB
+   on a Savant job; 5.1/7.1 rooms and passive soundbars → a receiver per room.
+   Everything it adds is ordinary gear + hookup, editable like anything drawn
+   by hand. Mutates res.job; returns lines for the review screen. */
+export function drawFromWalk(res, catalog) {
+  const job = res.job, sol = job.solutions[0], rack = sol.racks[0], walk = res.walk || {};
+  const said = [], warn = [];
+  const taken = new Set([...job.house.zones.flatMap(z => [z.id, ...z.endpoints.map(e => e.id)]),
+    ...rack.devices.map(d => d.id), ...sol.localDevices.map(d => d.id)]);
+  const freeId = base => { let id = base, n = 2; while (taken.has(id)) id = `${base}-${n++}`; taken.add(id); return id; };
+  const add = (base, type, ref, extra = {}) => {
+    const c = catalog?.devices?.[ref];
+    const d = { id: freeId(base), type, ...(c ? { catalogRef: ref } : {}), model: c ? productName(c) : base, status: "new", ...extra };
+    rack.devices.push(d); return d.id;
+  };
+  const conn = (from, to, signal) => sol.connections.push({ from, to, signal });
+  const epOf = z => ({ tv: z.endpoints.find(e => e.type === "display"), spk: z.endpoints.find(e => e.type === "speakers" && e.config !== "landscape"),
+    land: z.endpoints.find(e => e.config === "landscape") });
+  const zones = job.house.zones, w = z => walk[z.id] || { video: "none", audioFeed: "house" };
+  const sources = rack.devices.filter(d => d.type === "source");
+  const wantsAvr = z => { const { spk } = epOf(z); return /^surround/.test(spk?.config || "") || w(z).passiveBar; };
+  const ampSet = s => s && !/^surround|^soundbar/.test(s.config || "");
+
+  // video distribution: MXNet when any TV is on the system
+  const onSystem = zones.filter(z => epOf(z).tv && w(z).video === "matrix");
+  let sw = null;
+  if (onSystem.length) {
+    const ports = sources.length + onSystem.length + zones.filter(wantsAvr).length + 1;
+    sw = add("sw", "avSwitch", ports <= 12 ? "avpro-mxnet-sw12" : "avpro-mxnet-sw24p");
+    const cbx = add("cbx", "controlBox", "avpro-mxnet-cbox-ha");
+    conn(cbx, sw, "network");
+    for (const s of sources) {
+      const enc = freeId("enc-" + s.id);
+      sol.companions.push({ id: enc, type: "enc", serves: s.id, auto: true });
+      conn(s.id, enc, "video"); conn(enc, sw, "video");
+    }
+    said.push(`MXNet: ${sources.length} encoder${sources.length === 1 ? "" : "s"}, ${onSystem.length} decoder${onSystem.length === 1 ? "" : "s"} on the ${rack.devices.find(d => d.id === sw).model}`);
+    if (ports > 24) warn.push(`${ports} MXNet ports — more than one 24-port switch; add a second switch`);
+    if (!sources.length) warn.push("TVs are on the system but the walk listed no rack sources — add them in GEAR");
+  }
+
+  // house audio: multi-zone amps, fed by Savant AVB on a Savant job
+  const ampZones = zones.filter(z => (ampSet(epOf(z).spk) && w(z).audioFeed !== "local") || epOf(z).land);
+  const amps = [];
+  if (ampZones.length) {
+    const blocks = ampZones.reduce((n, z) => n + (ampSet(epOf(z).spk) && w(z).audioFeed !== "local" ? 1 : 0) + (epOf(z).land ? 1 : 0), 0);
+    for (let i = 0; i < Math.ceil(blocks / 8); i++) amps.push(add("amp", "amp", "anthem-mdx-16", { zones: 8 }));
+    if (sol.platforms.includes("savant")) {
+      const music = add("music", "source", "savant-pav-sms2001");
+      const sin = add("sav-in", "audioInputModule", "savant-avb-input-module");
+      const sout = add("sav-out", "audioOutputModule", "savant-avb-output-module");
+      const avb = add("avb", "avbSwitch", null, { model: "AVB switch (Avnu-certified)" });
+      conn(music, sin, "audio"); conn(avb, sin, "network"); conn(avb, sout, "network");
+      for (const a of amps) conn(sout, a, "audio");
+      said.push(`House audio: ${amps.length} multi-zone amp${amps.length === 1 ? "" : "s"} on Savant AVB`);
+    } else said.push(`House audio: ${amps.length} multi-zone amp${amps.length === 1 ? "" : "s"} (pick their audio source in GEAR)`);
+  }
+
+  // room by room
+  const avrs = [], shared = {};
+  for (const z of zones) {
+    const { tv, spk, land } = epOf(z), v = w(z).video;
+    if (wantsAvr(z)) {
+      const avr = add("avr", "avr", null, { model: `AV receiver — ${z.name}` });
+      avrs.push(avr);
+      if (spk) setSpeakers(job, sol, z, avr);
+      if (tv && v === "matrix" && sw) {
+        setVideo(job, sol, z, sw);                     // the TV off its decoder…
+        conn(sw, avr, "video");                         // …and the receiver off the system for sound
+      } else if (tv) setVideo(job, sol, z, avr, "balun", true);   // receiver drives the TV, eARC back
+      if (w(z).local) warn.push(`${z.name}: receiver drawn in the rack — the walk put gear in the room; move it if it stays there`);
+    } else if (tv) {
+      if (v === "matrix" && sw) setVideo(job, sol, z, sw);
+      else if (v === "local") {
+        const here = sol.localDevices.find(d => d.zone === z.id);
+        if (here) setVideo(job, sol, z, here.id);
+      } else if (v === "direct" && sources[0]) {
+        setVideo(job, sol, z, sources[0].id, "balun");
+        warn.push(`${z.name}: direct rack feed drawn from ${sources[0].model} — confirm the source`);
+      } else if (v === "none") warn.push(`${z.name}: the walk has no video feed for this TV — add one, or it stays flagged`);
+    }
+    if (ampSet(spk) && w(z).audioFeed !== "local" && !wantsAvr(z)) {
+      // rooms sharing a walk audio zone get their own outputs on the SAME amp
+      // (grouped in the control system; one output per room, never paralleled)
+      const mate = w(z).audioZone && shared[w(z).audioZone];
+      const room = a => sol.connections.filter(c => c.from === a && c.signal === "speaker").length < 8;
+      const amp = (mate && room(mate) ? mate : null) || amps.find(room);
+      if (amp) setSpeakers(job, sol, z, amp);
+      if (amp && w(z).audioZone) shared[w(z).audioZone] ||= amp;
+    }
+    if (tv && /^soundbar/.test(spk?.config || "") && !wantsAvr(z))
+      sol.connections.push({ from: tv.id, to: spk.id, signal: "audioReturn" });   // powered bar off the TV's eARC
+    if (ampSet(spk) && w(z).audioFeed === "local" && !wantsAvr(z)) {
+      // "local feed" on the walk = a small amp in the room (Sonos Amp class)
+      const la = freeId(`amp-${z.id}`);
+      sol.localDevices.push({ id: la, type: "amp", model: `Local amp — ${z.name}`, status: "new", zone: z.id, location: "at-display", zones: 1 });
+      sol.connections.push({ from: la, to: spk.id, signal: "speaker" });
+      warn.push(`${z.name}: speakers on a local amp in the room — pick the model`);
+    }
+    if (land) {
+      const amp = amps.find(a => sol.connections.filter(c => c.from === a && c.signal === "speaker").length < 8);
+      if (amp) sol.connections.push({ from: amp, to: land.id, signal: "speaker", channels: nextFreeOutputs(sol, amp, 2) });
+    }
+  }
+  // receivers off the system still need sources: one receiver can take them all
+  const unfed = avrs.filter(a => !sol.connections.some(c => c.to === a && c.signal === "video"));
+  if (sw) for (const a of unfed) conn(sw, a, "video");                  // off the system, like any TV
+  else if (unfed.length === 1) for (const s of sources) conn(s.id, unfed[0], "video");
+  else if (unfed.length > 1) warn.push(`${unfed.length} receivers share the rack sources — add a matrix or pick sources per receiver in GEAR`);
+  if (avrs.length) said.push(`${avrs.length} AV receiver${avrs.length === 1 ? "" : "s"} for surround / passive-soundbar rooms`);
+  if (!said.length) said.push("Nothing on the walk needs rack gear — add distribution in GEAR");
+  job.job.drawnFrom = "walk";
+  return { notes: said, warnings: warn };
 }
 
 /* ---------- Blueprinted takeoff ---------- */
@@ -262,6 +390,32 @@ export function importBlueprinted(raw) {
   if (raw.cameras?.length) sol.auxCounts = { cameras: raw.cameras.length };
 
   return { kind: "blueprinted", job, notes, warnings, unmapped };
+}
+
+/* ---------- AVWalk → SignalPath handoff link ----------
+   AVWalk's "Send to SignalPath" opens …/signalpath/#avwalk=<payload>: the
+   survey JSON, raw-DEFLATE compressed (Apple's .zlib = RFC 1951, no header),
+   base64url. It rides in the #fragment, so it never reaches a server; the app
+   strips it from the address bar on arrival. */
+const b64u = {
+  enc: bytes => { let s = ""; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); },
+  dec: str => { if (!/^[A-Za-z0-9_-]+$/.test(str)) throw new Error("the link is damaged (not base64url)");
+    const bin = atob(str.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((str.length + 3) % 4));
+    return Uint8Array.from(bin, ch => ch.charCodeAt(0)); },
+};
+const pipe = async (bytes, stream) => new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
+export async function encodeHandoff(obj) {
+  return b64u.enc(await pipe(new TextEncoder().encode(JSON.stringify(obj)), new CompressionStream("deflate-raw")));
+}
+/* null when the hash isn't a handoff; throws on a damaged one */
+export async function decodeHandoff(hash) {
+  const m = String(hash || "").match(/^#avwalk=(.*)$/s);
+  if (!m) return null;
+  let text;
+  try { text = new TextDecoder().decode(await pipe(b64u.dec(m[1]), new DecompressionStream("deflate-raw"))); }
+  catch (e) { throw new Error("AVWalk link is damaged or cut off — send it again (" + e.message + ")"); }
+  return JSON.parse(text);
 }
 
 /* ---------- the one door ---------- */

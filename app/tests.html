@@ -16,7 +16,7 @@
 <ul id="out"></ul>
 <script type="module">
 import { loadJob, validate, advise, place, route, render, routeAlternates, expandChannels, effectiveHouse, effectiveJob, trunkCount, autoLinkCatalog, indexJob, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
-import { sniff, importAny, importSiteWalk, importBlueprinted, mergeHouse, stripUnsafe, assertJobShape } from "./importers.js";
+import { sniff, importAny, importSiteWalk, importBlueprinted, mergeHouse, stripUnsafe, assertJobShape, drawFromWalk, decodeHandoff, encodeHandoff } from "./importers.js";
 import { pageFlags, sheetCount, renderChannelMap, renderTakeoff, renderWireSchedule, renderExtraPages, renderBomCompare, wireRuns, takeoffItems, takeoffCSV } from "./pages.js";
 
 const out = document.getElementById("out");
@@ -561,6 +561,57 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     const p = place(job, ix);
     t("sitewalk: imported job loads and places", p.zones.length === 3);
   }
+  { // drawing the rack from a walk: MXNet, amps, receivers — and it all validates
+    const CATW = await (await fetch("./catalog.json")).json();
+    const walk = structuredClone(miniWalk);
+    walk.rack.sources = { "Apple TV": 2, "DirecTV": 1 };
+    walk.rooms.push(
+      { name: "Kitchen", tv: true, tvSize: "55", videoFeed: "matrix", audio: "2.0", audioFeed: "house", zoneName: "Main Level", exw: {} },
+      { name: "Dining", tv: false, audio: "2.0", audioFeed: "house", zoneName: "Main Level", exw: {} },
+      { name: "Den", tv: true, tvSize: "65", videoFeed: "direct", audio: "soundbar", barType: "passive", exw: {} },
+      { name: "Guest", tv: true, tvSize: "50", videoFeed: "none", audio: "none", exw: {} });
+    walk.rooms.find(x => x.name === "Bed 2").audioFeed = "local";
+    const r = importSiteWalk(walk);
+    t("walk draw: audio 'none' is not an unmapped value", !r.unmapped.some(u => u.includes('"none"')));
+    const d = drawFromWalk(r, CATW);
+    const j = r.job, sol = j.solutions[0], devs = sol.racks[0].devices;
+    const ofType = ty => devs.filter(x => x.type === ty);
+    const fedBy = (epId, sig) => sol.connections.find(c => c.to === epId && c.signal === sig);
+    t("walk draw: TVs on the system → one MXNet switch + control box, an encoder per rack source",
+      ofType("avSwitch").length === 1 && ofType("controlBox").length === 1 &&
+      sol.companions.filter(c => c.type === "enc").length === 3 && d.notes.some(n => n.startsWith("MXNet")));
+    t("walk draw: on-system TVs get decoders off the switch",
+      ["z-kitchen-tv", "z-family-room-tv"].every(id => sol.companions.some(c => c.type === "dec" && c.serves === id)));
+    t("walk draw: Savant job → AVB chain into one amp; kitchen + landscape on its outputs",
+      ofType("amp").length === 1 && ofType("audioOutputModule").length === 1 &&
+      fedBy("z-patio-land", "speaker")?.channels === "1-2" && fedBy("z-kitchen-spk", "speaker")?.channels === "3-4" &&
+      sol.connections.some(c => c.to === ofType("amp")[0].id && c.signal === "audio"));
+    t("walk draw: 5.1 on the system → receiver for the speakers, fed video from the switch",
+      (() => { const a = fedBy("z-family-room-spk", "speaker")?.from; return a && devs.find(x => x.id === a)?.type === "avr" && sol.connections.some(c => c.to === a && c.signal === "video" && devs.find(x => x.id === c.from)?.type === "avSwitch"); })());
+    t("walk draw: rooms sharing a walk audio zone stay separate rooms, own outputs on the same amp",
+      j.house.zones.some(z => z.name === "Dining" && /audio zone: Main Level/.test(z.note)) &&
+      fedBy("z-dining-spk", "speaker")?.channels === "5-6" && fedBy("z-kitchen-spk", "speaker")?.channels === "3-4" &&
+      fedBy("z-dining-spk", "speaker")?.from === fedBy("z-kitchen-spk", "speaker")?.from);
+    t("walk draw: passive soundbar → its own receiver driving the TV with eARC",
+      (() => { const a = fedBy("z-den-spk", "speaker")?.from; return devs.find(x => x.id === a)?.type === "avr" && sol.connections.some(c => c.from === a && c.earc); })());
+    t("walk draw: locally-fed stereo gets a local amp in the room; local source drives its TV",
+      sol.localDevices.some(x => x.type === "amp" && x.zone === "z-bed-2" && fedBy("z-bed-2-spk", "speaker")?.from === x.id) &&
+      sol.localDevices.some(x => x.type === "source" && fedBy("z-bed-2-tv", "video")?.from === x.id));
+    t("walk draw: receivers are real gear with plain names (no catalog drift)", ofType("avr").every(x => !x.catalogRef && /AV receiver — /.test(x.model)));
+    const { job, ix } = loadJob(j);
+    const v = validate(job, ix);
+    const errs = (v.errors || []).map(e => e.msg);
+    t("walk draw: the only error left is the TV the walk gave no feed (and the draw warned about it)",
+      errs.length === 1 && /Guest/.test(errs[0]) && d.warnings.some(w => w.startsWith("Guest")), errs.join("; "));
+    t("walk draw: switch sized by port count (8 ports → SW12)", ofType("avSwitch")[0].catalogRef === "avpro-mxnet-sw12");
+    // the handoff link AVWalk opens: #avwalk=<base64url raw-deflate JSON>
+    const enc = await encodeHandoff(walk);
+    const back = await decodeHandoff("#avwalk=" + enc);
+    t("handoff: link round-trips the survey and stays short", JSON.stringify(back) === JSON.stringify(walk) && enc.length < JSON.stringify(walk).length);
+    t("handoff: other hashes are ignored", (await decodeHandoff("#tab=gear")) === null);
+    let threw = false; try { await decodeHandoff("#avwalk=!!!not-base64"); } catch { threw = true; }
+    t("handoff: a damaged link fails loudly, not silently", threw);
+  }
   { // Blueprinted adapter
     const r = importBlueprinted(miniBp);
     const j = r.job, sol = j.solutions[0];
@@ -953,8 +1004,9 @@ for (const [name, raw] of Object.entries(fixtures)) {
     catalog.devices["sonos-amp"].verified === true && catalog.devices["sonos-amp"].flags.includes("sonos") &&
     catalog.devices["sonos-port"].outputs.coax === 1 &&
     catalog.devices["sonos-connect"]?.verified === false && !!catalog.devices["sonos-arc-ultra"]);
-  t("sonos: Beam Ultra pre-ship entry present, honestly unverified",
-    catalog.devices["sonos-beam-ultra"]?.verified === false && catalog.devices["sonos-beam-ultra"].flags.includes("sonos"));
+  t("sonos: Beam Ultra verified post-launch (eARC, no DTS:X/ethernet gotchas noted)",
+    catalog.devices["sonos-beam-ultra"]?.verified === true && catalog.devices["sonos-beam-ultra"].flags.includes("eARC") &&
+    /Combo Adapter/.test(catalog.devices["sonos-beam-ultra"].notes) && /DTS:X/.test(catalog.devices["sonos-beam-ultra"].notes));
   // lip-sync note: TV audio into a Port (line-in encoder) needs delay tuning
   sol.localDevices.push({ id: "port-patio", type: "source", model: "Sonos Port", catalogRef: "sonos-port", zone: "z-patio", location: "at-display" });
   sol.connections.push({ from: "patio-tv", to: "port-patio", signal: "audioReturn" }, { from: "port-patio", to: "sav-avb", signal: "network" });
@@ -1011,7 +1063,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
     cat.devices["avpro-ac-mx-44"].outputs.analog === 4);
   t("catalog: only the known intentional unverifieds remain (pre-ship / legacy / placeholder)",
     JSON.stringify(Object.keys(cat.devices).filter(k => !cat.devices[k].verified).sort()) ===
-    JSON.stringify(["avpro-mxnet-cbox-ha", "savant-ip-audio-125", "sonos-beam-ultra", "sonos-connect", "sonos-connect-amp"]));
+    JSON.stringify(["avpro-mxnet-cbox-ha", "savant-ip-audio-125", "sonos-connect", "sonos-connect-amp"]));
   t("catalog: SW24 lineage settled (legacy 370W, SW24P successor present)",
     cat.devices["avpro-mxnet-sw24"].poeBudgetW === 370 && cat.devices["avpro-mxnet-sw24"].flags.includes("legacy") &&
     cat.devices["avpro-mxnet-sw24p"]?.verified === true);

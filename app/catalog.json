@@ -1,7 +1,7 @@
 {
  "generator": "SignalPath-catalog",
  "version": 1,
- "asOf": "2026-09-20",
+ "asOf": "2026-09-27",
  "note": "Seeded from RESEARCH.md \u00a75-6 (verified 2026-09-16). Edit in SignalPath \u2192 SETTINGS, not here.",
  "devices": {
   "anthem-mdx-16": {
@@ -884,7 +884,7 @@
     "speakerEndpoint"
    ],
    "verified": true,
-   "notes": "Mid-tier soundbar. Single HDMI eARC input (backward compatible with ARC-only TVs). Ships with an optical adapter in the box for TVs with no ARC/eARC \u2014 GOTCHA: using the optical adapter drops Dolby Atmos entirely (optical can't carry the Dolby Digital Plus/TrueHD bitstream Atmos needs), falls back to 5.1/stereo. Has its own Ethernet port for wired network. 5.0.2-channel driver array; supports Atmos via HDMI eARC/ARC using Dolby Digital Plus (lossy) or, over eARC only, Dolby TrueHD (lossless). NOTE 2026-09: Beam Ultra (ships 9/29) supersedes at the mid-tier \u2014 check whether Gen 2 continues at a lower price before quoting."
+   "notes": "Mid-tier soundbar. Single HDMI eARC input (backward compatible with ARC-only TVs). Ships with an optical adapter in the box for TVs with no ARC/eARC \u2014 GOTCHA: using the optical adapter drops Dolby Atmos entirely (optical can't carry the Dolby Digital Plus/TrueHD bitstream Atmos needs), falls back to 5.1/stereo. Has its own Ethernet port for wired network. 5.0.2-channel driver array; supports Atmos via HDMI eARC/ARC using Dolby Digital Plus (lossy) or, over eARC only, Dolby TrueHD (lossless). NOTE 2026-09-27: still sold alongside the Beam Ultra (sonos.com) \u2014 Gen 2 keeps the ethernet jack and the in-box optical adapter the Ultra drops."
   },
   "sonos-ray": {
    "brand": "Sonos",
@@ -1004,16 +1004,20 @@
    "brand": "Sonos",
    "model": "Beam Ultra",
    "type": "amp",
+   "zones": 1,
    "inputs": {
     "hdmi": 1
    },
    "outputs": {},
    "flags": [
+    "atmos",
+    "bluetooth",
+    "eARC",
     "sonos",
-    "atmos"
+    "speakerEndpoint"
    ],
-   "verified": false,
-   "notes": "The 'Gambit' rumor made real: announced 2026-09-01, ships 2026-09-29. 7.1.2 Dolby Atmos w/ dedicated up-firing drivers, redesigned center + AI Speech Enhancement, Trueplay. FCC (S59/RM059): BT + WiFi 2.4/5/6GHz 2x2. Beam Gen 2 form factor (~25.6in). PRE-SHIP entry: eARC-vs-ARC, DTS, ethernet speed, optical-adapter behavior and Sub/Era pairing all unconfirmed until spec sheets land after 9/29 \u2014 verify before spec'ing."
+   "verified": true,
+   "notes": "Verified 2026-09-27 against sonos.com Tech Specs + Sonos newsroom. Ships 2026-09-29; Beam (Gen 2) stays on sale. 7.1.2 Dolby Atmos, 9 drivers / 9 Class-D amps (5 tweeters incl. 2 up-firing, 4 woofers). ONE HDMI eARC port (ARC fallback), no HDMI input/passthrough. GOTCHAS vs Beam Gen 2: (1) NO ethernet jack \u2014 wired network needs the Sonos Combo Adapter on USB-C (sold separately; same port takes the Line-In Adapter); (2) optical adapter NOT in the box (sold separately) and TrueHD/Atmos/multichannel PCM all need eARC \u2014 optical drops Atmos; (3) DTS Digital Surround only, no DTS:X; (4) 29.5in wide (750 mm) vs Gen 2's 25.6in \u2014 check the space under the TV; wall mount is its own part. Wi-Fi 6, BT 5.3, AirPlay 2, Sonos Voice Control (no Alexa/Google listed), far-field mics w/ hardware switch, works with the TV remote. Pairs with Sub Mini/Sub, Era 100 surrounds (Sonos Immersive Set), Ace/Ace Ultra TV audio swap. Needs the current Sonos app (Sonos 27). Control-system drivers (Savant/C4/Crestron) not yet stated for this model \u2014 confirm before quoting into an integrated job."
   },
   "avpro-mxnet-sw24p": {
    "brand": "AVPro Edge",

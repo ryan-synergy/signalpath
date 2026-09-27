@@ -306,6 +306,7 @@
   <div class="hd"><div class="t" id="rvTitle"></div><div class="s" id="rvSub"></div></div>
   <div class="bd" id="rvBody"></div>
   <div class="ft">
+    <label id="rvDrawWrap" title="Adds MXNet, amps and receivers from how the walk says each room is fed"><input type="checkbox" id="rvDraw" checked> Draw the rack + wiring</label>
     <button class="primary" id="rvNew">Create new job</button>
     <select id="rvTarget"></select><button id="rvMerge">Update selected job</button>
     <span style="flex:1"></span><button id="rvCancel">Cancel</button>
@@ -314,7 +315,7 @@
 
 <script type="module">
 import { loadJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock } from "./app/engine.js";
-import { importAny, mergeHouse } from "./app/importers.js";
+import { importAny, mergeHouse, drawFromWalk, decodeHandoff } from "./app/importers.js";
 import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
 import { STARTERS, applyStarter } from "./app/starters.js";
@@ -786,10 +787,10 @@ async function showReview(res) {
   $("#rvTitle").textContent = `Import review — ${KINDS[res.kind] || res.kind}`;
   $("#rvSub").textContent = `${j.job.name} · ${j.house.zones.length} zones · ${sol.racks[0].devices.length} rack devices · ${sol.connections.length} connections${sol.platforms.length ? " · platform: " + sol.platforms[0] : ""}`;
   const zoneRow = z => {
-    const spk = z.endpoints.filter(e => e.type === "speakers").map(e => e.config).join(" + ");
+    const spk = z.endpoints.filter(e => e.type === "speakers").map(e => SPEAKER_SETUP[e.config] || e.config).join(" + ");
     const tv = z.endpoints.find(e => e.type === "display");
     return `<tr><td><b>${esc(z.name)}</b></td><td>${esc(spk || "—")}</td>
-      <td>${tv ? esc(`${tv.brand || "?"} ${tv.size}"${tv.confirm ? " ⚠" : ""} (${tv.status})`) : "—"}</td>
+      <td>${tv ? esc(`${tv.brand ? tv.brand + " " : ""}${tv.size}" ${tv.displayType === "projector" ? "projector" : "TV"}${tv.confirm ? " ⚠ size TBD" : ""} (${STATUS_NAME[tv.status] || tv.status})`) : "—"}</td>
       <td class="u">${esc(z.note || "")}</td></tr>`;
   };
   $("#rvBody").innerHTML =
@@ -804,7 +805,15 @@ async function showReview(res) {
   return new Promise(done => {
     const close = () => { $("#review").classList.remove("show"); done(); };
     $("#rvCancel").onclick = close;
-    $("#rvNew").onclick = async () => { await flushSave(); S.job = j; S.id = uid("job"); S.sol = 0; await persist(); refresh(false); close(); };
+    $("#rvDrawWrap").style.display = res.walk ? "" : "none";
+    $("#rvNew").onclick = async () => {
+      await flushSave();
+      if (res.walk && $("#rvDraw").checked) {
+        const d = drawFromWalk(res, SETTINGS.catalog);
+        toast([...d.notes, ...d.warnings.map(x => "⚠ " + x)].join(" · "));
+      }
+      S.job = j; S.id = uid("job"); S.sol = 0; await persist(); refresh(false); close();
+    };
     $("#rvMerge").onclick = async () => {
       const rec = jobs.find(r => r.id === $("#rvTarget").value); if (!rec) return;
       await flushSave();
@@ -1856,6 +1865,19 @@ function wirePanel(body) {
   await renderJobsSel();
   refresh(false);
 }
+
+/* AVWalk "Send to SignalPath": the survey rides in the #fragment. Take it,
+   clear it from the address bar (and this history entry) at once, then land
+   on the normal import review — nothing touches a job until you choose. */
+async function takeHandoff() {
+  if (!location.hash.startsWith("#avwalk=")) return;
+  const hash = location.hash;
+  history.replaceState(null, "", location.pathname + location.search);
+  try { await showReview(importAny(await decodeHandoff(hash))); }
+  catch (err) { alert("Couldn't open the AVWalk survey: " + err.message); }
+}
+addEventListener("hashchange", takeHandoff);
+await takeHandoff();
 </script>
 </body>
 </html>

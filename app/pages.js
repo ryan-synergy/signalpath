@@ -693,83 +693,127 @@ export function renderBomCompare(job, ix, adviseResult, opts = {}) {
   return bomComparePages(job, ix, adviseResult, opts, () => opts.sheetLabel || "")[0];
 }
 
-/* ============ PAGE: RACK ELEVATION ============
-   Front view per rack from advise().racks (rack.js): U numbers from the
-   bottom, gear top-down in build order, blank space shaded. Two racks per
-   sheet, each with its summary column. */
+/* ============ PAGE: RACK ============
+   Everything about the rack on its own sheet (one per rack): the front
+   elevation on the left; on the right the summary, the rack hardware the
+   elevation implies (part numbers the job hasn't filled in print "?"), and —
+   on the first rack — the power table: outlets, watts (typical / max, "?"
+   where nobody has a figure yet), circuit load and heat. All of it comes from
+   advise() (rack.js + power.js); the editor's RACK tab edits the same data. */
 const RACK_FILL = { patch: "#e8f0fb", vent: "#eceef1", shelf: "#f7f3e8" };
 const TIER_FILL = ["#e8f0fb", "#e6f4ea", "#ecebf8", "#f7f3e8", "#f6e9e7", "#fdf0d2"];
-function rackElevationPages(job, ix, adviseResult, opts, label) {
-  const s = ix.solutions[opts.solution ?? 0];
-  const racks = (adviseResult?.racks || []).filter(r => r.solution === s?.sol.id && (r.items.length || r.rear.length));
-  if (!racks.length) return [];
-  const pw = (adviseResult?.power || []).find(p => p.solution === s?.sol.id);
-  const bodies = [];
-  racks.forEach((r, k) => {
-    if (k % 2 === 0) bodies.push([]);
-    const body = bodies[bodies.length - 1];
-    const ox = k % 2 ? 840 : 40, rw = 380, top = TOP + 34;
-    const uPx = Math.min(20, Math.floor((LIMIT - top - 10) / Math.max(r.size, r.used)));
-    const rows = Math.max(r.size, r.used), h = rows * uPx, rx = ox + 40;
-    body.push(heading(ox, TOP + 8, `${r.name} — ${r.size}U`));
-    body.push(`<rect x="${rx}" y="${top}" width="${rw}" height="${h}" fill="#f4f5f7" stroke="#333" stroke-width="2"/>`);
-    if (r.over) body.push(`<rect x="${rx}" y="${top + r.size * uPx}" width="${rw}" height="${(rows - r.size) * uPx}" fill="#fbe3e1"/>
+const Q = { text: "?", color: "#a45a12" };
+// the rack body: frame, U numbers, gear top-down, amps/power on the floor
+function drawRack(r, rx, top, rw, uPx) {
+  const out = [];
+  const rows = Math.max(r.size, r.used), h = rows * uPx;
+  out.push(`<rect x="${rx}" y="${top}" width="${rw}" height="${h}" fill="#f4f5f7" stroke="#333" stroke-width="2"/>`);
+  if (r.over) out.push(`<rect x="${rx}" y="${top + r.size * uPx}" width="${rw}" height="${(rows - r.size) * uPx}" fill="#fbe3e1"/>
 <line x1="${rx - 6}" y1="${top + r.size * uPx}" x2="${rx + rw + 6}" y2="${top + r.size * uPx}" stroke="#b32017" stroke-width="2"/>`);   // the rack floor; red below = doesn't fit
-    for (let u = 0; u < rows; u++) {
-      const y = top + u * uPx, n = r.size - u;
-      body.push(`<line x1="${rx}" y1="${y}" x2="${rx + rw}" y2="${y}" stroke="#dde0e5" stroke-width="0.6"/>`);
-      if (n >= 1 && (uPx >= 14 || n % 2 === 1)) body.push(`<text x="${rx - 8}" y="${y + uPx * 0.72}" text-anchor="end" font-size="${Math.min(10, uPx * 0.6)}" fill="#888">${n}</text>`);
+  for (let u = 0; u < rows; u++) {
+    const y = top + u * uPx, n = r.size - u;
+    out.push(`<line x1="${rx}" y1="${y}" x2="${rx + rw}" y2="${y}" stroke="#dde0e5" stroke-width="0.6"/>`);
+    if (n >= 1 && (uPx >= 14 || n % 2 === 1)) out.push(`<text x="${rx - 8}" y="${y + uPx * 0.72}" text-anchor="end" font-size="${Math.min(10, uPx * 0.6)}" fill="#888">${n}</text>`);
+  }
+  // gear dresses the top; amps, receivers and power sit on the floor of the rack
+  // (only when it all fits — an over-full rack just stacks in order)
+  const low = r.over ? [] : r.items.filter(i => i.tier >= 4);
+  const lowStart = top + (r.size - low.reduce((n, i) => n + i.u, 0)) * uPx;
+  let y = top;
+  for (const it of r.items) {
+    if (it === low[0]) y = lowStart;
+    const ih = it.u * uPx;
+    const fill = RACK_FILL[it.kind] || TIER_FILL[it.tier] || "#fff";
+    const fs = Math.max(7, Math.min(12, ih * 0.62));
+    const maxCh = Math.floor((rw - 40) / (fs * 0.56));
+    const text = it.label.length > maxCh ? it.label.slice(0, maxCh - 1) + "…" : it.label;
+    out.push(`<rect x="${rx + 2}" y="${y + 1}" width="${rw - 4}" height="${ih - 2}" rx="2" fill="${fill}" stroke="${it.guess ? "#a45a12" : "#8a93a3"}"${it.guess ? ' stroke-dasharray="4 3"' : ""}/>` +
+      (it.kind === "vent" ? `<g stroke="#b9bec7">${Array.from({ length: Math.floor((rw - 90) / 30) }, (_, i) => `<line x1="${rx + 60 + i * 30}" y1="${y + 4}" x2="${rx + 60 + i * 30}" y2="${y + ih - 4}"/>`).join("")}</g>` : "") +
+      `<text x="${rx + 12}" y="${y + ih / 2 + fs * 0.36}" font-size="${fs}" fill="${it.kind === "vent" ? "#888" : "#222"}"${it.kind === "device" ? ' font-weight="600"' : ""}>${esc(text)}</text>` +
+      `<text x="${rx + rw - 10}" y="${y + ih / 2 + 4}" text-anchor="end" font-size="${Math.min(10, fs)}" fill="${it.guess ? "#a45a12" : "#888"}">${it.guess ? "?U" : `${it.u}U`}</text>`);
+    y += ih;
+  }
+  return out;
+}
+// a standalone front view for the editor's RACK tab
+export function rackFrontSVG(r, rw = 300) {
+  const uPx = 14, top = 6, rows = Math.max(r.size, r.used);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${rw + 40} ${rows * uPx + 12}" width="100%" font-family="'Avenir Next', Avenir, 'Helvetica Neue', sans-serif">${drawRack(r, 30, top, rw, uPx).join("")}</svg>`;
+}
+export function rackData(adviseResult, solId) {
+  return { racks: (adviseResult?.racks || []).filter(r => r.solution === solId && (r.items.length || r.rear.length)),
+           power: (adviseResult?.power || []).find(p => p.solution === solId) || null };
+}
+function rackPages(job, ix, adviseResult, opts, label) {
+  const s = ix.solutions[opts.solution ?? 0];
+  const { racks, power } = rackData(adviseResult, s?.sol.id);
+  if (!racks.length) return [];
+  const clip = (v, n) => String(v).length > n ? String(v).slice(0, n - 1) + "…" : String(v);
+  const bodies = [];
+  const RX = 560, RW = 1000;                           // right column
+  racks.forEach((r, k) => {
+    let body = []; bodies.push(body);
+    const top = TOP + 34, rw = 380;
+    const uPx = Math.min(20, Math.floor((LIMIT - top - 10) / Math.max(r.size, r.used)));
+    body.push(heading(40, TOP + 8, `${r.name} — ${r.size}U`), ...drawRack(r, 80, top, rw, uPx));
+    let y = TOP;
+    const more = () => { body = []; bodies.push(body); y = TOP; };
+    const text = (lines) => {
+      if (y + lines.length * 18 > LIMIT) more();
+      body.push(`<g font-size="12.5">${lines.map(([t, c = "#333", b], i) => `<text x="${RX}" y="${y + 14 + i * 18}" fill="${c}"${b ? ' font-weight="700"' : ""} xml:space="preserve">${esc(t)}</text>`).join("")}</g>`);
+      y += lines.length * 18 + 16;
+    };
+    const table = (title, sub, cols, rows) => {
+      let rest = [...rows], first = true;
+      while (rest.length) {
+        if (y + 60 + Math.min(3, rest.length) * 28 > LIMIT) more();
+        body.push(heading(RX, y + 8, first ? title : `${title} (cont.)`));
+        if (first && sub) body.push(`<text x="${RX}" y="${y + 28}" font-size="12" fill="#555">${esc(sub)}</text>`);
+        const t = tableFit(RX, y + (first && sub ? 38 : 20), RW, cols, rest);
+        body.push(t.svg); rest = t.rest; y = t.bottom + 30; first = false;
+        if (rest.length) more();
+      }
+    };
+    text([
+      [`${r.used}U used · ${r.over ? `${r.over}U OVER` : `${r.spare}U spare`} of ${r.size}U`, r.over ? "#b32017" : "#111", true],
+      [`Cat6 home runs: ${r.cat6}${r.cat6 ? ` → ${Math.ceil(r.cat6 / 24)} patch panel${Math.ceil(r.cat6 / 24) > 1 ? "s" : ""}` : ""}`],
+      ...(r.rear.length ? [[`Rear rails (no U): ${r.rear.join(", ")}`]] : []),
+      ...(r.unknown.length ? [[`Height unknown (?U, drawn 1U): ${clip(r.unknown.join(", "), 110)}`, "#a45a12"]] : []),
+      ...r.items.filter(i => i.kind === "shelf").map((i, n) => [`${i.kit || `Shelf ${n + 1}`}: ${clip(i.members.join(", "), 110)}`, "#555"]),
+    ]);
+    table("Rack hardware", "What the elevation needs beyond the gear — ? = part number to fill in",
+      [{ label: "Item", dx: 14 }, { label: "Qty", dx: 520 }, { label: "Part no.", dx: 600 }],
+      r.hardware.map(h => ({ cells: [h.item, String(h.qty), h.partNo || Q] })));
+    if (k === 0 && power) {
+      const units = power.units.length ? power.units.map(u => `${u.model}${u.outlets != null ? ` (${u.outlets} outlets)` : ""}`).join(" + ") : "No power conditioner";
+      const verdict = power.supply == null ? (power.units.length ? "outlet count ?" : `spec ${power.pick ? `${power.pick.qty > 1 ? power.pick.qty + " × " : ""}${power.pick.model}` : "a WattBox"}`)
+        : power.short ? `${power.short} SHORT` : `${power.supply - power.need} spare${power.tight ? ` (aim for ${power.spare})` : ""}`;
+      const W = v => v == null ? Q : String(v);
+      const rows = power.loads.map(l => ({ cells: [clip(l.what, 60), String(l.outlets), W(l.typicalW), W(l.maxW), l.why] }));
+      if (power.poe.length) rows.push({ gray: true, cells: [clip(`PoE-powered (no outlet): ${power.poe.map(p => p.what).join(", ")}`, 72), "0", "", "", "from its switch"] });
+      table("Power & heat", `${units} · ${power.need} outlets · ${verdict} · ~${power.typicalW} W typ / ${power.maxW} W max of ${power.circuitW} W (${power.circuits > 1 ? `${power.circuits} × ` : ""}${power.circuitA}A) · ~${power.btu.toLocaleString("en-US")} BTU/hr`,
+        [{ label: "Device", dx: 14 }, { label: "Outlets", dx: 520 }, { label: "Typ W", dx: 610 }, { label: "Max W", dx: 700 }, { label: "Note", dx: 790 }], rows);
+      const notes = [];
+      if (power.noWatts.length) notes.push([`? = no wattage on file for ${power.noWatts.length} box${power.noWatts.length > 1 ? "es" : ""} — totals are a floor until filled in (RACK tab)`, "#a45a12"]);
+      if (power.cooling) notes.push([power.cooling === "room" ? "Heat: plan room cooling (HVAC supply + return or a dedicated unit) plus rack fans" : "Heat: plan a top-exhaust rack fan and a vented door or closet", "#a45a12", true]);
+      if (notes.length) text(notes);
     }
-    // gear dresses the top; amps, receivers and power sit on the floor of the rack
-    // (only when it all fits — an over-full rack just stacks in order)
-    const low = r.over ? [] : r.items.filter(i => i.tier >= 4);
-    const lowStart = top + (r.size - low.reduce((n, i) => n + i.u, 0)) * uPx;
-    let y = top;
-    for (const it of r.items) {
-      if (it === low[0]) y = lowStart;
-      const ih = it.u * uPx;
-      const fill = RACK_FILL[it.kind] || TIER_FILL[it.tier] || "#fff";
-      const fs = Math.max(7, Math.min(12, ih * 0.62));
-      const maxCh = Math.floor((rw - 20) / (fs * 0.56));
-      const text = it.label.length > maxCh ? it.label.slice(0, maxCh - 1) + "…" : it.label;
-      body.push(`<rect x="${rx + 2}" y="${y + 1}" width="${rw - 4}" height="${ih - 2}" rx="2" fill="${fill}" stroke="${it.guess ? "#a45a12" : "#8a93a3"}"${it.guess ? ' stroke-dasharray="4 3"' : ""}/>` +
-        (it.kind === "vent" ? `<g stroke="#b9bec7">${Array.from({ length: 9 }, (_, i) => `<line x1="${rx + 60 + i * 30}" y1="${y + 4}" x2="${rx + 60 + i * 30}" y2="${y + ih - 4}"/>`).join("")}</g>` : "") +
-        `<text x="${rx + 12}" y="${y + ih / 2 + fs * 0.36}" font-size="${fs}" fill="${it.kind === "vent" ? "#888" : "#222"}"${it.kind === "device" ? ' font-weight="600"' : ""}>${esc(text)}</text>` +
-        `<text x="${rx + rw - 10}" y="${y + ih / 2 + 4}" text-anchor="end" font-size="${Math.min(10, fs)}" fill="#888">${it.u}U</text>`);
-      y += ih;
-    }
-    // summary column
-    const sx = rx + rw + 26;
-    const lines = [
-      [`${r.used}U used · ${r.over ? `${r.over}U OVER` : `${r.spare}U spare`}`, r.over ? "#b32017" : "#222", true],
-      ...(k === 0 && pw ? [[`Load ~${pw.typicalW} W typ · heat ~${pw.btu.toLocaleString("en-US")} BTU/hr`, pw.cooling ? "#a45a12" : "#444", !!pw.cooling],
-        ...(pw.cooling ? [[pw.cooling === "room" ? "Plan room cooling + rack fans" : "Plan a top-exhaust rack fan", "#a45a12"]] : [])] : []),
-      [`Cat6 home runs: ${r.cat6}${r.cat6 ? ` → ${Math.ceil(r.cat6 / 24)} patch panel${Math.ceil(r.cat6 / 24) > 1 ? "s" : ""}` : ""}`, "#444"],
-      ...(r.rear.length ? [["Rear rails (no U):", "#444", true], ...r.rear.map(n => ["  " + n, "#444"])] : []),
-      ...r.items.filter(i => i.kind === "shelf").flatMap((i, n) => [[`${i.kit || `Shelf ${n + 1}`}:`, "#444", true], ...i.members.map(m => ["  " + m, "#444"])]),
-      ...(r.unknown.length ? [["Height unknown — drawn 1U:", "#a45a12", true], ...r.unknown.map(n => ["  " + n, "#a45a12"])] : []),
-      ["Order: patch · network · control ·", "#888"], ["sources · amps (vent under each) · power", "#888"],
-    ];
-    const fitN = Math.floor((LIMIT - top - 14) / 18);
-    if (lines.length > fitN) lines.splice(fitN - 1, lines.length, ["  … (full list on the Equipment page)", "#888"]);
-    body.push(`<g font-size="12">${lines.map(([t, c, b], i) => `<text x="${sx}" y="${top + 14 + i * 18}" fill="${c}"${b ? ' font-weight="700"' : ""} xml:space="preserve">${esc(String(t).slice(0, 44))}</text>`).join("")}</g>`);
   });
-  return assemble(job, opts, "Rack Elevation", "Front view — gear heights from the catalog; shelves hold up to 3 small boxes", bodies, label,
-    () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Build order top to bottom: patch panels, network, control/processing, sources on shelves, receivers + amps (1U vent under each), power. Dashed = height not in the catalog.</text>`);
+  return assemble(job, opts, "Rack", "Elevation, rack hardware, power and heat — ? = not known yet, fill in on the RACK tab", bodies, label,
+    () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Build order top to bottom: patch panels, network, control/processing, sources on shelves / rack kits, receivers + amps (1U vent under each), power. Typical W = 1/8 power or the maker's typical; heat = typical W × 3.412 BTU/hr.</text>`);
 }
 
-/* ============ PAGE: NETWORK & POWER ============
-   The switch port plan (network.js) and the rack outlet budget (power.js),
-   both computed by advise(). One full-width column; long tables continue on
-   the next sheet under a "(cont.)" heading. */
+/* ============ PAGE: NETWORK ============
+   The switch port plan (network.js), computed by advise(). Two columns; long
+   tables continue under a "(cont.)" heading. (Power moved to the Rack page.) */
 export function networkPowerData(adviseResult, solId) {
   return { net: (adviseResult?.network || []).filter(p => p.solution === solId),
            power: (adviseResult?.power || []).find(p => p.solution === solId) || null };
 }
 function networkPowerPages(job, ix, adviseResult, opts, label) {
   const s = ix.solutions[opts.solution ?? 0];
-  const { net, power } = networkPowerData(adviseResult, s?.sol.id);
-  if (!net.length && !power) return [];
+  const { net } = networkPowerData(adviseResult, s?.sol.id);
+  if (!net.length) return [];
   // two columns like the channel map: a block goes in the shorter column; a
   // table that won't fit splits, and its rest continues under "(cont.)"
   const colX = [40, 820], W2 = 740;
@@ -814,24 +858,8 @@ function networkPowerPages(job, ix, adviseResult, opts, label) {
       r.power === "PoE" ? "PoE" : r.power ? { text: "PSU", color: "#a45a12" } : ""], tint: r.port == null }));
     block(p.virtual ? "House network (LAN)" : clip(`${p.model} — ${NET_ROLE_NAME[p.role]}`, 60), cap, cols, rows, switchSetup(p));
   }
-  if (power) {
-    const units = power.units.length
-      ? power.units.map(u => `${u.model}${u.outlets != null ? ` (${u.outlets})` : ""}`).join(" + ")
-      : "No power conditioner";
-    const verdict = power.supply == null ? (power.units.length ? "outlet count not in the catalog" : `spec ${power.pick ? `${power.pick.qty > 1 ? power.pick.qty + " × " : ""}${power.pick.model}` : "a WattBox"}`)
-      : power.short ? `${power.short} SHORT` : `${power.supply - power.need} spare${power.tight ? ` (aim for ${power.spare})` : ""}`;
-    const w = l => l.typicalW == null && l.maxW == null ? { text: "?", color: "#a45a12" }
-      : l.maxW != null && l.typicalW != null && l.maxW !== l.typicalW ? `${l.typicalW} / ${l.maxW}` : String(l.typicalW ?? l.maxW);
-    const rows = power.loads.map(l => ({ cells: [clip(l.what, 50), String(l.outlets), w(l), l.why] }));
-    for (const p of power.poe) rows.push({ gray: true, cells: [clip(p.what, 50), "0", "", "PoE from its switch"] });
-    const load = `~${power.typicalW} W typical${power.maxW !== power.typicalW ? ` / ${power.maxW} W max` : ""} of ${power.circuitW} W (${power.circuits > 1 ? `${power.circuits} × ` : ""}${power.circuitA}A)`;
-    const heat = `heat ~${power.btu.toLocaleString("en-US")} BTU/hr${power.cooling ? power.cooling === "room" ? " — ROOM COOLING" : " — FAN" : ""}`;
-    block("Rack power — outlets & load", [`${units} · ${power.need} outlet${power.need === 1 ? "" : "s"} · ${verdict}`, `${load} · ${heat}`],
-      [{ label: "Device", dx: 12 }, { label: "Outlets", dx: 390 }, { label: "Watts (typ / max)", dx: 460 }, { label: "Note", dx: 610 }], rows,
-      power.noWatts.length ? [`${power.noWatts.length} box${power.noWatts.length > 1 ? "es" : ""} with no wattage on file (?) — load is a floor, not a ceiling`] : [], "Note:");
-  }
   if (!bodies[bodies.length - 1].length) bodies.pop();
-  return assemble(job, opts, "Network & Power", "Switch ports, networks and the rack outlet budget — derived from the schematic", bodies, label,
+  return assemble(job, opts, "Network", "Switch ports and networks — every TV and networked box, derived from the schematic", bodies, label,
     () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Every TV and networked box takes an Ethernet port. Suggested assignment: rack gear low, TVs by zone, uplinks on the SFP cages (* = RJ45 SFP module). PoE gear draws from its switch; PSU = PoE device on a non-PoE switch.</text>`);
 }
 
@@ -845,8 +873,8 @@ function pageGroups(job, ix, adviseResult, opts) {
   if (flags.channelMap) g.push(["Channel Map", lbl => channelMapPages(job, ix, opts, lbl)]);
   if (flags.equipment) g.push(["Equipment & Takeoff", lbl => takeoffPages(job, ix, adviseResult, opts, lbl)]);
   if (flags.wireSchedule) g.push(["Wire Schedule", lbl => wireSchedulePages(job, ix, opts, lbl)]);
-  if (flags.elevation) g.push(["Rack Elevation", lbl => rackElevationPages(job, ix, adviseResult, opts, lbl)]);
-  if (flags.network) g.push(["Network & Power", lbl => networkPowerPages(job, ix, adviseResult, opts, lbl)]);
+  if (flags.elevation) g.push(["Rack", lbl => rackPages(job, ix, adviseResult, opts, lbl)]);
+  if (flags.network) g.push(["Network", lbl => networkPowerPages(job, ix, adviseResult, opts, lbl)]);
   if (flags.bomCompare && (job.solutions || []).length > 1) g.push(["Solution Comparison", lbl => bomComparePages(job, ix, adviseResult, opts, lbl)]);
   if (flags.labels) g.push(["Cable Labels", lbl => labelPages(job, ix, opts, lbl)]);
   return g;

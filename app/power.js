@@ -7,7 +7,7 @@
    Pure: advise() attaches it (advise().power), the Network & Power page
    prints it, the takeoff and exports read the WattBox like any rack gear. */
 
-import { companionRef, catalogFor } from "./network.js";
+import { companionRef, specFor } from "./network.js";
 
 // spare outlets to leave: 20%, never fewer than 2 (the ISP modem and a router always show up)
 export const spareTarget = need => Math.max(2, Math.ceil(need * 0.2));
@@ -34,14 +34,14 @@ export function powerPlan(job, ix, catalog, netPlans = []) {
     const catOfId = id => cat(s.devices[id]?.catalogRef ?? s.locals[id]?.catalogRef) || cat(companionRef(s.companions[id], tenG));
     const switchWatts = (d, c) => {
       const plan = netPlans.find(p => p.solution === sol.id && p.switch === d.id);
-      if (!plan || c?.powerNoPoeW == null) return watts(c);
+      if (!plan || c?.powerNoPoeW == null || d.powerTypicalW != null || d.powerMaxW != null) return watts(c);   // a typed-in figure wins
       const powered = plan.rows.filter(r => r.power === "PoE").map(r => catOfId(r.id));
       const typ = powered.reduce((n, pc) => n + (pc?.powerTypicalW ?? pc?.powerMaxW ?? POE_CLASS0_W), 0);
       const max = powered.reduce((n, pc) => n + (pc?.powerMaxW ?? pc?.powerTypicalW ?? POE_CLASS0_W), 0);
       return { typicalW: Math.round(c.powerNoPoeW + typ), maxW: Math.round(c.powerNoPoeW + max), poeLoad: powered.length };
     };
     for (const d of Object.values(s.devices)) {
-      const c = catalogFor(d, catalog);
+      const c = specFor(d, catalog);
       if (d.type === "power") { units.push({ id: d.id, model: d.model || c?.model || d.id, outlets: c?.outlets ?? d.outlets ?? null, controlled: c?.controlledOutlets ?? null, amps: c?.amps ?? 15 }); continue; }
       if (poeRow(d.id)) { poe.push({ id: d.id, what: d.model || d.id }); continue; }
       const n = Math.max(1, Math.floor(+(d.outlets ?? c?.outlets) || 1));

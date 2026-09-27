@@ -233,6 +233,10 @@
   #starter .opt .gear { font-size: 11px; color: #777; line-height: 1.4; }
   #starter .ft { display: flex; justify-content: flex-end; margin-top: 12px; }
   #starter .ft button { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 7px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
+.rtab { width: 100%; border-collapse: collapse; font-size: 12px; }
+.rtab th { text-align: left; font-weight: 600; color: var(--muted, #888); padding: 3px 4px; border-bottom: 1px solid rgba(128,128,128,.25); }
+.rtab td { padding: 3px 4px; border-bottom: 1px solid rgba(128,128,128,.12); }
+.rtab input { font-size: 12px; padding: 2px 4px; }
 </style>
 </head>
 <body>
@@ -268,6 +272,7 @@
     <div class="tabs">
       <button data-tab="zones" class="on"><span class="lbl">ZONES</span><span class="mini" style="display:none">Z</span></button>
       <button data-tab="gear"><span class="lbl">GEAR</span></button>
+      <button data-tab="rack"><span class="lbl">RACK</span></button>
       <button data-tab="job"><span class="lbl">JOB</span></button>
       <button data-tab="settings"><span class="lbl">⚙</span></button>
       <button id="collapse" title="Collapse">⟨⟨</button>
@@ -321,7 +326,8 @@ import { loadJob, validate, advise, place, route, render, effectiveJob, autoLink
 import { importAny, mergeHouse, drawFromWalk, decodeHandoff } from "./app/importers.js";
 import { planQueueFiles, aiReviewMarkdown } from "./app/exports.js";
 import { RACK_SIZES, DEFAULT_RACK_U } from "./app/rack.js";
-import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV, labelsCSV } from "./app/pages.js";
+import { specFor } from "./app/network.js";
+import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV, labelsCSV, rackFrontSVG, rackData } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
 import { STARTERS, applyStarter } from "./app/starters.js";
 import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/commands.js";
@@ -403,11 +409,13 @@ function syncShippedCatalog() {
 }
 const saveSettings = () => dbPut({ id: "__settings", updated: Date.now(), settings: SETTINGS });
 if (CAT_SYNCED) await saveSettings();
-/* job snapshot wins over the live catalog (old jobs advise identically forever) */
+/* job snapshot wins over the live catalog (old jobs advise identically forever) —
+   field by field: a locked entry keeps every value it has, and only picks up
+   fields it never had (rack height, watts, cords… added to the catalog later) */
 function effectiveCatalog() {
   const snap = S.job?.job?.catalogSnapshot;
   const cat = structuredClone(SETTINGS.catalog);
-  if (snap?.devices) cat.devices = { ...cat.devices, ...snap.devices };
+  if (snap?.devices) for (const [id, e] of Object.entries(snap.devices)) cat.devices[id] = { ...(cat.devices[id] || {}), ...e };
   return cat;
 }
 
@@ -1153,6 +1161,7 @@ function renderPanel() {
   if (S.tab === "zones") body.innerHTML = zonesHTML();
   else if (S.tab === "gear") body.innerHTML = gearHTML();
   else if (S.tab === "settings") body.innerHTML = settingsHTML();
+  else if (S.tab === "rack") body.innerHTML = rackHTML();
   else body.innerHTML = jobHTML();
   wirePanel(body);
   if (S.tab === "settings") wireSettings(body);
@@ -1413,6 +1422,52 @@ function allConnsHTML() {
   return [...byFrom].map(([from, list]) => `<div class="cgroup"><div class="cgrp">From <b>${esc(nodeInfo(from).label)}</b></div>` +
     list.map(([c, i]) => connRowHTML(c, i, sol, "job", "out")).join("") + `</div>`).join("");
 }
+/* RACK tab: everything about the rack in one place — size, the elevation,
+   each box's height / cords / watts (a "?" is a value nobody has yet: type it
+   in and it's saved on the job, overriding the catalog), the rack hardware with
+   part numbers, and the power / heat totals. Same numbers as the Rack sheet. */
+function rackHTML() {
+  const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
+  const cat = effectiveCatalog();
+  const a = advise(job, ix, cat);
+  const sol = S.job.solutions[S.sol];
+  const { racks, power } = rackData(a, ix.solutions[S.sol]?.sol.id);
+  const notes = (a.notes || []).filter(n => /^(power|rack|switch-no-poe)/.test(n.code) && (!n.solution || n.solution === sol.id));
+  const num = v => v == null ? "" : String(Math.round(v * 10) / 10);
+  const inp = (dev, k, own, fromCat, w = 46) => `<input class="rspec" data-dev="${esc(dev)}" data-k="${k}" value="${esc(num(own ?? fromCat))}" placeholder="?" style="width:${w}px${own == null && fromCat != null ? ";color:#777" : ""}" title="${own != null ? "Typed in for this job" : fromCat != null ? "From the catalog — type to override" : "Not known yet — type it in"}">`;
+  const rackRow = rr => {
+    const r = racks.find(x => x.rack === rr.id);
+    const devs = (rr.devices || []).map(d => {
+      const c = specFor({ ...d, rackUnits: null, powerTypicalW: null, powerMaxW: null, outlets: null }, cat) || {};
+      const shelf = d.rackUnits == null && typeof c.rackUnits !== "number" && (c.desktop || d.type === "source");
+      const isPower = d.type === "power";
+      return `<tr><td>${esc(d.model || d.id)}</td><td>${shelf ? `<span class="mini" title="Small box — rides a shelf">shelf</span>` : inp(d.id, "rackUnits", d.rackUnits, typeof c.rackUnits === "number" ? c.rackUnits : null, 34)}</td>
+        <td>${isPower ? "—" : inp(d.id, "outlets", d.outlets, c.outlets ?? 1, 30)}</td><td>${isPower ? "—" : inp(d.id, "powerTypicalW", d.powerTypicalW, c.powerTypicalW)}</td><td>${isPower ? "—" : inp(d.id, "powerMaxW", d.powerMaxW, c.powerMaxW)}</td></tr>`;
+    }).join("");
+    const hw = (r?.hardware || []).map(h => `<tr><td>${esc(h.item)}</td><td>${h.qty}</td><td>${h.key === "kit" ? esc(h.partNo)
+      : `<input class="rpart" data-key="${h.key}" data-rack="${esc(rr.id)}" value="${esc(h.partNo || "")}" placeholder="?" style="width:130px">`}</td></tr>`).join("");
+    return `<div class="sect">${esc(rr.name || "Equipment Rack")} ${r ? `<span class="badge">${r.used}U / ${r.size}U</span>` : ""}</div>
+    <div class="row open"><div class="fields" style="display:block;border-top:none">
+      ${field("Rack size", `<select class="rsize" data-rack="${esc(rr.id)}">${RACK_SIZES.map(n => `<option value="${n}" ${(+rr.units || +S.job.job.rackUnits || DEFAULT_RACK_U) === n ? "selected" : ""}>${n}U</option>`).join("")}</select>`)}
+      ${r ? `<div class="mini" style="margin:4px 0">${r.used}U used · ${r.over ? `<b style="color:#b32017">${r.over}U over</b>` : `${r.spare}U spare`}${r.cat6 ? ` · ${r.cat6} Cat6 home runs` : ""}${r.unknown.length ? ` · <span style="color:#a45a12">${r.unknown.length} height${r.unknown.length > 1 ? "s" : ""} unknown (?)</span>` : ""}</div>
+      <div class="rackview" style="background:#fff;border-radius:6px;padding:6px;margin:6px 0">${rackFrontSVG(r)}</div>` : ""}
+      <div class="mini" style="margin:8px 0 4px"><b>Gear</b> — U · cords · typical W · max W. <span style="color:#a45a12">?</span> = not known: type it in (saved on this job).</div>
+      <table class="rtab"><tr><th>Box</th><th>U</th><th>Cords</th><th>Typ W</th><th>Max W</th></tr>${devs}</table>
+      ${hw ? `<div class="mini" style="margin:10px 0 4px"><b>Rack hardware</b> — part numbers; <span style="color:#a45a12">?</span> = fill in later</div>
+      <table class="rtab"><tr><th>Item</th><th>Qty</th><th>Part no.</th></tr>${hw}</table>` : ""}
+    </div></div>`;
+  };
+  const pw = power ? `<div class="sect">POWER & HEAT</div>
+    <div class="row open"><div class="fields" style="display:block;border-top:none">
+      <div class="mini">${power.units.length ? esc(power.units.map(u => `${u.model} (${u.outlets ?? "?"} outlets)`).join(" + ")) : "No power conditioner yet"} · ${power.need} outlets needed${power.supply != null ? ` · ${power.supply - power.need} spare` : ""}</div>
+      <div class="mini">Load ~${power.typicalW} W typical / ${power.maxW} W max · circuit ${power.circuitW} W (${power.circuits > 1 ? `${power.circuits} × ` : ""}${power.circuitA}A)</div>
+      <div class="mini">Heat ~${power.btu.toLocaleString("en-US")} BTU/hr${power.noWatts.length ? ` · <span style="color:#a45a12">${power.noWatts.length} box${power.noWatts.length > 1 ? "es" : ""} with ? watts — totals are a floor</span>` : ""}</div>
+      ${notes.map(n => `<div class="mini" style="margin-top:6px;color:#a45a12">⚠ ${esc(n.msg)}</div>`).join("")}
+    </div></div>` : "";
+  const rs = sol.racks || [];
+  return rs.length ? rs.map(rackRow).join("") + pw : `<div class="mini" style="padding:12px">No rack on this job yet — add gear under GEAR.</div>`;
+}
+
 function jobHTML() {
   const J = S.job.job;
   return `
@@ -1422,7 +1477,6 @@ function jobHTML() {
       ${field("Address", `<input class="jaddr" value="${esc(J.client?.address || "")}">`)}
       ${field("Drawn by", `<input class="jdrawn" value="${esc(J.drawnBy || "")}">`)}
       ${field("Group zones", sel("jgroup", ["type", "type-outdoor", "order"], J.zoneGrouping || "type", ZONE_GROUPING_NAME))}
-      ${field("Rack size", sel("jrack", RACK_SIZES.map(String), String(J.rackUnits || DEFAULT_RACK_U), Object.fromEntries(RACK_SIZES.map(n => [String(n), `${n}U`]))))}
     </div></div>
     <div class="sect">SOLUTION</div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
@@ -1436,7 +1490,7 @@ function jobHTML() {
     <button class="addbtn" id="addConn">＋ Add connection</button>
     <div class="sect">PACKET PAGES <span class="mini">sheet 1 always prints</span></div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
-      ${["channelMap:Channel Map", "equipment:Equipment & Takeoff", "wireSchedule:Wire Schedule", "elevation:Rack Elevation", "network:Network & Power", "labels:Cable Labels",
+      ${["channelMap:Channel Map", "equipment:Equipment & Takeoff", "wireSchedule:Wire Schedule", "elevation:Rack (elevation, hardware, power)", "network:Network (switch ports)", "labels:Cable Labels",
          ...(S.job.solutions.length > 1 ? ["bomCompare:Solution Comparison"] : [])].map(kv => {
         const [k, label] = kv.split(":");
         return `<div class="f"><input type="checkbox" class="pgflag" data-pg="${k}" ${pageFlags(S.job)[k] ? "checked" : ""}> <span>${label}</span></div>`;
@@ -1908,7 +1962,22 @@ function wirePanel(body) {
   on(".jclient", el => { S.job.job.client.name = el.value; });
   on(".jaddr", el => { S.job.job.client.address = el.value; });
   on(".jdrawn", el => { S.job.job.drawnBy = el.value; });
-  on(".jrack", el => { if (+el.value === DEFAULT_RACK_U) delete S.job.job.rackUnits; else S.job.job.rackUnits = +el.value; });
+  /* rack tab */
+  const rackOf = id => (S.job.solutions[S.sol].racks || []).find(r => r.id === id);
+  on(".rsize", el => { const r = rackOf(el.dataset.rack); if (r) r.units = +el.value; });
+  on(".rpart", el => {
+    const r = rackOf(el.dataset.rack), v = el.value.trim();
+    if (el.dataset.key === "rack" && r) { if (v) r.partNo = v; else delete r.partNo; return; }
+    const parts = (S.job.job.rackParts ||= {});
+    if (v) parts[el.dataset.key] = v; else delete parts[el.dataset.key];
+  });
+  on(".rspec", el => {
+    const d = (S.job.solutions[S.sol].racks || []).flatMap(r => r.devices || []).find(x => x.id === el.dataset.dev);
+    if (!d) return;
+    const k = el.dataset.k, v = el.value.trim();
+    const base = specFor({ ...d, [k]: null }, effectiveCatalog())?.[k];
+    if (v === "" || (base != null && +v === +base) || !isFinite(+v)) delete d[k]; else d[k] = +v;
+  });
   on(".jgroup", el => { if (el.value === "type") delete S.job.job.zoneGrouping; else S.job.job.zoneGrouping = el.value; });
   on(".solname", el => { S.job.solutions[S.sol].name = el.value; });
   on(".solplat", el => { S.job.solutions[S.sol].platforms = el.value ? [el.value] : []; });

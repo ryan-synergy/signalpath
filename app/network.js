@@ -42,6 +42,15 @@ export function catalogFor(d, catalog) {
   return null;
 }
 
+// what the rack math reads for a box: its catalog/profile spec with the job's own
+// filled-in values on top (RACK tab: a "?" someone typed in) — the job wins
+export const SPEC_FIELDS = ["rackUnits", "powerTypicalW", "powerMaxW", "outlets"];
+export function specFor(d, catalog) {
+  const c = catalogFor(d, catalog);
+  const own = Object.fromEntries(SPEC_FIELDS.filter(k => d?.[k] != null && d[k] !== "").map(k => [k, +d[k]]));
+  return c || Object.keys(own).length ? { ...(c || {}), ...own } : null;
+}
+
 const portsOf = c => {
   const o = c?.outputs || {};
   return { copper: (o.gbe || 0) + (o.gbe25 || 0) + (o.gbe10 || 0), sfp: (o.sfp || 0) + (o.sfpPlus || 0) };

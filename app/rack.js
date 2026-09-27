@@ -9,7 +9,7 @@
    Pure: advise() attaches it (advise().racks), the Rack Elevation page draws it. */
 
 import { wireRuns } from "./pages.js";
-import { companionRef, catalogFor } from "./network.js";
+import { companionRef, specFor } from "./network.js";
 
 export const DEFAULT_RACK_U = 42;
 export const RACK_SIZES = [12, 16, 20, 24, 27, 32, 36, 38, 40, 42, 44, 45];
@@ -34,7 +34,7 @@ export function rackPlans(job, ix, catalog) {
       if (ri === 0 && cat6) for (let k = 0; k < Math.ceil(cat6 / PATCH_PORTS); k++)
         items.push({ kind: "patch", tier: 0, u: 1, label: `Cat6 patch panel ${PATCH_PORTS}-port${Math.ceil(cat6 / PATCH_PORTS) > 1 ? ` (${k + 1})` : ""}` });
       for (const d of r.devices || []) {
-        const c = catalogFor(d, catalog);
+        const c = specFor(d, catalog);
         const name = `${d.model || d.id}${d.danteSwitch ? " (Dante)" : ""}`;
         if (c?.mount === "vertical") { rear.push(name); continue; }
         const u = typeof c?.rackUnits === "number" ? c.rackUnits : null;
@@ -85,8 +85,22 @@ export function rackPlans(job, ix, catalog) {
         if (j > 0) { a.pairedWith = items[j].label; items.splice(j, 1); a.label = `${a.label} | ${a.pairedWith}`; }
       }
       const used = items.reduce((n, i) => n + i.u, 0);
+      // the rack hardware the elevation implies — part numbers come from the job
+      // (RACK tab) or a kit's catalog entry; anything nobody has filled in is "?"
+      const parts = job.job?.rackParts || {};
+      const count = k => items.filter(i => i.kind === k && !i.kit).length;
+      const hardware = [
+        { key: "rack", item: `Equipment rack, ${size}U`, qty: 1, partNo: r.partNo || parts.rack || null },
+        { key: "patch", item: "Cat6 patch panel, 24-port, 1U", qty: count("patch"), partNo: parts.patch || null },
+        { key: "vent", item: "Vent panel, 1U", qty: count("vent"), partNo: parts.vent || null },
+        { key: "shelf", item: "Rack shelf, 2U", qty: count("shelf"), partNo: parts.shelf || null },
+      ];
+      const kitQty = {};
+      for (const i of items.filter(i => i.kit)) kitQty[i.kit] = (kitQty[i.kit] || 0) + 1;
+      for (const [kit, qty] of Object.entries(kitQty)) hardware.push({ key: "kit", item: `MXNet rack kit, ${items.find(i => i.kit === kit).u}U`, qty, partNo: kit });
       out.push({ solution: sol.id, rack: r.id, name: r.name || "Equipment Rack", size, used, spare: size - used,
-        over: Math.max(0, used - size), items, unknown, rear, cat6: ri === 0 ? cat6 : 0 });
+        over: Math.max(0, used - size), items, unknown, rear, cat6: ri === 0 ? cat6 : 0,
+        hardware: hardware.filter(h => h.qty > 0) });
     });
   }
   return out;

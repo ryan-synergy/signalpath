@@ -17,6 +17,7 @@ import { loadJob, validate, advise, effectiveJob, expandChannels } from "./engin
 import { wireRuns } from "./pages.js";
 import { readHookup } from "./hookup.js";
 import { vocabularyText } from "./commands.js";
+import { NET_ROLE_NAME } from "./network.js";
 import { describeNode, adapterName, isOutdoorZone, SPEAKER_SETUP, STATUS_NAME, SCOPE_NAME, PLATFORM_NAME, AUDIO_NET_NAME, signalName } from "./names.js";
 
 // speaker sets as package names (PlanQueue maps them to its real packages)
@@ -271,6 +272,19 @@ export function aiReviewMarkdown(job, solIndex, catalog, { today = new Date().to
   o.push("## Licensing", "");
   const lic = (adv.licensing || []).filter(mine);
   o.push(lic.length ? lic.map(l => [`- **${PLATFORM_NAME[l.platform] || l.platform}:** ${l.pick || "no pick"}`, ...(l.lines || []).filter(Boolean).map(x => `  - ${clean(x)}`), ...(l.warns || []).map(x => `  - ⚠ ${clean(x)}`)].join("\n")).join("\n") : "_No control platform set._", "");
+
+  o.push("## Network & power", "");
+  const nets = (adv.network || []).filter(mine);
+  for (const p of nets) {
+    o.push(`### ${p.virtual ? "House network (no LAN switch on the job)" : `${clean(p.model)} — ${NET_ROLE_NAME[p.role]}`}`, "",
+      p.virtual ? `${p.used} Ethernet ports needed.` : p.known ? `${p.copper} RJ45 + ${p.sfp} SFP · ${p.used} used · ${p.over ? `${p.over} short` : `${p.spare} spare`}${p.poeBudgetW ? ` · PoE budget ${p.poeBudgetW} W` : ""}` : `${p.used} connections (port count not in the catalog)`, "",
+      table(["Port", "Device", "Location", "Network", "Power"], p.rows.map(r => [r.port ?? "NO PORT", r.what, r.where, r.net, r.power || "—"])), "");
+  }
+  const pw = (adv.power || []).find(mine);
+  if (pw) o.push("### Rack power (outlets)", "",
+    `${pw.units.length ? pw.units.map(u => `${u.model} (${u.outlets ?? "?"} outlets)`).join(" + ") : "No power conditioner on the job"} · ${pw.need} outlets needed · ${pw.supply == null ? (pw.pick ? `suggest ${pw.pick.qty > 1 ? pw.pick.qty + " × " : ""}${pw.pick.model}` : "size unknown") : pw.short ? `${pw.short} short` : `${pw.supply - pw.need} spare`}`, "",
+    table(["Device", "Outlets", "Note"], [...pw.loads.map(l => [l.what, String(l.outlets), l.why || "—"]), ...pw.poe.map(p => [p.what, "0", "PoE from its switch"])]), "");
+  if (!nets.length && !pw) o.push("_No switches or rack power on this job._", "");
 
   o.push("## Connections", "", table(["From", "To", "Signal", "Details"], (sol.connections || []).map(c => [nm(c.from), nm(c.to),
     c.dante ? "Dante audio (network)" : signalName(c.signal),

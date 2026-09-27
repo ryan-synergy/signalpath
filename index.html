@@ -1087,7 +1087,7 @@ $("#grip").onpointerdown = e => {
 
 const SPK_CONFIGS = ["none", "mono", "stereo", "2.1", "surround-5.1", "surround-7.1", "soundbar", "soundbar-sub", "landscape"];
 const STATUSES = ["new", "ofe", "prewire"];
-const DEV_TYPES = ["source", "avr", "amp", "videoMatrix", "avSwitch", "avbSwitch", "audioInputModule", "audioOutputModule", "controlBox", "splitter", "host"];
+const DEV_TYPES = ["source", "avr", "amp", "videoMatrix", "avSwitch", "avbSwitch", "audioInputModule", "audioOutputModule", "controlBox", "splitter", "host", "networkSwitch", "gateway", "danteBridge", "power"];
 const SIGNALS = ["video", "audio", "speaker", "network", "audioReturn"];
 
 /* every word shown for a stored value comes from app/names.js (the one
@@ -1432,7 +1432,7 @@ function jobHTML() {
     <button class="addbtn" id="addConn">＋ Add connection</button>
     <div class="sect">PACKET PAGES <span class="mini">sheet 1 always prints</span></div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
-      ${["channelMap:Channel Map", "equipment:Equipment & Takeoff", "wireSchedule:Wire Schedule",
+      ${["channelMap:Channel Map", "equipment:Equipment & Takeoff", "wireSchedule:Wire Schedule", "network:Network & Power",
          ...(S.job.solutions.length > 1 ? ["bomCompare:Solution Comparison"] : [])].map(kv => {
         const [k, label] = kv.split(":");
         return `<div class="f"><input type="checkbox" class="pgflag" data-pg="${k}" ${pageFlags(S.job)[k] ? "checked" : ""}> <span>${label}</span></div>`;

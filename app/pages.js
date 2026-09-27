@@ -5,6 +5,7 @@
 
 import { expandChannels, effectiveJob, indexJob } from "./engine.js";
 import { TYPE_NAME, PLATFORM_NAME, adapterName, describeNode } from "./names.js";
+import { NET_ROLE_NAME, switchSetup } from "./network.js";
 
 const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const W = 1632, H = 1056;
@@ -13,11 +14,11 @@ const W = 1632, H = 1056;
 export function pageFlags(job) {
   const p = job.job?.pages || {};
   return { channelMap: p.channelMap !== false, equipment: p.equipment !== false,
-           wireSchedule: p.wireSchedule === true, bomCompare: p.bomCompare === true };
+           wireSchedule: p.wireSchedule === true, bomCompare: p.bomCompare === true, network: p.network !== false };
 }
 export function sheetCount(job) {
   const f = pageFlags(job);
-  return 1 + (f.channelMap ? 1 : 0) + (f.equipment ? 1 : 0) + (f.wireSchedule ? 1 : 0) +
+  return 1 + (f.channelMap ? 1 : 0) + (f.equipment ? 1 : 0) + (f.wireSchedule ? 1 : 0) + (f.network ? 1 : 0) +
          (f.bomCompare && (job.solutions || []).length > 1 ? 1 : 0);
 }
 
@@ -468,6 +469,14 @@ export function wireRuns(job, ix, opts = {}) {
       runs.push({ prefix: "N", cable: "Cat6", from: rackName, to: zoneName(ix, toEp ? c.to : s.companions[c.to].serves), carries: "Network", color: "#2f9e44", term: "RJ45", count: 1, gray });
     }
   }
+  // every TV takes an Ethernet drop of its own (smart-TV apps, control, updates)
+  for (const z of job.house?.zones || []) {
+    if ((z.scope || "included") === "future") continue;
+    for (const e of z.endpoints || []) if (e.type === "display")
+      runs.push({ prefix: "N", cable: "Cat6", from: rackName, to: `${z.name} — TV location`,
+        carries: `Network (${e.displayType === "projector" ? "projector" : "TV"})`, color: "#2f9e44", term: "RJ45 at TV", count: 1,
+        gray: (z.scope || "included") !== "included" });
+  }
   // local streaming devices always need a network drop at the display
   for (const d of sol.localDevices || []) {
     if (d.location !== "at-display") continue;
@@ -624,6 +633,77 @@ export function renderBomCompare(job, ix, adviseResult, opts = {}) {
   return bomComparePages(job, ix, adviseResult, opts, () => opts.sheetLabel || "")[0];
 }
 
+/* ============ PAGE: NETWORK & POWER ============
+   The switch port plan (network.js) and the rack outlet budget (power.js),
+   both computed by advise(). One full-width column; long tables continue on
+   the next sheet under a "(cont.)" heading. */
+export function networkPowerData(adviseResult, solId) {
+  return { net: (adviseResult?.network || []).filter(p => p.solution === solId),
+           power: (adviseResult?.power || []).find(p => p.solution === solId) || null };
+}
+function networkPowerPages(job, ix, adviseResult, opts, label) {
+  const s = ix.solutions[opts.solution ?? 0];
+  const { net, power } = networkPowerData(adviseResult, s?.sol.id);
+  if (!net.length && !power) return [];
+  // two columns like the channel map: a block goes in the shorter column; a
+  // table that won't fit splits, and its rest continues under "(cont.)"
+  const colX = [40, 820], W2 = 740;
+  const bodies = [[]];
+  let colY = [TOP, TOP];
+  const newSheet = () => { bodies.push([]); colY = [TOP, TOP]; };
+  const put = svg => bodies[bodies.length - 1].push(svg);
+  const block = (title, sub, cols, rows, after = []) => {
+    let rest = [...rows], first = true;
+    for (let guard = 0; guard < 200; guard++) {
+      const head = 20 + (first && sub ? 18 : 0);
+      const order = colY[0] <= colY[1] ? [0, 1] : [1, 0];
+      let c = order.find(k => Math.floor((LIMIT - (colY[k] + head + 30)) / 28) >= Math.min(3, rest.length || 1));
+      if (c == null) { if (bodies[bodies.length - 1].length) { newSheet(); continue; } c = 0; }
+      const x = colX[c], y = colY[c];
+      put(heading(x, y + 8, first ? title : `${title} (cont.)`));
+      if (first && sub) put(`<text x="${x}" y="${y + 28}" font-size="12" fill="#555">${esc(sub)}</text>`);
+      const t = tableFit(x, y + head, W2, cols, rest);
+      put(t.svg);
+      colY[c] = t.bottom; rest = t.rest; first = false;
+      if (!rest.length) {
+        if (after.length && colY[c] + 10 + after.length * 18 <= LIMIT) {
+          put(`<g font-size="12" fill="#444">${after.map((l, i) => `<text x="${x}" y="${colY[c] + 22 + i * 18}">${i ? "·" : "Set up:"} ${esc(l)}</text>`).join("")}</g>`);
+          colY[c] += 10 + after.length * 18;
+        }
+        colY[c] += 46;
+        break;
+      }
+      colY[c] = LIMIT;                                   // this column is full
+    }
+  };
+  const short = w => String(w).replace(/ — TV location$/, " TV");
+  const cols = [{ label: "Port", dx: 12 }, { label: "Device", dx: 92 }, { label: "Location", dx: 350 }, { label: "Network", dx: 500 }, { label: "Power", dx: 676 }];
+  const clip = (v, n) => String(v).length > n ? String(v).slice(0, n - 1) + "…" : String(v);
+  for (const p of net) {
+    const cap = p.virtual ? `${p.used} Ethernet port${p.used === 1 ? "" : "s"} needed — add a LAN switch (see advisor)`
+      : p.known ? `${p.copper ? `${p.copper} RJ45` : ""}${p.copper && p.sfp ? " + " : ""}${p.sfp ? `${p.sfp} SFP` : ""} · ${p.used} used · ${p.over ? `${p.over} SHORT` : `${p.spare} spare`}${p.poeBudgetW ? ` · PoE budget ${p.poeBudgetW} W (${p.poeCount} powered)` : ""}`
+      : `${p.used} connection${p.used === 1 ? "" : "s"} · port count not in the catalog`;
+    const rows = p.rows.map(r => ({ cells: [r.port == null ? { text: "NONE", color: "#b32017" } : clip(String(r.port).replace(" (RJ45 module)", "*"), 9),
+      clip(r.what, 34), clip(short(r.where), 20), clip(r.net.replace("MXNet + Dante (VLAN 99)", "MXNet + VLAN 99"), 24),
+      r.power === "PoE" ? "PoE" : r.power ? { text: "PSU", color: "#a45a12" } : ""], tint: r.port == null }));
+    block(p.virtual ? "House network (LAN)" : clip(`${p.model} — ${NET_ROLE_NAME[p.role]}`, 60), cap, cols, rows, switchSetup(p));
+  }
+  if (power) {
+    const units = power.units.length
+      ? power.units.map(u => `${u.model}${u.outlets != null ? ` (${u.outlets})` : ""}`).join(" + ")
+      : "No power conditioner";
+    const verdict = power.supply == null ? (power.units.length ? "outlet count not in the catalog" : `spec ${power.pick ? `${power.pick.qty > 1 ? power.pick.qty + " × " : ""}${power.pick.model}` : "a WattBox"}`)
+      : power.short ? `${power.short} SHORT` : `${power.supply - power.need} spare${power.tight ? ` (aim for ${power.spare})` : ""}`;
+    const rows = power.loads.map(l => ({ cells: [clip(l.what, 60), String(l.outlets), l.why] }));
+    for (const p of power.poe) rows.push({ gray: true, cells: [clip(p.what, 60), "0", "PoE from its switch"] });
+    block("Rack power — outlet budget", `${units} · ${power.need} outlet${power.need === 1 ? "" : "s"} needed · ${verdict}`,
+      [{ label: "Device", dx: 12 }, { label: "Outlets", dx: 470 }, { label: "Note", dx: 560 }], rows);
+  }
+  if (!bodies[bodies.length - 1].length) bodies.pop();
+  return assemble(job, opts, "Network & Power", "Switch ports, networks and the rack outlet budget — derived from the schematic", bodies, label,
+    () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Every TV and networked box takes an Ethernet port. Suggested assignment: rack gear low, TVs by zone, uplinks on the SFP cages (* = RJ45 SFP module). PoE gear draws from its switch; PSU = PoE device on a non-PoE switch.</text>`);
+}
+
 /* ---------- packet assembly (pages 2..N; page 1 comes from engine render) ----------
    Two passes: count every page group's physical sheets, then render with the
    true "Sheet k of N" — a long wire schedule adds sheets, and every label
@@ -634,6 +714,7 @@ function pageGroups(job, ix, adviseResult, opts) {
   if (flags.channelMap) g.push(["Channel Map", lbl => channelMapPages(job, ix, opts, lbl)]);
   if (flags.equipment) g.push(["Equipment & Takeoff", lbl => takeoffPages(job, ix, adviseResult, opts, lbl)]);
   if (flags.wireSchedule) g.push(["Wire Schedule", lbl => wireSchedulePages(job, ix, opts, lbl)]);
+  if (flags.network) g.push(["Network & Power", lbl => networkPowerPages(job, ix, adviseResult, opts, lbl)]);
   if (flags.bomCompare && (job.solutions || []).length > 1) g.push(["Solution Comparison", lbl => bomComparePages(job, ix, adviseResult, opts, lbl)]);
   return g;
 }

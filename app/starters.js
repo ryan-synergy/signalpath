@@ -25,6 +25,7 @@ export const STARTERS = [
       dev("sav-out", "audioOutputModule", "savant-avb-output-module"),
       { id: "avb", type: "avbSwitch", model: "AVB switch (Avnu-certified)", status: "new" },
       dev("amp", "amp", "anthem-mdx-16", null, { zones: 8 }),
+      dev("power", "power", "wattbox-800-ipvm-12"),
     ],
     connections: [v("cablebox", "matrix"), v("atv", "matrix"),
       { from: "music", to: "sav-in", signal: "audio" },
@@ -36,7 +37,8 @@ export const STARTERS = [
     name: "Theater receiver",
     blurb: "One AV receiver drives the theater's TV and surround speakers.",
     tip: "theater 7.1 85 sony avr",
-    devices: [src("cablebox", "Cable Box"), src("atv", "Apple TV"), dev("avr", "avr", "anthem-mrx-740-8k")],
+    devices: [src("cablebox", "Cable Box"), src("atv", "Apple TV"), dev("avr", "avr", "anthem-mrx-740-8k"),
+      dev("power", "power", "wattbox-800-ipvm-6")],
     connections: [v("cablebox", "avr"), v("atv", "avr")],
   },
   {
@@ -49,6 +51,7 @@ export const STARTERS = [
       dev("sw", "avSwitch", "avpro-mxnet-sw12"),
       dev("cbx", "controlBox", "avpro-mxnet-cbox-ha"),
       dev("amp", "amp", "anthem-mdx-16", null, { zones: 8 }),
+      dev("power", "power", "wattbox-800-ipvm-12"),
     ],
     companions: [
       { id: "enc-atv1", type: "enc", serves: "atv1", auto: true },
@@ -73,6 +76,7 @@ export const STARTERS = [
       dev("dante-sw", "networkSwitch", "avpro-mxnet-sw24e", null, { danteSwitch: true }),
       dev("dante-in", "danteBridge", "audiocontrol-acp-dante-e-poe"),
       dev("director", "amp", "audiocontrol-m6800d"),
+      dev("power", "power", "wattbox-800-ipvm-12"),
     ],
     companions: [
       { id: "enc-atv1", type: "enc", serves: "atv1", auto: true },

@@ -11,6 +11,7 @@ export const TYPE_NAME = {
   source: "Source", avr: "AV receiver", amp: "Multi-zone amp", videoMatrix: "HDMI matrix",
   avSwitch: "AV-over-IP switch", avbSwitch: "AVB switch", audioInputModule: "Audio input module",
   audioOutputModule: "Audio output module", controlBox: "Control processor", splitter: "HDMI splitter", host: "Control host",
+  networkSwitch: "Network switch", gateway: "Router / gateway", danteBridge: "Dante interface", power: "Power conditioner",
 };
 
 // adapters the app adds behind a TV (or at a source): full name + the tag drawn on the sheet chip

@@ -3,6 +3,8 @@
    Pure functions, no DOM. Spec: ../DESIGN.md (FROZEN 2026-09-17). */
 
 import { describeNode, adapterName, adapterTag, isOutdoorZone, SIGNAL_SHORT, SCOPE_NAME } from "./names.js";
+import { networkPlan, suggestLanSwitch } from "./network.js";
+import { powerPlan } from "./power.js";
 
 export const SIGNAL_COLORS = {
   video: "#d22b1f",
@@ -463,7 +465,7 @@ function zoneCard(zone, localsInZone, hasNote = false) {
 function deviceTileSpec(d, inCount = 0) {
   // avbSwitch rides col A (mock-sheet draws Savant AVB with the sources) so its
   // module feeds enter col B left edges cleanly
-  if (d.type === "source" || d.type === "avbSwitch") return { col: "A", ...PL.smallTile, kind: "small", pitch: PL.smallTile.pitch };
+  if (d.type === "source" || d.type === "avbSwitch" || d.type === "power") return { col: "A", ...PL.smallTile, kind: "small", pitch: PL.smallTile.pitch };
   const base = d.type === "amp" ? { col: "C", ...PL.ampTile, kind: "amp" } : { col: "B", ...PL.chassisTile, kind: "chassis" };
   // uniform chassis height — except a hub whose left edge must seat all its
   // input ports at legible pitch (an SW12 draws big; it IS the hub);
@@ -630,7 +632,7 @@ export function place(job, ix = indexJob(job), opts = {}) {
       // AVB / switching gear anchors bottom-LEFT (user rule: sources dress the
       // top of the rack, network infrastructure lives low) — same two-phase
       // treatment the amps get
-      if (t.col === "A" && d.type === "avbSwitch") { aBottom.push({ d, t }); continue; }
+      if (t.col === "A" && (d.type === "avbSwitch" || d.type === "power")) { aBottom.push({ d, t }); continue; }
       const x = t.col === "A" ? PL.colA : colBx;
       placed.push({ id: d.id, model: d.model, kind: t.kind, col: t.col, x, y: cols[t.col], w: t.w, h: t.h, type: d.type });
       maxTileBottom = Math.max(maxTileBottom, cols[t.col] + t.h + (t.kind === "small" ? PL.captionH : 0));
@@ -2699,6 +2701,30 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       if (zc > 16) out.notes.push({ code: "savant-host", solution: sol.id, msg: `${zc} zones exceeds Smart Host (16) — Pro Host class required` });
       else out.notes.push({ code: "savant-host", solution: sol.id, msg: `Smart Host OK (${zc}/16 zones) · Essentials subscription required` });
     }
+  }
+  /* -- switch ports: every box on a switch takes a port (the Network page prints the plan) -- */
+  out.network = catalog?.devices ? networkPlan(job, ix, catalog) : [];
+  for (const p of out.network) {
+    if (p.over) out.notes.push({ code: "switch-ports-full", solution: p.solution, ref: p.switch,
+      msg: `${p.model}: ${p.used} connections need ${p.used} ports — it has ${p.copper + p.sfp}; add a second switch or step up a size` });
+    if (p.virtual) {
+      const sug = suggestLanSwitch(catalog, p.used);
+      out.notes.push({ code: "lan-no-switch", solution: p.solution,
+        msg: `${p.used} Ethernet ports needed on the house network (every TV, the networked rack gear, the AV switch uplinks) — no LAN switch on this job${sug ? `; a ${sug.model} (${sug.ports} ports) covers it with spare` : ""}` });
+    }
+    if (p.needsInjector) out.notes.push({ code: "switch-no-poe", solution: p.solution, ref: p.switch,
+      msg: `${p.model} doesn't power PoE — ${p.needsInjector} PoE device${p.needsInjector > 1 ? "s" : ""} on it need${p.needsInjector > 1 ? "" : "s"} an injector or local power supply` });
+  }
+  /* -- rack outlets: every box needs one on the WattBox unless PoE powers it -- */
+  out.power = catalog?.devices ? powerPlan(job, ix, catalog, out.network) : [];
+  for (const p of out.power) {
+    const pick = p.pick ? `${p.pick.qty > 1 ? `${p.pick.qty} × ` : ""}${p.pick.model} (${p.pick.outlets} outlets${p.pick.qty > 1 ? " each" : ""})` : "a WattBox";
+    if (!p.units.length)
+      out.notes.push({ code: "power-none", solution: p.solution, msg: `${p.need} rack outlet${p.need === 1 ? "" : "s"} needed (${p.loads.length} boxes${p.poe.length ? `, ${p.poe.length} more on PoE` : ""}) — no power conditioner on the job; spec ${pick}` });
+    else if (p.short)
+      out.notes.push({ code: "power-short", solution: p.solution, msg: `Rack power: ${p.need} outlets needed, ${p.supply} on the power conditioner — ${p.short} short; step up to ${pick}` });
+    else if (p.tight)
+      out.notes.push({ code: "power-tight", solution: p.solution, msg: `Rack power: ${p.need} of ${p.supply} outlets used — under ${p.spare} spare for the ISP modem, router and add-ons` });
   }
   return out;
 }

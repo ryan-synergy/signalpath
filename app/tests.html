@@ -452,9 +452,9 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
   const a = advise(job, ix, CATP);
   const parseOk = svg => !new DOMParser().parseFromString(svg, "image/svg+xml").querySelector("parsererror");
 
-  t("pages: default flags = channel map + equipment on, wire schedule + comparison opt-in",
-    JSON.stringify(pageFlags(fixtures.residence)) === JSON.stringify({ channelMap: true, equipment: true, wireSchedule: false, bomCompare: false }) &&
-    sheetCount(fixtures.residence) === 3);
+  t("pages: default flags = channel map + equipment + network on, wire schedule + comparison opt-in",
+    JSON.stringify(pageFlags(fixtures.residence)) === JSON.stringify({ channelMap: true, equipment: true, wireSchedule: false, bomCompare: false, network: true }) &&
+    sheetCount(fixtures.residence) === 4);
 
   const cm = renderChannelMap(job, ix, { sheetLabel: "Sheet 2 of 4" });
   t("channel map: valid SVG, no leaks", parseOk(cm) && !/NaN|undefined/.test(cm));
@@ -496,9 +496,9 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
   withWs.job.pages = { wireSchedule: true };
   const pages = renderExtraPages(loadJob(withWs).job, loadJob(withWs).ix, a, {});
   t("packet: flags drive page list + sheet numbering",
-    pages.length === 3 && pages[2].svg.includes("Sheet 4 of 4") && sheetCount(withWs) === 4);
+    pages.length === 4 && pages[2].title === "Wire Schedule" && pages[3].svg.includes("Sheet 5 of 5") && sheetCount(withWs) === 5);
   const noPages = structuredClone(fixtures.residence);
-  noPages.job.pages = { channelMap: false, equipment: false };
+  noPages.job.pages = { channelMap: false, equipment: false, network: false };
   t("packet: all pages off → schematic only, sheet 1 of 1",
     renderExtraPages(loadJob(noPages).job, loadJob(noPages).ix, a, {}).length === 0 && sheetCount(noPages) === 1);
 }
@@ -1128,7 +1128,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
     raw.job.pages = { bomCompare: true };
     const n2 = sheetCount(raw);
     const single = structuredClone(raw); single.solutions = [single.solutions[0]];
-    return !f1.bomCompare && n2 === 4 && sheetCount(single) === 3;
+    return !f1.bomCompare && n2 === 5 && sheetCount(single) === 4;
   })());
 
   const { job, ix } = loadJob(raw);
@@ -1149,7 +1149,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
 
   const pages = renderExtraPages(raw, ix, a, { rawJob: raw });
   t("bom: renderExtraPages includes the comparison sheet when flagged",
-    pages.some(p => p.title === "Solution Comparison") && pages.length === 3);
+    pages.some(p => p.title === "Solution Comparison") && pages.length === 4);
 }
 
 /* ---------- catalog auto-link: saved jobs self-heal their catalogRefs ---------- */
@@ -2194,6 +2194,57 @@ for (const [name, raw] of Object.entries(fixtures)) {
   { const { job: jj, ix } = loadJob(ov); const p = place(jj, ix);
     t("grouping: a zone's Outdoor setting overrides the guess (Patio set indoor stays in the main band)",
       p.zones.find(z => z.name === "Patio").band === "top" && p.zones.find(z => z.name === "Pool").band === "cluster"); }
+}
+
+/* ---------- network & power: switch ports, the house LAN, rack outlets (2026-09-27) ---------- */
+{
+  const CAT = await (await fetch("./catalog.json")).json();
+  const S = await import("./starters.js"), C = await import("./commands.js"), X = await import("./exports.js");
+  const blank = () => ({ generator: "SignalPath", schemaVersion: 1, job: { name: "n", client: { name: "c" }, revisions: [] },
+    house: { areas: [], zones: [] }, solutions: [{ id: "s", name: "A", platforms: [], racks: [{ id: "rack-main", name: "Rack", devices: [] }], localDevices: [], companions: [], connections: [], annotations: [] }] });
+  const j0 = S.applyStarter(blank(), S.STARTERS.find(x => x.id === "dante-director"), CAT);
+  const job = C.planCommands(j0, 0, [{ op: "add_zones", text: "kitchen stereo 55 matrix, family room 5.1 75 matrix, office stereo 43, guest prewire tv 50" }], CAT).job;
+  const { job: J, ix } = loadJob(job);
+  const a = advise(J, ix, CAT);
+  const plan = id => a.network.find(p => p.switch === id);
+  const mx = plan("sw"), dn = plan("dante-sw"), lan = a.network.find(p => p.virtual);
+  t("network: every switch gets a port plan; the house LAN appears when the job has no LAN switch", !!mx && !!dn && !!lan);
+  t("network: DANTE-DV2 decoders sit on the MXNet switch marked VLAN 99, with a VLAN 99 trunk to the Dante switch",
+    mx.rows.some(r => r.net === "MXNet + Dante (VLAN 99)" && r.where.startsWith("Kitchen")) &&
+    mx.rows.some(r => r.id === "dante-sw" && r.net.includes("Trunk")) && dn.rows.some(r => r.id === "sw" && r.net.includes("Trunk")));
+  t("network: the Dante switch carries the controller, the Director and the Dante encoder — and never a DV2",
+    ["dante-cbox", "director", "dante-in"].every(id => dn.rows.some(r => r.id === id)) && !dn.rows.some(r => /DV2|Dante decoder/.test(r.what)));
+  t("network: uplinks land on the SFP cages; rack gear numbers from port 1",
+    mx.rows.find(r => r.id === "dante-sw").port.startsWith("SFP") && mx.rows[0].port === "1" && mx.rows[0].id === "cbx");
+  const tvs = J.house.zones.filter(z => (z.scope || "included") === "included").flatMap(z => z.endpoints.filter(e => e.type === "display"));
+  t("LAN: every included TV takes an Ethernet port; a pre-wire room's TV doesn't",
+    tvs.length === 3 && tvs.every(e => lan.rows.some(r => r.id === e.id)) && !lan.rows.some(r => r.what.startsWith("Guest")));
+  t("LAN: the MXNet CBOX's control port counts on the house LAN; the Apple TVs and the WattBox do too",
+    lan.rows.some(r => r.id === "cbx" && r.net.includes("control")) && ["atv1", "atv2", "power"].every(id => lan.rows.some(r => r.id === id)));
+  t("LAN: no LAN switch → advisor sizes one", a.notes.some(n => n.code === "lan-no-switch" && /USW/.test(n.msg)));
+  const pw = a.power.find(p => p.solution === "s");
+  t("power: the starter's WattBox covers the rack; PoE gear takes no outlet",
+    pw.units.length === 1 && pw.supply === 12 && pw.need <= 12 && pw.poe.some(p => p.id === "dante-in") && !pw.loads.some(l => l.id === "enc-atv1"));
+  const noWb = structuredClone(job); noWb.solutions[0].racks[0].devices = noWb.solutions[0].racks[0].devices.filter(d => d.type !== "power");
+  { const L = loadJob(noWb), a2 = advise(L.job, L.ix, CAT);
+    t("power: no power conditioner → advisor specs the smallest WattBox with 20% spare", a2.notes.some(n => n.code === "power-none" && /WB-800/.test(n.msg))); }
+  const tiny = structuredClone(job); tiny.solutions[0].racks[0].devices.find(d => d.type === "power").catalogRef = "wattbox-300vb-ip-5";
+  { const L = loadJob(tiny), a3 = advise(L.job, L.ix, CAT);
+    t("power: too few outlets → power-short with a step-up pick", a3.notes.some(n => n.code === "power-short" && /short/.test(n.msg))); }
+  // a full MXNet switch: more boxes than ports
+  const full = C.planCommands(S.applyStarter(blank(), S.STARTERS.find(x => x.id === "mxnet"), CAT), 0,
+    [{ op: "add_zones", text: "a 55 matrix, b 55 matrix, c 55 matrix, d 55 matrix, e 55 matrix, f 55 matrix, g 55 matrix, h 55 matrix, i 55 matrix" }], CAT).job;
+  { const L = loadJob(full), a4 = advise(L.job, L.ix, CAT), p = a4.network.find(q => q.switch === "sw");
+    t("network: an SW12 with more boxes than ports → switch-ports-full and rows with no port", p.over > 0 && p.rows.some(r => r.port == null) && a4.notes.some(n => n.code === "switch-ports-full"), `${p.used}/${p.copper + p.sfp}`); }
+  const pages = renderExtraPages(J, ix, a, {});
+  const np = pages.find(p => p.title === "Network & Power");
+  t("network page: prints by default, valid SVG, no leaks",
+    !!np && !new DOMParser().parseFromString(np.svg, "image/svg+xml").querySelector("parsererror") && !/NaN|undefined/.test(np.svg));
+  t("wire schedule: every TV gets its own Cat6 drop (pre-wire rooms gray)",
+    ["Kitchen", "Family Room", "Office", "Guest"].every(z => wireRuns(J, ix).some(r => r.carries === "Network (TV)" && r.to.startsWith(z))) &&
+    wireRuns(J, ix).find(r => r.carries === "Network (TV)" && r.to.startsWith("Guest")).gray);
+  const md = X.aiReviewMarkdown(job, 0, CAT);
+  t("ai export: carries the port plan and the outlet budget", md.includes("## Network & power") && md.includes("### Rack power (outlets)"));
 }
 
 document.getElementById("summary").innerHTML =

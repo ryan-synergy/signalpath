@@ -630,6 +630,8 @@ function applyAlt(i) {
 }
 tip.addEventListener("click", e => {
   if (e.target.closest("#rrGo")) { startReroute(tipAt.x, tipAt.y); return; }
+  if (e.target.closest("#ceGo")) { openConn(selWire, selSignal()); return; }
+  if (e.target.closest("#zhGo")) { const z = wireZone(selWire, selSignal()); hideTip(); if (z) openHookup(z); return; }
   const row = e.target.closest(".altrow");
   if (row) applyAlt(+row.dataset.alt);
 });
@@ -654,6 +656,41 @@ function flashRow(sel) {
   setTimeout(() => row.classList.remove("flash"), 1300);
 }
 function openZone(zid) { switchTab("zones"); S.openRows.add(zid); renderPanel(); flashRow(`[data-zid="${CSS.escape(zid)}"]`); syncGlow(); }
+/* sheet → panel: a tapped wire opens its connection row (GEAR) or its zone's
+   HOOKUP; the wire stays selected so the edit is visible as it happens */
+function connIndex(wid, signal) {
+  const c = connOf(wid, signal);
+  return c ? S.job.solutions[S.sol].connections.indexOf(c) : -1;
+}
+function openConn(wid, signal) {
+  const i = connIndex(wid, signal); if (i < 0) return;
+  hideTip(); clearGhosts();
+  // focus: this connection is the one open row, so it lands where you look
+  for (const k of [...S.openRows]) if (k.startsWith("conn:")) S.openRows.delete(k);
+  const wasCollapsed = $("#panel").classList.contains("collapsed");
+  switchTab("gear"); S.openRows.add("conn:" + i); renderPanel();
+  // scroll after the panel finishes opening, or it measures a moving layout
+  setTimeout(() => flashRow(`[data-ci="${i}"]`), wasCollapsed ? 350 : 30);
+}
+// the zone a wire serves: its far end (or near end, for a return), through any adapter
+function wireZone(wid, signal) {
+  const v = S.view; if (!v) return null;
+  const [f, t] = String(wid).split("→");
+  const sol = v.job.solutions[S.sol] || v.job.solutions[0];
+  const zoneFor = id => v.ix.endpointZone[id] || v.ix.endpointZone[(sol.companions || []).find(c => c.id === id)?.serves] ||
+    (sol.localDevices || []).find(d => d.id === id)?.zone || null;
+  return zoneFor(t) || zoneFor(f);
+}
+function openHookup(zid) {
+  const wasCollapsed = $("#panel").classList.contains("collapsed");
+  switchTab("zones"); S.openRows.add(zid); renderPanel(); syncGlow();
+  setTimeout(() => {
+  const sect = [...$("#panelBody").querySelectorAll(`[data-zid="${CSS.escape(zid)}"] .sect`)].find(x => x.textContent.startsWith("HOOKUP"));
+  (sect || $("#panelBody").querySelector(`[data-zid="${CSS.escape(zid)}"]`))?.scrollIntoView({ block: "start", behavior: "smooth" });
+  const row = $("#panelBody").querySelector(`[data-zid="${CSS.escape(zid)}"]`);
+  row?.classList.add("flash"); setTimeout(() => row?.classList.remove("flash"), 1300);
+  }, wasCollapsed ? 350 : 30);
+}
 function openGear(did) { switchTab("gear"); S.openRows.add(did); renderPanel(); flashRow(`[data-did="${CSS.escape(did)}"]`); syncGlow(); }
 
 $("#canvas").addEventListener("click", e => {
@@ -674,7 +711,9 @@ $("#canvas").addEventListener("click", e => {
     const p = $("#canvas svg").querySelector(`path.wire[data-wire="${CSS.escape(selWire)}"]`);
     showTip(e.clientX, e.clientY,
       `<b>${esc(nodeName(p.dataset.from))}</b> → <b>${esc(nodeName(p.dataset.to))}</b> · ${esc(signalName(p.dataset.signal))}${connOf(selWire, p.dataset.signal)?.routeHint ? ' · <span class="mini">custom route</span>' : ""}${ids.length > 1 ? ` <span class="mini">(${idx + 2 > ids.length ? 1 : idx + 2}/${ids.length} here — tap to cycle)</span>` : ""}` +
-      `<div id="rrGo" class="altrow">⟲ Reroute…</div>`);
+      `<div id="rrGo" class="altrow">⟲ Reroute…</div>` +
+      `<div id="ceGo" class="altrow">✎ Edit connection — change what it connects</div>` +
+      (wireZone(selWire, p.dataset.signal) ? `<div id="zhGo" class="altrow">⚙ ${esc(S.view.ix.zonesById[wireZone(selWire, p.dataset.signal)]?.name || "Zone")} hookup</div>` : ""));
     return;
   }
   const dev = e.target.closest("[data-device]");
@@ -1067,6 +1106,12 @@ function wirePanel(body) {
   body.querySelectorAll("[data-toggle]").forEach(h => h.onclick = () => {
     const id = h.dataset.toggle;
     S.openRows.has(id) ? S.openRows.delete(id) : S.openRows.add(id);
+    // a connection row opened in the panel lights its wire on the sheet
+    if (id.startsWith("conn:")) {
+      const c = S.job.solutions[S.sol].connections[+id.slice(5)];
+      if (c && S.openRows.has(id)) { selWire = `${c.from}→${c.to}`; hideTip(); applySel(); }
+      else if (c && selWire === `${c.from}→${c.to}`) { selWire = null; applySel(); }
+    }
     renderPanel();
     syncGlow();
   });
@@ -1269,8 +1314,9 @@ function wirePanel(body) {
   const connOf = el => S.job.solutions[S.sol].connections[+el.closest("[data-ci]")?.dataset.ci];
   // re-pointing a connection re-guesses what it carries (TV → video, speakers → speaker wire)
   const reguess = c => { const g = suggestSignal(c.from, c.to); if (g) c.signal = g; };
-  on(".cfrom", el => { const c = connOf(el); if (c) { c.from = el.value; reguess(c); } });
-  on(".cto", el => { const c = connOf(el); if (c) { c.to = el.value; reguess(c); } });
+  const follow = (c, fn) => { const was = `${c.from}→${c.to}`; fn(); if (selWire === was) selWire = `${c.from}→${c.to}`; };
+  on(".cfrom", el => { const c = connOf(el); if (c) follow(c, () => { c.from = el.value; reguess(c); }); });
+  on(".cto", el => { const c = connOf(el); if (c) follow(c, () => { c.to = el.value; reguess(c); }); });
   on(".csig", el => { const c = connOf(el); if (c) c.signal = el.value; });
   on(".cearc", el => { const c = connOf(el); if (c) { if (el.checked) c.earc = true; else delete c.earc; } });
   on(".cbackup", el => { const c = connOf(el); if (c) { if (el.checked) c.backup = true; else delete c.backup; } });

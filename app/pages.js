@@ -4,6 +4,7 @@
    is not on Sheet 1. Pure string builders, no DOM. */
 
 import { expandChannels, effectiveJob, indexJob } from "./engine.js";
+import { TYPE_NAME, PLATFORM_NAME, adapterName, describeNode } from "./names.js";
 
 const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const W = 1632, H = 1056;
@@ -118,7 +119,9 @@ const statusLabel = (s, gray) => gray ? "PRE-WIRE" : s === "ofe" ? "OFE" : "New"
 const zoneOf = (ix, epId) => ix.zonesById[ix.endpointZone[epId]];
 // a connection can outlive its zone (dangling until validate's error is fixed) —
 // print something a tech can act on instead of "undefined"
-const zoneName = (ix, epId) => zoneOf(ix, epId)?.name || `(missing zone for ${epId})`;
+const zoneName = (ix, epId) => zoneOf(ix, epId)?.name || "(zone removed)";
+// any connection end in words (names.js) — never print a raw id on paper
+const nameOf = (job, s, id) => describeNode(job, s.sol, id).short;
 const servesEp = (s, id) => { const c = s.companions[id]; return c && c.serves && !s.devices[c.serves] ? c : null; };
 
 /* ============ PAGE: CHANNEL MAP ============ */
@@ -168,15 +171,15 @@ function channelMapBlocks(job, ix, opts) {
         const src = s.devices[c.from];
         const enc = s.companions[c.from];
         // an ENC chip in front of the matrix is named for the rack source it serves
-        const name = src ? devName(src) : enc && s.devices[enc.serves] ? `${devName(s.devices[enc.serves])} · ${String(enc.type).toUpperCase()}` : c.from;
+        const name = src ? devName(src) : enc && s.devices[enc.serves] ? `${devName(s.devices[enc.serves])} · ${adapterName(enc.type)}` : nameOf(job, s, c.from);
         rows.push({ cells: [`In ${c.matrixIn ?? i + 1}`, "Input", name, "HDMI"] });
       });
       outbound.filter(c => c.signal === "video").forEach((c, i) => {
         const comp = s.companions[c.to];
         const dest = comp ? (servesEp(s, c.to)
-            ? `${zoneName(ix, comp.serves)} TV · ${comp.type === "dec" ? "DEC" : "Balun"}`
-            : `${devName(s.devices[comp.serves])} · ${String(comp.type).toUpperCase()}`)
-          : s.devices[c.to] ? devName(s.devices[c.to]) : ix.endpointsById[c.to] ? `${zoneName(ix, c.to)} TV` : c.to;
+            ? `${zoneName(ix, comp.serves)} TV · ${adapterName(comp.type)}`
+            : `${devName(s.devices[comp.serves])} · ${adapterName(comp.type)}`)
+          : s.devices[c.to] ? devName(s.devices[c.to]) : ix.endpointsById[c.to] ? `${zoneName(ix, c.to)} TV` : nameOf(job, s, c.to);
         rows.push({ cells: [`Out ${c.matrixOut ?? i + 1}`, "Output", dest, comp && comp.type === "balun" ? "HDBaseT" : comp ? "MXNet" : "HDMI"] });
       });
       const io = d.io || {};
@@ -184,7 +187,7 @@ function channelMapBlocks(job, ix, opts) {
       const spareOut = (io.out || 0) - outbound.filter(c => c.signal === "video").length;
       if (spareIn > 0) rows.push({ spare: true, cells: [`In +${spareIn}`, "Input", "— spare —", ""] });
       if (spareOut > 0) rows.push({ spare: true, cells: [`Out +${spareOut}`, "Output", "— spare —", ""] });
-      blocks.push({ title: `${devName(d)} — ${d.type === "avSwitch" ? "AV Switch" : "Video Matrix"}`,
+      blocks.push({ title: `${devName(d)} — ${TYPE_NAME[d.type]}`,
         colsFor: w => [{ label: "Port", dx: 14 }, { label: "Direction", dx: 100 }, { label: "Connected To", dx: 220 }, { label: "Signal", dx: w - 100 }], rows });
     }
 
@@ -193,20 +196,20 @@ function channelMapBlocks(job, ix, opts) {
         const ret = c.signal === "audioReturn";
         const src = s.devices[c.from];
         return { cells: [String(i + 1),
-          ret ? { text: `${zoneName(ix, c.from)} TV — audio return`, color: "#a45a12" } : `${src ? devName(src) : c.from}${src?.status === "ofe" ? " (OFE)" : ""}`,
+          ret ? { text: `${zoneName(ix, c.from)} TV — audio return`, color: "#a45a12" } : `${src ? devName(src) : nameOf(job, s, c.from)}${src?.status === "ofe" ? " (OFE)" : ""}`,
           ret ? "Optical" : "Analog stereo"] };
       });
       blocks.push({ title: `${devName(d)} — Audio Sources In`, cols: [{ label: "Input", dx: 14 }, { label: "Source", dx: 110 }, { label: "Connection", dx: 400 }], rows });
     }
 
     else if (d.type === "avr") {
-      const vin = inbound.filter(c => c.signal === "video").map(c => s.devices[c.from] ? devName(s.devices[c.from]) : c.from).join(" · ") || "—";
+      const vin = inbound.filter(c => c.signal === "video").map(c => s.devices[c.from] ? devName(s.devices[c.from]) : s.companions[c.from] ? adapterName(s.companions[c.from].type) : nameOf(job, s, c.from)).join(" · ") || "—";
       const spk = outbound.filter(c => c.signal === "speaker").map(c => { const ep = ix.endpointsById[c.to]; return `${zoneName(ix, c.to)}: ${spkDescr(ep)} (${statusLabel(ep?.status)})`; }).join(" · ") || "—";
-      const vout = outbound.filter(c => c.signal === "video").map(c => { const comp = s.companions[c.to]; return comp && servesEp(s, c.to) ? `${zoneName(ix, comp.serves)} TV via ${comp.type === "balun" ? "Balun" : "DEC"}` : s.devices[c.to] ? devName(s.devices[c.to]) : c.to; }).join(" · ") || "—";
+      const vout = outbound.filter(c => c.signal === "video").map(c => { const comp = s.companions[c.to]; return comp && servesEp(s, c.to) ? `${zoneName(ix, comp.serves)} TV via ${adapterName(comp.type)}` : s.devices[c.to] ? devName(s.devices[c.to]) : nameOf(job, s, c.to); }).join(" · ") || "—";
       const zname = outbound.filter(c => c.signal === "speaker").map(c => zoneOf(ix, c.to)?.name).filter(Boolean)[0];
       const platform = (sol.platforms || [])[0];
       blocks.push({ title: `${devName(d)}${zname ? ` — ${zname} Surround` : ""}`,
-        text: [`Video in: ${vin}`, `Speakers: ${spk}`, `Video out: ${vout}`, `Control: ${platform ? `IP (${platform} driver)` : "IP / IR"}`] });
+        text: [`Video in: ${vin}`, `Speakers: ${spk}`, `Video out: ${vout}`, `Control: ${platform ? `IP (${PLATFORM_NAME[platform] || platform} driver)` : "IP / IR"}`] });
     }
   }
   return blocks;
@@ -266,10 +269,10 @@ export function takeoffItems(job, ix, opts = {}) {
   for (const r of sol.racks || []) for (const d of r.devices || [])
     items.push({ label: devName(d), status: d.status || "new", where: r.name || r.id });
   for (const d of sol.localDevices || [])
-    items.push({ label: `${devName(d)} (local)`, status: d.status || "new", where: ix.zonesById[d.zone]?.name || `(missing zone ${d.zone})` });
+    items.push({ label: `${devName(d)} (in-zone)`, status: d.status || "new", where: ix.zonesById[d.zone]?.name || "(zone removed)" });
   const compGroups = {};
   for (const c of sol.companions || []) {
-    const kind = c.type === "balun" ? "HDBaseT Balun (auto-added)" : c.type === "enc" ? "MXNet Encoder (auto-added)" : "MXNet Decoder (auto-added)";
+    const kind = `${adapterName(c.type)} (auto-added)`;
     const where = servesEp(s, c.id) ? zoneOf(ix, c.serves)?.name : s.devices[c.serves]?.model;
     (compGroups[kind] ||= []).push(where || "");
   }
@@ -279,7 +282,7 @@ export function takeoffItems(job, ix, opts = {}) {
     const gray = (z.scope || "included") !== "included";
     for (const ep of z.endpoints || []) {
       if (ep.type === "display") {
-        items.push({ label: `${ep.brand || "TBD"} ${ep.size ? `${ep.size}"` : "size TBD"} ${ep.displayType === "projector" ? "Projector" : "Display"}${ep.confirm?.length && ep.size ? " — size unconfirmed" : ""}`,
+        items.push({ label: `${ep.brand || "TBD"} ${ep.size ? `${ep.size}"` : "size TBD"} ${ep.displayType === "projector" ? "Projector" : "TV"}${ep.confirm?.length && ep.size ? " — size unconfirmed" : ""}`,
           status: gray ? "prewire" : ep.status || "new", where: z.name, confirm: !!ep.confirm?.length });
       } else {
         items.push({ label: `Speakers, ${spkDescr(ep)}`, status: gray ? "prewire" : ep.status || "new", where: z.name });
@@ -365,7 +368,7 @@ function takeoffPages(job, ix, adviseResult, opts, label) {
   const reserved = [];
   for (const c of s.sol.connections || []) if ((c.scope || "included") !== "included" && c.signal === "speaker") {
     const chs = expandChannels(c.channels || "");
-    reserved.push(`${s.devices[c.from] ? devName(s.devices[c.from]) : c.from} ${chs.length ? `ch ${chs[0]}–${chs[chs.length - 1]}` : ""} reserved`);
+    reserved.push(`${s.devices[c.from] ? devName(s.devices[c.from]) : nameOf(job, s, c.from)} ${chs.length ? `ch ${chs[0]}–${chs[chs.length - 1]}` : ""} reserved`);
   }
   const pre = rolled.filter(r => r.status === "prewire");
   box("PRE-WIRE ONLY", "#8a8a8a",
@@ -416,10 +419,10 @@ export function wireRuns(job, ix, opts = {}) {
     if (c.signal === "video" && toComp) {                // rack video feed to a display chip
       runs.push({ prefix: "V", cable: "Cat6", from: rackName, to: `${zoneName(ix, toComp.serves)} — TV location`,
         carries: toComp.type === "balun" ? "Video (HDBaseT)" : "Video (MXNet)", color: "#b32017",
-        term: `${toComp.type === "balun" ? "Balun" : "DEC"} at display`, count: 1, gray });
+        term: `${adapterName(toComp.type)} at TV`, count: 1, gray });
     } else if (c.signal === "video" && toEp && s.devices[c.from]) {   // direct rack → display (no extender chip drawn)
       runs.push({ prefix: "V", cable: "HDMI / extender", from: rackName, to: `${zoneName(ix, c.to)} — TV location`,
-        carries: "Video (direct)", color: "#b32017", term: "Display input — verify run length", count: 1, gray });
+        carries: "Video (direct)", color: "#b32017", term: "TV input — verify run length", count: 1, gray });
     } else if (c.signal === "speaker" && toEp) {
       const ep = toEp;
       // "surround-7.1.4" = 7 bed + 4 heights; the ".1" sub rides its own RG6 run
@@ -431,21 +434,21 @@ export function wireRuns(job, ix, opts = {}) {
       if (n > 0) runs.push({ prefix: "S", cable: `${spkCable(ep)} ×${n}`, from: rackName,
         to: `${zoneName(ix, c.to)} — ${ep.config === "landscape" ? "landscape array" : n > 2 ? "speaker set" : "ceiling pair"}`,
         carries: gray ? "PRE-WIRE — coil & label" : "Speaker level", color: gray ? null : "#1a5fa0",
-        term: `${amp?.model || c.from}${chs.length ? ` ch ${chs[0]}–${chs[chs.length - 1]}` : ""}${gray ? " (reserved)" : ""}`, count: n, gray });
+        term: `${amp?.model || nameOf(job, s, c.from)}${chs.length ? ` ch ${chs[0]}–${chs[chs.length - 1]}` : ""}${gray ? " (reserved)" : ""}`, count: n, gray });
       // subs: surround + 2.1 take an RG6/LFE home run; a landscape buried sub
       // is amp-powered on its own speaker pair; a soundbar's sub is wireless
       if (sm || ep.config === "2.1" || ep.config === "stereo-2.1")
         runs.push({ prefix: "S", cable: "RG6 / LFE", from: rackName, to: `${zoneName(ix, c.to)} — sub location`,
           carries: gray ? "PRE-WIRE — coil & label" : "Sub feed", color: gray ? null : "#1a5fa0",
-          term: `${amp ? devName(amp) : c.from} sub out`, count: 1, gray });
+          term: `${amp ? devName(amp) : nameOf(job, s, c.from)} sub out`, count: 1, gray });
       else if (ep.config === "landscape" && ep.buriedSub)
         runs.push({ prefix: "S", cable: "14/2 DB", from: rackName, to: `${zoneName(ix, c.to)} — buried sub`,
           carries: gray ? "PRE-WIRE — coil & label" : "Sub (speaker level)", color: gray ? null : "#1a5fa0",
-          term: `${amp ? devName(amp) : c.from}${chs.length ? ` ch ${chs[0]}–${chs[chs.length - 1]}` : ""}`, count: 1, gray });
+          term: `${amp ? devName(amp) : nameOf(job, s, c.from)}${chs.length ? ` ch ${chs[0]}–${chs[chs.length - 1]}` : ""}`, count: 1, gray });
     } else if (c.signal === "audioReturn" && fromEp) {
       if (s.locals[c.to] || ix.endpointsById[c.to]) continue;   // handled at the TV (local encoder / soundbar) — no pull
       runs.push({ prefix: "R", cable: "Optical (Toslink)", from: `${zoneName(ix, c.from)} — TV location`, to: rackName,
-        carries: "Audio return", color: "#a45a12", term: s.devices[c.to]?.model || c.to, count: 1, gray });
+        carries: "Audio return", color: "#a45a12", term: s.devices[c.to]?.model || nameOf(job, s, c.to), count: 1, gray });
     } else if (c.signal === "network" && (toEp || servesEp(s, c.to))) {
       runs.push({ prefix: "N", cable: "Cat6", from: rackName, to: zoneName(ix, toEp ? c.to : s.companions[c.to].serves), carries: "Network", color: "#2f9e44", term: "RJ45", count: 1, gray });
     }
@@ -454,8 +457,8 @@ export function wireRuns(job, ix, opts = {}) {
   for (const d of sol.localDevices || []) {
     if (d.location !== "at-display") continue;
     const z = ix.zonesById[d.zone];
-    runs.push({ prefix: "N", cable: "Cat6", from: rackName, to: `${z?.name || `(missing zone ${d.zone})`} — TV location`,
-      carries: `Network (local ${devName(d)})`, color: "#2f9e44", term: "RJ45 at display", count: 1,
+    runs.push({ prefix: "N", cable: "Cat6", from: rackName, to: `${z?.name || "(zone removed)"} — TV location`,
+      carries: `Network (${devName(d)})`, color: "#2f9e44", term: "RJ45 at TV", count: 1,
       gray: (z?.scope || "included") !== "included" });   // a puck in a pre-wire room is a pre-wire drop
   }
   // deterministic numbering per prefix, non-gray first within prefix order V,N,R,S

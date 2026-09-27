@@ -2,6 +2,8 @@
    Layers: load → validate → advise → place → route → render(SVG)
    Pure functions, no DOM. Spec: ../DESIGN.md (FROZEN 2026-09-17). */
 
+import { describeNode, adapterName, adapterTag, SIGNAL_SHORT, SCOPE_NAME } from "./names.js";
+
 export const SIGNAL_COLORS = {
   video: "#d22b1f",
   audio: "#2b6cb8",
@@ -188,27 +190,30 @@ export function trunkCount(conn, s) {
 
 export function validate(job, ix = indexJob(job)) {
   const errors = [], warnings = [];
-  const E = (code, msg) => errors.push({ code, msg });
-  const W = (code, msg) => warnings.push({ code, msg });
+  // messages are for people (names from names.js); the raw id rides along
+  // as `ref` for code and tests
+  const E = (code, msg, ref) => errors.push({ code, msg, ...(ref != null ? { ref } : {}) });
+  const W = (code, msg, ref) => warnings.push({ code, msg, ...(ref != null ? { ref } : {}) });
+  const zName = zid => ix.zonesById[zid]?.name || zid;
 
   // unique ids across zones/endpoints
   const seen = new Set();
-  const uniq = (id, kind) => { if (seen.has(id)) E("dup-id", `${kind} id duplicated: ${id}`); seen.add(id); };
+  const uniq = (id, kind) => { if (seen.has(id)) E("dup-id", `Two ${kind}s share the id "${id}" — each needs its own (re-import or rename)`, id); seen.add(id); };
   job.house.zones.forEach(z => { uniq(z.id, "zone"); (z.endpoints || []).forEach(e => uniq(e.id, "endpoint")); });
 
   // duplicate zone names -> soft warn (spec: allowed, warned)
   const names = {};
   job.house.zones.forEach(z => { names[z.name] = (names[z.name] || 0) + 1; });
   Object.entries(names).filter(([, n]) => n > 1)
-    .forEach(([n]) => W("dup-zone-name", `zone name used ${names[n]}x: "${n}"`));
+    .forEach(([n]) => W("dup-zone-name", `${names[n]} zones are named "${n}" — give each its own name so the drawing and schedules can tell them apart`));
 
   // areas / homeRack refs
   const areaIds = new Set((job.house.areas || []).map(a => a.id));
-  job.house.zones.forEach(z => { if (z.area && !areaIds.has(z.area)) E("bad-area", `zone ${z.id} references missing area ${z.area}`); });
+  job.house.zones.forEach(z => { if (z.area && !areaIds.has(z.area)) E("bad-area", `${z.name} is assigned to an area that no longer exists`, z.id); });
 
   // confirm flags roll-up (info-level warning: Needs Confirmation box)
   job.house.zones.forEach(z => (z.endpoints || []).forEach(e => {
-    if (e.confirm?.length) W("confirm", `${z.name}: confirm ${e.confirm.join(", ")} on ${e.type}`);
+    if (e.confirm?.length) W("confirm", `${z.name}: confirm ${e.confirm.join(", ")} on the ${e.type === "display" ? (e.displayType === "projector" ? "projector" : "TV") : e.type}`, e.id);
   }));
 
   for (const s of ix.solutions) {
@@ -216,42 +221,43 @@ export function validate(job, ix = indexJob(job)) {
     // per-solution findings carry the solution id: the editor validates the
     // ACTIVE solution's effective house, so a sibling's scope checks would read
     // the wrong overrides — the UI shows only the active solution's entries
-    const E = (code, msg) => errors.push({ code, msg, solution: sol.id });
-    const W = (code, msg) => warnings.push({ code, msg, solution: sol.id });
+    const E = (code, msg, ref) => errors.push({ code, msg, solution: sol.id, ...(ref != null ? { ref } : {}) });
+    const W = (code, msg, ref) => warnings.push({ code, msg, solution: sol.id, ...(ref != null ? { ref } : {}) });
+    const nm = id => describeNode(job, sol, id).short;
     // overrides must point at real House objects (stale after a zone/endpoint delete)
     for (const zid of Object.keys(sol.overrides?.zones || {}))
-      if (!ix.zonesById[zid]) W("stale-override", `${sol.name || sol.id}: override for missing zone ${zid}`);
+      if (!ix.zonesById[zid]) W("stale-override", `${sol.name || sol.id}: has a change saved for a zone that no longer exists`, zid);
     for (const eid of Object.keys(sol.overrides?.endpoints || {}))
-      if (!ix.endpointsById[eid]) W("stale-override", `${sol.name || sol.id}: override for missing endpoint ${eid}`);
+      if (!ix.endpointsById[eid]) W("stale-override", `${sol.name || sol.id}: has a change saved for a TV or speaker set that no longer exists`, eid);
     // device ids are per-solution namespaces: unique within the solution and vs the House,
     // but sibling solutions may reuse ids (duplicate-as-new clones the gear set).
     // Walk the RAW arrays — the index maps already collapsed duplicates.
     const seenSol = new Set(seen);
     const solIds = [...(sol.racks || []).flatMap(r => (r.devices || []).map(d => d.id)),
       ...(sol.companions || []).map(c => c.id), ...(sol.localDevices || []).map(d => d.id)];
-    solIds.forEach(id => { if (seenSol.has(id)) E("dup-id", `device id duplicated: ${id}`); seenSol.add(id); });
+    solIds.forEach(id => { if (seenSol.has(id)) E("dup-id", `Two pieces of gear share the id "${id}" — each needs its own`, id); seenSol.add(id); });
     // a note with no `near` is a general sheet note (legend only, legitimately
     // unanchored); one that NAMES a zone that's gone lost its keynote marker
     for (const a of sol.annotations || [])
-      if (a?.near != null && !ix.zonesById[a.near]) W("bad-annotation", `note "${String(a.text || "").slice(0, 40)}" points at missing zone ${a.near}`);
+      if (a?.near != null && !ix.zonesById[a.near]) W("bad-annotation", `Note "${String(a.text || "").slice(0, 40)}" points at a zone that no longer exists`, a.near);
 
     // companions serve real things
     for (const c of sol.companions || []) {
-      if (!nodeInSolution(s, ix, c.serves)) E("bad-serves", `companion ${c.id} serves missing ${c.serves}`);
+      if (!nodeInSolution(s, ix, c.serves)) E("bad-serves", `${adapterName(c.type)} is attached to gear that no longer exists`, c.id);
     }
     // local devices reference real zones
     for (const d of sol.localDevices || []) {
-      if (!ix.zonesById[d.zone]) E("bad-zone-ref", `local device ${d.id} references missing zone ${d.zone}`);
+      if (!ix.zonesById[d.zone]) E("bad-zone-ref", `${d.model || d.id} is placed in a zone that no longer exists`, d.id);
     }
 
     // connection endpoints exist
     for (const c of sol.connections || []) {
-      if (!nodeInSolution(s, ix, c.from)) E("bad-conn", `connection from missing node: ${c.from}`);
-      if (!nodeInSolution(s, ix, c.to)) E("bad-conn", `connection to missing node: ${c.to}`);
-      if (!SIGNAL_COLORS[c.signal]) E("bad-signal", `unknown signal "${c.signal}" on ${c.from}→${c.to}`);
+      if (!nodeInSolution(s, ix, c.from)) E("bad-conn", `A connection to ${nm(c.to)} starts at gear that no longer exists`, c.from);
+      if (!nodeInSolution(s, ix, c.to)) E("bad-conn", `A connection from ${nm(c.from)} goes to gear that no longer exists`, c.to);
+      if (!SIGNAL_COLORS[c.signal]) E("bad-signal", `${nm(c.from)} → ${nm(c.to)}: unknown signal "${c.signal}"`, `${c.from}→${c.to}`);
       // a custom-route hint that names vanished devices is stale, not fatal
       if (c.routeHint?.between && !(Array.isArray(c.routeHint.between) && c.routeHint.between.every(id => s.devices[id])))
-        W("route-hint-stale", `${c.from}→${c.to}: custom route references removed gear — will route automatically`);
+        W("route-hint-stale", `${nm(c.from)} → ${nm(c.to)}: the custom route named gear that was removed — routing it automatically`, `${c.from}→${c.to}`);
     }
 
     // orphan endpoints: every endpoint must be fed (be `to` of >=1 edge) —
@@ -263,12 +269,12 @@ export function validate(job, ix = indexJob(job)) {
     for (const eid of Object.keys(ix.endpointsById)) {
       if (fed.has(eid)) continue;
       if (ix.endpointsById[eid].type === "display" && localFedZones.has(ix.endpointZone[eid])) continue;
-      E("orphan-endpoint", `endpoint never fed: ${eid} (${ix.endpointZone[eid]})`);
+      E("orphan-endpoint", `${nm(eid)} has nothing feeding it — add a connection`, eid);
     }
     // sources should feed something
     const used = new Set((sol.connections || []).map(c => c.from));
     for (const d of Object.values(s.devices)) {
-      if (d.type === "source" && !used.has(d.id)) W("unused-source", `source ${d.id} feeds nothing`);
+      if (d.type === "source" && !used.has(d.id)) W("unused-source", `${d.model || d.id} isn't connected to anything`, d.id);
     }
 
     // amp channel collisions + zone capacity
@@ -281,19 +287,19 @@ export function validate(job, ix = indexJob(job)) {
       const taken = {};
       for (const f of feeds) {
         for (const ch of expandChannels(f.channels)) {
-          if (taken[ch]) E("ch-collision", `${ampId} ch ${ch}: ${taken[ch]} vs ${f.to}`);
+          if (taken[ch]) E("ch-collision", `${nm(ampId)} output ${ch} is assigned twice — ${nm(taken[ch])} and ${nm(f.to)}`, ampId);
           taken[ch] = f.to;
         }
       }
       if (amp?.zones && feeds.length > amp.zones)
-        E("amp-over", `${ampId}: ${feeds.length} zones assigned, capacity ${amp.zones}`);
+        E("amp-over", `${nm(ampId)}: ${feeds.length} zones assigned but it only has ${amp.zones}`, ampId);
     }
 
     // a local return encoder with no backhaul is a silently dead return in the field
     for (const c of sol.connections || []) {
       if (c.signal === "audioReturn" && s.locals[c.to] &&
           !(sol.connections || []).some(o => o.from === c.to && s.devices[o.to]))
-        W("return-no-backhaul", `${c.to}: local return encoder has no backhaul to the rack`);
+        W("return-no-backhaul", `${nm(c.to)}: the audio return has no link back to the rack`, c.to);
     }
 
     // scope coherence: prewire/future zone endpoints should have matching-scope feeds
@@ -303,14 +309,14 @@ export function validate(job, ix = indexJob(job)) {
       const zScope = sol.overrides?.zones?.[zid]?.scope || ix.zonesById[zid].scope || "included";
       const cScope = c.scope || "included";
       if (zScope !== "included" && cScope === "included")
-        W("scope-mismatch", `feed to ${c.to} not tagged ${zScope} (zone ${zid} is ${zScope})`);
+        W("scope-mismatch", `${zName(zid)} is ${SCOPE_NAME[zScope] || zScope}, but the feed to ${nm(c.to)} is marked Included`, c.to);
     }
   }
 
   // readability budget
   const zoneCount = job.house.zones.length;
   if (zoneCount > READABILITY_ZONE_CEILING)
-    W("readability", `${zoneCount} zones exceeds one-page ceiling (~${READABILITY_ZONE_CEILING}) — sheet will scale below comfortable print size`);
+    W("readability", `${zoneCount} zones is more than fits comfortably on one sheet (~${READABILITY_ZONE_CEILING}) — the drawing will print small`);
 
   return { errors, warnings, ok: errors.length === 0 };
 }
@@ -383,7 +389,7 @@ function displaySize(ep) {
   const inches = ep.size || 55;
   const w = Math.round(inches * 1.6), h = Math.round(w * 0.567);
   const brand = [ep.status === "ofe" ? "OFE" : "New", ep.brand].filter(Boolean).join(" ");
-  return { w, h, caption: "1 Display", brand, sizeText: `${inches}"` };
+  return { w, h, caption: ep.displayType === "projector" ? "Projector" : "TV", brand, sizeText: `${inches}"` };
 }
 
 /* Card geometry: groups run left→right [speakers, display]; a local
@@ -728,13 +734,13 @@ export function place(job, ix = indexJob(job), opts = {}) {
         ];
         const pick = candidates.find(p => chipFits({ ...p, w: PL.chip.w, h: PL.chip.h }));
         if (pick) { chip.x = pick.x; chip.y = pick.y; }
-        else { chip.x = bx; chip.y = cy; out.warnings.push({ code: "chip-crowded", msg: `chip ${comp.id} placed with overlap — no free slot near ${comp.serves}` }); }
+        else { chip.x = bx; chip.y = cy; out.warnings.push({ code: "chip-crowded", ref: comp.id, msg: `${describeNode(job, s.sol, comp.id).short} had no clear spot — it may overlap on the drawing` }); }
       }
     }
     if (chip.x == null) {
       chip.x = PL.marginX; chip.y = rackBottom + 40;
       for (let k = 1; k < 40 && !chipFits(chip); k++) chip.x = PL.marginX + k * (PL.chip.w + 8);
-      out.warnings.push({ code: "chip-unanchored", msg: `chip ${comp.id} had no served tile` });
+      out.warnings.push({ code: "chip-unanchored", ref: comp.id, msg: `${describeNode(job, s.sol, comp.id).short} isn't attached to anything on the drawing` });
     }
     out.chips.push(chip);
   }
@@ -768,7 +774,7 @@ export function place(job, ix = indexJob(job), opts = {}) {
   const maxY = Math.max(...rects.map(r => r.y + r.h), PL.topY);
   out.bounds = { x: 0, y: 0, w: maxX + PL.marginX, h: maxY + 40 };
   out.fitScale = Math.min(1, SHEET.content.w / out.bounds.w, (SHEET.content.h - out.legend.h - 20) / out.bounds.h);
-  if (out.fitScale < 0.75) out.warnings.push({ code: "scale", msg: `drawing fits at ${Math.round(out.fitScale * 100)}% — captions may print small` });
+  if (out.fitScale < 0.75) out.warnings.push({ code: "scale", msg: `The drawing fits at ${Math.round(out.fitScale * 100)}% — captions may print small` });
 
   return out;
 }
@@ -1047,7 +1053,7 @@ export function route(job, ix, placement, opts = {}) {
       const { pz, g } = slotOf(conn.to);
       const lt = pz.groups.flatMap(gr => gr.locals || (gr.local ? [gr.local] : [])).find(l => l.deviceId === conn.from);
       if (lt) commit(conn, "local", [[pz.x + lt.x + lt.w / 2, pz.y + lt.y], [pz.x + g.cx, pz.y + g.y + g.h]], { insideCard: pz.id });
-      else out.warnings.push({ code: "no-local-slot", msg: `local ${conn.from} has no slot` });
+      else out.warnings.push({ code: "no-local-slot", ref: conn.from, msg: `${describeNode(job, sol, conn.from).short} has no spot in its zone card` });
       done.add(i);
     } else if (ix.endpointsById[conn.from] && ix.endpointsById[conn.to] &&
                ix.endpointZone[conn.from] === ix.endpointZone[conn.to]) {
@@ -1067,7 +1073,7 @@ export function route(job, ix, placement, opts = {}) {
       if (lt && lt.pz === pz) {
         const x1 = pz.x + g.cx + 14;
         commit(conn, "local", [[x1, pz.y + g.y + g.h], [x1, lt.pz.y + lt.l.y]], { insideCard: pz.id });
-      } else out.warnings.push({ code: "no-local-slot", msg: `local ${conn.to} has no slot at ${conn.from}` });
+      } else out.warnings.push({ code: "no-local-slot", ref: conn.to, msg: `${describeNode(job, sol, conn.to).short} has no spot beside ${describeNode(job, sol, conn.from).short}` });
       done.add(i);
     }
   });
@@ -1968,23 +1974,23 @@ export function routeAlternates(job, ix, placed, opts, wid) {
     // harness choices first: a pinned shape is also an own run, and the
     // de-dupe below keeps the first label for a given path
     if (base.wires.some(x => x.id !== wid && x.from === w.from && x.signal === w.signal && /^zone-(west|east)$/.test(x.cls)))
-      menu.push({ label: "Ride the harness with its siblings", hint: { bundle: true } },
-                { label: "Own run (out of the harness)", hint: { bundle: false } });
-    if (cls === "zone-west") menu.push({ label: "Riser beside the rack", hint: { ch: "col" } },
-                                       { label: "Riser past the room band", hint: { ch: "gutter" } });
-    else menu.push({ label: "Land on the card's top edge", hint: { land: "top" } },
-                   { label: "Land on the card's bottom edge", hint: { land: "bottom" } });
+      menu.push({ label: "Join the harness (share the trunk)", hint: { bundle: true } },
+                { label: "Own run (leave the harness)", hint: { bundle: false } });
+    if (cls === "zone-west") menu.push({ label: "Up beside the rack", hint: { ch: "col" } },
+                                       { label: "Up past the end of the zone row", hint: { ch: "gutter" } });
+    else menu.push({ label: "Into the top of the zone box", hint: { land: "top" } },
+                   { label: "Into the bottom of the zone box", hint: { land: "bottom" } });
   } else {
     // must mirror routeRackToRack's same-column test (same x AND same rack), or
     // aligned devices in stacked racks get a menu their router can't honor
     const rackOfId = id => placed.racks.find(r => r.devices.some(d => d.id === id));
     const sameCol = fromDev && Math.abs(toDev.x - fromDev.x) < 8 && rackOfId(fromDev.id) === rackOfId(toDev.id);
     if (fromDev && sameCol) {
-      menu.push({ label: "Staple beside the column", hint: { ch: "staple" } },
-                 { label: "Wrap over the top", hint: { ch: "wrap" } });
+      menu.push({ label: "Straight across beside the gear", hint: { ch: "staple" } },
+                 { label: "Over the top of the rack", hint: { ch: "wrap" } });
     } else {
-      menu.push({ label: "Via the A|B gap", hint: { ch: "ab" } },
-                 { label: "Via the west margin", hint: { ch: "west" } });
+      menu.push({ label: "Through the gap between the first two columns", hint: { ch: "ab" } },
+                 { label: "Around the left edge of the drawing", hint: { ch: "west" } });
       // returns can also be pinned to the strip between two stacked devices
       if (!fromDev) {
         const colDevs = devs.filter(d => d.col === toDev.col).sort((a, b) => a.y - b.y);
@@ -2032,7 +2038,7 @@ export function wireD(w) {
   return d;
 }
 
-const LEGEND_LABELS = { video: "Video", audio: "Audio", audioReturn: "Audio Return", network: "Network", prewire: "Pre-wire" };
+const LEGEND_LABELS = { video: SIGNAL_SHORT.video, audio: SIGNAL_SHORT.audio, audioReturn: SIGNAL_SHORT.audioReturn, network: SIGNAL_SHORT.network, prewire: SIGNAL_SHORT.prewire };
 const fmtDate = iso => { const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${+m[2]}/${+m[3]}/${m[1].slice(2)}` : esc(iso); };
 
 export function render(job, ix, P, rt, opts = {}) {
@@ -2263,7 +2269,7 @@ export function render(job, ix, P, rt, opts = {}) {
   /* companion chips */
   for (const c of P.chips) {
     push(`<rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="2" fill="#1e1e1e"/>`);
-    push(`<text x="${c.x + c.w / 2}" y="${c.y + 13}" text-anchor="middle" font-size="10" fill="#eee">${esc(c.type.toUpperCase())}</text>`);
+    push(`<text x="${c.x + c.w / 2}" y="${c.y + 13}" text-anchor="middle" font-size="10" fill="#eee">${esc(adapterTag(c.type))}</text>`);
     push(`<circle cx="${c.x + c.w - 6}" cy="${c.y + c.h / 2}" r="1.8" fill="#3fbf5a"/>`);
   }
 

@@ -2,6 +2,8 @@
    speak "family room 5.1 75 sony matrix", see parse-preview chips, commit).
    Pure parser, no DOM. Comma / "then" / newline separates multiple zones. */
 
+import { SPEAKER_SETUP, SCOPE_NAME } from "./names.js";
+
 const uid = p => p + "-" + Math.random().toString(36).slice(2, 7);
 const slug = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || uid("z");
 
@@ -39,8 +41,8 @@ export function parseQuickZone(text) {
 
   const eat = re => { const m = t.match(re); if (m) t = t.replace(re, " "); return m; };
 
-  if (eat(/\bprewire(d)?\b|\bpre-wire(d)?\b/)) { zone.scope = "prewire"; chips.push({ kind: "scope", label: "PRE-WIRE" }); }
-  if (eat(/\bfuture\b/)) { zone.scope = "future"; chips.push({ kind: "scope", label: "FUTURE" }); }
+  if (eat(/\bprewire(d)?\b|\bpre-wire(d)?\b/)) { zone.scope = "prewire"; chips.push({ kind: "scope", label: SCOPE_NAME.prewire }); }
+  if (eat(/\bfuture\b/)) { zone.scope = "future"; chips.push({ kind: "scope", label: SCOPE_NAME.future }); }
   if (eat(/\bofe\b|\bexisting\b|\bowner\b(?!'s|s\b)/)) ofe = true;   // "owner's suite" is a room, not OFE
   if (eat(/\blocal\b/)) local = true;
   if (eat(/\bmatrix\b|\bdistributed\b/)) matrix = true;
@@ -99,8 +101,8 @@ export function parseQuickZone(text) {
     const ep = { id: zone.id + "-spk", type: "speakers", ...spk, status: ofe ? "ofe" : "new" };
     if (ep.config === "stereo" && !ep.count) ep.count = 2;
     zone.endpoints.push(ep);
-    const cfgLabel = ep.config === "landscape" ? `landscape ${ep.satCount}+1`
-      : ep.config.startsWith("surround") ? ep.config.slice(9) + " surround" : ep.config;
+    // chip words match the editor's (names.js); landscape adds its count
+    const cfgLabel = ep.config === "landscape" ? `Landscape ${ep.satCount}+1` : SPEAKER_SETUP[ep.config] || ep.config;
     chips.push({ kind: "spk", label: cfgLabel + (ofe ? " · OFE" : "") });
   }
   if (tv) {
@@ -110,8 +112,8 @@ export function parseQuickZone(text) {
     zone.endpoints.push(ep);
     chips.push({ kind: "tv", label: `${tv.brand || (tv.displayType === "projector" ? "Projector" : "TV")} ${ep.size}"${ep.confirm ? " ?" : ""}${ofe ? " · OFE" : ""}` });
   }
-  if (local && tv) chips.push({ kind: "hint", label: "local source" });
-  if (matrix && tv) chips.push({ kind: "hint", label: "matrix feed" });
+  if (local && tv) chips.push({ kind: "hint", label: "TV fed by a source in the zone" });
+  if (matrix && tv) chips.push({ kind: "hint", label: "TV fed from the rack" });
   zone._hints = { local, matrix };
   return { zone, chips, empty: !zone.endpoints.length };
 }

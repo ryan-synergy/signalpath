@@ -139,9 +139,9 @@ export function importSiteWalk(raw) {
         brand: "", size: size || 65, status: swStatus(r.tvStatus) };
       if (!size) { ep.confirm = ["size"]; warnings.push(`${zname}: TV size TBD`); }
       zone.endpoints.push(ep);
-      if (r.videoFeed === "matrix") znotes.push("video: matrix feed");
+      if (r.videoFeed === "matrix") znotes.push("TV fed from the rack");
       else if (r.videoFeed === "direct") znotes.push("video: direct rack feed");
-      else if (r.videoFeed === "local" || (r.localSources || []).length) znotes.push("video: local source");
+      else if (r.videoFeed === "local" || (r.localSources || []).length) znotes.push("TV fed by a source in the zone");
       for (const src of r.localSources || []) {
         sol.localDevices.push({ id: uid(zid + "-src"), type: "source", sourceType: "appletv",
           model: src, status: "new", zone: zid, location: (r.equipLoc || "").toLowerCase().includes("rack") ? "remote" : "at-display" });

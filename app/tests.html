@@ -461,7 +461,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
   t("channel map: MDX rows in channel order with gray prewire + spare rows",
     cm.includes(">Master Bed<") && cm.includes(">1–2<") && cm.includes(">Gym<") && cm.includes("PRE-WIRE") && cm.includes("— spare —"));
   t("channel map: matrix ports name their balun destinations",
-    cm.includes("Family Room TV · Balun") && cm.includes("HDBaseT"));
+    cm.includes("Family Room TV · HDBaseT balun") && cm.includes("HDBaseT"));
   t("channel map: input module shows the audio return in orange",
     cm.includes("Master Bed TV — audio return") && cm.includes("#a45a12"));
   t("channel map: AVR mini-card summarizes the surround zone",
@@ -475,7 +475,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
   t("takeoff: licensing box carries catalog date", tk.includes("catalog as of"));
   const items = takeoffItems(job, ix);
   t("takeoff: baluns rolled up as an auto-added pair",
-    items.some(i => i.label.includes("Balun") && i.qty === 2));
+    items.some(i => /balun/i.test(i.label) && i.qty === 2));
   t("takeoff CSV: one line per rolled item + header",
     takeoffCSV(job, ix).split("\n").length === items.length + 1);
 
@@ -484,7 +484,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
   t("wire schedule: valid SVG, no leaks", parseOk(ws) && !/NaN|undefined/.test(ws));
   t("wire schedule: V/N/R/S runs all present, local ATV gets its network drop",
     ["V-", "N-", "R-", "S-"].every(p => runs.some(r => r.id.startsWith(p))) &&
-    runs.some(r => r.carries.includes("local Apple TV")));
+    runs.some(r => r.carries === "Network (Apple TV)"));
   t("wire schedule: surround zone splits into speaker set + sub feed",
     runs.some(r => r.to.includes("Family Room") && r.cable.includes("×5")) &&
     runs.some(r => r.to.includes("Family Room — sub")));
@@ -680,7 +680,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("residence: title block carries customer, project, stage, revision",
     svg.includes("Customer Name") && svg.includes("Sample Residence") && svg.includes("PROPOSAL") && svg.includes("Initial proposal"));
   t("residence: legend renders all five labels",
-    ["Video", "Audio", "Audio Return", "Network", "Pre-wire"].every(l => svg.includes(`>${l}</text>`)));
+    ["Video", "Audio", "Audio return", "Network", "Pre-wire"].every(l => svg.includes(`>${l}</text>`)));
   // channel strip: 5 zones used (blue), 1 prewire-reserved (gray)
   const used = (svg.match(/fill="#3b82c4"/g) || []).length;
   const res = (svg.match(/height="11" fill="#8c8c8c"/g) || []).length;
@@ -694,7 +694,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   bad.solutions[0].connections = bad.solutions[0].connections.filter(c => c.to !== "kitchen-spk");
   const { job, ix } = loadJob(bad);
   t("negative: removing Kitchen feed → orphan-endpoint error",
-    validate(job, ix).errors.some(e => e.code === "orphan-endpoint" && e.msg.includes("kitchen-spk")));
+    validate(job, ix).errors.some(e => e.code === "orphan-endpoint" && e.ref === "kitchen-spk" && e.msg.includes("Kitchen speakers") && !e.msg.includes("kitchen-spk")));
 }
 {
   const bad = structuredClone(fixtures.residence);
@@ -748,7 +748,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   solB.overrides.endpoints["ghost-ep"] = { size: 1 };
   const v2 = validate(job, ix);
   t("overrides: stale override → warning, never silent",
-    v2.warnings.some(w => w.code === "stale-override" && w.msg.includes("ghost-ep")));
+    v2.warnings.some(w => w.code === "stale-override" && w.ref === "ghost-ep"));
 }
 
 /* ---------- faceplate glyphs: one quiet identity cue per device type ---------- */
@@ -893,7 +893,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
     model: "Apple TV", status: "new", zone: "z-guest", location: "at-display" });
   const { job, ix } = loadJob(raw);
   t("local zone: display with an at-display source validates fed — no wire required",
-    !validate(job, ix).errors.some(e => e.code === "orphan-endpoint" && e.msg.includes("guest-tv")));
+    !validate(job, ix).errors.some(e => e.code === "orphan-endpoint" && e.ref === "guest-tv"));
   const p = place(job, ix);
   const rt = route(job, ix, p);
   const guest = p.zones.find(z => z.id === "z-guest");
@@ -906,7 +906,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   {
     const { job: j2, ix: i2 } = loadJob(bare);
     t("local zone: remove the local source → orphan error returns",
-      validate(j2, i2).errors.some(e => e.msg.includes("guest-tv")));
+      validate(j2, i2).errors.some(e => e.ref === "guest-tv"));
   }
 }
 
@@ -1066,7 +1066,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("bom: parses as valid SVG", !new DOMParser().parseFromString(svg, "image/svg+xml").querySelector("parsererror"));
   t("bom: both solution columns named", svg.includes("Proposed System") && svg.includes("Better Rooms"));
   t("bom: override surfaces as a line-item difference (75\" vs 85\")",
-    svg.includes("Sony 75&quot; Display") && svg.includes("Sony 85&quot; Display"));
+    svg.includes("Sony 75&quot; TV") && svg.includes("Sony 85&quot; TV"));
   t("bom: extra device in B shows and diff counter reports", svg.includes("CM2-750D") && /\d+ line items? differ/.test(svg));
   t("bom: zone scope summary row present", svg.includes("Zones (included / pre-wire / future)"));
 
@@ -1074,7 +1074,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const effB = effectiveJob(raw, 1), ixB = indexJob(effB);
   const svg2 = renderBomCompare(effB, ixB, a, { rawJob: raw });
   t("bom: active-solution overrides never leak into other columns (rawJob wins)",
-    svg2.includes("Sony 75&quot; Display") && svg2.includes("Sony 85&quot; Display"));
+    svg2.includes("Sony 75&quot; TV") && svg2.includes("Sony 85&quot; TV"));
 
   const pages = renderExtraPages(raw, ix, a, { rawJob: raw });
   t("bom: renderExtraPages includes the comparison sheet when flagged",
@@ -1166,6 +1166,60 @@ for (const [name, raw] of Object.entries(fixtures)) {
   r.solutions[0].connections.push({ from: "cablebox", to: "patio-tv", signal: "video" });
   const v2 = loadJob(r); const rt2 = route(v2.job, v2.ix, place(v2.job, v2.ix));
   t("router: a column-A source feeds a top-band TV without falling back", rt2.wires.find(w => w.from === "cablebox" && w.to === "patio-tv")?.cls === "zone-west");
+}
+
+/* ---------- one vocabulary: nothing a person reads shows a raw id (2026-09-27) ---------- */
+{
+  const { describeNode, TYPE_NAME, SIGNAL_NAME, adapterName } = await import("./names.js");
+  // ids that could never be mistaken for words (hyphens / digits), per fixture
+  const idsOf = j => { const ids = new Set();
+    for (const z of j.house.zones) { ids.add(z.id); for (const e of z.endpoints || []) ids.add(e.id); }
+    for (const so of j.solutions) { for (const r of so.racks || []) for (const d of r.devices || []) ids.add(d.id);
+      for (const c of so.companions || []) ids.add(c.id); for (const d of so.localDevices || []) ids.add(d.id); }
+    return [...ids].filter(id => /[-0-9]/.test(id)); };
+  const leak = (text, ids) => ids.find(id => new RegExp(`(^|[^A-Za-z0-9_.:-])${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^A-Za-z0-9_.:-])`).test(text));
+  // break the residence every way the validator knows, so every message fires
+  const bad = structuredClone(fixtures.residence);
+  const so = bad.solutions[0];
+  so.connections = so.connections.filter(c => c.to !== "kitchen-spk");
+  so.connections.push({ from: "mdx16", to: "office-spk", signal: "speaker", channels: "7-8" });           // channel twice
+  so.connections.push({ from: "ghost-box", to: "patio-tv", signal: "video" });                          // missing end
+  (so.overrides ||= {}).zones = { "gone-zone": { scope: "future" } };                                    // stale override
+  so.racks[0].devices.push({ id: "spare-src-1", type: "source", model: "Roku Ultra" });                  // unused source
+  const { job, ix } = loadJob(bad);
+  const v = validate(job, ix);
+  const msgs = [...v.errors, ...v.warnings];
+  const ids = idsOf(bad).concat(["ghost-box", "gone-zone"]);
+  const codes = new Set(msgs.map(m => m.code));
+  t("names: the broken residence trips the validator broadly", ["orphan-endpoint", "ch-collision", "bad-conn", "stale-override", "unused-source"].every(c => codes.has(c)), [...codes].join(","));
+  const leaky = msgs.filter(m => leak(m.msg, ids));
+  t("names: no validator message shows a raw id", !leaky.length, leaky.map(m => m.msg).join(" | "));
+  t("names: messages keep the raw id in `ref` for code", msgs.filter(m => ["orphan-endpoint", "ch-collision", "unused-source", "stale-override"].includes(m.code)).every(m => m.ref));
+  t("names: validator names gear the way the editor does", v.errors.some(e => e.code === "orphan-endpoint" && e.msg.startsWith("Kitchen speakers")) &&
+    v.warnings.some(w => w.code === "unused-source" && w.msg.startsWith("Roku Ultra")));
+  // advisor + print pages + sheet, all three samples
+  const cat = await (await fetch("./catalog.json")).json();
+  for (const name of ["residence", "estate", "stress"]) {
+    const raw = fixtures[name], L = loadJob(structuredClone(raw));
+    const ids2 = idsOf(raw);
+    const a = advise(L.job, L.ix, cat);
+    const advText = [...(a.io || []), ...(a.notes || [])].map(x => x.msg || "").join("\n") + (a.licensing || []).map(l => [l.pick, ...l.lines, ...(l.warns || [])].join(" ")).join("\n");
+    t(`names: ${name} advisor text shows no raw id`, !leak(advText, ids2), leak(advText, ids2));
+    const pj = structuredClone(L.job); pj.job.pages = { channelMap: true, equipment: true, wireSchedule: true, bomCompare: true };
+    const texts = renderExtraPages(pj, L.ix, a, { rawJob: raw }).map(pg => pg.svg.replace(/<[^>]+>/g, " "));
+    const pl = place(L.job, L.ix), sheet = render(L.job, L.ix, pl, route(L.job, L.ix, pl)).replace(/<[^>]+>/g, " ");
+    const hit = [...texts, sheet].map(tx => leak(tx, ids2)).find(Boolean);
+    t(`names: ${name} print pages and sheet text show no raw id`, !hit, hit);
+  }
+  // the vocabulary is the vocabulary: one name per thing, everywhere
+  const r = loadJob(structuredClone(fixtures.residence));
+  const cm = renderChannelMap(r.job, r.ix, {});
+  t("names: the channel map titles gear with the editor's type names", cm.includes(`— ${TYPE_NAME.videoMatrix}<`) || cm.includes(`— ${TYPE_NAME.videoMatrix}`));
+  t("names: adapters are called the same thing on the channel map and in the editor",
+    cm.includes(adapterName("balun")) && describeNode(fixtures.residence, fixtures.residence.solutions[0], "balun-family").label === `${adapterName("balun")} at Family Room TV`);
+  const legend = render(r.job, r.ix, place(r.job, r.ix), route(r.job, r.ix, place(r.job, r.ix)));
+  t("names: legend words are the start of the editor's signal names",
+    ["video", "audio", "audioReturn", "network"].every(k => SIGNAL_NAME[k].startsWith(legend.match(new RegExp(`>(${SIGNAL_NAME[k].split(" (")[0]})</text>`))?.[1] || "\u0000")));
 }
 
 /* ---------- harness style + zone-feed rerouting (2026-09-27) ---------- */

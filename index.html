@@ -169,7 +169,7 @@
   <span class="spacer"></span>
   <span id="rulesChip" class="ok">✓</span>
   <label class="chk"><input type="checkbox" id="hideNet"> hide network</label>
-  <label class="chk" title="Harness style (saved with the job): a source's runs to 3+ rooms share one trunk and break out near each room, like an electrical drawing"><input type="checkbox" id="harnessMode"> harness</label>
+  <label class="chk" title="Harness style (saved with the job): a source's runs to 3+ zones share one trunk and break out near each zone, like an electrical drawing"><input type="checkbox" id="harnessMode"> harness</label>
   <label class="chk" title="B&amp;W-safe: dash patterns carry signal identity for office laser printers"><input type="checkbox" id="bwMode"> B/W</label>
   <button id="importBtn">Import</button><input type="file" id="importFile" accept=".json,.md" hidden>
   <button id="exportJson">JSON</button>
@@ -211,6 +211,8 @@ import { loadJob, validate, advise, place, route, render, effectiveJob, autoLink
 import { importAny, mergeHouse } from "./app/importers.js";
 import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
+import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME,
+         signalName, describeNode, humanizeWireIds } from "./app/names.js";
 
 /* ============ IndexedDB jobs store ============ */
 const DB = await new Promise((res, rej) => {
@@ -324,10 +326,12 @@ function refresh(save = true) {
   for (const w of warns) adv.push(`<div class="item w">⚠ ${esc(w.msg)}</div>`);
   // the router knows when a drawing is compromised — say so instead of leaving
   // a wire through a box unexplained
-  for (const w of routeWarn.filter(w => w.code === "unrouted")) adv.push(`<div class="item e">✗ wire not drawn: ${esc(w.msg)}</div>`);
-  const fb = routeWarn.filter(w => w.code === "route-fallback").map(w => w.msg);
-  if (fb.length) adv.push(`<div class="item w">⚠ ${fb.length} wire${fb.length > 1 ? "s have" : " has"} no clean path on this layout — drawn best-effort and may cross gear: ${esc(fb.slice(0, 4).join(", "))}${fb.length > 4 ? "…" : ""}</div>`);
-  for (const w of new Map(routeWarn.filter(w => w.code === "hint-unroutable").map(w => [w.msg, w])).values()) adv.push(`<div class="item w">⚠ custom route for ${esc(w.msg)} can't be honored on this layout — routed automatically</div>`);
+  for (const w of routeWarn.filter(w => w.code === "unrouted")) adv.push(`<div class="item e">✗ Wire not drawn: ${esc(wname(w.msg).replace(/^no route class for /, ""))}</div>`);
+  const vsol = S.view?.job?.solutions[S.sol];
+  const wname = t => S.view ? humanizeWireIds(S.view.job, vsol, t) : t;
+  const fb = routeWarn.filter(w => w.code === "route-fallback").map(w => wname(w.msg));
+  if (fb.length) adv.push(`<div class="item w">⚠ ${fb.length} wire${fb.length > 1 ? "s have" : " has"} no clean path on this layout — drawn best-effort and may cross gear: ${esc(fb.slice(0, 4).join("; "))}${fb.length > 4 ? "…" : ""}</div>`);
+  for (const w of new Map(routeWarn.filter(w => w.code === "hint-unroutable").map(w => [w.msg, w])).values()) adv.push(`<div class="item w">⚠ The custom route for ${esc(wname(w.msg))} can't be drawn on this layout — routed automatically</div>`);
   for (const w of placeWarn) adv.push(`<div class="item w">⚠ ${esc(w.msg)}</div>`);
   const drift = catalogDrift(S.job, SETTINGS.catalog);
   if (drift.length) adv.push(`<div class="item i">📦 The catalog has newer specs for ${drift.length} device${drift.length > 1 ? "s" : ""} on this job (${esc(drift.slice(0, 3).map(d => d.model).join(", "))}${drift.length > 3 ? "…" : ""}) — this job still uses the specs it was quoted with. JOB tab → Update catalog specs.</div>`);
@@ -335,10 +339,10 @@ function refresh(save = true) {
     if (io.over) adv.push(`<div class="item e">✗ ${esc(io.msg)}</div>`);
     else if (io.msg && (io.kind === "analog-in" || io.kind === "audio-out" || io.kind === "return-in")) adv.push(`<div class="item i">🔌 ${esc(io.msg)}</div>`);
   }
-  for (const amp of (a?.amps || []).filter(mine)) adv.push(`<div class="item i">🔊 ${esc(amp.amp)}: ${amp.zonesUsed}/${amp.zonesTotal ?? "?"} zones${amp.reserved ? ` (${amp.reserved} reserved)` : ""}${amp.spare != null ? ` · ${amp.spare} spare` : ""}</div>`);
+  for (const amp of (a?.amps || []).filter(mine)) adv.push(`<div class="item i">🔊 ${esc(amp.model || amp.amp)}: ${amp.zonesTotal != null ? `${amp.zonesUsed}/${amp.zonesTotal} zones` : `${amp.zonesUsed} zone${amp.zonesUsed === 1 ? "" : "s"}`}${amp.reserved ? ` (${amp.reserved} reserved)` : ""}${amp.spare != null ? ` · ${amp.spare} spare` : ""}</div>`);
   for (const lic of (a?.licensing || []).filter(mine)) {
-    adv.push(`<div class="item i">🎛 <b>${esc(lic.platform)}</b> → ${esc(lic.pick)} · ${lic.lines.map(esc).join(" · ")}</div>`);
-    for (const w of lic.warns || []) adv.push(`<div class="item w">⚠ ${esc(lic.platform)}: ${esc(w)}</div>`);
+    adv.push(`<div class="item i">🎛 <b>${esc(PLATFORM_NAME[lic.platform] || lic.platform)}</b> → ${esc(lic.pick)} · ${lic.lines.map(esc).join(" · ")}</div>`);
+    for (const w of lic.warns || []) adv.push(`<div class="item w">⚠ ${esc(PLATFORM_NAME[lic.platform] || lic.platform)}: ${esc(w)}</div>`);
   }
   for (const n of (a?.notes || []).filter(mine)) adv.push(`<div class="item i">${n.code === "avb-switch" || n.code === "sonos-net" ? "🌐" : "🎛"} ${esc(n.msg)}</div>`);
   $("#advisor").innerHTML = adv.join("") || `<div class="item ok">✓ No issues</div>`;
@@ -536,7 +540,11 @@ async function showReview(res) {
       const target = rec.id === S.id ? S.job : rec.data;
       const changes = mergeHouse(target, j);
       S.job = target; S.id = rec.id; S.sol = 0; await persist(); refresh(false); close();
-      alert("House updated (Solutions kept):\n" + changes.map(c => `${c.kind}: ${c.zone}${c.type ? " (" + c.type + ")" : ""}`).join("\n"));
+      alert("House updated (Solutions kept):\n" + changes.map(c => {
+        const what = c.type === "display" ? "TV" : c.type === "speakers" ? "speakers" : c.type || "";
+        return c.kind === "added" ? `Added zone: ${c.zone}` : c.kind === "endpoint-added" ? `${c.zone}: added ${what}`
+          : c.kind === "updated" ? `${c.zone}: updated ${what}` : c.kind === "kept" ? `${c.zone}: not in the import — left as is` : `${c.kind}: ${c.zone}`;
+      }).join("\n"));
     };
   });
 }
@@ -556,16 +564,7 @@ const hideTip = () => { tip.style.display = "none"; };
 
 function nodeName(id) {
   const v = S.view; if (!v) return id;
-  const sol = v.job.solutions[S.sol] || v.job.solutions[0];
-  for (const r of sol.racks || []) for (const d of r.devices || []) if (d.id === id) return d.model || id;
-  for (const d of sol.localDevices || []) if (d.id === id) return `${d.model || id} (${v.ix.zonesById[d.zone]?.name || d.zone})`;
-  for (const c of sol.companions || []) if (c.id === id) return `${String(c.type).toUpperCase()} @ ${nodeName(c.serves)}`;
-  const ep = v.ix.endpointsById[id];
-  if (ep) {
-    const zn = v.ix.zonesById[v.ix.endpointZone[id]]?.name || "";
-    return `${zn} ${ep.type === "display" ? (ep.displayType === "projector" ? "projector" : "TV") : ep.type}`.trim();
-  }
-  return id;
+  return describeNode(v.job, v.job.solutions[S.sol] || v.job.solutions[0], id).label;
 }
 
 function applySel() {
@@ -618,7 +617,7 @@ function startReroute(x, y) {
   const host = svg.querySelector(`path.wire[data-wire="${CSS.escape(selWire)}"]`)?.parentNode || svg;
   host.appendChild(g);
   showTip(x, y, `<b>Pick a route</b> <span class="mini">— tap a dashed path or a line below</span>` +
-    ALTS.map((a, i) => `<div class="altrow" data-alt="${i}">${i + 1} · ${esc(a.label)} <span class="mini">(${a.crossings} sheet hops)</span></div>`).join(""));
+    ALTS.map((a, i) => `<div class="altrow" data-alt="${i}">${i + 1} · ${esc(a.label)} <span class="mini">(${a.crossings} crossing${a.crossings === 1 ? "" : "s"} on the sheet)</span></div>`).join(""));
 }
 function applyAlt(i) {
   const a = ALTS?.[i]; if (!a || ALTS.wid !== selWire) { clearGhosts(); return; }
@@ -699,51 +698,21 @@ const STATUSES = ["new", "ofe", "prewire"];
 const DEV_TYPES = ["source", "avr", "amp", "videoMatrix", "avSwitch", "avbSwitch", "audioInputModule", "audioOutputModule", "controlBox", "splitter", "host"];
 const SIGNALS = ["video", "audio", "speaker", "network", "audioReturn"];
 
-/* plain-English labels: the stored values stay machine words (files, tests and
-   the engine read them); every dropdown shows these instead */
-const DEV_TYPE_LABEL = { source: "Source", avr: "AV receiver", amp: "Multi-zone amp", videoMatrix: "HDMI matrix",
-  avSwitch: "Video-over-IP switch", avbSwitch: "AVB / network switch", audioInputModule: "Audio input module", audioOutputModule: "Audio output module",
-  controlBox: "Control processor", splitter: "HDMI splitter", host: "Control host" };
-const SIGNAL_LABEL = { video: "Video (HDMI)", audio: "Audio (line level)", speaker: "Speaker wire", network: "Network (Cat6)", audioReturn: "Audio back from the room (ARC / optical)" };
-const SCOPE_LABEL = { included: "Included", prewire: "Pre-wire only", future: "Future" };
-const STATUS_LABEL = { new: "New", ofe: "Owner-furnished (OFE)", prewire: "Pre-wire only" };
-const SPK_LABEL = { none: "None", mono: "Mono (1 speaker)", stereo: "Stereo pair", "2.1": "2.1 (pair + sub)", "surround-5.1": "5.1 surround", "surround-7.1": "7.1 surround",
-  soundbar: "Soundbar", "soundbar-sub": "Soundbar + sub", landscape: "Landscape (in-ground)" };
-const REMOTE_LABEL = { none: "None", savant: "Savant remote", appletv: "Apple TV remote", josh: "Josh.ai", factory: "Factory remote" };
-const COMP_LABEL = { balun: "HDBaseT receiver", enc: "Video encoder", dec: "Video decoder" };
-const PLATFORM_LABEL = { "": "—", savant: "Savant", josh: "Josh.ai", control4: "Control4" };
-const signalName = sig => SIGNAL_LABEL[sig] || sig;
+/* every word shown for a stored value comes from app/names.js (the one
+   vocabulary the sheet, print pages and advisor also use) */
+const DEV_TYPE_LABEL = TYPE_NAME, SIGNAL_LABEL = SIGNAL_NAME, SCOPE_LABEL = SCOPE_NAME, STATUS_LABEL = STATUS_NAME,
+      SPK_LABEL = SPEAKER_SETUP, REMOTE_LABEL = REMOTE_NAME, PLATFORM_LABEL = PLATFORM_NAME;
 
 function field(label, inner) { return `<div class="f"><label>${label}</label>${inner}</div>`; }
 const sel = (cls, opts, val, labels = {}) => `<select class="${cls}">${opts.map(o =>
   `<option value="${esc(o)}" ${o === val ? "selected" : ""}>${esc(labels[o] ?? o)}</option>`).join("")}</select>`;
 
-/* what a connection endpoint IS, in words: "Anthem MRX-540 (AV receiver)",
-   "Family Room TV", "Video decoder at Family Room TV" — read from the raw
-   job (the panel edits S.job, and ids may not have rendered yet) */
-function nodeInfo(id) {
-  const sol = S.job.solutions[S.sol] || S.job.solutions[0];
-  const zoneName = zid => S.job.house.zones.find(z => z.id === zid)?.name || zid;
-  for (const r of sol.racks || []) for (const d of r.devices || []) if (d.id === id)
-    return { group: "In the rack", short: d.model || id, label: `${d.model || id}${DEV_TYPE_LABEL[d.type] && d.type !== "source" ? ` (${DEV_TYPE_LABEL[d.type]})` : ""}`, kind: "rack", type: d.type };
-  for (const z of S.job.house.zones) for (const e of z.endpoints || []) if (e.id === id) {
-    const what = e.type === "display" ? (e.displayType === "projector" ? "projector" : `TV${e.size ? ` (${e.size}")` : ""}`)
-      : e.type === "speakers" ? `speakers (${SPK_LABEL[e.config || "stereo"] || e.config})` : e.type;
-    return { group: "In the rooms", short: `${z.name} ${e.type === "display" ? (e.displayType === "projector" ? "projector" : "TV") : e.type}`, label: `${z.name} — ${what}`, kind: e.type };
-  }
-  for (const c of sol.companions || []) if (c.id === id) {
-    const at = nodeInfo(c.serves);
-    const what = COMP_LABEL[c.type] || String(c.type || "adapter");
-    return { group: "Behind the TVs (baluns, decoders)", short: `${what} at ${at.short}`, label: `${what} at ${at.short}`, kind: "companion", type: c.type };
-  }
-  for (const d of sol.localDevices || []) if (d.id === id)
-    return { group: "In-room gear", short: `${zoneName(d.zone)} ${d.model || id}`, label: `${d.model || id} in ${zoneName(d.zone)}`, kind: "local" };
-  return { group: "Missing", short: id, label: `${id} (missing)`, kind: "missing" };
-}
+// connection ends in words — the editor reads the raw job it's editing
+const nodeInfo = id => describeNode(S.job, S.job.solutions[S.sol] || S.job.solutions[0], id);
 function nodeSel(cls, val) {
   const groups = new Map();
   for (const id of allNodes()) { const n = nodeInfo(id); (groups.get(n.group) ?? groups.set(n.group, []).get(n.group)).push([id, n.label]); }
-  if (val && !allNodes().includes(val)) groups.set("Missing", [[val, `${val} (missing)`]]);
+  if (val && !allNodes().includes(val)) groups.set("Missing", [[val, nodeInfo(val).label]]);
   return `<select class="${cls}">${[...groups].map(([g, list]) => `<optgroup label="${esc(g)}">${list.map(([id, l]) =>
     `<option value="${esc(id)}" ${id === val ? "selected" : ""}>${esc(l)}</option>`).join("")}</optgroup>`).join("")}</select>`;
 }
@@ -753,7 +722,7 @@ function suggestSignal(from, to) {
   const f = nodeInfo(from), t = nodeInfo(to);
   if (t.kind === "speakers") return "speaker";
   if (f.kind === "display" || f.kind === "local" && t.kind === "rack") return "audioReturn";
-  if (t.kind === "display" || t.kind === "companion" || f.kind === "companion") return "video";
+  if (t.kind === "display" || t.kind === "adapter" || f.kind === "adapter") return "video";
   if (t.type === "avbSwitch" || f.type === "avbSwitch") return "network";
   if (t.type === "audioInputModule" || f.type === "audioOutputModule") return "audio";
   return null;
@@ -814,11 +783,11 @@ function zonesHTML() {
     const spk = spkH && { ...spkH, ...(ov.endpoints || {})[spkH.id] };
     const tv = tvH && { ...tvH, ...(ov.endpoints || {})[tvH.id] };
     const zEff = { ...z, ...(ov.zones || {})[z.id] };
-    const sub = [spk && (spk.config || "stereo"), tv && `TV ${tv.size || "?"}"`].filter(Boolean).join(" · ") || "empty";
+    const sub = [spk && (SPEAKER_SETUP[spk.config || "stereo"] || spk.config), tv && `${tv.displayType === "projector" ? "Projector" : "TV"} ${tv.size || "?"}"`].filter(Boolean).join(" · ") || "empty";
     const open = S.openRows.has(z.id);
     return `<div class="row ${open ? "open" : ""}" data-zid="${esc(z.id)}">
       <div class="head" data-toggle="${esc(z.id)}"><span class="t">${esc(z.name)}</span>
-        ${zEff.scope !== "included" ? `<span class="badge${ovHas("zones", z.id, "scope") ? " ovb" : ""}">${esc(zEff.scope)}</span>` : ""}<span class="sub">${esc(sub)}</span></div>
+        ${zEff.scope !== "included" ? `<span class="badge${ovHas("zones", z.id, "scope") ? " ovb" : ""}">${esc(SCOPE_NAME[zEff.scope] || zEff.scope)}</span>` : ""}<span class="sub">${esc(sub)}</span></div>
       <div class="fields">
         ${field("Name", `<input class="zname" value="${esc(z.name)}">`)}
         ${fieldO("Scope", sel("zscope", ["included", "prewire", "future"], zEff.scope || "included", SCOPE_LABEL), "zones", z.id, "scope")}
@@ -830,8 +799,8 @@ function zonesHTML() {
         ${spk ? fieldO("Count", `<input class="spkcount" type="number" min="1" max="12" value="${esc(spk.count || 2)}">`, "endpoints", spkH.id, "count") : ""}
         ${spk ? fieldO("Status", sel("spkstatus", STATUSES, spk.status || "new", STATUS_LABEL), "endpoints", spkH.id, "status") : ""}
         <div class="sect">DISPLAY</div>
-        ${tv ? fieldO("Type", sel("tvtype", ["none", "tv", "projector"], tv.displayType || "tv", { none: "None", tv: "TV", projector: "Projector" }), "endpoints", tvH.id, "displayType")
-             : field("Type", sel("tvtype", ["none", "tv", "projector"], "none", { none: "None", tv: "TV", projector: "Projector" }))}
+        ${tv ? fieldO("Type", sel("tvtype", ["none", "tv", "projector"], tv.displayType || "tv", DISPLAY_NAME), "endpoints", tvH.id, "displayType")
+             : field("Type", sel("tvtype", ["none", "tv", "projector"], "none", DISPLAY_NAME))}
         ${tv ? fieldO("Brand", `<input class="tvbrand" value="${esc(tv.brand || "")}">`, "endpoints", tvH.id, "brand") : ""}
         ${tv ? fieldO("Size", `<input class="tvsize" type="number" min="24" max="220" value="${esc(tv.size || 65)}">`, "endpoints", tvH.id, "size") : ""}
         ${tv ? fieldO("Status", sel("tvstatus", STATUSES.slice(0, 2), tv.status || "new", STATUS_LABEL), "endpoints", tvH.id, "status") : ""}
@@ -953,7 +922,7 @@ function settingsHTML() {
     const io = d.inputs || {};
     return `<div class="row ${open ? "open" : ""}" data-cat="${esc(id)}">
       <div class="head" data-toggle="cat-${esc(id)}"><span class="t">${esc(d.brand)} ${esc(d.model)}</span>
-        <span class="sub">${esc(d.type)}${d.zones ? ` · ${esc(d.zones)}z` : ""}${d.verified === false ? " · ⚠unverified" : ""}</span></div>
+        <span class="sub">${esc(TYPE_NAME[d.type] || d.type)}${d.zones ? ` · ${esc(d.zones)} zones` : ""}${d.verified === false ? " · ⚠ unverified" : ""}</span></div>
       <div class="fields">
         ${field("Model", `<input class="catmodel" value="${esc(d.model)}">`)}
         ${field("Zones", numf("catzones", d.zones, "-"))}
@@ -1131,9 +1100,9 @@ function wirePanel(body) {
         while (S.job.house.zones.some(x => x.id === z.id)) z.id += "b";
         if (z.id !== oldId) for (const ep of z.endpoints) ep.id = ep.id.replace(oldId, z.id);
         const notes = [];
-        if (hints.matrix) notes.push("video: matrix feed");
+        if (hints.matrix) notes.push("TV fed from the rack");
         if (hints.local) {
-          notes.push("video: local source");
+          notes.push("TV fed by a source in the zone");
           S.job.solutions[S.sol].localDevices.push({ id: uid(z.id + "-src"), type: "source",
             sourceType: "appletv", model: "Apple TV", status: "new", zone: z.id, location: "at-display" });
         }

@@ -1168,6 +1168,75 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("router: a column-A source feeds a top-band TV without falling back", rt2.wires.find(w => w.from === "cablebox" && w.to === "patio-tv")?.cls === "zone-west");
 }
 
+/* ---------- zone hookup: a receiver feeds a TV + speakers in one choice (2026-09-27) ---------- */
+{
+  const H = await import("./hookup.js");
+  const { parseQuickZone } = await import("./quickadd.js");
+  const PAD = 2;
+  const inside = (x1, y1, x2, y2, o) => Math.min(x1, x2) < o.x + o.w - PAD && Math.max(x1, x2) > o.x + PAD && Math.min(y1, y2) < o.y + o.h - PAD && Math.max(y1, y2) > o.y + PAD;
+  const healthy = j => { const L = loadJob(j), v = validate(L.job, L.ix), p = place(L.job, L.ix), rt = route(L.job, L.ix, p);
+    const bodies = [...p.racks.flatMap(r => r.devices), ...p.chips, ...p.zones];
+    const through = rt.wires.some(w => w.pts && !w.insideCard && w.cls !== "local" && !/fallback/.test(w.cls) && w.pts.some((q, i) => i && bodies.some(o => inside(...w.pts[i - 1], ...q, o))));
+    return { errs: v.errors.map(e => e.code), warns: v.warnings.map(w => w.code), bad: rt.warnings.filter(w => /unrouted|fallback/.test(w.code)).length, through }; };
+  const j = structuredClone(fixtures.residence), sol = j.solutions[0];
+  const fam = j.house.zones.find(z => z.name === "Family Room");
+  const h0 = H.readHookup(j, sol, fam);
+  t("hookup: reads the residence family room (matrix → balun → TV, receiver → speakers)",
+    h0.video?.from === "axion8" && h0.video.run === "balun" && h0.speakers?.from === "mrx540" && !h0.ret);
+  // the user's case: the receiver feeds the TV too
+  H.setVideo(j, sol, fam, "mrx540");
+  const h1 = H.readHookup(j, sol, fam);
+  t("hookup: the receiver takes over the TV, reusing the balun", h1.video.from === "mrx540" && h1.video.run === "balun" && h1.video.via === h0.video.via &&
+    !sol.connections.some(c => c.from === "axion8" && c.to === h0.video.via));
+  let hl = healthy(j);
+  t("hookup: receiver → TV + speakers validates and routes clean", !hl.errs.length && !hl.bad && !hl.through, JSON.stringify(hl));
+  H.setVideo(j, sol, fam, "mrx540", "direct");
+  t("hookup: a direct HDMI run drops the balun and its wires", H.readHookup(j, sol, fam).video.run === "direct" &&
+    !sol.companions.some(c => c.id === h0.video.via) && !sol.connections.some(c => c.from === h0.video.via || c.to === h0.video.via));
+  H.setReturn(j, sol, fam, "mrx540");
+  t("hookup: TV audio back to the receiver", H.readHookup(j, sol, fam).ret?.to === "mrx540");
+  hl = healthy(j);
+  t("hookup: direct + audio return still validates and routes clean", !hl.errs.length && !hl.bad && !hl.through, JSON.stringify(hl));
+  H.setVideo(j, sol, fam, null);
+  t("hookup: disconnecting the TV removes its feed (and the validator says so)", !H.readHookup(j, sol, fam).video && healthy(j).errs.includes("orphan-endpoint"));
+  // amps get the next free outputs; no channel collisions
+  const kit = j.house.zones.find(z => z.name === "Kitchen");
+  const before = H.readHookup(j, sol, kit).speakers;
+  const fr = structuredClone(j), fs = fr.solutions[0];
+  const famF = fr.house.zones.find(z => z.name === "Family Room");
+  H.setSpeakers(fr, fs, famF, "mdx16");
+  const ch = H.readHookup(fr, fs, famF).speakers.channels;
+  t("hookup: moving speakers to an amp picks its next free outputs", ch === "13-14" && !validate(...Object.values(loadJob(fr))).errors.some(e => e.code === "ch-collision"), ch);
+  H.setSpeakers(j, sol, kit, "mdx16");
+  t("hookup: re-picking the same amp keeps the outputs", H.readHookup(j, sol, kit).speakers.channels === before.channels);
+  // an AV-over-IP switch defaults to an MXNet decoder
+  const e = structuredClone(fixtures.estate), es = e.solutions[0];
+  const ez = e.house.zones.find(z => (z.endpoints || []).some(x => x.type === "display"));
+  const sw = es.racks.flatMap(r => r.devices).find(d => d.type === "avSwitch").id;
+  H.setVideo(e, es, ez, sw);
+  t("hookup: a feed from the AV-over-IP switch arrives through an MXNet decoder", H.readHookup(e, es, ez).video.run === "dec");
+  // quick-add: "avr" wires a new zone end to end
+  const q = parseQuickZone("theater 7.1 85 sony avr");
+  t("quick-add: 'avr' asks for a receiver hookup", q.zone._hints.avr === true && q.chips.some(c => /AV receiver feeds the TV \+ speakers/.test(c.label)));
+  const j2 = structuredClone(fixtures.residence), s2 = j2.solutions[0];
+  const z = q.zone; delete z._hints; j2.house.zones.push(z);
+  const nDev = s2.racks.flatMap(r => r.devices).length;
+  H.autoHookup(j2, s2, z, { avr: true });
+  const h2 = H.readHookup(j2, s2, z);
+  t("quick-add: the busy MRX-540 is left alone — a new receiver is added for the theater",
+    s2.racks.flatMap(r => r.devices).length === nDev + 1 && h2.video.from === h2.speakers.from && h2.video.from !== "mrx540");
+  hl = healthy(j2);
+  t("quick-add: the avr-wired theater validates and routes clean", !hl.errs.length && !hl.bad && !hl.through, JSON.stringify(hl));
+  // pre-wire zones get pre-wire connections (no scope-mismatch warning)
+  const j3 = structuredClone(fixtures.residence), s3 = j3.solutions[0];
+  const pz = parseQuickZone("loft 5.1 65 avr prewire").zone; delete pz._hints; j3.house.zones.push(pz);
+  H.autoHookup(j3, s3, pz, { avr: true });
+  t("hookup: connections follow the zone's scope", !healthy(j3).warns.includes("scope-mismatch") && s3.connections.filter(c => c.to.startsWith(pz.id) || c.from.startsWith(pz.id)).every(c => c.scope === "prewire"));
+  // placeholder names split sensibly on the rack tile
+  const L2 = loadJob(j2), p2 = place(L2.job, L2.ix), svg2 = render(L2.job, L2.ix, p2, route(L2.job, L2.ix, p2));
+  t("render: a placeholder receiver name keeps its type whole on the tile", svg2.includes(">AV receiver</text>") && svg2.includes(">Theater</text>"));
+}
+
 /* ---------- one vocabulary: nothing a person reads shows a raw id (2026-09-27) ---------- */
 {
   const { describeNode, TYPE_NAME, SIGNAL_NAME, adapterName } = await import("./names.js");

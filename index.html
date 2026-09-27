@@ -211,6 +211,8 @@ import { loadJob, validate, advise, place, route, render, effectiveJob, autoLink
 import { importAny, mergeHouse } from "./app/importers.js";
 import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
+import { readHookup, setVideo, setSpeakers, setReturn, addRackDevice, autoHookup, nextFreeOutputs, outputsNeeded,
+         VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS } from "./app/hookup.js";
 import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME,
          signalName, describeNode, humanizeWireIds } from "./app/names.js";
 
@@ -796,7 +798,7 @@ function zonesHTML() {
         <div class="sect">SPEAKERS</div>
         ${spk ? fieldO("Config", sel("spkcfg", SPK_CONFIGS, spk.config || "stereo", SPK_LABEL), "endpoints", spkH.id, "config")
               : field("Config", sel("spkcfg", SPK_CONFIGS, "none", SPK_LABEL))}
-        ${spk ? fieldO("Count", `<input class="spkcount" type="number" min="1" max="12" value="${esc(spk.count || 2)}">`, "endpoints", spkH.id, "count") : ""}
+        ${spk && !/^(surround|soundbar)/.test(spk.config || "") ? fieldO("Count", `<input class="spkcount" type="number" min="1" max="12" value="${esc(spk.count || 2)}">`, "endpoints", spkH.id, "count") : ""}
         ${spk ? fieldO("Status", sel("spkstatus", STATUSES, spk.status || "new", STATUS_LABEL), "endpoints", spkH.id, "status") : ""}
         <div class="sect">DISPLAY</div>
         ${tv ? fieldO("Type", sel("tvtype", ["none", "tv", "projector"], tv.displayType || "tv", DISPLAY_NAME), "endpoints", tvH.id, "displayType")
@@ -805,11 +807,56 @@ function zonesHTML() {
         ${tv ? fieldO("Size", `<input class="tvsize" type="number" min="24" max="220" value="${esc(tv.size || 65)}">`, "endpoints", tvH.id, "size") : ""}
         ${tv ? fieldO("Status", sel("tvstatus", STATUSES.slice(0, 2), tv.status || "new", STATUS_LABEL), "endpoints", tvH.id, "status") : ""}
         ${tv ? field("Confirm", `<input type="checkbox" class="tvconfirm" ${tvH.confirm?.length ? "checked" : ""}> <span class="mini">size needs confirmation</span>`) : ""}
+        ${hookupHTML(z, sol, multi)}
         <div style="text-align:right"><button class="del zdel">delete zone</button></div>
       </div>
     </div>`;
   }).join("");
   return escope + qa + rows + `<button class="addbtn" id="addZone">＋ Add zone</button>`;
+}
+
+/* HOOKUP: what feeds this zone — the TV's video (and how it gets there), the
+   speakers' drive, the TV's audio back. Writes ordinary connections for the
+   active solution (app/hookup.js); the GEAR tab's list shows the result. */
+function hookupHTML(z, sol, multi) {
+  const h = readHookup(S.job, sol, z);
+  if (!h.tv && !h.spk) return "";
+  const devs = sol.racks.flatMap(r => r.devices);
+  const nm = id => describeNode(S.job, sol, id).label;
+  const opt = (v, label, cur) => `<option value="${esc(v)}" ${v === cur ? "selected" : ""}>${esc(label)}</option>`;
+  const devOpts = (types, cur) => devs.filter(d => types.includes(d.type))
+    .sort((a, b) => types.indexOf(a.type) - types.indexOf(b.type)).map(d => opt(d.id, nm(d.id), cur)).join("");
+  const locals = (sol.localDevices || []).filter(d => d.zone === z.id);
+  const rows = [];
+  const byDev = id => devs.find(d => d.id === id);
+  if (h.tv) {
+    const cur = h.video?.from || "";
+    rows.push(field("TV video", `<select class="hvfrom">${opt("", "— not connected —", cur)}
+      <optgroup label="In the rack">${devOpts(VIDEO_FROM, cur)}</optgroup>
+      ${locals.length ? `<optgroup label="In this zone">${locals.map(d => opt(d.id, nm(d.id), cur)).join("")}</optgroup>` : ""}
+      <optgroup label="Add">${opt("__new_avr", "＋ New AV receiver…", "")}</optgroup></select>`));
+    if (byDev(cur)) rows.push(field("Run to TV", `<select class="hvrun">${Object.entries(RUNS).map(([k, l]) => opt(k, l, h.video.run)).join("")}</select>`));
+  }
+  if (h.spk) {
+    const cur = h.speakers?.from || "";
+    rows.push(field("Speakers", `<select class="hsfrom">${opt("", "— not connected —", cur)}
+      <optgroup label="In the rack">${devOpts(SPEAKERS_FROM, cur)}</optgroup>
+      <optgroup label="Add">${opt("__new_avr", "＋ New AV receiver…", "")}${opt("__new_amp", "＋ New multi-zone amp…", "")}</optgroup></select>`));
+    if (byDev(cur)?.type === "amp")
+      rows.push(field("Amp outputs", `<input class="hsch" value="${esc(h.speakers.channels || "")}" placeholder="e.g. ${esc(nextFreeOutputs(sol, cur, outputsNeeded(h.spk) || 2, h.spk.id))}">`));
+  }
+  if (h.tv) {
+    const cur = h.ret?.to || "";
+    rows.push(field("TV audio back", `<select class="hret">${opt("", "— none —", cur)}${devOpts(RETURN_TO, cur)}</select>`));
+  }
+  // one receiver for the whole zone is the common case — offer to finish it
+  const vDev = byDev(h.video?.from), sDev = byDev(h.speakers?.from);
+  let nudge = "";
+  if (h.tv && sDev?.type === "avr" && h.video?.from !== sDev.id)
+    nudge = `<button class="addbtn hsame" data-what="video" data-dev="${esc(sDev.id)}">Feed the TV from ${esc(sDev.model || sDev.id)} too</button>`;
+  else if (h.spk && vDev?.type === "avr" && h.speakers?.from !== vDev.id)
+    nudge = `<button class="addbtn hsame" data-what="speakers" data-dev="${esc(vDev.id)}">Drive the speakers from ${esc(vDev.model || vDev.id)} too</button>`;
+  return `<div class="sect">HOOKUP <span class="mini">what feeds this zone${multi ? ` · ${esc(sol.name)}` : ""}</span></div>${rows.join("")}${nudge}`;
 }
 
 function gearHTML() {
@@ -1080,6 +1127,29 @@ function wirePanel(body) {
     refresh();
   };
 
+  /* zone hookup */
+  const hook = (el, fn) => { const z = zoneOf(el); if (!z) return; fn(z, S.job.solutions[S.sol]); refresh(); };
+  const newDev = (sol, v) => {
+    const type = v === "__new_amp" ? "amp" : "avr";
+    const model = prompt(type === "amp" ? "Amp model:" : "Receiver model:", type === "amp" ? "Multi-zone amp" : "AV receiver");
+    return model ? addRackDevice(S.job, sol, type, model) : null;
+  };
+  body.querySelectorAll(".hvfrom").forEach(el => el.onchange = () => hook(el, (z, sol) => {
+    let v = el.value; if (v.startsWith("__new_")) { v = newDev(sol, v); if (!v) return; }
+    setVideo(S.job, sol, z, v || null);
+  }));
+  body.querySelectorAll(".hvrun").forEach(el => el.onchange = () => hook(el, (z, sol) =>
+    setVideo(S.job, sol, z, readHookup(S.job, sol, z).video?.from, el.value)));
+  body.querySelectorAll(".hsfrom").forEach(el => el.onchange = () => hook(el, (z, sol) => {
+    let v = el.value; if (v.startsWith("__new_")) { v = newDev(sol, v); if (!v) return; }
+    setSpeakers(S.job, sol, z, v || null);
+  }));
+  body.querySelectorAll(".hsch").forEach(el => el.onchange = () => hook(el, (z, sol) =>
+    setSpeakers(S.job, sol, z, readHookup(S.job, sol, z).speakers?.from, el.value.trim())));
+  body.querySelectorAll(".hret").forEach(el => el.onchange = () => hook(el, (z, sol) => setReturn(S.job, sol, z, el.value || null)));
+  body.querySelectorAll(".hsame").forEach(el => el.onclick = () => hook(el, (z, sol) =>
+    el.dataset.what === "video" ? setVideo(S.job, sol, z, el.dataset.dev) : setSpeakers(S.job, sol, z, el.dataset.dev)));
+
   /* quick-add: shorthand / dictation with live parse-preview chips */
   const qaInput = body.querySelector("#qaInput");
   if (qaInput) {
@@ -1100,7 +1170,6 @@ function wirePanel(body) {
         while (S.job.house.zones.some(x => x.id === z.id)) z.id += "b";
         if (z.id !== oldId) for (const ep of z.endpoints) ep.id = ep.id.replace(oldId, z.id);
         const notes = [];
-        if (hints.matrix) notes.push("TV fed from the rack");
         if (hints.local) {
           notes.push("TV fed by a source in the zone");
           S.job.solutions[S.sol].localDevices.push({ id: uid(z.id + "-src"), type: "source",
@@ -1108,6 +1177,7 @@ function wirePanel(body) {
         }
         if (notes.length) z.note = notes.join(" · ");
         S.job.house.zones.push(z);
+        autoHookup(S.job, S.job.solutions[S.sol], z, hints);   // "matrix" / "avr" wire it up now
         S.openRows.add(z.id);
       }
       qaInput.value = "";

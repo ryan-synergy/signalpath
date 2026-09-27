@@ -2041,6 +2041,14 @@ export function wireD(w) {
 const LEGEND_LABELS = { video: SIGNAL_SHORT.video, audio: SIGNAL_SHORT.audio, audioReturn: SIGNAL_SHORT.audioReturn, network: SIGNAL_SHORT.network, prewire: SIGNAL_SHORT.prewire };
 const fmtDate = iso => { const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${+m[2]}/${+m[3]}/${m[1].slice(2)}` : esc(iso); };
 
+// a tile prints brand over model; a placeholder name ("AV receiver — Theater")
+// splits at its dash instead, so the generic type stays whole on top
+const tileName = model => {
+  const m = String(model || "");
+  const i = m.indexOf(" — ");
+  return i > 0 ? [m.slice(0, i), m.slice(i + 3)] : m.split(" ");
+};
+
 export function render(job, ix, P, rt, opts = {}) {
   const bw = !!opts.grayscale;   // B&W-safe mode: dashes carry signal identity
   const s = ix.solutions[opts.solution ?? 0];
@@ -2089,7 +2097,7 @@ export function render(job, ix, P, rt, opts = {}) {
         push(`<text x="${d.x + d.w / 2}" y="${d.y + d.h + 15}" text-anchor="middle" font-size="12" fill="#333">${esc(d.model)}</text>`);
       } else if (d.kind === "amp") {
         push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="3" fill="#1c1c1c" stroke="#0d0d0d"/>`);
-        const [brand, ...restName] = String(d.model || "").split(" ");
+        const [brand, ...restName] = tileName(d.model);
         push(`<text x="${d.x + d.w / 2}" y="${d.y + 16}" text-anchor="middle" font-size="11" fill="#ddd">${esc(brand)}</text>`);
         // channel strip: used (blue), reserved (gray), spare (outline)
         const zones = Math.max(1, Math.floor(+dev.zones) || 8);
@@ -2120,7 +2128,7 @@ export function render(job, ix, P, rt, opts = {}) {
         push(`<circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 12}" r="2.2" fill="#3fbf5a"/>`);
       } else {
         push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="3" fill="#262626" stroke="#101010"/>`);
-        const [brand, ...restName] = String(d.model || "").split(" ");
+        const [brand, ...restName] = tileName(d.model);
         push(`<text x="${d.x + d.w / 2}" y="${d.y + 17}" text-anchor="middle" font-size="11" fill="#ddd">${esc(brand)}</text>`);
         // faceplate identity cues (squint-test assists, never the identifier)
         const my = d.y + d.h / 2 + 3;

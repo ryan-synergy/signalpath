@@ -37,7 +37,7 @@ export function parseQuickZone(text) {
   t = t.replace(NUMBERED_ROOM, (m, w, n) => `${w} #${n}`);
   const chips = [];
   const zone = { scope: "included" };
-  let spk = null, tv = null, ofe = false, local = false, matrix = false;
+  let spk = null, tv = null, ofe = false, local = false, matrix = false, avr = false;
 
   const eat = re => { const m = t.match(re); if (m) t = t.replace(re, " "); return m; };
 
@@ -46,6 +46,8 @@ export function parseQuickZone(text) {
   if (eat(/\bofe\b|\bexisting\b|\bowner\b(?!'s|s\b)/)) ofe = true;   // "owner's suite" is a room, not OFE
   if (eat(/\blocal\b/)) local = true;
   if (eat(/\bmatrix\b|\bdistributed\b/)) matrix = true;
+  // "avr" / "receiver": one AV receiver drives this zone's TV and speakers
+  if (eat(/\bav\s?rs?\b|\breceiver\b/)) avr = true;
 
   // room remote: "savant remote", "atv remote", "josh remote", "factory remote"
   const rm = eat(/\b(savant|josh|apple\s*tv|appletv|atv|apple|factory|oem)\s+remote\b/);
@@ -114,7 +116,8 @@ export function parseQuickZone(text) {
   }
   if (local && tv) chips.push({ kind: "hint", label: "TV fed by a source in the zone" });
   if (matrix && tv) chips.push({ kind: "hint", label: "TV fed from the rack" });
-  zone._hints = { local, matrix };
+  if (avr) chips.push({ kind: "hint", label: tv && spk ? "AV receiver feeds the TV + speakers" : tv ? "AV receiver feeds the TV" : "AV receiver feeds the speakers" });
+  zone._hints = { local, matrix, avr };
   return { zone, chips, empty: !zone.endpoints.length };
 }
 

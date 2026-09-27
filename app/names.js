@@ -52,7 +52,7 @@ export function describeNode(job, sol, id) {
   for (const r of sol?.racks || []) for (const d of r.devices || []) if (d.id === id) {
     const t = TYPE_NAME[d.type];
     return { group: "In the rack", kind: "rack", type: d.type, short: d.model || id,
-             label: `${d.model || id}${t && d.type !== "source" ? ` (${t})` : ""}` };
+             label: `${d.model || id}${t && d.type !== "source" && !String(d.model || "").toLowerCase().includes(t.toLowerCase()) ? ` (${t})` : ""}` };
   }
   for (const z of zones) for (const e of z.endpoints || []) if (e.id === id) {
     if (e.type === "display") {

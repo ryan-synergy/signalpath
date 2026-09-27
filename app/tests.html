@@ -1325,6 +1325,30 @@ for (const [name, raw] of Object.entries(fixtures)) {
     ["video", "audio", "audioReturn", "network"].every(k => SIGNAL_NAME[k].startsWith(legend.match(new RegExp(`>(${SIGNAL_NAME[k].split(" (")[0]})</text>`))?.[1] || "\u0000")));
 }
 
+/* ---------- a linked box is called by its product's name (2026-09-27) ---------- */
+{
+  const { productName, productSku } = await import("./names.js");
+  const C = await (await fetch("./catalog.json")).json();
+  t("product name: part-number lists move out of the name", productName(C.devices["savant-avb-input-module"]) === "Savant Analog Audio Input Module" &&
+    productSku(C.devices["savant-avb-input-module"]) === "AIM-0A16-05 / AIM-BAL16-01");
+  t("product name: descriptive parentheticals stay", productName(C.devices["sonos-beam-gen2"]) === "Sonos Beam (Gen 2)" && productName(C.devices["sonos-connect"]) === "Sonos Connect (legacy)");
+  t("product name: no doubled brand", productName(C.devices["savant-pav-sms2001"]) === "Savant Music Server 2");
+  t("product name: plain models are brand + model", productName(C.devices["anthem-mrx-540-8k"]) === "Anthem MRX 540 8K");
+  t("product name: every catalog product has a clean name", Object.values(C.devices).every(c => { const n = productName(c); return n && !/\(\s*\)|\s{2}/.test(n); }));
+  // tiles: a long product name is squeezed inside its tile, a short one is untouched
+  const j = structuredClone(fixtures.residence);
+  const dev = j.solutions[0].racks[0].devices.find(d => d.id === "sav-in");
+  dev.model = productName(C.devices["savant-avb-input-module"]);
+  const L = loadJob(j), p = place(L.job, L.ix), svg = render(L.job, L.ix, p, route(L.job, L.ix, p));
+  const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+  const tile = doc.querySelector('[data-device="sav-in"]'), tl = p.racks.flatMap(r => r.devices).find(d => d.id === "sav-in");
+  const squeezed = [...tile.querySelectorAll("text")].find(x => x.textContent === "Analog Audio Input Module");
+  t("render: a long name is squeezed to fit inside its tile", !!squeezed && +squeezed.getAttribute("textLength") <= tl.w - 40);
+  t("render: a two-word brand stays whole on the tile", [...doc.querySelectorAll('[data-device="axion8"] text')].some(x => x.textContent === "AVPro Edge") &&
+    [...doc.querySelectorAll('[data-device="axion8"] text')].some(x => x.textContent === "Axion 8"));
+  t("render: a short name is drawn as-is", ![...doc.querySelectorAll('[data-device="mrx540"] text')].some(x => x.hasAttribute("textLength")));
+}
+
 /* ---------- harness style + zone-feed rerouting (2026-09-27) ---------- */
 {
   const PAD = 2;

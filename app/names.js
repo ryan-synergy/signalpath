@@ -84,3 +84,19 @@ export function connectionName(job, sol, from, to) {
 export function humanizeWireIds(job, sol, text) {
   return String(text ?? "").replace(/([A-Za-z0-9_.:-]+)→([A-Za-z0-9_.:-]+)/g, (m, f, t) => connectionName(job, sol, f, t));
 }
+
+/* A catalog product's name — what a linked box is called on the drawing, in
+   the editor and on paper. Brand + model, with a trailing part-number list
+   ("(AIM-0A16-05 / AIM-BAL16-01)") moved out to productSku; descriptive
+   parentheticals ("(Gen 2)", "(legacy)") stay. No doubled brand
+   ("Savant Savant Music Server 2"). */
+const SKU_PAREN = /\s*\(([^)]*\b[A-Z0-9]{2,}-[A-Z0-9][A-Z0-9-]*[^)]*)\)\s*$/;
+export function productName(c) {
+  if (!c) return "";
+  const model = String(c.model || "").replace(SKU_PAREN, "").trim();
+  const brand = String(c.brand || "").trim();
+  return brand && !model.toLowerCase().startsWith(brand.toLowerCase()) ? `${brand} ${model}` : model;
+}
+export function productSku(c) {
+  return String(c?.model || "").match(SKU_PAREN)?.[1] || "";
+}

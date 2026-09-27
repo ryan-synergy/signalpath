@@ -54,6 +54,8 @@
   .row.open .fields { display: block; }
   .cgrp { font-size: 11.5px; color: #555; margin: 12px 2px 5px; }
   .cgrp b { color: #222; }
+  .drift { background: #fff7e6; border: 1px solid #f0d49a; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; font-size: 12px; color: #6b4a00; }
+  .drift .addbtn { margin-top: 6px; }
   [data-ci] > .head { padding: 6px 10px; }
   [data-ci] > .head .t { font-weight: 500; font-size: 12.5px; }
   .fields .f { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
@@ -214,7 +216,7 @@ import { parseQuick } from "./app/quickadd.js";
 import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, nextFreeOutputs, outputsNeeded,
          VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS } from "./app/hookup.js";
 import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME,
-         signalName, describeNode, humanizeWireIds } from "./app/names.js";
+         signalName, describeNode, humanizeWireIds, productName, productSku } from "./app/names.js";
 
 /* ============ IndexedDB jobs store ============ */
 const DB = await new Promise((res, rej) => {
@@ -915,17 +917,25 @@ function gearHTML() {
   const catSel = d => `<select class="dcat"><option value="">— not linked —</option>${catDevs
     .slice().sort((a, b) => ((b[1].type === d.type) - (a[1].type === d.type)) ||
       String((a[1].brand || "") + a[1].model).localeCompare(String((b[1].brand || "") + b[1].model)))
-    .map(([id, c]) => `<option value="${esc(id)}" ${d.catalogRef === id ? "selected" : ""}>${esc([c.brand, c.model].filter(Boolean).join(" "))}${c.verified === false ? " ⚠" : ""}${c.type === d.type ? "" : " · " + esc(DEV_TYPE_LABEL[c.type] || c.type)}</option>`).join("")}</select>`;
-  const racks = sol.racks.map(r => `
+    .map(([id, c]) => `<option value="${esc(id)}" ${d.catalogRef === id ? "selected" : ""}>${esc(productName(c))}${productSku(c) ? " · " + esc(productSku(c)) : ""}${c.verified === false ? " ⚠" : ""}${c.type === d.type ? "" : " · " + esc(DEV_TYPE_LABEL[c.type] || c.type)}</option>`).join("")}</select>`;
+  // a linked box is called by its product's name — the drawing, this list and
+  // the dropdown all read the same words; flag any that drifted
+  const catOf = d => d.catalogRef ? effectiveCatalog().devices?.[d.catalogRef] : null;
+  const drifted = d => { const c = catOf(d); return c && (d.model || "") !== productName(c) ? productName(c) : null; };
+  const nDrift = sol.racks.flatMap(r => r.devices).filter(drifted).length;
+  const driftBar = nDrift ? `<div class="drift"><span>${nDrift} name${nDrift > 1 ? "s don't" : " doesn't"} match the catalog product ${nDrift > 1 ? "they're" : "it's"} linked to.</span>
+    <button class="addbtn" id="matchAll">Use the catalog names</button></div>` : "";
+  const racks = driftBar + sol.racks.map(r => `
     <div class="sect">${esc(String(r.name || r.id).toUpperCase())}</div>
     ${r.devices.map(d => {
       const open = S.openRows.has(d.id);
       return `<div class="row ${open ? "open" : ""}" data-did="${esc(d.id)}" data-rid="${esc(r.id)}">
-      <div class="head" data-toggle="${esc(d.id)}"><span class="t">${esc(d.model || d.id)}</span><span class="sub">${esc(DEV_TYPE_LABEL[d.type] || d.type)}${d.zones ? ` · ${esc(d.zones)} zones` : ""}</span></div>
+      <div class="head" data-toggle="${esc(d.id)}"><span class="t">${esc(d.model || d.id)}${drifted(d) ? ' <span class="mini" style="color:#b26a00" title="Name differs from its catalog product">●</span>' : ""}</span><span class="sub">${esc(DEV_TYPE_LABEL[d.type] || d.type)}${d.zones ? ` · ${esc(d.zones)} zones` : ""}</span></div>
       <div class="fields">
-        ${field("Model", `<input class="dmodel" value="${esc(d.model || "")}">`)}
+        ${field("Product", catSel(d))}
+        ${field("Name", `<input class="dmodel" value="${esc(d.model || "")}" title="What the drawing and paperwork call this box — follows the product you pick">`)}
+        ${drifted(d) ? `<div class="mini" style="margin:-2px 0 6px 80px;color:#8a5a00">The drawing says “${esc(d.model || "")}”, the product is “${esc(drifted(d))}”. <a href="#" class="dusecat">Use “${esc(drifted(d))}”</a></div>` : ""}
         ${field("Type", sel("dtype", DEV_TYPES, d.type, { ...DEV_TYPE_LABEL, source: "Source (Apple TV, cable box, streamer…)" }))}
-        ${field("Catalog", catSel(d))}
         ${d.type === "amp" ? field("Zones", `<input class="dzones" type="number" min="1" max="32" value="${esc(d.zones || 8)}">`) : ""}
         ${field("Status", sel("dstatus", STATUSES.slice(0, 2), d.status || "new", STATUS_LABEL))}
         <div style="text-align:right"><button class="del ddel">delete device</button></div>
@@ -1284,10 +1294,23 @@ function wirePanel(body) {
     d.catalogRef = el.value;
     const c = effectiveCatalog().devices[el.value];
     if (!c) return;
-    if (!d.model || d.model === "New Device") d.model = [c.brand, c.model].filter(Boolean).join(" ");
+    d.model = productName(c);   // the box is called what was picked — drawing, list and dropdown agree
     if (c.type && d.type !== c.type) d.type = c.type;   // the catalog knows what this box is
     if (c.zones && c.type === "amp") d.zones = c.zones;
   });
+  body.querySelectorAll(".dusecat").forEach(el => el.onclick = ev => {
+    ev.preventDefault();
+    const { d } = devOf(el); const c = d && effectiveCatalog().devices?.[d.catalogRef];
+    if (c) { d.model = productName(c); refresh(); }
+  });
+  const matchAll = body.querySelector("#matchAll");
+  if (matchAll) matchAll.onclick = () => {
+    for (const d of S.job.solutions[S.sol].racks.flatMap(r => r.devices)) {
+      const c = d.catalogRef && effectiveCatalog().devices?.[d.catalogRef];
+      if (c) d.model = productName(c);
+    }
+    refresh();
+  };
   on(".dtype", el => { const { d } = devOf(el); if (d) { d.type = el.value; if (el.value === "amp" && !d.zones) d.zones = 8; } });
   on(".dzones", el => { const { d } = devOf(el); if (d) d.zones = +el.value; });
   on(".dstatus", el => { const { d } = devOf(el); if (d) d.status = el.value; });

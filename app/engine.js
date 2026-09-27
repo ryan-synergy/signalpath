@@ -2041,12 +2041,26 @@ export function wireD(w) {
 const LEGEND_LABELS = { video: SIGNAL_SHORT.video, audio: SIGNAL_SHORT.audio, audioReturn: SIGNAL_SHORT.audioReturn, network: SIGNAL_SHORT.network, prewire: SIGNAL_SHORT.prewire };
 const fmtDate = iso => { const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${+m[2]}/${+m[3]}/${m[1].slice(2)}` : esc(iso); };
 
+// a label that must stay inside its tile: past the width it's squeezed to fit
+// (textLength) instead of spilling over the tile edge or a neighbor
+const fitText = (x, y, text, size, fill, maxW) => {
+  const t = String(text ?? "");
+  const est = t.length * size * 0.56;
+  const fit = est > maxW ? ` textLength="${Math.round(maxW)}" lengthAdjust="spacingAndGlyphs"` : "";
+  return `<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}" fill="${fill}"${fit}>${esc(t)}</text>`;
+};
 // a tile prints brand over model; a placeholder name ("AV receiver — Theater")
 // splits at its dash instead, so the generic type stays whole on top
-const tileName = model => {
+// A known brand (from the job's locked catalog entry, or a multi-word maker)
+// stays whole: "AVPro Edge" over "AC-MX-88", never "AVPro" over "Edge AC-MX-88".
+const MULTIWORD_BRANDS = ["AVPro Edge"];
+const tileName = (model, brand) => {
   const m = String(model || "");
   const i = m.indexOf(" — ");
-  return i > 0 ? [m.slice(0, i), m.slice(i + 3)] : m.split(" ");
+  if (i > 0) return [m.slice(0, i), m.slice(i + 3)];
+  for (const b of [brand, ...MULTIWORD_BRANDS].filter(Boolean))
+    if (m.toLowerCase().startsWith(b.toLowerCase() + " ")) return [m.slice(0, b.length), m.slice(b.length + 1)];
+  return m.split(" ");
 };
 
 export function render(job, ix, P, rt, opts = {}) {
@@ -2094,11 +2108,11 @@ export function render(job, ix, P, rt, opts = {}) {
         push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="${rx}" fill="#1e1e1e"/>`);
         push(`<circle cx="${d.x + 9}" cy="${d.y + d.h / 2}" r="2.3" fill="#3fbf5a"/>`);
         push(faceGlyph(dev, d.x + d.w - 18, d.y + d.h / 2));
-        push(`<text x="${d.x + d.w / 2}" y="${d.y + d.h + 15}" text-anchor="middle" font-size="12" fill="#333">${esc(d.model)}</text>`);
+        push(fitText(d.x + d.w / 2, d.y + d.h + 15, d.model, 12, "#333", d.w + 36));
       } else if (d.kind === "amp") {
         push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="3" fill="#1c1c1c" stroke="#0d0d0d"/>`);
-        const [brand, ...restName] = tileName(d.model);
-        push(`<text x="${d.x + d.w / 2}" y="${d.y + 16}" text-anchor="middle" font-size="11" fill="#ddd">${esc(brand)}</text>`);
+        const [brand, ...restName] = tileName(d.model, job.job?.catalogSnapshot?.devices?.[dev.catalogRef]?.brand);
+        push(fitText(d.x + d.w / 2, d.y + 16, brand, 11, "#ddd", d.w - 12));
         // channel strip: used (blue), reserved (gray), spare (outline)
         const zones = Math.max(1, Math.floor(+dev.zones) || 8);
         const feeds = (sol.connections || []).filter(c => c.from === d.id && c.signal === "speaker");
@@ -2124,12 +2138,12 @@ export function render(job, ix, P, rt, opts = {}) {
                               `<rect x="${x}" y="${d.y + 26}" width="7" height="11" fill="none" stroke="#666"/>`);
           push(`<text x="${x + 3.5}" y="${d.y + 48}" text-anchor="middle" font-size="8" fill="#9aa">${k}</text>`);
         }
-        push(`<text x="${d.x + d.w / 2}" y="${d.y + d.h - 10}" text-anchor="middle" font-size="11" fill="#eee">${esc(restName.join(" ") || d.model)}</text>`);
+        push(fitText(d.x + d.w / 2, d.y + d.h - 10, restName.join(" ") || d.model, 11, "#eee", d.w - 40));   // clear of the status light
         push(`<circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 12}" r="2.2" fill="#3fbf5a"/>`);
       } else {
         push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="3" fill="#262626" stroke="#101010"/>`);
-        const [brand, ...restName] = tileName(d.model);
-        push(`<text x="${d.x + d.w / 2}" y="${d.y + 17}" text-anchor="middle" font-size="11" fill="#ddd">${esc(brand)}</text>`);
+        const [brand, ...restName] = tileName(d.model, job.job?.catalogSnapshot?.devices?.[dev.catalogRef]?.brand);
+        push(fitText(d.x + d.w / 2, d.y + 17, brand, 11, "#ddd", d.w - 12));
         // faceplate identity cues (squint-test assists, never the identifier)
         const my = d.y + d.h / 2 + 3;
         if (dev.type === "avr") {
@@ -2154,7 +2168,7 @@ export function render(job, ix, P, rt, opts = {}) {
           push(`<line x1="${ax}" y1="${my}" x2="${ax + 9}" y2="${my}" stroke="#8f8f8f" stroke-width="1.1"/>`);
           push(`<path d="M${ax + 9} ${my}l-3.2 -2.4v4.8z" fill="#8f8f8f"/>`);
         }
-        push(`<text x="${d.x + d.w / 2}" y="${d.y + d.h - 10}" text-anchor="middle" font-size="10.5" fill="#eee">${esc(restName.join(" ") || "")}</text>`);
+        push(fitText(d.x + d.w / 2, d.y + d.h - 10, restName.join(" "), 10.5, "#eee", d.w - 40));   // clear of the status light
         push(`<circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 10}" r="2.2" fill="#3fbf5a"/>`);
       }
       push(`</g>`);

@@ -84,6 +84,8 @@ Render also bakes the **interactivity contract** (§7): every wire gets a 12 px 
 
 Single file, no framework. Dark top bar: jobs dropdown (+ shipped sample fixtures), solution switcher with duplicate-as-new, stage selector, rules chip, hide-network / harness / B/W checkboxes (harness is per-job: `job.job.harnessStyle`), Import/Export/Print. Left panel: collapsible ZONES / GEAR / JOB / SETTINGS tabs. Right: the SVG canvas.
 
+**Words on screen, ids in the file.** Stored values stay machine words (`videoMatrix`, `audioReturn`, `surround-5.1`, node ids) because the engine, fixtures, importers and tests read them; every dropdown maps them through a label table (`DEV_TYPE_LABEL`, `SIGNAL_LABEL`, `SPK_LABEL`, `STATUS_LABEL`, `SCOPE_LABEL`, …) via `sel(cls, values, current, labels)`. Connection ends go through `nodeInfo(id)` → `{group, label, kind}` ("Anthem MRX-540 (AV receiver)", "Family Room — TV (75\")", "Video decoder at Office TV", "Apple TV in Patio"), rendered by `nodeSel` as optgroups. Connections list as collapsed sentences grouped by source; `suggestSignal(from, to)` re-guesses the signal whenever an end changes. The user's complaint that drove it: raw ids in the pickers made an AVR→TV hookup feel random. Editors are for people; keep the vocabulary of the file out of them.
+
 The core loop is brutally simple:
 
 ```js

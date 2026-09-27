@@ -52,6 +52,10 @@
   .row > .head .sub { font-size: 11px; color: #777; }
   .row .fields { border-top: 1px solid var(--line); padding: 9px 10px; display: none; }
   .row.open .fields { display: block; }
+  .cgrp { font-size: 11.5px; color: #555; margin: 12px 2px 5px; }
+  .cgrp b { color: #222; }
+  [data-ci] > .head { padding: 6px 10px; }
+  [data-ci] > .head .t { font-weight: 500; font-size: 12.5px; }
   .fields .f { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
   .fields label { font-size: 11px; color: #666; width: 74px; flex: 0 0 auto; }
   .fields input, .fields select { font: inherit; font-size: 12.5px; padding: 4px 6px; border: 1px solid var(--line);
@@ -667,7 +671,7 @@ $("#canvas").addEventListener("click", e => {
     applySel();
     const p = $("#canvas svg").querySelector(`path.wire[data-wire="${CSS.escape(selWire)}"]`);
     showTip(e.clientX, e.clientY,
-      `<b>${esc(nodeName(p.dataset.from))}</b> → <b>${esc(nodeName(p.dataset.to))}</b> · ${esc(p.dataset.signal)}${connOf(selWire, p.dataset.signal)?.routeHint ? ' · <span class="mini">custom route</span>' : ""}${ids.length > 1 ? ` <span class="mini">(${idx + 2 > ids.length ? 1 : idx + 2}/${ids.length} here — tap to cycle)</span>` : ""}` +
+      `<b>${esc(nodeName(p.dataset.from))}</b> → <b>${esc(nodeName(p.dataset.to))}</b> · ${esc(signalName(p.dataset.signal))}${connOf(selWire, p.dataset.signal)?.routeHint ? ' · <span class="mini">custom route</span>' : ""}${ids.length > 1 ? ` <span class="mini">(${idx + 2 > ids.length ? 1 : idx + 2}/${ids.length} here — tap to cycle)</span>` : ""}` +
       `<div id="rrGo" class="altrow">⟲ Reroute…</div>`);
     return;
   }
@@ -695,8 +699,65 @@ const STATUSES = ["new", "ofe", "prewire"];
 const DEV_TYPES = ["source", "avr", "amp", "videoMatrix", "avSwitch", "avbSwitch", "audioInputModule", "audioOutputModule", "controlBox", "splitter", "host"];
 const SIGNALS = ["video", "audio", "speaker", "network", "audioReturn"];
 
+/* plain-English labels: the stored values stay machine words (files, tests and
+   the engine read them); every dropdown shows these instead */
+const DEV_TYPE_LABEL = { source: "Source", avr: "AV receiver", amp: "Multi-zone amp", videoMatrix: "HDMI matrix",
+  avSwitch: "Video-over-IP switch", avbSwitch: "AVB / network switch", audioInputModule: "Audio input module", audioOutputModule: "Audio output module",
+  controlBox: "Control processor", splitter: "HDMI splitter", host: "Control host" };
+const SIGNAL_LABEL = { video: "Video (HDMI)", audio: "Audio (line level)", speaker: "Speaker wire", network: "Network (Cat6)", audioReturn: "Audio back from the room (ARC / optical)" };
+const SCOPE_LABEL = { included: "Included", prewire: "Pre-wire only", future: "Future" };
+const STATUS_LABEL = { new: "New", ofe: "Owner-furnished (OFE)", prewire: "Pre-wire only" };
+const SPK_LABEL = { none: "None", mono: "Mono (1 speaker)", stereo: "Stereo pair", "2.1": "2.1 (pair + sub)", "surround-5.1": "5.1 surround", "surround-7.1": "7.1 surround",
+  soundbar: "Soundbar", "soundbar-sub": "Soundbar + sub", landscape: "Landscape (in-ground)" };
+const REMOTE_LABEL = { none: "None", savant: "Savant remote", appletv: "Apple TV remote", josh: "Josh.ai", factory: "Factory remote" };
+const COMP_LABEL = { balun: "HDBaseT receiver", enc: "Video encoder", dec: "Video decoder" };
+const PLATFORM_LABEL = { "": "—", savant: "Savant", josh: "Josh.ai", control4: "Control4" };
+const signalName = sig => SIGNAL_LABEL[sig] || sig;
+
 function field(label, inner) { return `<div class="f"><label>${label}</label>${inner}</div>`; }
-const sel = (cls, opts, val) => `<select class="${cls}">${opts.map(o => `<option ${o === val ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+const sel = (cls, opts, val, labels = {}) => `<select class="${cls}">${opts.map(o =>
+  `<option value="${esc(o)}" ${o === val ? "selected" : ""}>${esc(labels[o] ?? o)}</option>`).join("")}</select>`;
+
+/* what a connection endpoint IS, in words: "Anthem MRX-540 (AV receiver)",
+   "Family Room TV", "Video decoder at Family Room TV" — read from the raw
+   job (the panel edits S.job, and ids may not have rendered yet) */
+function nodeInfo(id) {
+  const sol = S.job.solutions[S.sol] || S.job.solutions[0];
+  const zoneName = zid => S.job.house.zones.find(z => z.id === zid)?.name || zid;
+  for (const r of sol.racks || []) for (const d of r.devices || []) if (d.id === id)
+    return { group: "In the rack", short: d.model || id, label: `${d.model || id}${DEV_TYPE_LABEL[d.type] && d.type !== "source" ? ` (${DEV_TYPE_LABEL[d.type]})` : ""}`, kind: "rack", type: d.type };
+  for (const z of S.job.house.zones) for (const e of z.endpoints || []) if (e.id === id) {
+    const what = e.type === "display" ? (e.displayType === "projector" ? "projector" : `TV${e.size ? ` (${e.size}")` : ""}`)
+      : e.type === "speakers" ? `speakers (${SPK_LABEL[e.config || "stereo"] || e.config})` : e.type;
+    return { group: "In the rooms", short: `${z.name} ${e.type === "display" ? (e.displayType === "projector" ? "projector" : "TV") : e.type}`, label: `${z.name} — ${what}`, kind: e.type };
+  }
+  for (const c of sol.companions || []) if (c.id === id) {
+    const at = nodeInfo(c.serves);
+    const what = COMP_LABEL[c.type] || String(c.type || "adapter");
+    return { group: "Behind the TVs (baluns, decoders)", short: `${what} at ${at.short}`, label: `${what} at ${at.short}`, kind: "companion", type: c.type };
+  }
+  for (const d of sol.localDevices || []) if (d.id === id)
+    return { group: "In-room gear", short: `${zoneName(d.zone)} ${d.model || id}`, label: `${d.model || id} in ${zoneName(d.zone)}`, kind: "local" };
+  return { group: "Missing", short: id, label: `${id} (missing)`, kind: "missing" };
+}
+function nodeSel(cls, val) {
+  const groups = new Map();
+  for (const id of allNodes()) { const n = nodeInfo(id); (groups.get(n.group) ?? groups.set(n.group, []).get(n.group)).push([id, n.label]); }
+  if (val && !allNodes().includes(val)) groups.set("Missing", [[val, `${val} (missing)`]]);
+  return `<select class="${cls}">${[...groups].map(([g, list]) => `<optgroup label="${esc(g)}">${list.map(([id, l]) =>
+    `<option value="${esc(id)}" ${id === val ? "selected" : ""}>${esc(l)}</option>`).join("")}</optgroup>`).join("")}</select>`;
+}
+// the signal a pair of ends almost certainly carries — used when the user
+// re-points a connection so "Speaker wire" follows a switch to a TV, etc.
+function suggestSignal(from, to) {
+  const f = nodeInfo(from), t = nodeInfo(to);
+  if (t.kind === "speakers") return "speaker";
+  if (f.kind === "display" || f.kind === "local" && t.kind === "rack") return "audioReturn";
+  if (t.kind === "display" || t.kind === "companion" || f.kind === "companion") return "video";
+  if (t.type === "avbSwitch" || f.type === "avbSwitch") return "network";
+  if (t.type === "audioInputModule" || f.type === "audioOutputModule") return "audio";
+  return null;
+}
 
 /* House objects are shared by every solution — removing an endpoint or zone
    must clean ALL of them (connections, the chips serving it and the wires
@@ -760,20 +821,20 @@ function zonesHTML() {
         ${zEff.scope !== "included" ? `<span class="badge${ovHas("zones", z.id, "scope") ? " ovb" : ""}">${esc(zEff.scope)}</span>` : ""}<span class="sub">${esc(sub)}</span></div>
       <div class="fields">
         ${field("Name", `<input class="zname" value="${esc(z.name)}">`)}
-        ${fieldO("Scope", sel("zscope", ["included", "prewire", "future"], zEff.scope || "included"), "zones", z.id, "scope")}
-        ${fieldO("Remote", sel("zremote", ["none", "savant", "appletv", "josh", "factory"], zEff.remote || "none"), "zones", z.id, "remote")}
+        ${fieldO("Scope", sel("zscope", ["included", "prewire", "future"], zEff.scope || "included", SCOPE_LABEL), "zones", z.id, "scope")}
+        ${fieldO("Remote", sel("zremote", ["none", "savant", "appletv", "josh", "factory"], zEff.remote || "none", REMOTE_LABEL), "zones", z.id, "remote")}
         ${(S.job.house.areas || []).length ? field("Area", sel("zarea", ["", ...S.job.house.areas.map(a => a.id)], z.area || "")) : ""}
         <div class="sect">SPEAKERS</div>
-        ${spk ? fieldO("Config", sel("spkcfg", SPK_CONFIGS, spk.config || "stereo"), "endpoints", spkH.id, "config")
-              : field("Config", sel("spkcfg", SPK_CONFIGS, "none"))}
+        ${spk ? fieldO("Config", sel("spkcfg", SPK_CONFIGS, spk.config || "stereo", SPK_LABEL), "endpoints", spkH.id, "config")
+              : field("Config", sel("spkcfg", SPK_CONFIGS, "none", SPK_LABEL))}
         ${spk ? fieldO("Count", `<input class="spkcount" type="number" min="1" max="12" value="${esc(spk.count || 2)}">`, "endpoints", spkH.id, "count") : ""}
-        ${spk ? fieldO("Status", sel("spkstatus", STATUSES, spk.status || "new"), "endpoints", spkH.id, "status") : ""}
+        ${spk ? fieldO("Status", sel("spkstatus", STATUSES, spk.status || "new", STATUS_LABEL), "endpoints", spkH.id, "status") : ""}
         <div class="sect">DISPLAY</div>
-        ${tv ? fieldO("Type", sel("tvtype", ["none", "tv", "projector"], tv.displayType || "tv"), "endpoints", tvH.id, "displayType")
-             : field("Type", sel("tvtype", ["none", "tv", "projector"], "none"))}
+        ${tv ? fieldO("Type", sel("tvtype", ["none", "tv", "projector"], tv.displayType || "tv", { none: "None", tv: "TV", projector: "Projector" }), "endpoints", tvH.id, "displayType")
+             : field("Type", sel("tvtype", ["none", "tv", "projector"], "none", { none: "None", tv: "TV", projector: "Projector" }))}
         ${tv ? fieldO("Brand", `<input class="tvbrand" value="${esc(tv.brand || "")}">`, "endpoints", tvH.id, "brand") : ""}
         ${tv ? fieldO("Size", `<input class="tvsize" type="number" min="24" max="220" value="${esc(tv.size || 65)}">`, "endpoints", tvH.id, "size") : ""}
-        ${tv ? fieldO("Status", sel("tvstatus", STATUSES.slice(0, 2), tv.status || "new"), "endpoints", tvH.id, "status") : ""}
+        ${tv ? fieldO("Status", sel("tvstatus", STATUSES.slice(0, 2), tv.status || "new", STATUS_LABEL), "endpoints", tvH.id, "status") : ""}
         ${tv ? field("Confirm", `<input type="checkbox" class="tvconfirm" ${tvH.confirm?.length ? "checked" : ""}> <span class="mini">size needs confirmation</span>`) : ""}
         <div style="text-align:right"><button class="del zdel">delete zone</button></div>
       </div>
@@ -784,36 +845,49 @@ function zonesHTML() {
 
 function gearHTML() {
   const sol = S.job.solutions[S.sol];
-  const nodes = allNodes();
   // catalog link: powers the port-budget advisor + snapshot lockfile (same-type entries listed first)
   const catDevs = Object.entries(effectiveCatalog().devices || {});
   const catSel = d => `<select class="dcat"><option value="">— not linked —</option>${catDevs
     .slice().sort((a, b) => ((b[1].type === d.type) - (a[1].type === d.type)) ||
       String((a[1].brand || "") + a[1].model).localeCompare(String((b[1].brand || "") + b[1].model)))
-    .map(([id, c]) => `<option value="${esc(id)}" ${d.catalogRef === id ? "selected" : ""}>${esc([c.brand, c.model].filter(Boolean).join(" "))}${c.verified === false ? " ⚠" : ""}${c.type === d.type ? "" : " · " + esc(c.type)}</option>`).join("")}</select>`;
+    .map(([id, c]) => `<option value="${esc(id)}" ${d.catalogRef === id ? "selected" : ""}>${esc([c.brand, c.model].filter(Boolean).join(" "))}${c.verified === false ? " ⚠" : ""}${c.type === d.type ? "" : " · " + esc(DEV_TYPE_LABEL[c.type] || c.type)}</option>`).join("")}</select>`;
   const racks = sol.racks.map(r => `
     <div class="sect">${esc(String(r.name || r.id).toUpperCase())}</div>
     ${r.devices.map(d => {
       const open = S.openRows.has(d.id);
       return `<div class="row ${open ? "open" : ""}" data-did="${esc(d.id)}" data-rid="${esc(r.id)}">
-      <div class="head" data-toggle="${esc(d.id)}"><span class="t">${esc(d.model || d.id)}</span><span class="sub">${esc(d.type)}${d.zones ? ` · ${esc(d.zones)}z` : ""}</span></div>
+      <div class="head" data-toggle="${esc(d.id)}"><span class="t">${esc(d.model || d.id)}</span><span class="sub">${esc(DEV_TYPE_LABEL[d.type] || d.type)}${d.zones ? ` · ${esc(d.zones)} zones` : ""}</span></div>
       <div class="fields">
         ${field("Model", `<input class="dmodel" value="${esc(d.model || "")}">`)}
-        ${field("Type", sel("dtype", DEV_TYPES, d.type))}
+        ${field("Type", sel("dtype", DEV_TYPES, d.type, { ...DEV_TYPE_LABEL, source: "Source (Apple TV, cable box, streamer…)" }))}
         ${field("Catalog", catSel(d))}
         ${d.type === "amp" ? field("Zones", `<input class="dzones" type="number" min="1" max="32" value="${esc(d.zones || 8)}">`) : ""}
-        ${field("Status", sel("dstatus", STATUSES.slice(0, 2), d.status || "new"))}
+        ${field("Status", sel("dstatus", STATUSES.slice(0, 2), d.status || "new", STATUS_LABEL))}
         <div style="text-align:right"><button class="del ddel">delete device</button></div>
       </div></div>`;
     }).join("")}
     <button class="addbtn adddev" data-rid="${esc(r.id)}">＋ Add device to ${esc(r.name || r.id)}</button>`).join("");
 
-  const conns = `<div class="sect">CONNECTIONS <span class="badge">${sol.connections.length}</span></div>` +
-    sol.connections.map((c, i) => `<div class="row open" data-ci="${i}"><div class="fields" style="display:block;border-top:none">
-      <div class="f">${sel("cfrom", nodes, c.from)}<span class="mini">→</span>${sel("cto", nodes, c.to)}</div>
-      <div class="f">${sel("csig", SIGNALS, c.signal)}<input class="cch" placeholder="ch" style="max-width:64px" value="${esc(c.channels || "")}">
-        ${sel("cscope", ["included", "prewire", "future"], c.scope || "included")}<button class="del cdel">×</button></div>
-    </div></div>`).join("") +
+  // each connection reads as a sentence ("Anthem MRX-540 → Family Room TV ·
+  // Video (HDMI)"); tap to edit. Grouped under the box the signal leaves.
+  const byFrom = new Map();
+  sol.connections.forEach((c, i) => (byFrom.get(c.from) ?? byFrom.set(c.from, []).get(c.from)).push([c, i]));
+  const conns = `<div class="sect">CONNECTIONS <span class="badge">${sol.connections.length}</span></div>
+    <div class="mini" style="margin:-2px 0 8px">What plugs into what. Grouped by the box the signal comes out of — tap one to change it.</div>` +
+    [...byFrom].map(([from, list]) => `<div class="cgrp">From <b>${esc(nodeInfo(from).label)}</b></div>` + list.map(([c, i]) => {
+      const key = "conn:" + i, open = S.openRows.has(key);
+      const tail = [signalName(c.signal), c.channels && `outputs ${c.channels}`, c.scope && c.scope !== "included" && SCOPE_LABEL[c.scope]].filter(Boolean).join(" · ");
+      return `<div class="row ${open ? "open" : ""}" data-ci="${i}">
+      <div class="head" data-toggle="${key}"><span class="t">→ ${esc(nodeInfo(c.to).label)}</span><span class="sub">${esc(tail)}</span></div>
+      <div class="fields">
+        ${field("From", nodeSel("cfrom", c.from))}
+        ${field("To", nodeSel("cto", c.to))}
+        ${field("Carries", sel("csig", SIGNALS, c.signal, SIGNAL_LABEL))}
+        ${c.signal !== "network" ? field("Outputs", `<input class="cch" placeholder="optional, e.g. 3-4" title="Which outputs this uses — amp channels (3-4) or a matrix output (2). Shows on the channel strip." value="${esc(c.channels || "")}">`) : ""}
+        ${field("Scope", sel("cscope", ["included", "prewire", "future"], c.scope || "included", SCOPE_LABEL))}
+        <div style="text-align:right"><button class="del cdel">delete connection</button></div>
+      </div></div>`;
+    }).join("")).join("") +
     `<button class="addbtn" id="addConn">＋ Add connection</button>`;
   return racks + conns;
 }
@@ -840,7 +914,7 @@ function jobHTML() {
     <div class="sect">SOLUTION</div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       ${field("Name", `<input class="solname" value="${esc(S.job.solutions[S.sol].name)}">`)}
-      ${field("Platform", sel("solplat", ["", "savant", "josh", "control4"], (S.job.solutions[S.sol].platforms || [])[0] || ""))}
+      ${field("Platform", sel("solplat", ["", "savant", "josh", "control4"], (S.job.solutions[S.sol].platforms || [])[0] || "", PLATFORM_LABEL))}
     </div></div>
     <div class="sect">PACKET PAGES <span class="mini">sheet 1 always prints</span></div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
@@ -1138,20 +1212,27 @@ function wirePanel(body) {
     refresh();
   });
   const connOf = el => S.job.solutions[S.sol].connections[+el.closest("[data-ci]")?.dataset.ci];
-  on(".cfrom", el => { const c = connOf(el); if (c) c.from = el.value; });
-  on(".cto", el => { const c = connOf(el); if (c) c.to = el.value; });
+  // re-pointing a connection re-guesses what it carries (TV → video, speakers → speaker wire)
+  const reguess = c => { const g = suggestSignal(c.from, c.to); if (g) c.signal = g; };
+  on(".cfrom", el => { const c = connOf(el); if (c) { c.from = el.value; reguess(c); } });
+  on(".cto", el => { const c = connOf(el); if (c) { c.to = el.value; reguess(c); } });
   on(".csig", el => { const c = connOf(el); if (c) c.signal = el.value; });
   on(".cch", el => { const c = connOf(el); if (c) { if (el.value) c.channels = el.value; else delete c.channels; } });
   on(".cscope", el => { const c = connOf(el); if (c) { if (el.value !== "included") c.scope = el.value; else delete c.scope; } });
   body.querySelectorAll(".cdel").forEach(el => el.onclick = () => {
     const sol = S.job.solutions[S.sol];
     sol.connections.splice(+el.closest("[data-ci]").dataset.ci, 1);
+    for (const k of [...S.openRows]) if (k.startsWith("conn:")) S.openRows.delete(k);   // indices shifted
     refresh();
   });
   const addConn = body.querySelector("#addConn");
   if (addConn) addConn.onclick = () => {
-    const nodes = allNodes();
-    S.job.solutions[S.sol].connections.push({ from: nodes[0] || "", to: nodes[1] || "", signal: "audio" });
+    const nodes = allNodes(), sol = S.job.solutions[S.sol];
+    const from = nodes.find(id => nodeInfo(id).kind === "rack") || nodes[0] || "";
+    const to = nodes.find(id => nodeInfo(id).kind === "display") || nodes.find(id => id !== from) || "";
+    const c = { from, to, signal: suggestSignal(from, to) || "video" };
+    sol.connections.push(c);
+    S.openRows.add("conn:" + (sol.connections.length - 1));   // open it — the defaults are a starting point
     refresh();
   };
 

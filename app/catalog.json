@@ -156,7 +156,8 @@
     "mxnet"
    ],
    "verified": true,
-   "notes": "MXNet encoder with a real Dolby/DTS \u2192 2ch downmix on its balanced 5-pin out. HDMI loop out; Toslink OUT reserved ('future audio return support only'); no coax. 1 unbalanced 3.5mm analog in; network = 1 RJ45 PoE + 1 SFP. AUDIT 2026-09-27: was 'no toslink out' \u2014 it has one (inactive); added HDMI loop + analog in."
+   "notes": "MXNet encoder with a real Dolby/DTS \u2192 2ch downmix on its balanced 5-pin out. HDMI loop out; Toslink OUT reserved ('future audio return support only'); no coax. 1 unbalanced 3.5mm analog in; network = 1 RJ45 PoE + 1 SFP. AUDIT 2026-09-27: was 'no toslink out' \u2014 it has one (inactive); added HDMI loop + analog in.",
+   "gen": "1g-ev2"
   },
   "avpro-acp-axis2": {
    "brand": "AVPro Edge",
@@ -172,10 +173,11 @@
    },
    "flags": [
     "dante",
+    "pcmOnly2ch",
     "poe"
    ],
    "verified": true,
-   "notes": "TV audio \u2192 Dante/AES67: eARC + Toslink + coax inputs (auto-switch on signal), 2 Dante channels out on 1 RJ45 (PoE 802.3af or USB-C 5V). The eARC Dante encoder (ACP-DANTE-ETV) is listed discontinued; AVPro doesn't name the AXIS2 its successor. AUDIT 2026-09-27: added optical + coax inputs."
+   "notes": "TV audio \u2192 Dante/AES67: eARC + Toslink + coax inputs (auto-switch on signal), 2 Dante channels out on 1 RJ45 (PoE 802.3af or USB-C 5V). The eARC Dante encoder (ACP-DANTE-ETV) is listed discontinued; AVPro doesn't name the AXIS2 its successor. AUDIT 2026-09-27: added optical + coax inputs. AUDIT 2026-09-27: manual \u2014 the TV MUST be set to stereo PCM output ('loud noises will ensue' with bitstream). Unicast: each channel to 2 receivers; multicast: up to 8 devices."
   },
   "avpro-ac-mx-88": {
    "brand": "AVPro Edge",
@@ -210,7 +212,8 @@
    ],
    "verified": true,
    "notes": "12 ports are NOT 12 endpoint ports: 8x GbE PoE+ endpoint + 4x 10G SFP+ uplink/aggregation. SKU transitioning to AC-MXNET-SW8P \u2014 identical hardware, renamed to match the true 8-endpoint-port count. AUDIT 2026-09-27: PoE budget 125W (AVPro page + datasheet \u2014 the datasheet still carries an editor's note 'change 370W to 125W'). Plus 1 console port.",
-   "poeBudgetW": 125
+   "poeBudgetW": 125,
+   "gen": "1g"
   },
   "avpro-mxnet-cbox-ha": {
    "brand": "AVPro Edge",
@@ -222,7 +225,7 @@
     "mxnet"
    ],
    "verified": true,
-   "notes": "MXNet control box, high-availability: 8 RJ45 LAN (one is the 802.3af PoE power port), 5-pin RS-232 (system control), RJ45 RS-232 HA heartbeat, USB-C service, optional 12V DC. HA units run in MATCHED PAIRS and don't mix with older CBOX models. TAA version is its own SKU (AC-MXNET-CBOX-HA-TAA). 10G-CBOX discontinued. AUDIT 2026-09-27: verified from the AVPro datasheet (was '6 LAN ports')."
+   "notes": "MXNet control box, high-availability: 8 RJ45 LAN (one is the 802.3af PoE power port), 5-pin RS-232 (system control), RJ45 RS-232 HA heartbeat, USB-C service, optional 12V DC. HA units run in MATCHED PAIRS and don't mix with older CBOX models. TAA version is its own SKU (AC-MXNET-CBOX-HA-TAA). 10G-CBOX discontinued. AUDIT 2026-09-27: verified from the AVPro datasheet (was '6 LAN ports'). AUDIT 2026-09-27: CBOX-HA runs ONE discrete mode \u2014 1G, USP, 10G or Dante ('only devices of that type are supported'): a 1G + 10G house needs one per platform, plus one for Dante."
   },
   "ubiquiti-udm-se": {
    "brand": "Ubiquiti",
@@ -310,7 +313,7 @@
     "ipControl"
    ],
    "verified": true,
-   "notes": "No RS-232. 1 local analog per zone."
+   "notes": "No RS-232. 1 local analog per zone. AUDIT 2026-09-27: Dante 16x16 on a Broadway chipset (manual); 8 stereo VIRTUAL Dante inputs per amp; more than 8 non-AudioControl Dante sources needs a controller (the Dante-mode CBOX)."
   },
   "audiocontrol-m6800d": {
    "brand": "AudioControl",
@@ -333,7 +336,7 @@
     "ipControl"
    ],
    "verified": true,
-   "notes": "MANUAL-CONFIRMED (M6400/M6800 user manual): analog inputs are per-zone stereo RCA (8 zones = 8 stereo ins) with hard-wired loop outs; the 2 bus inputs are DIGITAL (coax/Toslink selectable) \u2014 analog count corrected from 10 to 8. AUDIT 2026-09-27: Dante 16x16 CONFIRMED in the manual (tx no longer presumed); added 2 coax S/PDIF outs."
+   "notes": "MANUAL-CONFIRMED (M6400/M6800 user manual): analog inputs are per-zone stereo RCA (8 zones = 8 stereo ins) with hard-wired loop outs; the 2 bus inputs are DIGITAL (coax/Toslink selectable) \u2014 analog count corrected from 10 to 8. AUDIT 2026-09-27: Dante 16x16 CONFIRMED in the manual (tx no longer presumed); added 2 coax S/PDIF outs. 8 stereo VIRTUAL Dante inputs; internal 10x10 stereo matrix. Surround from an AXIS16 works with static routing: one zone per pair (FL/FR, SL/SR, SBL/SBR), center and LFE each on their OWN zone (mono/bridged, LFE low-pass) \u2014 never pair C with LFE (DSP/crossover are per zone)."
   },
   "audiocontrol-d2800": {
    "brand": "AudioControl",
@@ -430,10 +433,11 @@
    },
    "flags": [
     "dante",
-    "poe"
+    "poe",
+    "ultimo"
    ],
    "verified": true,
-   "notes": "Legacy source \u2192 Dante on-ramp. AUDIT 2026-09-27: 1 stereo RCA pair (was 2); Toslink takes priority over analog \u2014 one source at a time."
+   "notes": "Legacy source \u2192 Dante on-ramp. AUDIT 2026-09-27: 1 stereo RCA pair (was 2); Toslink takes priority over analog \u2014 one source at a time. Ultimo-class: unicast each channel to 2 receivers, multicast to 8 \u2014 set multicast when 3+ amps subscribe."
   },
   "savant-avb-output-module": {
    "brand": "Savant",
@@ -625,7 +629,8 @@
    },
    "flags": [
     "dante",
-    "poe"
+    "poe",
+    "ultimo"
    ],
    "verified": true,
    "notes": "Dante \u2192 legacy analog endpoint (the decoder counterpart to the ACP-DANTE-E-POE already in the catalog). 1x stereo RCA analog out. PoE or USB-C 5V. Configurable 1/2/5ms latency. AUDIT 2026-09-27: 1 stereo RCA pair out (was 2)."
@@ -648,7 +653,8 @@
     "poe"
    ],
    "verified": true,
-   "notes": "Standard (non-downmixing) MXNet 1G Evolution II encoder. HDMI loop-out + balanced stereo analog de-embed (5-pin Phoenix) + Toslink. GOTCHA: Toslink is currently 'Future Audio Return Support Only' \u2014 eARC/ARC not active yet. This is a straight PCM de-embed, not a Dolby/DTS downmixer \u2014 use the AC-MXNET-1G-AVDM-EV2 (already in catalog) for Atmos/DTS-HD \u2192 2ch. PoE 802.3af (15.4W). AUDIT 2026-09-27: added 1 unbalanced 3.5mm analog IN (embedded into the stream); network = 1 RJ45 PoE + 1 SFP. CONFLICT: the EV2 datasheet says the 5-pin out is 'downmixed to PCM 2ch' \u2014 possibly copied from the AVDM sheet; test on a unit before relying on either."
+   "notes": "Standard (non-downmixing) MXNet 1G Evolution II encoder. HDMI loop-out + balanced stereo analog de-embed (5-pin Phoenix) + Toslink. GOTCHA: Toslink is currently 'Future Audio Return Support Only' \u2014 eARC/ARC not active yet. This is a straight PCM de-embed, not a Dolby/DTS downmixer \u2014 use the AC-MXNET-1G-AVDM-EV2 (already in catalog) for Atmos/DTS-HD \u2192 2ch. PoE 802.3af (15.4W). AUDIT 2026-09-27: added 1 unbalanced 3.5mm analog IN (embedded into the stream); network = 1 RJ45 PoE + 1 SFP. CONFLICT: the EV2 datasheet says the 5-pin out is 'downmixed to PCM 2ch' \u2014 possibly copied from the AVDM sheet; test on a unit before relying on either.",
+   "gen": "1g-ev2"
   },
   "avpro-mxnet-1g-dv2": {
    "brand": "AVPro Edge",
@@ -666,7 +672,8 @@
     "poe"
    ],
    "verified": true,
-   "notes": "Standard MXNet 1G Evolution II decoder. 1x HDMI out, balanced stereo analog de-embed, Toslink (same 'future ARC support only' caveat as the EV2 encoder \u2014 no active downmix/eARC today). PoE 802.3af (15.4W). AUDIT 2026-09-27: the decoder's Toslink is an INPUT (future audio return), not an output. Also 2 USB-A (KVM), 3 IR, RS-232; network = 1 RJ45 PoE + 1 SFP."
+   "notes": "Standard MXNet 1G Evolution II decoder. 1x HDMI out, balanced stereo analog de-embed, Toslink (same 'future ARC support only' caveat as the EV2 encoder \u2014 no active downmix/eARC today). PoE 802.3af (15.4W). AUDIT 2026-09-27: the decoder's Toslink is an INPUT (future audio return), not an output. Also 2 USB-A (KVM), 3 IR, RS-232; network = 1 RJ45 PoE + 1 SFP.",
+   "gen": "1g-ev2"
   },
   "avpro-mxnet-sw24": {
    "brand": "AVPro Edge",
@@ -683,7 +690,8 @@
     "poe"
    ],
    "verified": true,
-   "notes": "DISCONTINUED (AVPro Global) \u2014 replaced by AC-MXNET-SW24P (same 24x GbE PoE+ + 4x 10G SFP+). 370W PoE budget confirmed. Still fielded; for new designs spec the SW24P, or the SW24E economy variant (Layer 2.5, 4x 1G SFP stacking, also 370W). AUDIT 2026-09-27: also 4 x 1G SFP combo ports, OOB management + console + USB."
+   "notes": "DISCONTINUED (AVPro Global) \u2014 replaced by AC-MXNET-SW24P (same 24x GbE PoE+ + 4x 10G SFP+). 370W PoE budget confirmed. Still fielded; for new designs spec the SW24P, or the SW24E economy variant (Layer 2.5, 4x 1G SFP stacking, also 370W). AUDIT 2026-09-27: also 4 x 1G SFP combo ports, OOB management + console + USB.",
+   "gen": "1g"
   },
   "avpro-ac-mx-44": {
    "brand": "AVPro Edge",
@@ -1076,7 +1084,351 @@
     "poe"
    ],
    "verified": true,
-   "notes": "Current successor to the discontinued AC-MXNET-SW24: 24x GbE PoE+ endpoint ports, 4x 10G SFP+ uplink/aggregation, 370W PoE budget. Sibling AC-MXNET-SW24E = economy Layer 2.5 variant (4x 1G SFP stacking, same 370W) for smaller deployments."
+   "notes": "Current successor to the discontinued AC-MXNET-SW24: 24x GbE PoE+ endpoint ports, 4x 10G SFP+ uplink/aggregation, 370W PoE budget. Sibling AC-MXNET-SW24E = economy Layer 2.5 variant (4x 1G SFP stacking, same 370W) for smaller deployments.",
+   "gen": "1g"
+  },
+  "avpro-acp-axis16": {
+   "brand": "AVPro Edge",
+   "model": "ACP-AXIS16",
+   "type": "danteBridge",
+   "inputs": {
+    "earc": 1,
+    "optical": 1,
+    "coax": 1
+   },
+   "outputs": {
+    "dante": 16
+   },
+   "flags": [
+    "dante",
+    "poe",
+    "atmosDecode",
+    "surroundDsp"
+   ],
+   "verified": true,
+   "notes": "Hyperion Axis16 \u2014 TV eARC (or Toslink/coax; coax wins, digital overrides eARC, falls back after 10s) \u2192 up to 16 Dante/AES67 channels: 9.1.6, or up to 9.1.4 + a stereo downmix pair (UBL/UBR slots become DM-L/DM-R). DECODES Dolby Atmos / DTS-HD. On-board EQ, crossover, distance and level \u2014 the receiver's job, so a Hyperion or Director amp can run a surround room with no AVR. CEC volume pass-through, TCP control + API. 1 RJ45 Dante (PoE 802.3af in) + 1 RJ45 control; or USB-C 5V 2A. Manual/datasheet text says '10 channels'/'Axis10' in places \u2014 copy-paste from the ACP-AXIS10 sibling. Chipset/flows unpublished. Source: avproglobal.com/products/acp-axis16 + datasheet + manual (2026-09-27)."
+  },
+  "audiocontrol-hype-tetra": {
+   "brand": "AudioControl",
+   "model": "ACP-HYPE-TETRA",
+   "type": "amp",
+   "zones": 1,
+   "ampCh": 4,
+   "inputs": {
+    "analog": 4,
+    "dante": 4
+   },
+   "outputs": {
+    "analog": 4
+   },
+   "flags": [
+    "dante",
+    "theaterAmp"
+   ],
+   "verified": true,
+   "notes": "Hyperion Tetra \u2014 4-channel Class-H theater amp, 230W/ch @8\u03a9, 300W/ch @4\u03a9, bridges to 600W @8\u03a9. Inputs: 4 XLR + 4 RCA (mono, one per channel) and 4 Dante RX channels on one RJ45 (receive only); RCA thru outs pass analog only. Trigger in/out. Counted as ONE zone (one surround set, or a height layer). No IP control in the manual (the Hyperion page mentions a web GUI \u2014 conflict). 2U, 38 lb. Pair with an ACP-AXIS16 for a receiver-less theater. Source: avproglobal.com/products/acp-hype-tetra + Hepta manual."
+  },
+  "audiocontrol-hype-penta": {
+   "brand": "AudioControl",
+   "model": "ACP-HYPE-PENTA",
+   "type": "amp",
+   "zones": 1,
+   "ampCh": 5,
+   "inputs": {
+    "analog": 5,
+    "dante": 5
+   },
+   "outputs": {
+    "analog": 5
+   },
+   "flags": [
+    "dante",
+    "theaterAmp"
+   ],
+   "verified": true,
+   "notes": "Hyperion Penta \u2014 5-channel Class-H theater amp, 230W/ch @8\u03a9, 300W/ch @4\u03a9, bridges to 600W @8\u03a9. Inputs: 5 XLR + 5 RCA (mono, one per channel) and 5 Dante RX channels on one RJ45 (receive only); RCA thru outs pass analog only. Trigger in/out. Counted as ONE zone (one surround set, or a height layer). No IP control in the manual (the Hyperion page mentions a web GUI \u2014 conflict). 3U, 43 lb. Pair with an ACP-AXIS16 for a receiver-less theater. Source: avproglobal.com/products/acp-hype-penta + Hepta manual."
+  },
+  "audiocontrol-hype-hepta": {
+   "brand": "AudioControl",
+   "model": "ACP-HYPE-HEPTA",
+   "type": "amp",
+   "zones": 1,
+   "ampCh": 7,
+   "inputs": {
+    "analog": 7,
+    "dante": 7
+   },
+   "outputs": {
+    "analog": 7
+   },
+   "flags": [
+    "dante",
+    "theaterAmp"
+   ],
+   "verified": true,
+   "notes": "Hyperion Hepta \u2014 7-channel Class-H theater amp, 230W/ch @8\u03a9, 300W/ch @4\u03a9, bridges to 600W @8\u03a9. Inputs: 7 XLR + 7 RCA (mono, one per channel) and 7 Dante RX channels on one RJ45 (receive only); RCA thru outs pass analog only. Trigger in/out. Counted as ONE zone (one surround set, or a height layer). No IP control in the manual (the Hyperion page mentions a web GUI \u2014 conflict). 3U, 43 lb. Pair with an ACP-AXIS16 for a receiver-less theater. Source: avproglobal.com/products/acp-hype-hepta + Hepta manual."
+  },
+  "avpro-mxnet-sw24e": {
+   "brand": "AVPro Edge",
+   "model": "AC-MXNET-SW24E",
+   "type": "avSwitch",
+   "outputs": {
+    "gbe": 24,
+    "sfp": 4
+   },
+   "poeBudgetW": 370,
+   "flags": [
+    "mxnet",
+    "poe",
+    "danteReady"
+   ],
+   "verified": true,
+   "notes": "24 x 1G PoE+ + 4 x 1G SFP + RJ45 console; 370W PoE (450W max draw); rated 23 endpoints + CBOX. Ships PRE-CONFIGURED for MXNet USP, 1G V1/V2 AND Dante (VLAN, QoS, IGMP \u2014 'no additional adjustments required'); 4-switch-hop max. Economy Layer 2.5 sibling of the SW24P. The default dedicated Dante switch too. Source: AVPro datasheet (2026-09-27).",
+   "gen": "1g"
+  },
+  "avpro-mxnet-sw48e": {
+   "brand": "AVPro Edge",
+   "model": "AC-MXNET-SW48E",
+   "type": "avSwitch",
+   "outputs": {
+    "gbe": 48,
+    "sfpPlus": 6
+   },
+   "poeBudgetW": 740,
+   "flags": [
+    "mxnet",
+    "poe",
+    "danteReady"
+   ],
+   "verified": true,
+   "notes": "48 x 1G PoE+ + 6 x 1/10G SFP+; 740W PoE (850W max draw); rated 47 endpoints + CBOX. Pre-configured for MXNet USP, 1G V1/V2 and Dante; 4-switch-hop max. Source: AVPro datasheet (2026-09-27).",
+   "gen": "1g"
+  },
+  "avpro-mxnet-dante-cbox": {
+   "brand": "AVPro Edge",
+   "model": "AC-MXNET-DANTE-CBOX",
+   "type": "controlBox",
+   "inputs": {},
+   "outputs": {
+    "gbe": 8
+   },
+   "flags": [
+    "danteController",
+    "poe"
+   ],
+   "verified": true,
+   "notes": "The Dante controller = an AC-MXNET-CBOX-HA running the Dante firmware (a CBOX-HA is 'converted'; order it as a CBOX-HA if AVPro has no separate SKU on the quote). Uses Audinate's Dante API: discovers AVPro/AudioControl/third-party Dante devices, makes/breaks subscriptions from a web routing grid (Mentor), no PC running Dante Controller needed; not Dante Domain Manager. MODES ARE EXCLUSIVE \u2014 in Dante mode it manages no MXNet, so MXNet video + Dante audio = TWO CBOX-HAs. Lets the control system re-route Dante on the fly: Control4 'MXNET Dante Router' driver v103 (needs CBOX Dante fw 1.03; 2-ch virtual I/O, source selection only \u2014 volume stays on the amp driver); Savant/RTI/Crestron Home/Q-SYS/ELAN/URC listed as supported \u2014 confirm the Savant driver before quoting. 8 RJ45 (7 control/Mentor + 1 AV/network PoE-PD), RS-232, HA RJ45, USB-C; 12V or PoE, 4.5W. Source: AVPro KB 'AC-MXNET-DANTE-CBOX introduction guide' (2026-09-27)."
+  },
+  "avpro-mxnet-1g-dante-ev2": {
+   "brand": "AVPro Edge",
+   "model": "AC-MXNET-1G-DANTE-EV2",
+   "type": "enc",
+   "gen": "1g-ev2",
+   "inputs": {
+    "hdmi": 1,
+    "analog": 1
+   },
+   "outputs": {
+    "hdmi": 1,
+    "analog": 1,
+    "optical": 1,
+    "dante": 2
+   },
+   "flags": [
+    "mxnet",
+    "poe",
+    "dante",
+    "danteOnMxnetVlan"
+   ],
+   "verified": true,
+   "notes": "MXNet 1G EVO II encoder with Dante built in (software on the main chip, 2x2 channels) \u2014 puts the source's audio on Dante (stereo; the 3.5mm analog in overrides HDMI audio). Dante rides the SAME RJ45/SFP as the video, tagged on VLAN 99 (MXNet on VLAN 100): the switch port must be a trunk, and Dante + MXNet share one MAC so they need different subnets. HDMI loop out, 5-pin balanced out (2ch PCM downmix), Toslink out (future audio return only), 1 RJ45 PoE + 1 SFP, USB-B (KVM), IR x3, RS-232; 9.7W. Managed by the 1G-mode CBOX; Dante routing via Dante Controller or the Dante-mode CBOX. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27)."
+  },
+  "avpro-mxnet-1g-dante-dv2": {
+   "brand": "AVPro Edge",
+   "model": "AC-MXNET-1G-DANTE-DV2",
+   "type": "dec",
+   "gen": "1g-ev2",
+   "inputs": {
+    "optical": 1,
+    "dante": 2
+   },
+   "outputs": {
+    "hdmi": 1,
+    "analog": 1,
+    "dante": 2
+   },
+   "flags": [
+    "mxnet",
+    "poe",
+    "dante",
+    "danteOnMxnetVlan",
+    "audioFollowsVideo"
+   ],
+   "verified": true,
+   "notes": "MXNet 1G EVO II decoder with Dante (2x2). Its Dante is a break-out of the Dante stream carried from a DANTE-EV2 \u2014 i.e. the SOURCE's audio for whatever this TV is watching (audio follows video), NOT the TV's own app audio (Toslink in is ARC-only; no documented TV-audio\u2192Dante path \u2014 add an AXIS2 if the client streams on the TV). Needs DANTE-EV2 encoders on the sources. Dante on VLAN 99 over the video cable (trunk port). HDMI out, 5-pin balanced out (2ch PCM), 1 RJ45 PoE + 1 SFP, 2 USB-A, IR x3, RS-232. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27)."
+  },
+  "avpro-mxnet-10g-tcvr": {
+   "brand": "AVPro Edge",
+   "model": "AC-MXNET-10G-TCVR",
+   "type": "enc",
+   "gen": "10g",
+   "inputs": {
+    "hdmi": 1,
+    "analog": 1
+   },
+   "outputs": {
+    "hdmi": 1,
+    "analog": 1,
+    "optical": 1
+   },
+   "flags": [
+    "mxnet",
+    "mxnet10g",
+    "poe",
+    "transceiver"
+   ],
+   "verified": true,
+   "notes": "MXNet 10G (SDVoE) transceiver \u2014 set as encoder or decoder by switch (factory default decoder). Video: uncompressed to 4K30 4:4:4 8-bit; 4K60 4:4:4 8-bit / 4:2:2 10-bit / 4:2:0 12-bit with light 1.3:1 compression; ~0.1ms in genlock mode, else 1\u20132 frames; Dolby Vision/HDR10+/HLG; scaler, multiview up to 32 windows, walls up to 8x8. HDMI passes Atmos/DTS:X; Toslink out up to DD 5.1 (no DD+/Atmos); 3-pin 2ch analog out; 3.5mm = in as encoder / out as decoder; no ARC/eARC documented. 1 x 10GBase-T RJ45 (PoE 802.3af in) OR 1 x 10G SFP+, plus 1 x 1G RJ45 (extension/control; sources PoE when the 10G link is fiber). ~9W; 12V PSU optional. Does NOT interoperate with 1G. Managed by a CBOX-HA in 10G mode (the 10G-CBOX is discontinued). Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27)."
+  },
+  "avpro-mxnet-10g-tcvr-avdm": {
+   "brand": "AVPro Edge",
+   "model": "AC-MXNET-10G-TCVR-AVDM",
+   "type": "enc",
+   "gen": "10g",
+   "inputs": {
+    "hdmi": 1,
+    "analog": 1
+   },
+   "outputs": {
+    "hdmi": 1,
+    "analog": 1,
+    "optical": 1
+   },
+   "flags": [
+    "downmix2ch",
+    "mxnet",
+    "mxnet10g",
+    "poe",
+    "transceiver"
+   ],
+   "verified": true,
+   "notes": "AVDM: 8ch \u2192 stereo downmix on the balanced analog out; Toslink always downmixed. MXNet 10G (SDVoE) transceiver \u2014 set as encoder or decoder by switch (factory default decoder). Video: uncompressed to 4K30 4:4:4 8-bit; 4K60 4:4:4 8-bit / 4:2:2 10-bit / 4:2:0 12-bit with light 1.3:1 compression; ~0.1ms in genlock mode, else 1\u20132 frames; Dolby Vision/HDR10+/HLG; scaler, multiview up to 32 windows, walls up to 8x8. HDMI passes Atmos/DTS:X; Toslink out up to DD 5.1 (no DD+/Atmos); 3-pin 2ch analog out; 3.5mm = in as encoder / out as decoder; no ARC/eARC documented. 1 x 10GBase-T RJ45 (PoE 802.3af in) OR 1 x 10G SFP+, plus 1 x 1G RJ45 (extension/control; sources PoE when the 10G link is fiber). ~9W; 12V PSU optional. Does NOT interoperate with 1G. Managed by a CBOX-HA in 10G mode (the 10G-CBOX is discontinued). Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27)."
+  },
+  "avpro-mxnet-10g-tcvr-usbx": {
+   "brand": "AVPro Edge",
+   "model": "AC-MXNET-10G-TCVR-USBX",
+   "type": "enc",
+   "gen": "10g",
+   "inputs": {
+    "hdmi": 1,
+    "analog": 1
+   },
+   "outputs": {
+    "hdmi": 1,
+    "analog": 1,
+    "optical": 1
+   },
+   "flags": [
+    "icronUsb",
+    "mxnet",
+    "mxnet10g",
+    "poe",
+    "transceiver"
+   ],
+   "verified": true,
+   "notes": "USBX: Icron high-speed USB 2.0 (base/AVDM do keyboard+mouse only). MXNet 10G (SDVoE) transceiver \u2014 set as encoder or decoder by switch (factory default decoder). Video: uncompressed to 4K30 4:4:4 8-bit; 4K60 4:4:4 8-bit / 4:2:2 10-bit / 4:2:0 12-bit with light 1.3:1 compression; ~0.1ms in genlock mode, else 1\u20132 frames; Dolby Vision/HDR10+/HLG; scaler, multiview up to 32 windows, walls up to 8x8. HDMI passes Atmos/DTS:X; Toslink out up to DD 5.1 (no DD+/Atmos); 3-pin 2ch analog out; 3.5mm = in as encoder / out as decoder; no ARC/eARC documented. 1 x 10GBase-T RJ45 (PoE 802.3af in) OR 1 x 10G SFP+, plus 1 x 1G RJ45 (extension/control; sources PoE when the 10G link is fiber). ~9W; 12V PSU optional. Does NOT interoperate with 1G. Managed by a CBOX-HA in 10G mode (the 10G-CBOX is discontinued). Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27)."
+  },
+  "avpro-mxnet-10g-tcvr-pro": {
+   "brand": "AVPro Edge",
+   "model": "AC-MXNET-10G-TCVR-PRO",
+   "type": "enc",
+   "gen": "10g",
+   "inputs": {
+    "hdmi": 1,
+    "analog": 1
+   },
+   "outputs": {
+    "hdmi": 1,
+    "analog": 1,
+    "optical": 1,
+    "dante": 2
+   },
+   "flags": [
+    "dante",
+    "icronUsb",
+    "mxnet",
+    "mxnet10g",
+    "poe",
+    "transceiver"
+   ],
+   "verified": true,
+   "notes": "PRO: Icron USB + Dante TRANSMIT only \u2014 encodes the HDMI source's stereo to 2 Dante streams, does not decode Dante (datasheet's '512x512' is Audinate's generic figure). Dante shares the 10G port. 10.8W enc / 14.2W dec. MXNet 10G (SDVoE) transceiver \u2014 set as encoder or decoder by switch (factory default decoder). Video: uncompressed to 4K30 4:4:4 8-bit; 4K60 4:4:4 8-bit / 4:2:2 10-bit / 4:2:0 12-bit with light 1.3:1 compression; ~0.1ms in genlock mode, else 1\u20132 frames; Dolby Vision/HDR10+/HLG; scaler, multiview up to 32 windows, walls up to 8x8. HDMI passes Atmos/DTS:X; Toslink out up to DD 5.1 (no DD+/Atmos); 3-pin 2ch analog out; 3.5mm = in as encoder / out as decoder; no ARC/eARC documented. 1 x 10GBase-T RJ45 (PoE 802.3af in) OR 1 x 10G SFP+, plus 1 x 1G RJ45 (extension/control; sources PoE when the 10G link is fiber). ~9W; 12V PSU optional. Does NOT interoperate with 1G. Managed by a CBOX-HA in 10G mode (the 10G-CBOX is discontinued). Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27)."
+  },
+  "avpro-mxnet-10g-sw12c": {
+   "brand": "AVPro Edge",
+   "model": "AC-MXNET-10G-SW12C",
+   "type": "avSwitch",
+   "gen": "10g",
+   "outputs": {
+    "sfpPlus": 6,
+    "gbe10": 12
+   },
+   "flags": [
+    "mxnet",
+    "mxnet10g",
+    "poe"
+   ],
+   "verified": true,
+   "notes": "MXNet 10G switch: 12 x 10G multi-gig RJ45 with PoE up to 802.3bt (370W) + 6 x SFP28. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27).",
+   "poeBudgetW": 370
+  },
+  "avpro-mxnet-10g-sw24c": {
+   "brand": "AVPro Edge",
+   "model": "AC-MXNET-10G-SW24C",
+   "type": "avSwitch",
+   "gen": "10g",
+   "outputs": {
+    "sfpPlus": 2,
+    "gbe10": 24
+   },
+   "flags": [
+    "mxnet",
+    "mxnet10g",
+    "poe"
+   ],
+   "verified": true,
+   "notes": "MXNet 10G switch: 24 x 10G RJ45 PoE++ (960W) + 2 x 40G QSFP+. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27).",
+   "poeBudgetW": 960
+  },
+  "avpro-mxnet-10g-sw24q": {
+   "brand": "AVPro Edge",
+   "model": "AC-MXNET-10G-SW24Q",
+   "type": "avSwitch",
+   "gen": "10g",
+   "outputs": {
+    "sfpPlus": 24
+   },
+   "flags": [
+    "mxnet",
+    "mxnet10g"
+   ],
+   "verified": true,
+   "notes": "MXNet 10G switch: 24 x SFP+ + 2 x 40G QSFP+, no PoE. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27)."
+  },
+  "avpro-mxnet-10g-sw48q": {
+   "brand": "AVPro Edge",
+   "model": "AC-MXNET-10G-SW48Q",
+   "type": "avSwitch",
+   "gen": "10g",
+   "outputs": {
+    "sfpPlus": 48
+   },
+   "flags": [
+    "mxnet",
+    "mxnet10g"
+   ],
+   "verified": true,
+   "notes": "MXNet 10G switch: 48 x SFP+ + 6 x 40G QSFP+, no PoE. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27)."
   }
  },
  "licensing": {

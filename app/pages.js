@@ -171,14 +171,14 @@ function channelMapBlocks(job, ix, opts) {
         const src = s.devices[c.from];
         const enc = s.companions[c.from];
         // an ENC chip in front of the matrix is named for the rack source it serves
-        const name = src ? devName(src) : enc && s.devices[enc.serves] ? `${devName(s.devices[enc.serves])} · ${adapterName(enc.type)}` : nameOf(job, s, c.from);
+        const name = src ? devName(src) : enc && s.devices[enc.serves] ? `${devName(s.devices[enc.serves])} · ${adapterName(enc)}` : nameOf(job, s, c.from);
         rows.push({ cells: [`In ${c.matrixIn ?? i + 1}`, "Input", name, "HDMI"] });
       });
       outbound.filter(c => c.signal === "video").forEach((c, i) => {
         const comp = s.companions[c.to];
         const dest = comp ? (servesEp(s, c.to)
-            ? `${zoneName(ix, comp.serves)} TV · ${adapterName(comp.type)}`
-            : `${devName(s.devices[comp.serves])} · ${adapterName(comp.type)}`)
+            ? `${zoneName(ix, comp.serves)} TV · ${adapterName(comp)}`
+            : `${devName(s.devices[comp.serves])} · ${adapterName(comp)}`)
           : s.devices[c.to] ? devName(s.devices[c.to]) : ix.endpointsById[c.to] ? `${zoneName(ix, c.to)} TV` : nameOf(job, s, c.to);
         rows.push({ cells: [`Out ${c.matrixOut ?? i + 1}`, "Output", dest, comp && comp.type === "balun" ? "HDBaseT" : comp ? "MXNet" : "HDMI"] });
       });
@@ -203,10 +203,10 @@ function channelMapBlocks(job, ix, opts) {
     }
 
     else if (d.type === "avr") {
-      const vin = inbound.filter(c => c.signal === "video").map(c => s.devices[c.from] ? devName(s.devices[c.from]) : s.companions[c.from] ? adapterName(s.companions[c.from].type) : nameOf(job, s, c.from)).join(" · ") || "—";
+      const vin = inbound.filter(c => c.signal === "video").map(c => s.devices[c.from] ? devName(s.devices[c.from]) : s.companions[c.from] ? adapterName(s.companions[c.from]) : nameOf(job, s, c.from)).join(" · ") || "—";
       const spk = outbound.filter(c => c.signal === "speaker").map(c => { const ep = ix.endpointsById[c.to]; return `${zoneName(ix, c.to)}: ${spkDescr(ep)} (${statusLabel(ep?.status)})`; }).join(" · ") || "—";
       const vout = outbound.filter(c => c.signal === "video").map(c => { const comp = s.companions[c.to]; const back = c.earc ? " (eARC back)" : "";
-        return comp && servesEp(s, c.to) ? `${zoneName(ix, comp.serves)} TV via ${adapterName(comp.type)}${back}` : s.devices[c.to] ? devName(s.devices[c.to]) : `${nameOf(job, s, c.to)}${back}`; }).join(" · ") || "—";
+        return comp && servesEp(s, c.to) ? `${zoneName(ix, comp.serves)} TV via ${adapterName(comp)}${back}` : s.devices[c.to] ? devName(s.devices[c.to]) : `${nameOf(job, s, c.to)}${back}`; }).join(" · ") || "—";
       // TV audio coming home to this receiver: eARC on its own HDMI outs, optical runs in
       const aback = [...outbound.filter(c => c.signal === "video" && c.earc).map(c => { const comp = s.companions[c.to];
           return `${comp && servesEp(s, c.to) ? zoneName(ix, comp.serves) : zoneName(ix, c.to)} TV (eARC)`; }),
@@ -277,7 +277,7 @@ export function takeoffItems(job, ix, opts = {}) {
     items.push({ label: `${devName(d)} (in-zone)`, status: d.status || "new", where: ix.zonesById[d.zone]?.name || "(zone removed)" });
   const compGroups = {};
   for (const c of sol.companions || []) {
-    const kind = `${adapterName(c.type)} (auto-added)`;
+    const kind = `${adapterName(c)} (auto-added)`;
     const where = servesEp(s, c.id) ? zoneOf(ix, c.serves)?.name : s.devices[c.serves]?.model;
     (compGroups[kind] ||= []).push(where || "");
   }
@@ -421,10 +421,20 @@ export function wireRuns(job, ix, opts = {}) {
     const toEp = ix.endpointsById[c.to];
     const fromEp = ix.endpointsById[c.from];
     if (s.locals[c.from]) continue;                      // in-room link, not a pull
+    if (c.dante) {                                       // Dante: a network drop, not an audio pull
+      const comp = s.companions[c.from];
+      if (comp && (comp.type === "axis" || comp.type === "axis16") && !runs.some(r => r.danteFrom === comp.id)) {
+        const dsw = Object.values(s.devices).find(d => d.danteSwitch);
+        runs.push({ prefix: "N", cable: "Cat6", from: `${zoneName(ix, comp.serves)} — TV location`, to: dsw ? devName(dsw) : rackName,
+          carries: `Dante audio (${adapterName(comp)})`, color: "#2b6cb8", term: "RJ45 (PoE) at the AXIS", count: 1, gray, danteFrom: comp.id });
+      }
+      continue;                                          // DANTE-DV2 rides its video cable (VLAN 99); rack Dante gear is patched in the rack
+    }
+    if (c.signal === "audioReturn" && s.companions[c.to]) continue;   // TV eARC into its AXIS — an HDMI at the TV
     if (c.signal === "video" && toComp) {                // rack video feed to a display chip
       runs.push({ prefix: "V", cable: "Cat6", from: rackName, to: `${zoneName(ix, toComp.serves)} — TV location`,
-        carries: `${toComp.type === "balun" ? "Video (HDBaseT)" : "Video (MXNet)"}${c.earc ? " + eARC back" : ""}`, color: "#b32017",
-        term: `${adapterName(toComp.type)} at TV`, count: 1, gray });
+        carries: `${toComp.type === "balun" ? "Video (HDBaseT)" : "Video (MXNet)"}${toComp.dante ? " + Dante (VLAN 99)" : ""}${c.earc ? " + eARC back" : ""}`, color: "#b32017",
+        term: `${adapterName(toComp)} at TV`, count: 1, gray });
     } else if (c.signal === "video" && toEp && s.devices[c.from]) {   // direct rack → display (no extender chip drawn)
       runs.push({ prefix: "V", cable: "HDMI / extender", from: rackName, to: `${zoneName(ix, c.to)} — TV location`,
         carries: `Video (direct)${c.earc ? " + eARC back" : ""}`, color: "#b32017", term: "TV input — verify run length", count: 1, gray });

@@ -10,6 +10,7 @@ export const SIGNAL_COLORS = {
   speaker: "#2b6cb8",
   network: "#2f9e44",
   audioReturn: "#e8842c",
+  dante: "#2b6cb8",          // audio blue, dashed: it rides the Dante network, not a line-level run
   prewire: "#a7a7a7",
 };
 
@@ -22,10 +23,15 @@ export const SIGNAL_DASHES = {
   speaker: { stroke: "#333", dash: "9 4" },
   audioReturn: { stroke: "#333", dash: "12 4 2.5 4" },
   network: { stroke: "#666", dash: "2 4" },
+  dante: { stroke: "#333", dash: "3 3" },
   prewire: { stroke: "#9a9a9a", dash: "5 4" },
 };
 
 export const REMOTE_LABELS = { savant: "SAVANT", appletv: "ATV", josh: "JOSH", factory: "OEM" };
+
+// amp zones a speaker feed takes: a stereo pair is one; a surround set on a
+// multi-zone amp spans its channels ("1-8" = 4 zones)
+export const feedZones = f => { const n = expandChannels(f.channels).length; return n > 2 ? Math.ceil(n / 2) : 1; };
 
 export const READABILITY_ZONE_CEILING = 24; // one 11x17 page, per spec §"Readability budget"
 
@@ -243,7 +249,7 @@ export function validate(job, ix = indexJob(job)) {
 
     // companions serve real things
     for (const c of sol.companions || []) {
-      if (!nodeInSolution(s, ix, c.serves)) E("bad-serves", `${adapterName(c.type)} is attached to gear that no longer exists`, c.id);
+      if (!nodeInSolution(s, ix, c.serves)) E("bad-serves", `${adapterName(c)} is attached to gear that no longer exists`, c.id);
     }
     // local devices reference real zones
     for (const d of sol.localDevices || []) {
@@ -291,8 +297,9 @@ export function validate(job, ix = indexJob(job)) {
           taken[ch] = f.to;
         }
       }
-      if (amp?.zones && feeds.length > amp.zones)
-        E("amp-over", `${nm(ampId)}: ${feeds.length} zones assigned but it only has ${amp.zones}`, ampId);
+      const zonesUsed = feeds.reduce((n, f) => n + feedZones(f), 0);
+      if (amp?.zones && zonesUsed > amp.zones)
+        E("amp-over", `${nm(ampId)}: ${zonesUsed} zones assigned but it only has ${amp.zones}`, ampId);
     }
 
     // a local return encoder with no backhaul is a silently dead return in the field
@@ -709,7 +716,7 @@ export function place(job, ix = indexJob(job), opts = {}) {
   const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   const chipFits = r => !allDevices.some(d => hit(r, d)) && !out.chips.some(c => hit(r, c));
   for (const comp of sol.companions || []) {
-    const chip = { id: comp.id, type: comp.type, ...PL.chip };
+    const chip = { id: comp.id, type: comp.type, ...(comp.dante ? { dante: true } : {}), ...PL.chip };
     const servedEp = ix.endpointsById[comp.serves];
     if (servedEp) {
       // balun/DEC under the display it serves, aligned with the endpoint (boundary principle)
@@ -756,8 +763,8 @@ export function place(job, ix = indexJob(job), opts = {}) {
   });
 
   /* -- dynamic legend: only signal types present on the sheet -- */
-  const present = [...new Set(visConns.map(c => (c.scope || "included") !== "included" ? "prewire" : c.signal === "speaker" ? "audio" : c.signal))];
-  const order = ["video", "audio", "audioReturn", "network", "prewire"];
+  const present = [...new Set(visConns.map(c => (c.scope || "included") !== "included" ? "prewire" : c.dante ? "dante" : c.signal === "speaker" ? "audio" : c.signal))];
+  const order = ["video", "audio", "dante", "audioReturn", "network", "prewire"];
   const rows = order.filter(k => present.includes(k));
   // zone annotations ride the legend as numbered keynotes (CAD style): the
   // full sentence lives here, the zone card wears only the circled number
@@ -1008,7 +1015,7 @@ export function route(job, ix, placement, opts = {}) {
   };
   const commit = (conn, cls, pts, extra = {}) => {
     const clean = pts.filter((p, i) => i === 0 || p[0] !== pts[i - 1][0] || p[1] !== pts[i - 1][1]);
-    const w = { id: wireId(conn), net: nWire++, cls, signal: conn.signal, scope: conn.scope || "included", from: conn.from, to: conn.to, pts: clean, hops: [], ...extra };
+    const w = { id: wireId(conn), net: nWire++, cls, signal: conn.signal, scope: conn.scope || "included", from: conn.from, to: conn.to, pts: clean, hops: [], ...(conn.dante ? { dante: true } : {}), ...extra };
     // a fallback is known-bad geometry: draw it, but never let it poison the
     // registry and starve later (valid) wires
     if (!cls.endsWith("-fallback")) registerPath(clean, w.net);
@@ -1047,6 +1054,12 @@ export function route(job, ix, placement, opts = {}) {
       const chip = chipById[conn.from];
       const { pz } = slotOf(conn.to);
       commit(conn, "stub", [[chip.x + chip.w / 2, chip.y], [chip.x + chip.w / 2, pz.y + pz.h]]);
+      done.add(i);
+    } else if (ix.endpointsById[conn.from] && s.companions[conn.to]?.serves === conn.from && chipById[conn.to]) {
+      // the TV into its own chip (eARC into an AXIS): the same stub, pointing down
+      const chip = chipById[conn.to];
+      const { pz } = slotOf(conn.from);
+      commit(conn, "stub", [[chip.x + chip.w / 2, pz.y + pz.h], [chip.x + chip.w / 2, chip.y]]);
       done.add(i);
     } else if (s.locals[conn.from] && ix.endpointsById[conn.to]) {
       // in-room source touches its display: the local-source exception
@@ -1135,6 +1148,8 @@ export function route(job, ix, placement, opts = {}) {
 
     if (fromDev && toDev) { routeRackToRack(conn, fromDev, toDev); done.add(i); return; }
     if (fromDev && toChip) { routeDevToChip(conn, fromDev, toChip); done.add(i); return; }
+    // a chip parked under a TV sending to the rack (Dante: AXIS/DANTE-DV2 → amp) leaves the zone like a return (pass 4c)
+    if (fromChip && toDev && ix.endpointsById[s.companions[conn.from]?.serves]) return;
     if (fromChip && toDev) { routeChipToDev(conn, fromChip, toDev); done.add(i); return; }
     if ((ix.endpointsById[conn.from] || s.locals[conn.from]) && toDev) return; // returns + local backhauls route LAST (pass 4c)
     out.warnings.push({ code: "unrouted", msg: `no route class for ${wireId(conn)}` });
@@ -1710,20 +1725,21 @@ export function route(job, ix, placement, opts = {}) {
     tryCommit(conn, "chip-out", cands, skip);
   }
 
-  function routeReturn(conn, b) {
+  function routeReturn(conn, b, origin = conn.from) {
     // audio return: starts at the border aligned with the display (or the local
     // encoder's puck for network backhauls), wraps to the target's LEFT edge —
     // least-hops around the corridor bundles
-    const ls = localSlotOf(conn.from);
-    const { pz, cx } = ls ? { pz: ls.pz, cx: ls.cx } : slotOf(conn.from);
-    const compChip = ls ? null : (sol.companions || []).find(c => c.serves === conn.from);
+    const ls = localSlotOf(origin);
+    const { pz, cx } = ls ? { pz: ls.pz, cx: ls.cx } : slotOf(origin);
+    const compChip = ls ? null : (sol.companions || []).find(c => c.serves === origin);
     const chipHalf = compChip ? (chipById[compChip.id]?.w ?? 0) / 2 + 8 : 0;
-    const sx0 = ls ? cx : (feedsToEp[conn.from] ? cx + Math.max(RT.lane, chipHalf) : cx);
-    const skip = new Set([pz.id, b.id]);
+    const ownChip = origin !== conn.from ? chipById[conn.from] : null;   // a chip under the TV sending to the rack
+    const sx0 = ownChip ? ownChip.x + ownChip.w / 2 + 14 : ls ? cx : (feedsToEp[origin] ? cx + Math.max(RT.lane, chipHalf) : cx);
+    const skip = new Set([pz.id, b.id, ...(ownChip ? [ownChip.id] : [])]);
     const corTop = P.corridors.find(c => c.id === "top");
     // hug the strip just under the source card, above the corridor's feed lanes
     // — the return crosses only the drops it can't avoid (least-hops)
-    const laneLo = pz.y + pz.h + 14;
+    const laneLo = ownChip ? ownChip.y + ownChip.h + 8 : pz.y + pz.h + 14;
     // range reaches below the rack too — a return from a far cluster may have to
     // travel under everything to reach the AB gap
     const laneHi = Math.max(corTop ? corTop.y + corTop.h - 6 : pz.y + pz.h + 220, rackBottom + 320);
@@ -1756,7 +1772,7 @@ export function route(job, ix, placement, opts = {}) {
     // a stacked card directly below can wall off the straight descent — jog
     // through the row strip into the cluster gutter beside the card, then drop
     const buildCands = (y, wx) => {
-      const cb = pz.y + pz.h;
+      const cb = ownChip ? ownChip.y + ownChip.h : pz.y + pz.h;   // a chip's wire leaves the chip's bottom
       const list = [[[sx0, cb], [sx0, y], [wx, y], [wx, ty], [b.x, ty]]];
       if (y > cb + 60) {
         // the descent beside the card is a channel like any other — allocate it
@@ -1774,8 +1790,9 @@ export function route(job, ix, placement, opts = {}) {
       let n = 0;
       scanLane(band[0], +1, band, gapABx[0], sx0, nWire, y => {
         for (const range of rangesArr) {
-          const wx = alloc(usedV, range === gapABx ? (range[0] + range[1]) / 2 : range[1],
-            Math.min(y, ty), Math.max(y, ty), nWire, range === gapABx ? 0 : -1,
+          const isGap = range === gapABx || range === gapBCx;
+          const wx = alloc(usedV, isGap ? (range[0] + range[1]) / 2 : range[1],
+            Math.min(y, ty), Math.max(y, ty), nWire, isGap ? 0 : -1,
             x => segBlocked(x, Math.min(y, ty), x, Math.max(y, ty), skip), range);
           if (wx == null) { rdbg({ [tag]: y, r: range === gapABx ? "ab" : "west", fail: "alloc" }); continue; }
           const list = buildCands(y, wx);
@@ -1829,11 +1846,13 @@ export function route(job, ix, placement, opts = {}) {
     if (!best) {
       for (const p of portCands) {
         ty = p; reset();
-        scan([laneLo, laneHi], [gapABx, westMarginX], 30, "y");
+        // a column-C target (e.g. a Hyperion) is reached through the B/C gap first
+        const ranges = b.col === "C" ? [gapBCx, gapABx, westMarginX] : [gapABx, westMarginX];
+        scan([laneLo, laneHi], ranges, 30, "y");
         // tall racks put the only clear crossing BELOW everything — the near-card
         // scan can exhaust its sample budget before ever reaching it; the first
         // 340px below the rack belong to the amp dive strips, duck BENEATH them
-        if (!best) scan([rackBottom + 24, rackBottom + 560], [gapABx, westMarginX], 12, "band2");
+        if (!best) scan([rackBottom + 24, rackBottom + 560], ranges, 12, "band2");
         if (best) break;
       }
     }
@@ -1850,6 +1869,8 @@ export function route(job, ix, placement, opts = {}) {
     if (done.has(i)) return;
     const toDev = devById[conn.to];
     if ((ix.endpointsById[conn.from] || s.locals[conn.from]) && toDev) { routeReturn(conn, toDev); done.add(i); return; }
+    const zc = s.companions[conn.from];
+    if (zc && toDev && ix.endpointsById[zc.serves]) { routeReturn(conn, toDev, zc.serves); done.add(i); return; }
     out.warnings.push({ code: "unrouted", msg: `no route class for ${wireId(conn)}` });
   });
 
@@ -2038,7 +2059,7 @@ export function wireD(w) {
   return d;
 }
 
-const LEGEND_LABELS = { video: SIGNAL_SHORT.video, audio: SIGNAL_SHORT.audio, audioReturn: SIGNAL_SHORT.audioReturn, network: SIGNAL_SHORT.network, prewire: SIGNAL_SHORT.prewire };
+const LEGEND_LABELS = { video: SIGNAL_SHORT.video, audio: SIGNAL_SHORT.audio, dante: "Dante audio", audioReturn: SIGNAL_SHORT.audioReturn, network: SIGNAL_SHORT.network, prewire: SIGNAL_SHORT.prewire };
 const fmtDate = iso => { const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${+m[2]}/${+m[3]}/${m[1].slice(2)}` : esc(iso); };
 
 // a label that must stay inside its tile: past the width it's squeezed to fit
@@ -2230,7 +2251,7 @@ export function render(job, ix, P, rt, opts = {}) {
      convention). The count rides the root segment carrying the most wires. */
   const busTicks = [];
   const colorOf = w => {
-    const key = w.scope !== "included" ? "prewire" : (w.signal === "speaker" ? "audio" : w.signal);
+    const key = w.scope !== "included" ? "prewire" : w.dante ? "dante" : (w.signal === "speaker" ? "audio" : w.signal);
     const gs = bw ? (SIGNAL_DASHES[key] || SIGNAL_DASHES.video) : null;
     return gs ? gs.stroke : SIGNAL_COLORS[key] || "#555";
   };
@@ -2265,10 +2286,11 @@ export function render(job, ix, P, rt, opts = {}) {
   /* wires (under chips so badges sit inline on their runs) */
   push(`<g fill="none" stroke-width="2.2" stroke-linecap="round">`);
   for (const w of rt.wires) {
-    const key = w.scope !== "included" ? "prewire" : (w.signal === "speaker" ? "audio" : w.signal);
+    const key = w.scope !== "included" ? "prewire" : w.dante ? "dante" : (w.signal === "speaker" ? "audio" : w.signal);
     const gs = bw ? (SIGNAL_DASHES[key] || SIGNAL_DASHES.video) : null;
     const color = gs ? gs.stroke : SIGNAL_COLORS[key] || "#555";
-    push(`<path class="wire" data-wire="${esc(w.id)}" data-from="${esc(w.from)}" data-to="${esc(w.to)}" data-signal="${esc(w.signal)}" d="${wireD(w)}" stroke="${color}"${gs?.dash ? ` stroke-dasharray="${gs.dash}"` : ""}/>`);
+    const dash = gs?.dash || (key === "dante" ? "6 4" : null);
+    push(`<path class="wire${w.dante ? " dante" : ""}" data-wire="${esc(w.id)}" data-from="${esc(w.from)}" data-to="${esc(w.to)}" data-signal="${esc(w.signal)}" d="${wireD(w)}" stroke="${color}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`);
     // one-line bus notation: a trunk drawn once carries its real run count
     const conn = (sol.connections || []).find(c => c.from === w.from && c.to === w.to && c.signal === w.signal);
     const n = conn ? trunkCount(conn, s) : 1;
@@ -2291,7 +2313,7 @@ export function render(job, ix, P, rt, opts = {}) {
   /* companion chips */
   for (const c of P.chips) {
     push(`<rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="2" fill="#1e1e1e"/>`);
-    push(`<text x="${c.x + c.w / 2}" y="${c.y + 13}" text-anchor="middle" font-size="10" fill="#eee">${esc(adapterTag(c.type))}</text>`);
+    push(`<text x="${c.x + c.w / 2}" y="${c.y + 13}" text-anchor="middle" font-size="10" fill="#eee">${esc(adapterTag(c))}</text>`);
     push(`<circle cx="${c.x + c.w - 6}" cy="${c.y + c.h / 2}" r="1.8" fill="#3fbf5a"/>`);
   }
 
@@ -2310,7 +2332,8 @@ export function render(job, ix, P, rt, opts = {}) {
   lg.rows.forEach((k, i) => {
     const x = lg.x + 12 + i * 140;
     const st = bw ? SIGNAL_DASHES[k] : null;
-    push(`<path d="M${x} ${lg.y + 36}H${x + 32}" stroke="${st ? st.stroke : SIGNAL_COLORS[k]}" stroke-width="3" fill="none"${st?.dash ? ` stroke-dasharray="${st.dash}"` : ""}/>`);
+    const ld = st?.dash || (k === "dante" ? "6 4" : null);
+    push(`<path d="M${x} ${lg.y + 36}H${x + 32}" stroke="${st ? st.stroke : SIGNAL_COLORS[k]}" stroke-width="3" fill="none"${ld ? ` stroke-dasharray="${ld}"` : ""}/>`);
     push(`<text x="${x + 38}" y="${lg.y + 40}" font-size="11.5" fill="#333">${LEGEND_LABELS[k] || k}</text>`);
   });
   if (lg.notes?.length) {
@@ -2449,10 +2472,11 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       const amp = s.devices[ampId];
       const reserved = feeds.filter(f => (f.scope || "included") !== "included").length;
       const zonesTotal = amp?.zones ?? catalog?.devices?.[amp?.catalogRef]?.zones ?? null;
+      const zonesUsed = feeds.reduce((n, f) => n + feedZones(f), 0);
       out.amps.push({
         solution: sol.id, amp: ampId, model: amp?.model,
-        zonesUsed: feeds.length, zonesTotal, reserved,
-        spare: zonesTotal != null ? zonesTotal - feeds.length : null,
+        zonesUsed, zonesTotal, reserved,
+        spare: zonesTotal != null ? zonesTotal - zonesUsed : null,
       });
     }
 
@@ -2523,9 +2547,64 @@ export function advise(job, ix = indexJob(job), catalog = null) {
           out.notes.push({ code: "control-lan-only", solution: sol.id, msg: `${d.model || d.id}: LAN is control/DSP only — no Dante/audio-over-IP on this box` });
       }
       // current-gen AVB/IP audio gear rides the network — and Savant makes no AVB switch of its own
-      if (Object.values(s.devices).some(d => catalog.devices[d.catalogRef]?.flags?.includes("avb")))
+      if (sol.audioNetwork !== "dante" && Object.values(s.devices).some(d => catalog.devices[d.catalogRef]?.flags?.includes("avb")))
         out.notes.push({ code: "avb-switch", solution: sol.id,
           msg: "AVB/IP audio gear on this job — requires an Avnu-certified AVB switch (e.g. Netgear M4250 AV Line); an uncertified switch breaks AVB stream sync silently" });
+      // controllers: MXNet needs its control box; a Dante system needs AVPro's Dante controller
+      const flagsOf = d => catalog.devices[d.catalogRef]?.flags || [];
+      const rackAndLocal = [...Object.values(s.devices), ...Object.values(s.locals)];
+      const mxnet = rackAndLocal.some(d => flagsOf(d).includes("mxnet") && d.type !== "controlBox") ||
+        Object.values(s.companions).some(c => (c.type === "enc" || c.type === "dec") && (sol.connections || []).some(k => (k.from === c.id || k.to === c.id) && s.devices[k.from === c.id ? k.to : k.from]?.type === "avSwitch"));
+      // a CBOX runs ONE mode: an MXNet CBOX and a Dante-mode CBOX are two boxes
+      const danteCtl = d => flagsOf(d).includes("danteController") || /dante/i.test(d.model || "");
+      if (mxnet && !rackAndLocal.some(d => d.type === "controlBox" && !danteCtl(d) && (flagsOf(d).includes("mxnet") || /mxnet|cbox/i.test(d.model || ""))))
+        out.notes.push({ code: "mxnet-no-cbox", solution: sol.id,
+          msg: "MXNet on this job but no MXNet control box — add an AC-MXNET-CBOX-HA (it runs the system and is what Savant/Control4 talk to)" });
+      const danteGear = rackAndLocal.filter(d => flagsOf(d).includes("dante"));
+      const danteJob = sol.audioNetwork === "dante" || danteGear.some(d => d.type === "danteBridge");
+      if (danteJob && !rackAndLocal.some(d => d.type === "controlBox" && danteCtl(d)))
+        out.notes.push({ code: "dante-no-controller", solution: sol.id,
+          msg: mxnet
+            ? "Dante system with no Dante controller — add a second CBOX-HA in Dante mode (a CBOX runs MXNet OR Dante, not both); it's what lets Savant/Control4 re-route Dante"
+            : "Dante system with no Dante controller — add an AC-MXNET-CBOX-HA in Dante mode; it's what lets Savant/Control4 re-route Dante" });
+      // a CBOX-HA runs ONE mode (1G / USP / 10G / Dante): one per MXNet platform on the job
+      const gens = new Set(rackAndLocal.map(d => catalog.devices[d.catalogRef]?.gen).filter(Boolean).map(g => g.startsWith("1g") ? "1G" : g === "10g" ? "10G" : g.toUpperCase()));
+      const mxCtl = rackAndLocal.filter(d => d.type === "controlBox" && !danteCtl(d) && (flagsOf(d).includes("mxnet") || /mxnet|cbox/i.test(d.model || ""))).length;
+      if (gens.size > 1 && mxCtl < gens.size)
+        out.notes.push({ code: "mxnet-cbox-per-platform", solution: sol.id,
+          msg: `MXNet ${[...gens].join(" + ")} on one job — a CBOX-HA runs one platform at a time: needs ${gens.size} CBOX-HAs (has ${mxCtl})${danteJob ? ", plus the Dante-mode one" : ""}. 1G and 10G endpoints never route to each other.` });
+      // Dante-enabled MXNet endpoints: what they carry, and where their Dante travels
+      const ddec = Object.values(s.companions).filter(c => c.type === "dec" && c.dante);
+      if (ddec.length) {
+        out.notes.push({ code: "dante-dv2-audio", solution: sol.id,
+          msg: `Dante decoders (DANTE-DV2) at ${ddec.length} TV${ddec.length > 1 ? "s" : ""}: they put the MXNet SOURCE's audio on Dante (audio follows video) — not the TV's own apps; add an AXIS2 where the client streams on the TV. They need DANTE-EV2 encoders on the sources.` });
+        out.notes.push({ code: "dante-vlan99", solution: sol.id,
+          msg: "Dante on the MXNet endpoints rides the video cable as VLAN 99 (MXNet on VLAN 100): trunk those switch ports and carry VLAN 99 over to the Dante switch" });
+      }
+      // TV-audio encoders
+      if (Object.values(s.companions).some(c => c.type === "axis") || rackAndLocal.some(d => flagsOf(d).includes("pcmOnly2ch")))
+        out.notes.push({ code: "axis2-pcm", solution: sol.id, msg: "AXIS2 at a TV: set that TV's audio output to stereo PCM — the AXIS2 doesn't decode Dolby/DTS (manual: bitstream = 'loud noises')" });
+      // small Dante transmitters (AXIS2 / Ultimo encoders) reach 2 receivers by unicast
+      for (const id of [...Object.values(s.companions).filter(c => c.type === "axis").map(c => c.id),
+                        ...rackAndLocal.filter(d => flagsOf(d).includes("ultimo") || flagsOf(d).includes("pcmOnly2ch")).map(d => d.id)]) {
+        const subs = new Set((sol.connections || []).filter(c => c.from === id && c.dante).map(c => c.to)).size;
+        if (subs > 2) out.notes.push({ code: "dante-multicast", solution: sol.id, ref: id,
+          msg: `${describeNode(job, sol, id).short} feeds ${subs} Dante receivers — set it to multicast (unicast reaches 2)` });
+      }
+      // one audio network per job: Dante OR Savant AVB (the control platform is separate)
+      const avbOnly = rackAndLocal.filter(d => flagsOf(d).includes("avb") && ["audioInputModule", "audioOutputModule", "avbSwitch"].includes(d.type));
+      const danteOnly = rackAndLocal.filter(d => d.type === "danteBridge");
+      const names = list => list.map(d => d.model || d.id).join(", ");
+      if (sol.audioNetwork === "dante" && avbOnly.length)
+        out.notes.push({ code: "net-mismatch", solution: sol.id, msg: `AVB gear on a Dante job: ${names(avbOnly)} — swap for Dante encoders/decoders, or set the job's audio network to Savant AVB` });
+      else if (sol.audioNetwork === "avb" && danteOnly.length)
+        out.notes.push({ code: "net-mismatch", solution: sol.id, msg: `Dante gear on a Savant AVB job: ${names(danteOnly)} — one audio network per job` });
+      else if (!sol.audioNetwork && avbOnly.length && danteOnly.length)
+        out.notes.push({ code: "net-mixed", solution: sol.id, msg: `Both Dante (${names(danteOnly)}) and AVB (${names(avbOnly)}) gear — pick one audio network for the job (JOB → Audio network)` });
+      // Dante on its own switch, set up for Dante (AVPro guidance; MXNet E-series ship this way)
+      if (danteJob)
+        out.notes.push({ code: "dante-switch", solution: sol.id,
+          msg: "Dante switch (dedicated): Energy-Efficient Ethernet OFF · IGMP snooping on with a querier · QoS for Dante (clock CS7, audio EF) · clock leader = an always-on rack amp, never a TV encoder" });
       // Sonos distributes over the LAN — every player wants a wired drop where possible
       const allSolDevs = [...Object.values(s.devices), ...Object.values(s.locals)];
       if (allSolDevs.some(d => catalog.devices[d.catalogRef]?.flags?.includes("sonos")))
@@ -2547,7 +2626,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       if (!comp || !ix.endpointsById[comp.serves]) continue;
       if ((sol.connections || []).some(r => r.from === comp.serves && r.signal === "audioReturn")) continue;
       out.notes.push({ code: "earc-extender", solution: sol.id, ref: comp.serves,
-        msg: `${describeNode(job, sol, comp.serves).short}: eARC comes back through the ${adapterName(comp.type)} — confirm that model passes eARC (many only pass ARC), or add the optical backup` });
+        msg: `${describeNode(job, sol, comp.serves).short}: eARC comes back through the ${adapterName(comp)} — confirm that model passes eARC (many only pass ARC), or add the optical backup` });
     }
 
     /* -- licensing advisor per platform -- */

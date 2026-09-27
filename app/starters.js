@@ -59,6 +59,33 @@ export const STARTERS = [
       v("cablebox", "enc-cable"), v("enc-cable", "sw"), { from: "cbx", to: "sw", signal: "network" }],
   },
   {
+    id: "dante-director",
+    name: "Dante (Director amps)",
+    blurb: "MXNet video + Dante audio: Director amps, Dante decoders (DANTE-DV2) at MXNet TVs, AXIS2/AXIS16 elsewhere, Dante CBOX + its own switch.",
+    tip: "kitchen stereo 55 matrix, family room 5.1 75 matrix, office stereo 43 matrix, theater 7.1 85 matrix",
+    solution: { audioNetwork: "dante" },
+    devices: [
+      src("atv1", "Apple TV 1"), src("atv2", "Apple TV 2"), src("cablebox", "Cable Box"),
+      dev("music", "source", "savant-pav-sms2001"),
+      dev("sw", "avSwitch", "avpro-mxnet-sw24e"),
+      dev("cbx", "controlBox", "avpro-mxnet-cbox-ha"),
+      dev("dante-cbox", "controlBox", "avpro-mxnet-dante-cbox"),
+      dev("dante-sw", "networkSwitch", "avpro-mxnet-sw24e", null, { danteSwitch: true }),
+      dev("dante-in", "danteBridge", "audiocontrol-acp-dante-e-poe"),
+      dev("director", "amp", "audiocontrol-m6800d"),
+    ],
+    companions: [
+      { id: "enc-atv1", type: "enc", serves: "atv1", auto: true },
+      { id: "enc-atv2", type: "enc", serves: "atv2", auto: true },
+      { id: "enc-cable", type: "enc", serves: "cablebox", auto: true },
+    ],
+    connections: [v("atv1", "enc-atv1"), v("enc-atv1", "sw"), v("atv2", "enc-atv2"), v("enc-atv2", "sw"),
+      v("cablebox", "enc-cable"), v("enc-cable", "sw"), { from: "cbx", to: "sw", signal: "network" },
+      { from: "music", to: "dante-in", signal: "audio" },                          // music server optical → Dante encoder
+      { from: "dante-in", to: "director", signal: "audio", dante: true },
+      { from: "dante-cbox", to: "dante-sw", signal: "network" }, { from: "dante-sw", to: "director", signal: "network" }],
+  },
+  {
     id: "blank",
     name: "Blank rack",
     blurb: "Start empty and add gear yourself.",
@@ -82,6 +109,7 @@ export function applyStarter(job, starter, catalog) {
   });
   sol.companions = structuredClone(starter.companions || []);
   sol.connections = structuredClone(starter.connections);
+  if (starter.solution?.audioNetwork) sol.audioNetwork = starter.solution.audioNetwork; else delete sol.audioNetwork;
   job.job.starter = starter.id;
   return job;
 }

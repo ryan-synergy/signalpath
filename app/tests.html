@@ -1065,7 +1065,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
     Object.keys(cat.devices).filter(k => !cat.devices[k].verified).length === 0);
   { // one port vocabulary, so every count the advisor reads is actually read
     const IN = ["hdmi", "earc", "analog", "coax", "optical", "digitalCombo", "dante"];
-    const OUT = ["hdmi", "analog", "sub", "coax", "optical", "dante", "gbe", "gbe25", "sfpPlus"];
+    const OUT = ["hdmi", "analog", "sub", "coax", "optical", "dante", "gbe", "gbe25", "gbe10", "sfp", "sfpPlus"];
     const bad = Object.entries(cat.devices).flatMap(([k, d]) => [
       ...Object.keys(d.inputs || {}).filter(p => !IN.includes(p)).map(p => `${k} in.${p}`),
       ...Object.keys(d.outputs || {}).filter(p => !OUT.includes(p)).map(p => `${k} out.${p}`)]);
@@ -2037,6 +2037,82 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("hardening: missing endpoint/rack/connection lists normalize to empty",
     Array.isArray(ok.job.house.zones[0].endpoints) && Array.isArray(ok.job.solutions[0].racks) &&
     Array.isArray(ok.job.solutions[0].connections) && Array.isArray(ok.job.solutions[0].localDevices));
+}
+
+/* ---------- audio network + controllers (Dante OR AVB; CBOX per MXNet / per Dante) ---------- */
+{
+  const CAT = await (await fetch("./catalog.json")).json();
+  const mk = (devs, extra = {}) => ({ generator: "SignalPath", schemaVersion: 1, job: { name: "net" },
+    house: { zones: [{ id: "z1", name: "Kitchen", endpoints: [{ id: "z1-tv", type: "display", size: 55 }] }] },
+    solutions: [{ id: "s1", name: "A", platforms: ["savant"], racks: [{ id: "r", name: "Rack", devices: devs }],
+      localDevices: [], companions: [], connections: [], annotations: [], ...extra }] });
+  const codes = r => { const { job, ix } = loadJob(r); return advise(job, ix, CAT).notes.map(n => n.code); };
+  const sw = { id: "sw", type: "avSwitch", catalogRef: "avpro-mxnet-sw12", model: "MXNET SW12" };
+  const cbox = { id: "cbx", type: "controlBox", catalogRef: "avpro-mxnet-cbox-ha", model: "AC-MXNET-CBOX-HA" };
+  const dcbox = { id: "dcbx", type: "controlBox", catalogRef: "avpro-mxnet-cbox-ha", model: "AC-MXNET-CBOX-HA (Dante mode)" };
+  const axis = { id: "ax", type: "danteBridge", catalogRef: "avpro-acp-axis2", model: "ACP-AXIS2" };
+  const aim = { id: "aim", type: "audioInputModule", catalogRef: "savant-pav-aim7c", model: "PAV-AIM7C" };
+  t("net: MXNet without a control box is flagged", codes(mk([sw])).includes("mxnet-no-cbox"));
+  t("net: MXNet with its CBOX is fine", !codes(mk([sw, cbox])).includes("mxnet-no-cbox"));
+  t("net: a Dante-mode CBOX doesn't count as the MXNet one", codes(mk([sw, dcbox])).includes("mxnet-no-cbox"));
+  t("net: Dante job without a Dante controller is flagged (and asks for a SECOND CBOX when MXNet is there too)",
+    (() => { const { job, ix } = loadJob(mk([sw, cbox, axis], { audioNetwork: "dante" }));
+      const n = advise(job, ix, CAT).notes.find(n => n.code === "dante-no-controller"); return n && /second CBOX/.test(n.msg); })());
+  t("net: Dante job with a Dante-mode CBOX is fine + gets the switch checklist",
+    (() => { const c = codes(mk([sw, cbox, dcbox, axis], { audioNetwork: "dante" })); return !c.includes("dante-no-controller") && c.includes("dante-switch"); })());
+  t("net: AVB modules on a Dante job are flagged", codes(mk([aim, dcbox], { audioNetwork: "dante" })).includes("net-mismatch"));
+  t("net: Dante encoders on an AVB job are flagged", codes(mk([axis], { audioNetwork: "avb" })).includes("net-mismatch"));
+  t("net: both kinds with no network chosen → pick one", codes(mk([axis, aim, dcbox])).includes("net-mixed"));
+  t("net: a Dante-capable AMP on an AVB job is allowed (it just uses its analog inputs)",
+    !codes(mk([aim, { id: "amp", type: "amp", catalogRef: "audiocontrol-m6800d", model: "M6800D", zones: 8 }], { audioNetwork: "avb" })).includes("net-mismatch"));
+}
+
+/* ---------- Dante distribution (Director default, DANTE-DV2 at MXNet TVs, AXIS2/AXIS16) ---------- */
+{
+  const CAT = await (await fetch("./catalog.json")).json();
+  const H = await import("./hookup.js"), S = await import("./starters.js"), C = await import("./commands.js");
+  const blank = () => ({ generator: "SignalPath", schemaVersion: 1, job: { name: "d", client: { name: "c" }, revisions: [] },
+    house: { areas: [], zones: [] }, solutions: [{ id: "s", name: "A", platforms: ["savant"], racks: [{ id: "rack-main", name: "Rack", devices: [] }], localDevices: [], companions: [], connections: [], annotations: [] }] });
+  const j0 = S.applyStarter(blank(), S.STARTERS.find(x => x.id === "dante-director"), CAT);
+  const r = C.planCommands(j0, 0, [{ op: "add_zones", text: "kitchen stereo 55 matrix, office stereo 43, family room 5.1 75 matrix, theater 7.1 85 matrix, den 5.1 65 matrix director" }], CAT);
+  const sol = r.job.solutions[0], comp = id => sol.companions.find(c => c.id === id);
+  const feed = spk => sol.connections.find(c => c.to === spk && c.signal === "speaker");
+  const devOf = id => sol.racks[0].devices.find(d => d.id === id);
+  t("dante: the starter makes a Dante job with a Dante CBOX AND the MXNet CBOX, plus a dedicated Dante switch",
+    sol.audioNetwork === "dante" && sol.racks[0].devices.filter(d => d.type === "controlBox").length === 2 && sol.racks[0].devices.some(d => d.danteSwitch));
+  t("dante: an MXNet TV gets the Dante decoder (DANTE-DV2) feeding a Director; source encoders become DANTE-EV2",
+    comp("dec-z-kitchen")?.dante && sol.connections.some(c => c.from === "dec-z-kitchen" && c.dante && /m6800d/.test(devOf(c.to)?.catalogRef)) &&
+    sol.companions.filter(c => c.type === "enc").every(c => c.dante));
+  t("dante: a TV with no MXNet feed gets an AXIS2 on its eARC", comp("axis-z-office") && sol.connections.some(c => c.from === "z-office-tv" && c.to === "axis-z-office"));
+  t("dante: surround → AXIS16 into a Hyperion sized to the room (5.1 Penta, 7.1 Hepta)",
+    devOf(feed("z-family-room-spk").from)?.catalogRef === "audiocontrol-hype-penta" && devOf(feed("z-theater-spk").from)?.catalogRef === "audiocontrol-hype-hepta" &&
+    sol.connections.some(c => c.from === "axis16-z-theater" && c.dante));
+  t("dante: 'director' puts a 5.1 on the Director across 4 zones (C and LFE on their own)",
+    /m6800d/.test(devOf(feed("z-den-spk").from)?.catalogRef) && expandChannels(feed("z-den-spk").channels).length === 8);
+  const { job, ix } = loadJob(r.job), v = validate(job, ix), a = advise(job, ix, CAT), codes = a.notes.map(n => n.code);
+  t("dante: the whole house validates (the one error: the Office TV was given no video on purpose)",
+    v.errors.length === 1 && /Office TV/.test(v.errors[0].msg), v.errors.map(e => e.msg).join(" | "));
+  t("dante: Director zones count the surround set as 4 (kitchen 1 + office 1 + den 4 = 6 of 8)",
+    a.amps.find(x => /M6800D/.test(x.model))?.zonesUsed === 6);
+  t("dante: advisor explains DANTE-DV2 (source audio, not TV apps), VLAN 99, AXIS2 → PCM, switch checklist; no AVB note",
+    ["dante-dv2-audio", "dante-vlan99", "axis2-pcm", "dante-switch"].every(c => codes.includes(c)) && !codes.includes("avb-switch") && !codes.includes("dante-no-controller"));
+  const pl = place(job, ix), rt = route(job, ix, pl), svg = render(job, ix, pl, rt);
+  t("dante: every wire routes (chips under TVs reach the rack, TV→AXIS is a stub)", !rt.warnings.some(w => /unrouted|fallback/.test(w.code)), rt.warnings.map(w => w.msg).join(" | "));
+  t("dante: Dante wires draw dashed and the legend says so", /class="wire dante"[^>]*stroke-dasharray/.test(svg) && svg.includes("Dante audio") && svg.includes("DEC·D") && svg.includes("AX16"));
+  const runs = wireRuns(job, ix);
+  t("dante: wire schedule — a Cat6 from each AXIS to the Dante switch; DANTE-DV2 rides its video run as VLAN 99; no fake optical returns",
+    runs.some(x => /Dante audio/.test(x.carries) && /SW24E/.test(x.to)) && runs.some(x => /Dante \(VLAN 99\)/.test(x.carries)) && !runs.some(x => /Optical/.test(x.cable)));
+  // multicast warning: one AXIS2 heard by 3 amps
+  const m = structuredClone(r.job), ms = m.solutions[0];
+  for (const id of ["amp-x", "amp-y"]) { ms.racks[0].devices.push({ id, type: "amp", model: "AudioControl M4800D", catalogRef: "audiocontrol-m4800d", zones: 4 }); ms.connections.push({ from: "axis-z-office", to: id, signal: "audio", dante: true }); }
+  const lm = loadJob(m); t("dante: an AXIS2 heard by 3 amps is told to go multicast", advise(lm.job, lm.ix, CAT).notes.some(n => n.code === "dante-multicast"));
+  // 1G + 10G on one job needs a CBOX each
+  const g = structuredClone(r.job); g.solutions[0].racks[0].devices.push({ id: "sw10", type: "avSwitch", model: "AVPro Edge AC-MXNET-10G-SW12C", catalogRef: "avpro-mxnet-10g-sw12c" });
+  const lg = loadJob(g); t("mxnet: 1G + 10G on one job asks for a CBOX per platform",
+    advise(lg.job, lg.ix, CAT).notes.some(n => n.code === "mxnet-cbox-per-platform" && /needs 2/.test(n.msg)));
+  // the zone's Dante line: swap a Dante decoder for an AXIS2
+  const hk = H.readHookup(r.job, sol, r.job.house.zones.find(z => z.name === "Kitchen"));
+  t("dante: hookup reads the Dante path (Dante decoder → Director)", hk.dante?.type === "ddec" && hk.dante.to.length === 1);
 }
 
 document.getElementById("summary").innerHTML =

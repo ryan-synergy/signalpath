@@ -18,9 +18,15 @@ export const ADAPTER = {
   balun: { name: "HDBaseT balun", tag: "BALUN" },
   enc: { name: "MXNet encoder", tag: "ENC" },
   dec: { name: "MXNet decoder", tag: "DEC" },
+  ddec: { name: "MXNet Dante decoder", tag: "DEC·D" },     // dec + dante:true (AC-MXNET-1G-DANTE-DV2)
+  denc: { name: "MXNet Dante encoder", tag: "ENC·D" },     // enc + dante:true (AC-MXNET-1G-DANTE-EV2)
+  axis: { name: "AXIS2 (TV audio → Dante)", tag: "AXIS" },
+  axis16: { name: "AXIS16 (surround → Dante)", tag: "AX16" },
 };
-export const adapterName = t => ADAPTER[t]?.name || String(t || "adapter");
-export const adapterTag = t => ADAPTER[t]?.tag || String(t || "").toUpperCase();
+// takes a type string or the companion itself (a Dante decoder is a dec with dante:true)
+const adapterKey = t => t && typeof t === "object" ? (t.dante && (t.type === "dec" || t.type === "enc") ? "d" + t.type : t.type) : t;
+export const adapterName = t => ADAPTER[adapterKey(t)]?.name || String(adapterKey(t) || "adapter");
+export const adapterTag = t => ADAPTER[adapterKey(t)]?.tag || String(adapterKey(t) || "").toUpperCase();
 
 // what a connection carries (editor + tooltips); the sheet legend uses the short form
 export const SIGNAL_NAME = {
@@ -31,6 +37,9 @@ export const SIGNAL_SHORT = { video: "Video", audio: "Audio", speaker: "Speaker 
 export const signalName = s => SIGNAL_NAME[s] || String(s);
 
 export const STATUS_NAME = { new: "New", ofe: "Owner-furnished (OFE)", prewire: "Pre-wire only" };
+// the audio network a job runs on — Dante OR Savant AVB, never both (the
+// control platform is a separate choice: Savant can drive either)
+export const AUDIO_NET_NAME = { "": "Not set", dante: "Dante", avb: "Savant AVB" };
 export const SCOPE_NAME = { included: "Included", prewire: "Pre-wire only", future: "Future" };
 export const SPEAKER_SETUP = {
   none: "None", mono: "Mono (1 speaker)", stereo: "Stereo pair", "2.1": "2.1 (pair + sub)",
@@ -68,8 +77,8 @@ export function describeNode(job, sol, id) {
   }
   for (const c of sol?.companions || []) if (c.id === id) {
     const at = describeNode(job, sol, c.serves);
-    const s = `${adapterName(c.type)} at ${at.kind === "missing" ? "(removed)" : at.short}`;
-    return { group: "Adapters (baluns, encoders, decoders)", kind: "adapter", type: c.type, short: s, label: s };
+    const s = `${adapterName(c)} at ${at.kind === "missing" ? "(removed)" : at.short}`;
+    return { group: "Adapters (baluns, encoders, decoders, Dante)", kind: "adapter", type: c.type, short: s, label: s };
   }
   for (const d of sol?.localDevices || []) if (d.id === id) {
     const s = `${d.model || id} in ${zoneName(d.zone)}`;

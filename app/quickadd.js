@@ -48,6 +48,11 @@ export function parseQuickZone(text) {
   if (eat(/\bmatrix\b|\bdistributed\b/)) matrix = true;
   // "avr" / "receiver": one AV receiver drives this zone's TV and speakers
   if (eat(/\bav\s?rs?\b|\breceiver\b/)) avr = true;
+  // "dante": sound over Dante (AXIS2 / Dante decoder at the TV → a Director);
+  // "director": a surround set on a Director instead of a Hyperion
+  let dante = false, director = false;
+  if (eat(/\bdante\b/)) dante = true;
+  if (eat(/\bdirector\b/)) { director = true; dante = true; }
 
   // room remote: "savant remote", "atv remote", "josh remote", "factory remote"
   const rm = eat(/\b(savant|josh|apple\s*tv|appletv|atv|apple|factory|oem)\s+remote\b/);
@@ -117,7 +122,8 @@ export function parseQuickZone(text) {
   if (local && tv) chips.push({ kind: "hint", label: "TV fed by a source in the zone" });
   if (matrix && tv) chips.push({ kind: "hint", label: "TV fed from the rack" });
   if (avr) chips.push({ kind: "hint", label: tv && spk ? "AV receiver feeds the TV + speakers" : tv ? "AV receiver feeds the TV" : "AV receiver feeds the speakers" });
-  zone._hints = { local, matrix, avr };
+  if (dante) chips.push({ kind: "hint", label: director ? "Dante → Director amp" : "sound over Dante" });
+  zone._hints = { local, matrix, avr, dante, director };
   return { zone, chips, empty: !zone.endpoints.length };
 }
 

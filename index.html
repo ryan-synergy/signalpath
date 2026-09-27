@@ -321,10 +321,11 @@ import { parseQuick } from "./app/quickadd.js";
 import { STARTERS, applyStarter } from "./app/starters.js";
 import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/commands.js";
 import { askClaude, handoffPrompt, extractProposal, jobSummary, assess, loadConn, saveConn, connReady, MODELS } from "./app/ai.js";
+import { setDanteAudio, danteAmpFor } from "./app/hookup.js";
 import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, nextFreeOutputs, outputsNeeded,
          VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS } from "./app/hookup.js";
-import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME,
-         signalName, describeNode, humanizeWireIds, productName, productSku } from "./app/names.js";
+import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME, AUDIO_NET_NAME,
+         signalName, describeNode, humanizeWireIds, productName, productSku, ADAPTER } from "./app/names.js";
 
 /* ============ IndexedDB jobs store ============ */
 const DB = await new Promise((res, rej) => {
@@ -1262,6 +1263,14 @@ function hookupHTML(z, sol, multi) {
     if (h.earc && !h.ret && (h.video.run === "balun" || h.video.run === "dec"))
       rows.push(`<div class="mini" style="margin:-2px 0 6px 80px">Confirm the ${h.video.run === "balun" ? "HDBaseT balun" : "MXNet decoder"} passes eARC — many extenders don't. The optical backup covers it.</div>`);
   }
+  // Dante: how this TV's sound gets on the network, and who listens
+  if (h.dante) {
+    const lis = h.dante.to.map(id => nm(id)).join(", ") || "no amp yet";
+    rows.push(field("Dante", `<span class="mini" style="line-height:1.5">${esc(ADAPTER[h.dante.type]?.name || h.dante.type)} → ${esc(lis)}${h.dante.type === "ddec" ? " · the source's audio (audio follows video)" : h.dante.type === "axis" ? " · set the TV to stereo PCM" : " · decodes Atmos/DTS-HD"}</span>`));
+    if (h.dante.type === "ddec")
+      rows.push(`<div style="margin:-2px 0 6px 80px"><button class="addbtn hdante" data-how="axis">Use an AXIS2 instead (TV's own apps too)</button></div>`);
+  } else if ((sol.audioNetwork === "dante" || h.spk) && (h.tv || h.spk) && sol.audioNetwork !== "avb" && !/^soundbar/.test(h.spk?.config || ""))
+    rows.push(`<div style="margin:2px 0 6px 80px"><button class="addbtn hdante" data-how="auto">Put this zone on Dante${sol.audioNetwork === "dante" ? "" : " (makes this a Dante job)"}</button></div>`);
   // one receiver for the whole zone is the common case — offer to finish it
   const vDev = byDev(h.video?.from), sDev = byDev(h.speakers?.from);
   let nudge = "";
@@ -1331,7 +1340,7 @@ const isRackDev = (sol, id) => sol.racks.some(r => r.devices.some(d => d.id === 
    (the same wire appears under both boxes it joins, and in JOB's full list) */
 function connRowHTML(c, i, sol, ctx, dir) {
   const key = `conn:${i}@${ctx}`, open = S.openRows.has(key);
-  const tail = [signalName(c.signal), c.earc && "eARC back", c.backup && "backup to eARC", c.channels && `outputs ${c.channels}`, c.scope && c.scope !== "included" && SCOPE_LABEL[c.scope]].filter(Boolean).join(" · ");
+  const tail = [c.dante ? "Dante audio (network)" : signalName(c.signal), c.earc && "eARC back", c.backup && "backup to eARC", c.channels && `outputs ${c.channels}`, c.scope && c.scope !== "included" && SCOPE_LABEL[c.scope]].filter(Boolean).join(" · ");
   const fromRcv = sol.racks.some(r => r.devices.some(d => d.id === c.from && d.type === "avr"));
   const title = dir === "in" ? `← ${nodeInfo(c.from).label}` : `→ ${nodeInfo(c.to).label}`;
   return `<div class="row ${open ? "open" : ""}" data-ci="${i}">
@@ -1361,7 +1370,7 @@ function portCaps(d, cat, ins, outs) {
   if (I.hdmi) inParts.push(`HDMI ${cnt(ins, "video")} of ${I.hdmi}`);
   if (I.analog) inParts.push(`analog ${cnt(ins, "audio")} of ${I.analog}`);
   if (I.optical) inParts.push(`optical ${cnt(ins, "audioReturn")} of ${I.optical}`);
-  const net = (O.gbe || 0) + (O.gbe25 || 0) + (O.sfpPlus || 0);
+  const net = (O.gbe || 0) + (O.gbe25 || 0) + (O.gbe10 || 0) + (O.sfp || 0) + (O.sfpPlus || 0);
   if (net && /switch|avSwitch/i.test(d.type)) inParts.push(`ports ${cnt(ins, "network") + cnt(outs, "network")} of ${net}`);
   if (O.hdmi) outParts.push(`HDMI ${cnt(outs, "video")} of ${O.hdmi}`);
   if (O.analog && d.type !== "videoMatrix") outParts.push(`analog ${cnt(outs, "audio")} of ${O.analog}`);
@@ -1401,6 +1410,7 @@ function jobHTML() {
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       ${field("Name", `<input class="solname" value="${esc(S.job.solutions[S.sol].name)}">`)}
       ${field("Platform", sel("solplat", ["", "savant", "josh", "control4"], (S.job.solutions[S.sol].platforms || [])[0] || "", PLATFORM_LABEL))}
+      ${field("Audio network", sel("solnet", ["", "dante", "avb"], S.job.solutions[S.sol].audioNetwork || "", AUDIO_NET_NAME))}
     </div></div>
     <div class="sect" id="allConns">ALL CONNECTIONS <span class="badge">${S.job.solutions[S.sol].connections.length}</span></div>
     <input id="connSearch" placeholder="Search — a box, a zone, a signal…" value="${esc(S.connQuery || "")}">
@@ -1667,6 +1677,16 @@ function wirePanel(body) {
   }));
   body.querySelectorAll(".hsame").forEach(el => el.onclick = () => hook(el, (z, sol) =>
     el.dataset.what === "video" ? setVideo(S.job, sol, z, el.dataset.dev) : setSpeakers(S.job, sol, z, el.dataset.dev)));
+  body.querySelectorAll(".hdante").forEach(el => el.onclick = () => hook(el, (z, sol) => {
+    const h = readHookup(S.job, sol, z);
+    if (el.dataset.how === "axis") {                          // swap the Dante decoder for an AXIS2 on the TV's eARC
+      const dec = sol.companions.find(c => c.id === h.dante.via); const amps = h.dante.to;
+      sol.connections = sol.connections.filter(c => !(c.from === dec.id && c.dante)); delete dec.dante;
+      const a = { id: `axis-${z.id}`, type: "axis", serves: h.tv.id, auto: true };
+      sol.companions.push(a);
+      sol.connections.push({ from: h.tv.id, to: a.id, signal: "audioReturn", earc: true }, ...amps.map(to => ({ from: a.id, to, signal: "audio", dante: true })));
+    } else setDanteAudio(S.job, sol, z, h.spk ? danteAmpFor(S.job, sol, z) : null);
+  }));
 
   /* quick-add: shorthand / dictation with live parse-preview chips */
   const qaInput = body.querySelector("#qaInput");
@@ -1871,6 +1891,7 @@ function wirePanel(body) {
   on(".jdrawn", el => { S.job.job.drawnBy = el.value; });
   on(".solname", el => { S.job.solutions[S.sol].name = el.value; });
   on(".solplat", el => { S.job.solutions[S.sol].platforms = el.value ? [el.value] : []; });
+  on(".solnet", el => { const sol = S.job.solutions[S.sol]; if (el.value) sol.audioNetwork = el.value; else delete sol.audioNetwork; });
   on(".pgflag", el => { (S.job.job.pages ||= {})[el.dataset.pg] = el.checked; });
   const updCat = body.querySelector("#updCat");
   if (updCat) updCat.onclick = () => {

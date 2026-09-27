@@ -49,6 +49,10 @@ export function readHookup(job, sol, zone) {
     const c = conns.find(c => c.to === spk.id && c.signal === "speaker");
     if (c) out.speakers = { from: c.from, channels: c.channels || "" };
   }
+  if (tv) {   // TV sound on Dante: which adapter carries it, which amp listens
+    const via = (sol.companions || []).find(c => c.serves === tv.id && (c.type === "axis" || c.type === "axis16" || (c.type === "dec" && c.dante)));
+    if (via) out.dante = { via: via.id, type: via.type === "dec" ? "ddec" : via.type, to: conns.filter(c => c.from === via.id && c.dante).map(c => c.to) };
+  }
   return out;
 }
 
@@ -107,6 +111,12 @@ export function outputsNeeded(spk) {
   if (/^surround|^soundbar/.test(c)) return 0;   // surround/soundbar hang off a receiver, not amp zones
   return 2;
 }
+// a surround set on a multi-zone amp fed by an AXIS16 (it does the receiver's
+// processing): a zone per pair and a zone EACH for center and LFE — never C+LFE together
+export function surroundOutputs(spk) {
+  return { "surround-5.1": 8, "surround-7.1": 10, "surround-7.1.4": 14 }[spk?.config] || 0;
+}
+const fedByAxis16 = (sol, ampId) => (sol.connections || []).some(c => c.to === ampId && c.dante && (sol.companions || []).some(k => k.id === c.from && k.type === "axis16"));
 export function nextFreeOutputs(sol, ampId, n, exceptTo = null) {
   if (!n) return "";
   const used = new Set();
@@ -116,7 +126,7 @@ export function nextFreeOutputs(sol, ampId, n, exceptTo = null) {
       for (let i = +m[1]; i <= +(m[2] ?? m[1]); i++) used.add(i);
     }
   let start = 1;
-  while ([...Array(n).keys()].some(k => used.has(start + k))) start += n;
+  while ([...Array(n).keys()].some(k => used.has(start + k))) start += Math.min(n, 2);   // big sets align to pairs, not to their own size
   return n === 1 ? String(start) : `${start}-${start + n - 1}`;
 }
 
@@ -129,7 +139,8 @@ export function setSpeakers(job, sol, zone, from, channels) {
   if (!from) return;
   const dev = rackDevices(sol).find(d => d.id === from);
   if (channels === undefined)
-    channels = prev && prev.from === from ? prev.channels : dev?.type === "amp" ? nextFreeOutputs(sol, from, outputsNeeded(spk) || 2, spk.id) : "";
+    channels = prev && prev.from === from ? prev.channels : dev?.type === "amp" && !isTheaterAmp(dev)
+      ? nextFreeOutputs(sol, from, (fedByAxis16(sol, from) && surroundOutputs(spk)) || outputsNeeded(spk) || 2, spk.id) : "";
   sol.connections.push({ from, to: spk.id, signal: "speaker", ...(channels ? { channels } : {}), ...scopeOf(zone) });
 }
 
@@ -141,17 +152,111 @@ export function setReturn(job, sol, zone, to, backup = false) {
 }
 
 /* a new box in the first rack, named plainly; returns its id */
-export function addRackDevice(job, sol, type, model) {
+export function addRackDevice(job, sol, type, model, extra = {}) {
   const rack = (sol.racks ||= [])[0] || (sol.racks[0] = { id: "rack-main", name: "Equipment Rack", devices: [] });
-  const id = freeId(job, sol, type === "avr" ? "avr" : type === "amp" ? "amp" : type);
-  rack.devices.push({ id, type, model, status: "new", ...(type === "amp" ? { zones: 8 } : {}) });
+  const id = freeId(job, sol, extra.idBase || (type === "avr" ? "avr" : type === "amp" ? "amp" : type));
+  delete extra.idBase;
+  rack.devices.push({ id, type, model, status: "new", ...(type === "amp" ? { zones: 8 } : {}), ...extra });
   return id;
+}
+
+/* ---------- Dante (a job's audio network is Dante OR Savant AVB) ----------
+   TV sound gets onto Dante AT THE TV: an MXNet TV's decoder becomes the Dante
+   model (AC-MXNET-1G-DANTE-DV2 — the default), any other TV gets an AXIS2 on
+   its eARC, and a surround room gets an AXIS16 (decodes Atmos/DTS-HD, does
+   the receiver's EQ/crossover/delay). The amp subscribes over the Dante
+   network — a dashed "Dante audio" wire; the Cat6 runs go to the dedicated
+   Dante switch. The system needs a Dante-mode CBOX + that switch. */
+export const isDanteJob = sol => sol?.audioNetwork === "dante";
+export const isTheaterAmp = d => /hype|hyperion/i.test(`${d?.catalogRef || ""} ${d?.model || ""}`);
+const DIRECTOR = { type: "amp", model: "AudioControl M6800D", catalogRef: "audiocontrol-m6800d", zones: 8 };
+const HYPE = { 5: ["penta", 5], 7: ["hepta", 7], 4: ["tetra", 4] };
+const hyperion = n => { const [k, ch] = HYPE[n]; return { type: "amp", model: `AudioControl ACP-HYPE-${k.toUpperCase()}`, catalogRef: `audiocontrol-hype-${k}`, zones: 1, idBase: "hype" }; };
+
+/* the Dante core every Dante system needs: controller + dedicated switch */
+export function ensureDanteCore(job, sol) {
+  sol.audioNetwork = "dante";
+  const devs = rackDevices(sol);
+  let ctl = devs.find(d => d.type === "controlBox" && /dante/i.test(`${d.catalogRef || ""} ${d.model || ""}`))?.id;
+  if (!ctl) ctl = addRackDevice(job, sol, "controlBox", "AVPro Edge AC-MXNET-DANTE-CBOX", { catalogRef: "avpro-mxnet-dante-cbox", idBase: "dante-cbox" });
+  let sw = devs.find(d => d.danteSwitch)?.id;
+  if (!sw) sw = addRackDevice(job, sol, "networkSwitch", "AVPro Edge AC-MXNET-SW24E", { catalogRef: "avpro-mxnet-sw24e", danteSwitch: true, idBase: "dante-sw" });
+  sol.connections ||= [];
+  if (!sol.connections.some(c => c.from === ctl && c.to === sw)) sol.connections.push({ from: ctl, to: sw, signal: "network" });
+  return { ctl, sw };
+}
+const linkToDanteSwitch = (sol, sw, id) => {
+  if (!sol.connections.some(c => c.signal === "network" && ((c.from === sw && c.to === id) || (c.from === id && c.to === sw))))
+    sol.connections.push({ from: sw, to: id, signal: "network" });
+};
+
+/* which amp takes this zone on a Dante job: surround → Hyperion by size
+   (7.1.4 = Hepta, heights on a Tetra), else the next Director with room */
+export function danteAmpFor(job, sol, zone, { director = false } = {}) {
+  const { spk } = endpointsOf(zone);
+  const cfg = spk?.config || "stereo";
+  const need = surroundOutputs(spk) || outputsNeeded(spk) || 2;
+  if (/^surround/.test(cfg) && !director) {
+    const d = hyperion(cfg === "surround-5.1" ? 5 : 7);
+    return addRackDevice(job, sol, d.type, d.model, { catalogRef: d.catalogRef, zones: 1, idBase: "hype" });
+  }
+  const used = id => new Set((sol.connections || []).filter(c => c.from === id && c.signal === "speaker")
+    .flatMap(c => String(c.channels || "").split(",").flatMap(p => { const m = p.trim().match(/^(\d+)(?:\s*[-–]\s*(\d+))?$/); return m ? Array.from({ length: +(m[2] ?? m[1]) - +m[1] + 1 }, (_, i) => +m[1] + i) : []; }))).size;
+  const fits = d => d.type === "amp" && !isTheaterAmp(d) && /m6800d|m4800d|director/i.test(`${d.catalogRef || ""} ${d.model || ""}`) &&
+    used(d.id) + need <= (d.zones || 8) * 2;
+  const found = rackDevices(sol).find(fits);
+  return found ? found.id : addRackDevice(job, sol, DIRECTOR.type, DIRECTOR.model, { catalogRef: DIRECTOR.catalogRef, zones: DIRECTOR.zones, idBase: "director" });
+}
+
+/* put a zone's TV sound on Dante and its speakers on a Dante amp */
+export function setDanteAudio(job, sol, zone, ampId) {
+  const { tv, spk } = endpointsOf(zone);
+  sol.companions ||= []; sol.connections ||= [];
+  const { sw } = ensureDanteCore(job, sol);
+  const surround = /^surround/.test(spk?.config || "");
+  const sc = scopeOf(zone);
+  let src = null;
+  if (tv) {
+    const mine = sol.companions.filter(c => c.serves === tv.id);
+    const dec = mine.find(c => c.type === "dec");
+    const want = surround ? "axis16" : dec ? null : "axis";
+    // adapters this choice doesn't reuse go, with their wires; old Dante feeds off the decoder too
+    const drop = new Set(mine.filter(c => (c.type === "axis" || c.type === "axis16") && c.type !== want).map(c => c.id));
+    sol.companions = sol.companions.filter(c => !drop.has(c.id));
+    sol.connections = sol.connections.filter(c => !drop.has(c.from) && !drop.has(c.to) && !(c.dante && mine.some(m => m.id === c.from)));
+    if (want) {
+      let a = sol.companions.find(c => c.serves === tv.id && c.type === want);
+      if (!a) { a = { id: freeId(job, sol, `${want}-${zone.id}`), type: want, serves: tv.id, auto: true }; sol.companions.push(a); }
+      if (!sol.connections.some(c => c.from === tv.id && c.to === a.id))
+        sol.connections.push({ from: tv.id, to: a.id, signal: "audioReturn", earc: true, ...sc });   // TV eARC into the AXIS
+      src = a.id;
+    } else {                                                   // AC-MXNET-1G-DANTE-DV2 (default at MXNet TVs)
+      dec.dante = true; src = dec.id;
+      // it breaks out the Dante the SOURCE's DANTE-EV2 put on the stream — make the encoders Dante too
+      for (const e of sol.companions) if (e.type === "enc") e.dante = true;
+    }
+    for (const d of sol.companions.filter(c => c.serves === tv.id && c.type === "dec" && c.id !== src)) delete d.dante;
+    if (surround && dec) delete dec.dante;
+  }
+  if (!ampId) return src;
+  if (src) sol.connections.push({ from: src, to: ampId, signal: "audio", dante: true, ...sc });
+  if (spk) setSpeakers(job, sol, zone, ampId);
+  linkToDanteSwitch(sol, sw, ampId);
+  return src;
 }
 
 /* quick-add: wire a new zone from its shorthand hints */
 export function autoHookup(job, sol, zone, hints = {}) {
   const { tv, spk } = endpointsOf(zone);
   const devs = rackDevices(sol);
+  if ((hints.dante || isDanteJob(sol)) && !hints.avr) {
+    // Dante job: video as asked (matrix → MXNet decoder), sound over Dante
+    const m = devs.find(d => d.type === "avSwitch" && !d.danteSwitch) || devs.find(d => d.type === "videoMatrix");
+    if (hints.matrix && tv && m) setVideo(job, sol, zone, m.id);
+    if (spk && !/^soundbar/.test(spk.config || "")) setDanteAudio(job, sol, zone, danteAmpFor(job, sol, zone, hints));
+    else if (tv) setDanteAudio(job, sol, zone, null);
+    return;
+  }
   if (hints.avr) {
     // one receiver per surround/theater zone is the norm — reuse one only if
     // it isn't already driving another zone's speakers

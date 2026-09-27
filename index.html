@@ -25,6 +25,22 @@
   #topbar button { cursor: pointer; }
   #topbar button:hover { border-color: #58607a; }
   #topbar .spacer { flex: 1; }
+  /* grouped menus (File / View / Export) */
+  #topbar .menu { position: relative; }
+  #topbar .mlist { position: absolute; top: calc(100% + 6px); left: 0; z-index: 50; min-width: 270px; display: flex; flex-direction: column;
+    background: var(--bar2); border: 1px solid #3a404c; border-radius: 8px; padding: 6px; box-shadow: 0 10px 28px rgba(0,0,0,.35); }
+  #topbar .mlist[hidden] { display: none; }
+  #topbar .mlist.right { left: auto; right: 0; }
+  #topbar .mlist button, #topbar .mlist label { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left;
+    background: transparent; border: 0; border-radius: 6px; padding: 7px 10px; width: 100%; }
+  #topbar .mlist label { flex-direction: row; gap: 10px; align-items: flex-start; cursor: pointer; }
+  #topbar .mlist label > span { display: flex; flex-direction: column; gap: 2px; }
+  #topbar .mlist button:hover, #topbar .mlist label:hover, #topbar .mlist button:focus-visible { background: #2a303b; }
+  #topbar .mlist b { font-weight: 600; font-size: 12.5px; }
+  #topbar .mlist span, #topbar .mlist em { font-size: 11px; color: #9aa3b2; font-style: normal; line-height: 1.35; white-space: normal; }
+  #topbar .mlist .danger b { color: #ff9d8e; }
+  #topbar .mlist hr { border: 0; border-top: 1px solid #333842; margin: 4px 2px; }
+  #topbar .mbtn[aria-expanded="true"] { border-color: #58607a; background: #2a303b; }
   #rulesChip { border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 600; border: 1px solid transparent; }
   #rulesChip.ok { background: #14301c; color: #7fd695; border-color: #2f7a3a; }
   #rulesChip.bad { background: #33150f; color: #ff9d8e; border-color: #b32017; cursor: pointer; }
@@ -244,8 +260,13 @@
 <div id="topbar">
   <span class="logo">SIGNALPATH</span>
   <select id="jobsSel" title="Jobs"></select>
-  <button id="newJob" title="New job">＋</button>
-  <button id="delJob" title="Delete job">🗑</button>
+  <div class="menu" id="fileMenu"><button class="mbtn" aria-haspopup="true" aria-expanded="false">File ▾</button>
+    <div class="mlist" role="menu" hidden>
+      <button id="newJob" role="menuitem"><b>New job</b><span>Start from a rack: Savant, theater, MXNet, Dante or blank</span></button>
+      <button id="importBtn" role="menuitem"><b>Import…</b><span>A SignalPath job (.json / AI .md), an AVWalk survey or a Blueprinted file</span></button>
+      <hr>
+      <button id="delJob" role="menuitem" class="danger"><b>Delete job</b><span>Removes this job from this browser</span></button>
+    </div></div>
   <input id="jobName" title="Project name">
   <select id="solSel" title="Solution"></select>
   <select id="stageSel"><option value="proposal">PROPOSAL</option><option value="asBuilt">AS-BUILT</option></select>
@@ -253,16 +274,23 @@
   <button id="aiBtn" title="Describe a change — Claude proposes it, you preview and apply">✦ AI</button>
   <span class="spacer"></span>
   <span id="rulesChip" class="ok">✓</span>
-  <label class="chk"><input type="checkbox" id="hideNet"> hide network</label>
-  <label class="chk" title="Harness style (saved with the job): a source's runs to 3+ zones share one trunk and break out near each zone, like an electrical drawing"><input type="checkbox" id="harnessMode"> harness</label>
-  <label class="chk" title="B&amp;W-safe: dash patterns carry signal identity for office laser printers"><input type="checkbox" id="bwMode"> B/W</label>
-  <button id="importBtn">Import</button><input type="file" id="importFile" accept=".json,.md" hidden>
-  <button id="exportJson">JSON</button>
-  <button id="exportSvg">SVG</button>
-  <button id="exportCsv" title="Takeoff CSV">CSV</button>
-  <button id="exportLabels" title="Cable labels CSV — one row per wire, for label-printer software">Labels</button>
-  <button id="exportPq" title="PlanQueue proposal import (.md) — two files when the job has pre-wire-only rooms">PlanQueue</button>
-  <button id="exportAi" title="Markdown for an AI to review: rooms, feeds, rack usage, open items, wire list, quote lines + the full job">AI .md</button>
+  <div class="menu" id="viewMenu"><button class="mbtn" aria-haspopup="true" aria-expanded="false">View ▾</button>
+    <div class="mlist" role="menu" hidden>
+      <label class="chk"><input type="checkbox" id="hideNet"><span><b>Hide network</b><em>Drop the Cat6 network wires from the drawing</em></span></label>
+      <label class="chk"><input type="checkbox" id="harnessMode"><span><b>Harness style</b><em>Saved with the job: runs to 3+ zones share one trunk and break out near each zone, like an electrical drawing</em></span></label>
+      <label class="chk"><input type="checkbox" id="bwMode"><span><b>Black &amp; white</b><em>Dash patterns carry each signal, for office laser printers</em></span></label>
+    </div></div>
+  <input type="file" id="importFile" accept=".json,.md" hidden>
+  <div class="menu" id="exportMenu"><button class="mbtn" aria-haspopup="true" aria-expanded="false">Export ▾</button>
+    <div class="mlist right" role="menu" hidden>
+      <button id="exportPq" role="menuitem"><b>PlanQueue</b><span>Proposal import (.md) — two files when there are pre-wire-only rooms</span></button>
+      <button id="exportCsv" role="menuitem"><b>Takeoff</b><span>Equipment list (.csv)</span></button>
+      <button id="exportLabels" role="menuitem"><b>Cable labels</b><span>One row per wire (.csv) for Brady / P-touch</span></button>
+      <hr>
+      <button id="exportJson" role="menuitem"><b>Job file</b><span>The whole job (.json) — reopen, share, back up</span></button>
+      <button id="exportSvg" role="menuitem"><b>Drawing</b><span>The schematic sheet (.svg)</span></button>
+      <button id="exportAi" role="menuitem"><b>AI review</b><span>Markdown for an AI: rooms, feeds, rack, open items, wire list + the full job</span></button>
+    </div></div>
   <button id="printBtn" title="Print packet / save as PDF">Print</button>
   <button id="toolsBtn" title="Synergy Field Kit">TOOLS</button>
 </div>
@@ -584,6 +612,17 @@ $("#solSel").onchange = e => {
   refresh();
 };
 // new job: pick a rack starting point (or blank); quick-add then wires zones to it
+/* top-bar menus: one open at a time; picking an action closes it (View's checkboxes stay open) */
+const menus = [...document.querySelectorAll("#topbar .menu")];
+const closeMenus = except => menus.forEach(m => { if (m === except) return; m.querySelector(".mlist").hidden = true; m.querySelector(".mbtn").setAttribute("aria-expanded", "false"); });
+menus.forEach(m => {
+  const btn = m.querySelector(".mbtn"), list = m.querySelector(".mlist");
+  btn.onclick = e => { e.stopPropagation(); const open = list.hidden; closeMenus(m); list.hidden = !open; btn.setAttribute("aria-expanded", String(open)); };
+  list.addEventListener("click", e => { if (e.target.closest("button")) closeMenus(); else e.stopPropagation(); });
+});
+document.addEventListener("click", e => { if (!e.target.closest("#topbar .menu")) closeMenus(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenus(); });
+
 $("#newJob").onclick = () => {
   const cat = SETTINGS.catalog;
   $("#stGrid").innerHTML = STARTERS.map(st => `<button class="opt" data-st="${esc(st.id)}"><b>${esc(st.name)}</b>

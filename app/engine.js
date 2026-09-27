@@ -127,10 +127,21 @@ export function autoLinkCatalog(job, catalog) {
 
 export function trunkCount(conn, s) {
   const from = s.devices[conn.from], to = s.devices[conn.to];
-  let derived = 0;
-  if (conn.signal === "audio" && from?.type === "audioOutputModule" && to?.type === "amp")
-    derived = (s.sol.connections || []).filter(c => c.from === conn.to && c.signal === "speaker").length;
-  return Math.max(conn.count || 0, derived) || 1;
+  const authored = c => Math.max(0, Math.floor(+c.count) || 0);   // imported "4" / -3 must not skew budgets
+  if (!(conn.signal === "audio" && from?.type === "audioOutputModule" && to?.type === "amp"))
+    return authored(conn) || 1;
+  const conns = s.sol.connections || [];
+  const derived = conns.filter(c => c.from === conn.to && c.signal === "speaker").length;
+  // several modules can share one amp: the amp's zone count is the TOTAL runs
+  // across all its trunks, split between them — each trunk claiming every
+  // zone double-counted the amp's inputs
+  const trunks = conns.filter(c => c.to === conn.to && c.signal === "audio" && s.devices[c.from]?.type === "audioOutputModule");
+  if (trunks.length <= 1) return Math.max(authored(conn), derived) || 1;
+  if (authored(conn)) return authored(conn);
+  const unset = trunks.filter(c => !authored(c));
+  const remaining = Math.max(0, derived - trunks.reduce((n, c) => n + authored(c), 0));
+  const i = unset.indexOf(conn);
+  return Math.floor(remaining / unset.length) + (i < remaining % unset.length ? 1 : 0) || 1;
 }
 
 /* ---------- validate ---------- */
@@ -162,16 +173,27 @@ export function validate(job, ix = indexJob(job)) {
 
   for (const s of ix.solutions) {
     const sol = s.sol;
+    // per-solution findings carry the solution id: the editor validates the
+    // ACTIVE solution's effective house, so a sibling's scope checks would read
+    // the wrong overrides — the UI shows only the active solution's entries
+    const E = (code, msg) => errors.push({ code, msg, solution: sol.id });
+    const W = (code, msg) => warnings.push({ code, msg, solution: sol.id });
     // overrides must point at real House objects (stale after a zone/endpoint delete)
     for (const zid of Object.keys(sol.overrides?.zones || {}))
       if (!ix.zonesById[zid]) W("stale-override", `${sol.name || sol.id}: override for missing zone ${zid}`);
     for (const eid of Object.keys(sol.overrides?.endpoints || {}))
       if (!ix.endpointsById[eid]) W("stale-override", `${sol.name || sol.id}: override for missing endpoint ${eid}`);
     // device ids are per-solution namespaces: unique within the solution and vs the House,
-    // but sibling solutions may reuse ids (duplicate-as-new clones the gear set)
+    // but sibling solutions may reuse ids (duplicate-as-new clones the gear set).
+    // Walk the RAW arrays — the index maps already collapsed duplicates.
     const seenSol = new Set(seen);
-    const solIds = new Set([...Object.keys(s.devices), ...Object.keys(s.companions), ...Object.keys(s.locals)]);
+    const solIds = [...(sol.racks || []).flatMap(r => (r.devices || []).map(d => d.id)),
+      ...(sol.companions || []).map(c => c.id), ...(sol.localDevices || []).map(d => d.id)];
     solIds.forEach(id => { if (seenSol.has(id)) E("dup-id", `device id duplicated: ${id}`); seenSol.add(id); });
+    // a note with no `near` is a general sheet note (legend only, legitimately
+    // unanchored); one that NAMES a zone that's gone lost its keynote marker
+    for (const a of sol.annotations || [])
+      if (a?.near != null && !ix.zonesById[a.near]) W("bad-annotation", `note "${String(a.text || "").slice(0, 40)}" points at missing zone ${a.near}`);
 
     // companions serve real things
     for (const c of sol.companions || []) {
@@ -188,7 +210,7 @@ export function validate(job, ix = indexJob(job)) {
       if (!nodeInSolution(s, ix, c.to)) E("bad-conn", `connection to missing node: ${c.to}`);
       if (!SIGNAL_COLORS[c.signal]) E("bad-signal", `unknown signal "${c.signal}" on ${c.from}→${c.to}`);
       // a custom-route hint that names vanished devices is stale, not fatal
-      if (c.routeHint?.between && !c.routeHint.between.every(id => s.devices[id]))
+      if (c.routeHint?.between && !(Array.isArray(c.routeHint.between) && c.routeHint.between.every(id => s.devices[id])))
         W("route-hint-stale", `${c.from}→${c.to}: custom route references removed gear — will route automatically`);
     }
 
@@ -307,12 +329,15 @@ function speakerGroupSize(ep) {
   if (cfg === "surround-7.1" || cfg === "surround-7.1.4") return { w: SPK_PITCH * 4 - 2, h: 70, caption: cap(cfg.slice(9) + " Surround") };
   if (cfg.startsWith("soundbar")) return { w: 90, h: SPK, caption: cap(cfg === "soundbar-sub" ? "Soundbar + Sub" : "Soundbar") };
   if (cfg === "landscape") {
-    const sats = ep.satCount || 4, subs = ep.buriedSub ? 1 : 0;
+    const sats = satCount(ep), subs = ep.buriedSub ? 1 : 0;
     return { w: sats * 26 + subs * 34, h: SPK, caption: cap(`Landscape ${sats}${subs ? "+" + subs : ""}`) };
   }
-  const n = ep.count || 2;
+  const n = spkCount(ep);
   return { w: SPK_PITCH * n - 2, h: SPK, caption: cap(`${n} Speakers`) };
 }
+// a typed "-1" or "1.5" in the Count field must not become Array(-1)
+const spkCount = ep => Math.min(24, Math.max(1, Math.floor(+ep?.count) || 2));
+const satCount = ep => Math.min(24, Math.max(1, Math.floor(+ep?.satCount) || 4));
 
 function displaySize(ep) {
   const inches = ep.size || 55;
@@ -324,7 +349,7 @@ function displaySize(ep) {
 /* Card geometry: groups run left→right [speakers, display]; a local
    "at-display" source sits under the display footprint (the touch-the-TV
    exception renders from this slot). Card sizes to contents (compactness rule). */
-function zoneCard(zone, localsInZone) {
+function zoneCard(zone, localsInZone, hasNote = false) {
   const groups = [];
   for (const ep of zone.endpoints || []) {
     if (ep.type === "speakers") groups.push({ epId: ep.id, kind: "speakers", ...speakerGroupSize(ep) });
@@ -338,12 +363,17 @@ function zoneCard(zone, localsInZone) {
   const compact = !groups.some(g => g.kind === "display") && !localsInZone.length;
   const pad = compact ? 14 : PL.cardPad;
   const titleH = compact ? 28 : PL.cardTitleH;
+  // at-display locals seat under ONE host group: the first display, else the
+  // speaker group (a Sonos amp in a TV-less room), else a bare slot — every
+  // local gets exactly one puck, or its wires have nowhere to start
+  let host = groups.find(g => g.kind === "display") || groups[groups.length - 1];
+  if (localsInZone.length && !host) groups.push(host = { epId: null, kind: "host", w: PL.smallTile.w, h: 0, caption: "" });
   let x = pad, contentBottom = 0;
   for (const g of groups) {
     g.x = x; g.y = titleH;
     g.cx = x + g.w / 2;
     let bottom = g.y + g.h;
-    if (g.kind === "display" && localsInZone.length) {
+    if (g === host && localsInZone.length) {
       // at-display devices stack under the display, staggered right like a fanned
       // deck (a room can hold a local source AND a return encoder)
       g.locals = localsInZone.map((ld, k) => ({
@@ -362,8 +392,10 @@ function zoneCard(zone, localsInZone) {
   for (const g of groups) for (const l of g.locals || []) contentRight = Math.max(contentRight, l.x + l.w);
   // a compact card still fits its own name (13px title, ~7px/char)
   const nameW = compact ? Math.ceil(String(zone.name || "").length * 7) + 2 * pad : 0;
-  const minW = compact ? Math.max(72, nameW + (zone.remote ? 40 : 0)) : PL.cardMinW;   // corner remote pill needs clear air beside the title
-  const minH = compact ? 0 : PL.cardMinH;
+  // corner remote pill (right) and keynote marker (left) need clear air beside
+  // the centered title — widen symmetrically so the title stays centered
+  const minW = compact ? Math.max(72, nameW + (zone.remote ? 40 : 0) + (hasNote ? 28 : 0)) : PL.cardMinW;
+  const minH = compact ? titleH + 24 : PL.cardMinH;   // an endpoint-less zone still reads as a card
   const w = Math.max(minW, contentRight + pad);
   const h = Math.max(minH, contentBottom + (compact ? 12 : PL.cardBottomPad));
   // widen: center content when min width won
@@ -405,7 +437,8 @@ export function place(job, ix = indexJob(job), opts = {}) {
   const primaryAreaId = areas.length ? (sol.racks?.[0]?.area || areas[0].id) : null;
   const clusters = []; // [{areaId, name, video:[], audio:[]}] — cluster 0 = primary
   const clusterFor = z => {
-    const aid = multiArea ? (z.area || primaryAreaId) : null;
+    // an area id that isn't declared falls back to the primary (validate flags it)
+    const aid = multiArea ? (areas.some(a => a.id === z.area) ? z.area : primaryAreaId) : null;
     let c = clusters.find(c => c.areaId === aid);
     if (!c) {
       c = { areaId: aid, name: areas.find(a => a.id === aid)?.name || null, video: [], audio: [] };
@@ -413,14 +446,17 @@ export function place(job, ix = indexJob(job), opts = {}) {
     }
     return c;
   };
-  if (!multiArea) clusters.push({ areaId: null, name: null, video: [], audio: [] });
+  // the primary cluster is the RACK's area and always exists — even with no
+  // zones of its own (rack in a mech room), or clusters[0] becomes whichever
+  // area sorts first and inherits the wrong header
+  clusters.push({ areaId: multiArea ? primaryAreaId : null, name: multiArea ? areas.find(a => a.id === primaryAreaId)?.name || null : null, video: [], audio: [] });
   for (const z of job.house.zones) {
     const c = clusterFor(z);
     (z.endpoints || []).some(e => e.type === "display") ? c.video.push(z) : c.audio.push(z);
   }
   // primary cluster first, others in area order
   clusters.sort((a, b) => {
-    const rank = c => (c.areaId === primaryAreaId || c.areaId === null) ? -1 : areas.findIndex(x => x.id === c.areaId);
+    const rank = c => (c.areaId === primaryAreaId || c.areaId === null) ? -1 : areas.findIndex(x => x.id === c.areaId);   // every cluster id is a declared area now
     return rank(a) - rank(b);
   });
 
@@ -436,9 +472,10 @@ export function place(job, ix = indexJob(job), opts = {}) {
   }
   const rowGapFor = rowZones => Math.max(PL.videoRowGapY,
     38 + 12 * (rowZones.reduce((n, z) => n + (zoneInbound[z.id] || 0), 0) + 1));
+  const notedZones = new Set((sol.annotations || []).map(a => a?.near));
   for (const z of job.house.zones) {
     const locals = Object.values(s.locals).filter(d => d.zone === z.id && d.location === "at-display");
-    cardOf[z.id] = zoneCard(z, locals);
+    cardOf[z.id] = zoneCard(z, locals, notedZones.has(z.id));
   }
 
   /* -- primary top band: video zones of cluster 0, rows wrapping at content right -- */
@@ -631,7 +668,11 @@ export function place(job, ix = indexJob(job), opts = {}) {
       // balun/DEC under the display it serves, aligned with the endpoint (boundary principle)
       const pz = out.zones.find(z => z.id === ix.endpointZone[comp.serves]);
       const slot = pz?.groups.find(g => g.epId === comp.serves);
-      if (pz && slot) { chip.x = pz.x + slot.cx - PL.chip.w / 2; chip.y = pz.y + pz.h + 20; }
+      if (pz && slot) {
+        chip.x = pz.x + slot.cx - PL.chip.w / 2; chip.y = pz.y + pz.h + 20;
+        // a second companion on the same endpoint steps sideways, never stacks
+        for (let k = 1; k < 6 && !chipFits(chip); k++) chip.x = pz.x + slot.cx - PL.chip.w / 2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (PL.chip.w + 8);
+      }
     } else {
       // serves a rack device: ENC to the right of its source, DEC to the left of its target
       const dev = allDevices.find(d => d.id === comp.serves);
@@ -649,7 +690,11 @@ export function place(job, ix = indexJob(job), opts = {}) {
         else { chip.x = bx; chip.y = cy; out.warnings.push({ code: "chip-crowded", msg: `chip ${comp.id} placed with overlap — no free slot near ${comp.serves}` }); }
       }
     }
-    if (chip.x == null) { chip.x = PL.marginX; chip.y = rackBottom + 40; out.warnings.push({ code: "chip-unanchored", msg: `chip ${comp.id} had no served tile` }); }
+    if (chip.x == null) {
+      chip.x = PL.marginX; chip.y = rackBottom + 40;
+      for (let k = 1; k < 40 && !chipFits(chip); k++) chip.x = PL.marginX + k * (PL.chip.w + 8);
+      out.warnings.push({ code: "chip-unanchored", msg: `chip ${comp.id} had no served tile` });
+    }
     out.chips.push(chip);
   }
 
@@ -669,9 +714,10 @@ export function place(job, ix = indexJob(job), opts = {}) {
   const rows = order.filter(k => present.includes(k));
   // zone annotations ride the legend as numbered keynotes (CAD style): the
   // full sentence lives here, the zone card wears only the circled number
-  const notes = (sol.annotations || []).map((a, i) => ({ n: i + 1, text: a.text, near: a.near }));
+  const notes = (sol.annotations || []).filter(a => a && typeof a === "object")
+    .map((a, i) => ({ n: i + 1, text: String(a.text ?? ""), near: a.near }));
   const noteW = notes.length ? Math.max(...notes.map(n => n.text.length)) * 5.4 + 58 : 0;
-  const lw = Math.max(24 + rows.length * PL.legendRowW, noteW);
+  const lw = Math.max(90, 24 + rows.length * PL.legendRowW, noteW);   // "LEGEND" must fit even with no signal rows yet
   const lh = PL.legendH + (notes.length ? notes.length * 15 + 10 : 0);
   out.legend = { rows, notes, w: lw, h: lh, x: SHEET.content.x + SHEET.content.w - lw - 60, y: SHEET.content.y + SHEET.content.h - lh - 6 };
 
@@ -834,6 +880,7 @@ export function route(job, ix, placement, opts = {}) {
   // non-mutating variant: candidates that may lose the cost comparison peek,
   // and only the winner claims (a considered-but-rejected west wrap once ate
   // both lanes of a 22px tile and walled off a later backhaul)
+  const release = (store, id, y) => { const l = store[id]; const i = l ? l.indexOf(y) : -1; if (i >= 0) l.splice(i, 1); };
   const peekPort = (store, dev, desired) => {
     const list = store[dev.id] || [];
     const [min, max] = portSpan(dev);
@@ -1218,15 +1265,20 @@ export function route(job, ix, placement, opts = {}) {
           // the exit row is walled (col-C neighbor) or lane-pinned: duck through
           // the nearest vertical channel onto a highway below (preferred) or
           // above the rack, continue east from there
-          const exChan = gapBCx;
+          // a col-C source (amp) exits its RIGHT edge — the B|C gap is WEST of
+          // it, so escaping there ran the first leg back through the amp's own
+          // body (skip exempts d, so nothing caught it). Amps escape east.
+          const eastOfDev = d.col === "C";
+          const exChan = eastOfDev ? [sx + 6, sx + 70] : gapBCx;
           for (const hyDesired of [rackBottom + 16, rackTop - 16]) {
             const dir = hyDesired > o.portY ? +1 : -1;
-            const hy = alloc(usedH, hyDesired, colBx, tx, nWire, dir,
-              y => segBlocked(colBx, y, tx, y, skip), null);
+            const hx0 = eastOfDev ? sx : colBx;
+            const hy = alloc(usedH, hyDesired, hx0, tx, nWire, dir,
+              y => segBlocked(hx0, y, tx, y, skip), null);
             if (hy == null) { why += "escape hy null; "; continue; }
             // descend on the EAST side of the channel — clear of the west-group
             // stubs that hug the west risers
-            const ex = alloc(usedV, exChan[1] - 6, Math.min(o.portY, hy), Math.max(o.portY, hy), nWire, -1,
+            const ex = alloc(usedV, eastOfDev ? exChan[0] + 2 : exChan[1] - 6, Math.min(o.portY, hy), Math.max(o.portY, hy), nWire, eastOfDev ? +1 : -1,
               x => segBlocked(x, Math.min(o.portY, hy), x, Math.max(o.portY, hy), skip), exChan);
             if (ex == null) { why += "escape ex null; "; continue; }
             pts = finishFrom(ex, hy, [[sx, o.portY], [ex, o.portY]], !relax && hy > o.portY, relax);
@@ -1292,6 +1344,7 @@ export function route(job, ix, placement, opts = {}) {
       const gx = alloc(usedV, sx + 14, Math.min(sy, ty), Math.max(sy, ty), nWire, +1,
         x => segBlocked(x, Math.min(sy, ty), x, Math.max(sy, ty), skip), [sx + 8, sx + 80]);
       tryCommit(conn, "staple", [gx != null ? [[sx, sy], [gx, sy], [gx, ty], [b.x + b.w, ty]] : null], skip);
+      if (rHint?.ch) out.warnings.push({ code: "hint-unroutable", msg: wireId(conn) });   // the inter-rack trunk has one shape
       return;
     }
     const sy = portPlan[wireId(conn)] ?? takeRightPort(a, a.y + a.h / 2);
@@ -1302,7 +1355,7 @@ export function route(job, ix, placement, opts = {}) {
       const gap = b.col === "C" ? gapBCx : gapABx;
       const [tmin, tmax] = portSpan(b);
       const tyDesired = Math.max(tmin, Math.min(tmax, sy));
-      let committed = null, sywCache = null;   // west-wrap exit port: taken at most once per connection
+      let committed = null, sywCache = null, westTaken = false;   // west-wrap exit port: taken at most once per connection
       for (let k = 0; k <= Math.ceil((tmax - tmin) / RT.lane) + 1 && !committed; k++) {
         for (const sgn of k ? [1, -1] : [1]) {
           const ty = tyDesired + sgn * k * RT.lane;
@@ -1339,7 +1392,9 @@ export function route(job, ix, placement, opts = {}) {
           // (user redline: an ATV feed hooking out the left edge reads backwards).
           // The wrap is for infrastructure trunks (AVB switch etc.) dodging a
           // busy feed band.
-          if (a.col === "A" && a.type !== "source" && base && rHint?.ch !== "ab" && (ty < a.y - 4 || ty > a.y + a.h + 4)) {
+          // (base may be null when the gap is starved — the wrap is then the
+          // only legal route, so it no longer needs a gap route to compare to)
+          if (a.col === "A" && a.type !== "source" && rHint?.ch !== "ab" && (ty < a.y - 4 || ty > a.y + a.h + 4)) {
             // the exit is a LEFT-edge port and must say so — the left-port
             // manager spaces it clear of later westward arrivals at this tile
             // (reusing the right-port y once walled off a backhaul's only door)
@@ -1350,12 +1405,13 @@ export function route(job, ix, placement, opts = {}) {
             // an explicit hint takes the wrap whenever it is legal; unhinted
             // wires still need to earn the detour (≥2 crossings saved)
             if (west && !pathBlocked(west, skip) && pathRegisterable(west, nWire) &&
-                (rHint?.ch === "west" || countCrossings(west) + 2 <= countCrossings(base))) {
+                (rHint?.ch === "west" || !base || countCrossings(west) + 2 <= countCrossings(base))) {
               chosen = west;
+              westTaken = true;
               (leftPorts[a.id] ||= []).push(syw);   // the winner claims its exit port
+              release(rightPorts, a.id, sy);         // …and the unused right-edge booking goes back
             }
           }
-          if (rHint?.ch === "west" && chosen !== null && chosen === base) out.warnings.push({ code: "hint-unroutable", msg: wireId(conn) });
           if (chosen) {
             (leftPorts[b.id] ||= []).push(ty);
             committed = commit(conn, "intra", chosen);
@@ -1363,6 +1419,9 @@ export function route(job, ix, placement, opts = {}) {
           if (committed) break;
         }
       }
+      // judged once, on the final outcome — not per entry-port attempt
+      if ((rHint?.ch === "west" && !westTaken) || rHint?.ch === "staple" || rHint?.ch === "wrap")
+        out.warnings.push({ code: "hint-unroutable", msg: wireId(conn) });
       if (!committed) {
         const ty = takeLeftPort(b, sy);
         tryCommit(conn, "intra", [[[sx, sy], [(sx + b.x) / 2, sy], [(sx + b.x) / 2, ty], [b.x, ty]]], skip);
@@ -1402,8 +1461,11 @@ export function route(job, ix, placement, opts = {}) {
       let pick = staple && (!wrapOk || countCrossings(staple) <= countCrossings(wrapOk)) ? staple : wrapOk;
       if (rHint?.ch === "staple" && staple) pick = staple;
       else if (rHint?.ch === "wrap" && wrapOk) pick = wrapOk;
-      else if ((rHint?.ch === "staple" || rHint?.ch === "wrap") && pick) out.warnings.push({ code: "hint-unroutable", msg: wireId(conn) });
-      if (pick === staple && staple) { (rightPorts[a.id] ||= []).push(sy2); (rightPorts[b.id] ||= []).push(ty2); }
+      else if (rHint?.ch && pick) out.warnings.push({ code: "hint-unroutable", msg: wireId(conn) });   // incl. ab/west: this class has no gap route
+      if (pick === staple && staple) {
+        (rightPorts[a.id] ||= []).push(sy2); (rightPorts[b.id] ||= []).push(ty2);
+        release(rightPorts, a.id, sy);   // the staple exits at sy2 — the planned mid-port is free again
+      }
       else if (pick) (leftPorts[b.id] ||= []).push(ty);
       tryCommit(conn, pick === staple ? "staple" : "wrap", [pick], skip);
     }
@@ -1521,10 +1583,19 @@ export function route(job, ix, placement, opts = {}) {
     // range reaches below the rack too — a return from a far cluster may have to
     // travel under everything to reach the AB gap
     const laneHi = Math.max(corTop ? corTop.y + corTop.h - 6 : pz.y + pz.h + 220, rackBottom + 320);
-    const ty = takeLeftPort(b, b.y + b.h / 2);
+    // entry port: PEEKED, not claimed — if the middle port's row is walled off,
+    // the search retries the target's other free left ports; only the port the
+    // winning route actually lands on is claimed (a claimed-but-dead port once
+    // made returns vanish with no geometry at all)
+    const [tmin, tmax] = portSpan(b), tmid = b.y + b.h / 2;
+    const portCands = [peekPort(leftPorts, b, tmid)];
+    for (let yy = tmin; yy <= tmax; yy += RT.lane)
+      if (!portCands.includes(yy) && !(leftPorts[b.id] || []).some(u => Math.abs(u - yy) < 10)) portCands.push(yy);
+    portCands.splice(1, portCands.length, ...portCands.slice(1).sort((m, n) => Math.abs(m - tmid) - Math.abs(n - tmid)));
+    let ty = portCands[0];
     // gather every valid (lane, channel) candidate and take the one that costs
     // the fewest hops — returns route last, so the corridor is fully known
-    let best = null, bestCost = Infinity, seen = 0;
+    let best = null, bestCost = Infinity, seen = 0, firstTry = null;
     const rdbg = info => { if (opts.debug) { const k = wireId(conn); ((out.debug ||= {})[k] ||= []).length < 400 && out.debug[k].push(info); } };
     // the target is exempt from segBlocked so the final approach may land on its
     // edge — but that exemption must not let EARLIER segments pierce its body
@@ -1564,6 +1635,9 @@ export function route(job, ix, placement, opts = {}) {
             x => segBlocked(x, Math.min(y, ty), x, Math.max(y, ty), skip), range);
           if (wx == null) { rdbg({ [tag]: y, r: range === gapABx ? "ab" : "west", fail: "alloc" }); continue; }
           const list = buildCands(y, wx);
+          // remember the first geometrically sane attempt (doesn't pierce the
+          // target) as the best-effort fallback, with the port it lands on
+          if (!firstTry) { const c0 = list.find(c => !hitsTarget(c)); if (c0) firstTry = { pts: c0, ty }; }
           const cand = list.find(c => !hitsTarget(c) && !pathBlocked(c, skip) && pathRegisterable(c, nWire));
           if (!cand) {
             rdbg({ [tag]: y, wx, r: range === gapABx ? "ab" : "west",
@@ -1591,23 +1665,40 @@ export function route(job, ix, placement, opts = {}) {
         if (gBot - gTop >= 8) hintBand = [gTop, gBot]; else hintBad = true;
       } else hintBad = true;
     }
+    // "staple"/"wrap" belong to rack-to-rack runs; a return can't honor them
+    if (hint && hint.ch && hint.ch !== "ab" && hint.ch !== "west") hintBad = true;
     const hintRanges = hint?.ch === "west" ? [westMarginX] : hint?.ch === "ab" ? [gapABx] : [gapABx, westMarginX];
+    const reset = () => { best = null; bestCost = Infinity; seen = 0; };
+    // the hint gets every entry port before the free search takes over
     if (hint && !hintBad) {
-      if (hintBand) scan(hintBand, hintRanges, 30, "y");
-      else {
-        scan([laneLo, laneHi], hintRanges, 30, "y");
-        if (!best) scan([rackBottom + 24, rackBottom + 560], hintRanges, 12, "band2");
+      for (const p of portCands) {
+        ty = p; reset();
+        if (hintBand) scan(hintBand, hintRanges, 30, "y");
+        else {
+          scan([laneLo, laneHi], hintRanges, 30, "y");
+          if (!best) scan([rackBottom + 24, rackBottom + 560], hintRanges, 12, "band2");
+        }
+        if (best) break;
       }
     }
     if (hint && !best) out.warnings.push({ code: "hint-unroutable", msg: wireId(conn) });
     if (!best) {
-      scan([laneLo, laneHi], [gapABx, westMarginX], 30, "y");
-      // tall racks put the only clear crossing BELOW everything — the near-card
-      // scan can exhaust its sample budget before ever reaching it; the first
-      // 340px below the rack belong to the amp dive strips, duck BENEATH them
-      if (!best) scan([rackBottom + 24, rackBottom + 560], [gapABx, westMarginX], 12, "band2");
+      for (const p of portCands) {
+        ty = p; reset();
+        scan([laneLo, laneHi], [gapABx, westMarginX], 30, "y");
+        // tall racks put the only clear crossing BELOW everything — the near-card
+        // scan can exhaust its sample budget before ever reaching it; the first
+        // 340px below the rack belong to the amp dive strips, duck BENEATH them
+        if (!best) scan([rackBottom + 24, rackBottom + 560], [gapABx, westMarginX], 12, "band2");
+        if (best) break;
+      }
     }
-    tryCommit(conn, "return", [best], skip);
+    // every other class draws a flagged best-effort path when the corridor is
+    // full; a return used to VANISH instead — the connection disappeared from
+    // the schematic. Draw the first sane attempt and let the fallback warning say so.
+    if (best) (leftPorts[b.id] ||= []).push(ty);
+    else if (firstTry) (leftPorts[b.id] ||= []).push(firstTry.ty);
+    tryCommit(conn, "return", [best, !best && firstTry ? firstTry.pts : null], skip);
   }
 
   /* ============ pass 4c: audio returns — last, so they can dodge everything ============ */
@@ -1679,6 +1770,30 @@ function computeHops(out) {
       rest.forEach(c => assigned.add(c));
     }
   }
+  // normalize per segment: arcs that overlap merge into one wider bridge
+  // (separate 12px arcs 9px apart drew the path backwards), and every arc is
+  // clamped to its own segment (a 24px bridge on a 20px stub poked into a card)
+  for (const w of out.wires) {
+    if (!w.hops?.length) continue;
+    const bySi = {};
+    for (const h of w.hops) (bySi[h.si] ||= []).push(h);
+    const merged = [];
+    for (const [si, hs] of Object.entries(bySi)) {
+      const [a, b] = [w.pts[+si], w.pts[+si + 1]];
+      const vert = a[0] === b[0];
+      const lo = Math.min(vert ? a[1] : a[0], vert ? b[1] : b[0]), hi = Math.max(vert ? a[1] : a[0], vert ? b[1] : b[0]);
+      const ivs = hs.map(h => { const c = vert ? h.y : h.x; return { s: c - h.w / 2, e: c + h.w / 2, orient: h.orient }; }).sort((m, n) => m.s - n.s);
+      const runs = [];
+      for (const iv of ivs) { const last = runs[runs.length - 1]; if (last && iv.s <= last.e) last.e = Math.max(last.e, iv.e); else runs.push({ ...iv }); }
+      for (const r of runs) {
+        const s0 = Math.max(lo, r.s), e0 = Math.min(hi, r.e);
+        if (e0 - s0 < 4) continue;
+        const c = (s0 + e0) / 2;
+        merged.push({ si: +si, x: vert ? a[0] : c, y: vert ? c : a[1], w: e0 - s0, orient: r.orient });
+      }
+    }
+    w.hops = merged;
+  }
   out.crossings = crossings.length;
 }
 
@@ -1704,7 +1819,10 @@ export function routeAlternates(job, ix, placed, opts, wid) {
   const fromDev = devs.find(d => d.id === from);
   if (!toDev) return [];                                 // zone-feed classes have no hint vocabulary yet
   const menu = [{ label: "Auto", hint: null }];
-  const sameCol = fromDev && Math.abs(toDev.x - fromDev.x) < 8;
+  // must mirror routeRackToRack's same-column test (same x AND same rack), or
+  // aligned devices in stacked racks get a menu their router can't honor
+  const rackOfId = id => placed.racks.find(r => r.devices.some(d => d.id === id));
+  const sameCol = fromDev && Math.abs(toDev.x - fromDev.x) < 8 && rackOfId(fromDev.id) === rackOfId(toDev.id);
   if (fromDev && sameCol) {
     menu.push({ label: "Staple beside the column", hint: { ch: "staple" } },
                { label: "Wrap over the top", hint: { ch: "wrap" } });
@@ -1811,13 +1929,21 @@ export function render(job, ix, P, rt, opts = {}) {
         const [brand, ...restName] = String(d.model || "").split(" ");
         push(`<text x="${d.x + d.w / 2}" y="${d.y + 16}" text-anchor="middle" font-size="11" fill="#ddd">${esc(brand)}</text>`);
         // channel strip: used (blue), reserved (gray), spare (outline)
-        const zones = dev.zones || 8;
+        const zones = Math.max(1, Math.floor(+dev.zones) || 8);
         const feeds = (sol.connections || []).filter(c => c.from === d.id && c.signal === "speaker");
         const slot = {};
+        const mark = (k, st) => { if (slot[k] !== "used") slot[k] = st; };   // a live feed outranks a reservation
+        // feeds with channels occupy every zone-out they span ("1-4" = outs 1–2);
+        // feeds made without channels take the next free out instead of all
+        // piling onto out 1
+        const loose = [];
         for (const f of feeds) {
-          const ch = expandChannels(f.channels)[0] || 1;
-          slot[Math.min(zones, Math.ceil(ch / 2))] = (f.scope || "included") !== "included" ? "res" : "used";
+          const st = (f.scope || "included") !== "included" ? "res" : "used";
+          const chs = expandChannels(f.channels);
+          if (!chs.length) { loose.push(st); continue; }
+          for (const ch of chs) mark(Math.min(zones, Math.ceil(ch / 2)), st);
         }
+        for (const st of loose) { let k = 1; while (k < zones && slot[k]) k++; mark(k, st); }
         const pitch = Math.min(18, (d.w - 32) / zones), x0 = d.x + d.w / 2 - (zones - 1) * pitch / 2 - 3.5;
         for (let k = 1; k <= zones; k++) {
           const x = x0 + (k - 1) * pitch;
@@ -1888,17 +2014,17 @@ export function render(job, ix, P, rt, opts = {}) {
         push(`<rect x="${gx}" y="${gy}" width="${g.w}" height="${g.h}" fill="url(#tvg)" stroke="#556" stroke-width="1.2"/>`);
         push(`<text x="${gx + g.w / 2}" y="${gy + g.h / 2 - 3}" text-anchor="middle" font-size="11" fill="#233">${esc(g.brand)}</text>`);
         push(`<text x="${gx + g.w / 2}" y="${gy + g.h / 2 + 13}" text-anchor="middle" font-size="12" font-weight="600" fill="#233">${esc(g.sizeText)}</text>`);
-        for (const l of g.locals || (g.local ? [g.local] : [])) {
-          const ldev = s.locals[l.deviceId] || {};
-          push(`<rect x="${z.x + l.x}" y="${z.y + l.y}" width="${l.w}" height="${l.h}" rx="8" fill="#1e1e1e"/>`);
-          push(faceGlyph(ldev, z.x + l.x + l.w - 15, z.y + l.y + l.h / 2) ||
-               `<circle cx="${z.x + l.x + l.w - 11}" cy="${z.y + l.y + l.h / 2}" r="2.4" fill="#cfcfcf"/>`);
-          push(`<text x="${z.x + l.x + l.w / 2}" y="${z.y + l.y + l.h / 2 + 3}" text-anchor="middle" font-size="8.5" fill="#bbb">${esc(l.label)}</text>`);
-        }
-      } else {
+      } else if (g.kind === "speakers") {
         push(speakerGlyphs(ix.endpointsById[g.epId], gx, gy, g.w));
       }
-      push(`<text x="${z.x + g.cx}" y="${z.y + g.captionY}" text-anchor="middle" font-size="11.5" fill="#333">${esc(g.caption)}</text>`);
+      for (const l of g.locals || (g.local ? [g.local] : [])) {
+        const ldev = s.locals[l.deviceId] || {};
+        push(`<rect x="${z.x + l.x}" y="${z.y + l.y}" width="${l.w}" height="${l.h}" rx="8" fill="#1e1e1e"/>`);
+        push(faceGlyph(ldev, z.x + l.x + l.w - 15, z.y + l.y + l.h / 2) ||
+             `<circle cx="${z.x + l.x + l.w - 11}" cy="${z.y + l.y + l.h / 2}" r="2.4" fill="#cfcfcf"/>`);
+        push(`<text x="${z.x + l.x + l.w / 2}" y="${z.y + l.y + l.h / 2 + 3}" text-anchor="middle" font-size="8.5" fill="#bbb">${esc(l.label || l.deviceId)}</text>`);
+      }
+      if (g.caption) push(`<text x="${z.x + g.cx}" y="${z.y + g.captionY}" text-anchor="middle" font-size="11.5" fill="#333">${esc(g.caption)}</text>`);
     }
     push(`</g>`);
   }
@@ -1906,9 +2032,12 @@ export function render(job, ix, P, rt, opts = {}) {
   /* annotations render as keynotes: circled number on the zone card (top-left
      corner), full sentence in the legend's NOTES block */
   const keynote = n => n <= 20 ? String.fromCharCode(0x2460 + n - 1) : `(${n})`;
+  const markersOn = {};
   for (const a of P.legend.notes || []) {
     const z = P.zones.find(z => z.id === a.near);
-    if (z) push(`<text x="${z.x + 9}" y="${z.y + 17}" font-size="11" font-weight="700" fill="${bw ? "#333" : "#b32017"}">${keynote(a.n)}</text>`);
+    if (!z) continue;
+    const k = markersOn[z.id] = (markersOn[z.id] || 0) + 1;    // two notes on one card sit side by side
+    push(`<text x="${z.x + 9 + (k - 1) * 13}" y="${z.y + 17}" font-size="11" font-weight="700" fill="${bw ? "#333" : "#b32017"}">${keynote(a.n)}</text>`);
   }
 
   /* wires (under chips so badges sit inline on their runs) */
@@ -2059,7 +2188,7 @@ function speakerGlyphs(ep, gx, gy, gw) {
   if (cfg === "mono") return use("spk", 16, 16);
   if (cfg === "surround-5.1") return row(["spk", "spk", "spk"], 16) + row(["spk", "sub", "spk"], 54);
   if (cfg === "surround-7.1" || cfg === "surround-7.1.4")
-    return row(["spk", "spk", "spk", "spk"], 16) + `<g transform="translate(${gx + 17},0)">` + row(["spk", "sub", "spk"], 54) + `</g>`;
+    return row(["spk", "spk", "spk", "spk"], 16) + `<g transform="translate(17,0)">` + row(["spk", "sub", "spk"], 54) + `</g>`;   // row() already adds gx
   if (cfg === "2.1" || cfg === "stereo-2.1") return row(["spk", "sub", "spk"], 16);
   if (cfg.startsWith("soundbar")) {
     const barW = cfg === "soundbar-sub" ? gw - 38 : gw;
@@ -2068,14 +2197,13 @@ function speakerGlyphs(ep, gx, gy, gw) {
     return out2;
   }
   if (cfg === "landscape") {
-    const sats = ep?.satCount || 4, subs = ep?.buriedSub ? 1 : 0;
+    const sats = satCount(ep), subs = ep?.buriedSub ? 1 : 0;
     let out2 = "";
     for (let i = 0; i < sats; i++) out2 += use("spks", 10 + i * 26, 16);
     if (subs) out2 += use("sub", sats * 26 + 18, 16);
     return out2;
   }
-  const n = ep?.count || 2;
-  return row(Array(n).fill("spk"), 16);
+  return row(Array(spkCount(ep)).fill("spk"), 16);
 }
 
 /* ---------- advise ----------
@@ -2132,14 +2260,22 @@ export function advise(job, ix = indexJob(job), catalog = null) {
               ? `${d.model || d.id}: ${analogRuns} analog runs into ${cat.inputs.analog} analog inputs (${cat.model}) — over capacity`
               : `${d.model || d.id}: ${analogRuns}/${cat.inputs.analog} analog inputs fed · ${cat.inputs.analog - analogRuns} spare` });
         // audio returns land on DIGITAL inputs (optical/coax/eARC) — budget them
+        // (the catalog spells it "eArc"; accept either)
+        const earc = cat.inputs?.earc ?? cat.inputs?.eArc ?? 0;
         const retIn = inbound.filter(c => c.signal === "audioReturn").length;
-        const retCap = (cat.inputs?.optical || 0) + (cat.inputs?.coax || 0) + (cat.inputs?.digitalCombo || 0) + (cat.inputs?.earc || 0);
+        const retCap = (cat.inputs?.optical || 0) + (cat.inputs?.coax || 0) + (cat.inputs?.digitalCombo || 0) + earc;
         if (retIn && retCap)
           out.io.push({ solution: sol.id, device: d.id, kind: "return-in", used: retIn, capacity: retCap,
             over: retIn > retCap,
             msg: retIn > retCap
               ? `${d.model || d.id}: ${retIn} audio returns into ${retCap} digital inputs (${cat.model}) — over capacity`
               : `${d.model || d.id}: ${retIn}/${retCap} digital return inputs used` });
+        // audio feeds and returns share the digital jacks — each budget can pass
+        // alone while the two together need more cables than the box has jacks
+        const jacks = (cat.inputs?.analog || 0) + (cat.inputs?.coax || 0) + (cat.inputs?.optical || 0) + (cat.inputs?.digitalCombo || 0) + earc;
+        if (jacks && audioIn <= audioCap && retIn <= retCap && audioIn + retIn > jacks)
+          out.io.push({ solution: sol.id, device: d.id, kind: "jack-total", used: audioIn + retIn, capacity: jacks, over: true,
+            msg: `${d.model || d.id}: ${audioIn} audio feeds + ${retIn} returns need ${audioIn + retIn} jacks — only ${jacks} inputs (${cat.model})` });
         // module side of the trunk: outputs consumed = runs leaving
         const outRuns = (sol.connections || []).filter(c => c.from === d.id && c.signal === "audio")
           .reduce((n, c) => n + trunkCount(c, s), 0);
@@ -2158,10 +2294,12 @@ export function advise(job, ix = indexJob(job), catalog = null) {
         if (outCap && d.type === "videoMatrix" && outbound > outCap)
           out.io.push({ solution: sol.id, device: d.id, kind: "video-out", used: outbound, capacity: outCap, over: true,
             msg: `${d.model || d.id}: ${outbound} video outputs of ${outCap} available` });
-        if (cat.flags?.includes("pcmOnlyDigital") && inbound.some(c => c.signal === "audio"))
-          out.notes.push({ code: "pcm-only", msg: `${d.model || d.id}: digital inputs are PCM-only — bitstream sources need a 2ch downmix (AC-AVDM-V3 / AVDM-EV2)` });
+        // bitstream arrives from TVs (optical returns / TV audio) — an analog
+        // trunk from an output module never carries Dolby, so it can't trigger this
+        if (cat.flags?.includes("pcmOnlyDigital") && inbound.some(c => c.signal === "audioReturn" || (c.signal === "audio" && ix.endpointsById[c.from])))
+          out.notes.push({ code: "pcm-only", solution: sol.id, msg: `${d.model || d.id}: digital inputs are PCM-only — bitstream sources need a 2ch downmix (AC-AVDM-V3 / AVDM-EV2)` });
         if (cat.flags?.includes("controlLanOnly"))
-          out.notes.push({ code: "control-lan-only", msg: `${d.model || d.id}: LAN is control/DSP only — no Dante/audio-over-IP on this box` });
+          out.notes.push({ code: "control-lan-only", solution: sol.id, msg: `${d.model || d.id}: LAN is control/DSP only — no Dante/audio-over-IP on this box` });
       }
       // current-gen AVB/IP audio gear rides the network — and Savant makes no AVB switch of its own
       if (Object.values(s.devices).some(d => catalog.devices[d.catalogRef]?.flags?.includes("avb")))
@@ -2184,11 +2322,14 @@ export function advise(job, ix = indexJob(job), catalog = null) {
     /* -- licensing advisor per platform -- */
     const platforms = sol.platforms || [];
     const aux = sol.auxCounts || {};
-    const devEstimate = aux.devices ?? Math.round(zc * 3 + (aux.cameras || 0) + (aux.controls || 0));
-    const voiceRooms = aux.voiceRooms ?? 0;
+    const num = v => Math.max(0, +v || 0);   // imported counts may arrive as text ("4" + 3 = "43")
+    const devEstimate = aux.devices != null ? num(aux.devices) : Math.round(zc * 3 + num(aux.cameras) + num(aux.controls));
+    const voiceRooms = num(aux.voiceRooms);
 
+    // a missing platform table (offline catalog fallback, old stored settings)
+    // skips that platform's pick instead of throwing away the whole drawing
     if (catalog?.licensing) {
-      if (platforms.includes("savant")) {
+      if (platforms.includes("savant") && catalog.licensing.savant) {
         const L = catalog.licensing.savant;
         const pick = (L.hosts || []).find(h =>
           (h.maxZones == null || zc <= h.maxZones) &&
@@ -2200,7 +2341,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
           warns.push(`${audioZones} audio zones exceeds the ${pick.maxIpAudio} IP-audio device ceiling`);
         out.licensing.push({ solution: sol.id, platform: "savant", pick: pick?.name, lines, warns, notes: L.notes || [] });
       }
-      if (platforms.includes("josh")) {
+      if (platforms.includes("josh") && catalog.licensing.josh) {
         const L = catalog.licensing.josh;
         const needMics = Math.max(voiceRooms, 0);
         const pick = (L.processors || []).find(p => devEstimate <= p.maxDevices && needMics <= (p.maxMics ?? 0)) ||
@@ -2211,7 +2352,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
           warns: dual ? ["over single-processor limits — dual Core / manufacturer review"] : [],
           notes: L.notes || [] });
       }
-      if (platforms.includes("control4")) {
+      if (platforms.includes("control4") && catalog.licensing.control4) {
         const L = catalog.licensing.control4;
         const pick = (L.controllers || []).find(c => devEstimate <= c.maxDevices && zc <= (c.rooms ?? 99)) ||
           (L.controllers || [])[(L.controllers || []).length - 1];
@@ -2222,8 +2363,8 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       }
     } else if (platforms.includes("savant")) {
       // legacy catalog-less hint (kept for compatibility)
-      if (zc > 16) out.notes.push({ code: "savant-host", msg: `${zc} zones exceeds Smart Host (16) — Pro Host class required` });
-      else out.notes.push({ code: "savant-host", msg: `Smart Host OK (${zc}/16 zones) · Essentials subscription required` });
+      if (zc > 16) out.notes.push({ code: "savant-host", solution: sol.id, msg: `${zc} zones exceeds Smart Host (16) — Pro Host class required` });
+      else out.notes.push({ code: "savant-host", solution: sol.id, msg: `Smart Host OK (${zc}/16 zones) · Essentials subscription required` });
     }
   }
   return out;

@@ -1,0 +1,257 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>SignalPath Fuzz</title>
+<style>
+  body { font-family: "Avenir Next", Avenir, Helvetica, sans-serif; margin: 24px; background: #f7f7f9; color: #16181c; }
+  h1 { font-size: 20px; } .pass { color: #2f7a3a; } .fail { color: #b32017; font-weight: 700; }
+  li { margin: 3px 0; font-size: 13px; } #summary { font-size: 17px; font-weight: 700; margin: 14px 0; }
+  code { background: #ececf0; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>SignalPath — pipeline fuzz</h1>
+<p>Hand-crafted edge cases plus seeded random jobs pushed through load → validate → advise → place → route → render → print pages → CSV → reroute alternates. Add <code>?n=500&amp;seed=7</code> to widen the random run.</p>
+<div id="summary">running…</div>
+<ul id="out"></ul>
+<script type="module">
+import { loadJob, validate, advise, place, route, render, effectiveJob, routeAlternates, wireD } from "./engine.js";
+import { renderExtraPages, takeoffCSV, wireRuns } from "./pages.js";
+
+const q = new URLSearchParams(location.search);
+const N = +(q.get("n") || 300), SEED = +(q.get("seed") || 1);
+const catalog = await (await fetch("./catalog.json")).json();
+const fixtures = {};
+for (const name of ["residence", "estate", "stress"]) fixtures[name] = await (await fetch(`../mock-system-${name}.json`)).json();
+
+const out = document.getElementById("out");
+const failures = [];
+let runs = 0;
+const log = (ok, name, detail = "") => {
+  const li = document.createElement("li");
+  li.className = ok ? "pass" : "fail";
+  li.textContent = (ok ? "✓ " : "✗ ") + name + (detail ? " — " + detail : "");
+  out.appendChild(li);
+};
+
+// geometry invariants: a wire may touch a tile's EDGE (ports live there) but
+// never cross its body; hop arcs must fit their segment without overlapping
+const PAD = 2;
+const METRIC = { fallbackWires: 0, jobsWithFallback: 0 };
+const inside = (x1, y1, x2, y2, o) =>
+  Math.min(x1, x2) < o.x + o.w - PAD && Math.max(x1, x2) > o.x + PAD &&
+  Math.min(y1, y2) < o.y + o.h - PAD && Math.max(y1, y2) > o.y + PAD;
+function geometryProblems(p, rt) {
+  const probs = [];
+  const tiles = [...p.racks.flatMap(r => r.devices), ...p.chips];
+  for (const w of rt.wires) {
+    if (!w.pts || w.insideCard || w.cls === "local") continue;
+    // a fallback wire is the router admitting "no legal path — best effort"
+    // (already warned); it's a capacity metric, not a geometry bug
+    if (/fallback/.test(w.cls)) { METRIC.fallbackWires++; continue; }
+    for (let i = 0; i + 1 < w.pts.length; i++) {
+      const [[x1, y1], [x2, y2]] = [w.pts[i], w.pts[i + 1]];
+      const t = tiles.find(o => inside(x1, y1, x2, y2, o));
+      if (t) { probs.push(`${w.id} (${w.cls}) crosses the body of ${t.id}`); break; }
+      const z = p.zones.find(o => inside(x1, y1, x2, y2, o));
+      if (z) { probs.push(`${w.id} (${w.cls}) crosses zone card ${z.id}`); break; }
+    }
+    const bySeg = {};
+    for (const h of w.hops || []) (bySeg[h.si] ||= []).push(h);
+    for (const [si, hs] of Object.entries(bySeg)) {
+      const [a, b] = [w.pts[+si], w.pts[+si + 1]];
+      const vert = a[0] === b[0];
+      const lo = Math.min(vert ? a[1] : a[0], vert ? b[1] : b[0]), hi = Math.max(vert ? a[1] : a[0], vert ? b[1] : b[0]);
+      const ivs = hs.map(h => { const c = vert ? h.y : h.x; return [c - h.w / 2, c + h.w / 2]; }).sort((m, n) => m[0] - n[0]);
+      if (ivs[0][0] < lo - 0.5 || ivs[ivs.length - 1][1] > hi + 0.5) { probs.push(`${w.id}: hop arc overruns its segment`); break; }
+      if (ivs.some((iv, k) => k && iv[0] < ivs[k - 1][1] - 0.5)) { probs.push(`${w.id}: hop arcs overlap`); break; }
+    }
+  }
+  return probs;
+}
+
+// the invariant set every job must satisfy, whatever garbage it contains
+function exercise(raw, label, strict = false) {
+  runs++;
+  const problems = [];
+  const svgCheck = (svg, where) => {
+    if (typeof svg !== "string") { problems.push(`${where}: not a string`); return; }
+    const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+    if (doc.querySelector("parsererror")) problems.push(`${where}: malformed SVG`);
+    const m = svg.match(/NaN|undefined|Infinity/);
+    if (m) problems.push(`${where}: "${m[0]}" in output near …${svg.slice(Math.max(0, m.index - 60), m.index + 20).replace(/\s+/g, " ")}…`);
+  };
+  try {
+    const solCount = Math.max(1, (raw.solutions || []).length);
+    for (let si = 0; si < solCount; si++) {
+      const eff = effectiveJob(structuredClone(raw), si);
+      const { job, ix } = loadJob(eff);
+      validate(job, ix);
+      const a = advise(job, ix, catalog);
+      for (const opts of [{ solution: si }, { solution: si, grayscale: true, hideSignals: ["network"] }]) {
+        if (!job.house.zones.length) continue;
+        const p = place(job, ix, opts);
+        const rt = route(job, ix, p, opts);
+        svgCheck(render(job, ix, p, rt, opts), `sheet sol${si}${opts.grayscale ? " bw" : ""}`);
+        if (!opts.grayscale) {
+          problems.push(...geometryProblems(p, rt).slice(0, 3));
+          // a well-formed job must route every wire — "unrouted" means a wire silently vanished
+          if (strict) for (const w of rt.warnings.filter(w => w.code === "unrouted")) problems.push(`${w.code}: ${w.msg}`);
+          if (rt.warnings.some(w => w.code === "route-fallback")) METRIC.jobsWithFallback++;
+        }
+        for (const w of rt.wires) if (w.pts) for (const pt of w.pts)
+          if (!Number.isFinite(pt[0]) || !Number.isFinite(pt[1])) { problems.push(`non-finite wire point on ${w.id}`); break; }
+        if (!opts.grayscale) {
+          // reroute: alternates must be legal and a picked hint must reproduce its preview
+          const cands = rt.wires.filter(w => w.pts && (w.signal === "audioReturn" || w.cls === "intra" || w.cls === "staple" || w.cls === "wrap")).slice(0, 2);
+          for (const w of cands) {
+            const alts = routeAlternates(job, ix, p, opts, w.id);
+            for (const alt of alts.slice(1, 3)) {
+              const j2 = structuredClone(job);
+              const conn = j2.solutions[si].connections.find(c => `${c.from}→${c.to}` === w.id);
+              if (!conn) continue;
+              conn.routeHint = alt.hint;
+              const { job: jj, ix: ii } = loadJob(j2);
+              const pp = place(jj, ii, opts);
+              const again = route(jj, ii, pp, opts).wires.find(x => x.id === w.id);
+              if (JSON.stringify(again?.pts) !== JSON.stringify(alt.pts)) problems.push(`reroute "${alt.label}" on ${w.id} does not reproduce its preview`);
+            }
+          }
+        }
+      }
+      const pj = structuredClone(job);
+      pj.job.pages = { channelMap: true, equipment: true, wireSchedule: true, bomCompare: true };
+      for (const pg of renderExtraPages(pj, ix, a, { solution: si, rawJob: raw })) svgCheck(pg.svg, `page "${pg.title}" sol${si}`);
+      takeoffCSV(job, ix, { solution: si });
+      wireRuns(job, ix, { solution: si });
+    }
+  } catch (e) {
+    problems.push(`THREW ${e.name}: ${e.message} @ ${(e.stack || "").split("\n")[1]?.trim() || "?"}`);
+  }
+  if (problems.length) failures.push({ label, problems, raw });
+  return problems;
+}
+
+/* ---------- hand-crafted edge cases ---------- */
+const R = () => structuredClone(fixtures.residence);
+const edge = {
+  "zero zones": j => { j.house.zones = []; },
+  "zone with no endpoints": j => { j.house.zones.push({ id: "z-empty", name: "Empty", endpoints: [] }); },
+  "solution with no racks": j => { j.solutions[0].racks = []; },
+  "rack with no devices": j => { j.solutions[0].racks[0].devices = []; },
+  "all connections removed": j => { j.solutions[0].connections = []; },
+  "annotation near a missing zone": j => { j.solutions[0].annotations.push({ text: "ghost", near: "z-nope" }); },
+  "annotation with no near": j => { j.solutions[0].annotations.push({ text: "floating" }); },
+  "connection to missing node": j => { j.solutions[0].connections.push({ from: "axion8", to: "ghost-tv", signal: "video" }); },
+  "device with no model": j => { delete j.solutions[0].racks[0].devices[2].model; },
+  "display with no size": j => { delete j.house.zones[0].endpoints[1].size; },
+  "unknown speaker config": j => { j.house.zones[0].endpoints[0].config = "surround-9.2.6"; },
+  "landscape with 0 satellites": j => { j.house.zones[0].endpoints[0] = { id: "family-spk", type: "speakers", config: "landscape", satCount: 0 }; },
+  "200-char zone name": j => { j.house.zones[0].name = "Great Room ".repeat(18); },
+  "hostile characters everywhere": j => { j.house.zones[0].name = `A & B <"x">'`; j.job.name = `J&<>"`; j.solutions[0].name = `S&<"`; j.solutions[0].annotations[0].text = `a<b>&"c"`; },
+  "duplicate zone ids": j => { j.house.zones.push(structuredClone(j.house.zones[0])); },
+  "stale overrides in 2nd solution": j => { const s2 = structuredClone(j.solutions[0]); s2.id = "s2"; s2.name = "Alt"; s2.overrides = { zones: { "z-gone": { scope: "future" } }, endpoints: { "gone-tv": { size: 99 } } }; j.solutions.push(s2); },
+  "local device in a missing zone": j => { j.solutions[0].localDevices.push({ id: "orphan-puck", type: "source", model: "ATV", zone: "z-nope", location: "at-display" }); },
+  "companion serving a missing endpoint": j => { j.solutions[0].companions.push({ id: "balun-x", type: "balun", serves: "ghost-tv" }); },
+  "amp with zones: 0": j => { const amp = j.solutions[0].racks[0].devices.find(d => d.type === "amp"); if (amp) amp.zones = 0; },
+  "weird connection counts": j => { for (const c of j.solutions[0].connections) if (c.signal === "audio") c.count = -3; j.solutions[0].connections.push({ from: "sav-out", to: "mdx16", signal: "audio", count: "4" }); },
+  "garbage route hints": j => { const cs = j.solutions[0].connections; cs[0].routeHint = { ch: "xyz" }; cs[1].routeHint = { between: "notarray" }; const r = cs.find(c => c.signal === "audioReturn"); if (r) r.routeHint = { between: ["axion8", "axion8"] }; },
+  "only audio zones, no video": j => { j.house.zones = j.house.zones.filter(z => !z.endpoints.some(e => e.type === "display")); },
+};
+for (const [name, mutate] of Object.entries(edge)) {
+  const j = R(); mutate(j);
+  const p = exercise(j, "edge: " + name);
+  log(!p.length, "edge: " + name, p.slice(0, 2).join(" | "));
+}
+for (const name of ["residence", "estate", "stress"]) {
+  const p = exercise(structuredClone(fixtures[name]), "fixture: " + name, true);
+  log(!p.length, "fixture: " + name, p.slice(0, 2).join(" | "));
+}
+
+/* ---------- seeded random jobs ---------- */
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const rnd = mulberry32(SEED);
+const pick = arr => arr[Math.floor(rnd() * arr.length)];
+const CONFIGS = ["stereo", "mono", "2.1", "surround-5.1", "surround-7.1", "surround-7.1.4", "soundbar", "soundbar-sub", "landscape"];
+function randomJob(k) {
+  const nz = 1 + Math.floor(rnd() * 18);
+  const zones = [];
+  for (let i = 0; i < nz; i++) {
+    const eps = [];
+    if (rnd() < 0.85) eps.push({ id: `z${i}-spk`, type: "speakers", config: pick(CONFIGS), satCount: 2 + Math.floor(rnd() * 8), buriedSub: rnd() < 0.5, status: pick(["new", "ofe", "prewire"]) });
+    if (rnd() < 0.55) eps.push({ id: `z${i}-tv`, type: "display", displayType: rnd() < 0.1 ? "projector" : "tv", brand: pick(["Sony", "LG", ""]), size: pick([43, 55, 65, 75, 85, 98, 120]), status: pick(["new", "ofe"]) });
+    zones.push({ id: `z${i}`, name: `Zone ${i} ${pick(["", "Suite", "Great Room", "Bath"])}`.trim(), scope: pick(["included", "included", "included", "prewire", "future"]), remote: pick([undefined, "savant", "appletv", "josh", "factory"]), endpoints: eps });
+  }
+  const devs = [];
+  const nSrc = 1 + Math.floor(rnd() * 5);
+  for (let i = 0; i < nSrc; i++) devs.push({ id: `src${i}`, type: "source", sourceType: pick(["appletv", "cable", "streamer", "turntable", "kaleidescape"]), model: `Source ${i}` });
+  const hasMatrix = rnd() < 0.8, hasAvb = rnd() < 0.6;
+  if (hasMatrix) devs.push({ id: "mx", type: "videoMatrix", model: "AVPro Edge Axion 8", catalogRef: pick(["avpro-ac-mx-88", "avpro-ac-mx-44", undefined]) });
+  if (rnd() < 0.5) devs.push({ id: "avr", type: "avr", model: "Anthem MRX-540", catalogRef: "anthem-mrx-540-8k" });
+  if (hasAvb) {
+    devs.push({ id: "avb", type: "avbSwitch", model: "Savant AVB" });
+    devs.push({ id: "in", type: "audioInputModule", model: "Savant Input Module", catalogRef: pick(["savant-avb-input-module", "savant-pav-aim7c"]) });
+    devs.push({ id: "out", type: "audioOutputModule", model: "Savant Output Module", catalogRef: "savant-avb-output-module" });
+  }
+  const nAmp = Math.floor(rnd() * 3);
+  for (let i = 0; i < nAmp; i++) devs.push({ id: `amp${i}`, type: "amp", model: pick(["Anthem MDX-16", "AudioControl M6800D", "Sonance DSP 8-130"]), catalogRef: pick(["anthem-mdx-16", "audiocontrol-m6800d", "sonance-dsp-8-130-mkiii"]), zones: pick([4, 8, 16]) });
+  if (rnd() < 0.3) devs.push({ id: "sw", type: "networkSwitch", model: "USW Pro 24", catalogRef: "ubiquiti-usw-pro-24-poe" });
+  const conns = [], companions = [], locals = [], annotations = [];
+  const ampIds = devs.filter(d => d.type === "amp").map(d => d.id);
+  let ampCh = 0;
+  for (const z of zones) {
+    const tv = z.endpoints.find(e => e.type === "display"), spk = z.endpoints.find(e => e.type === "speakers");
+    if (tv) {
+      if (rnd() < 0.15) locals.push({ id: `${z.id}-puck`, type: "source", sourceType: "appletv", model: "Apple TV", zone: z.id, location: "at-display" });
+      else if (hasMatrix) {
+        if (rnd() < 0.6) { companions.push({ id: `${z.id}-balun`, type: "balun", serves: tv.id }); conns.push({ from: "mx", to: `${z.id}-balun`, signal: "video" }, { from: `${z.id}-balun`, to: tv.id, signal: "video" }); }
+        else conns.push({ from: "mx", to: tv.id, signal: "video" });
+      } else conns.push({ from: pick(devs.filter(d => d.type === "source")).id, to: tv.id, signal: "video" });
+      if (hasAvb && rnd() < 0.3) conns.push({ from: tv.id, to: "in", signal: "audioReturn" });
+    }
+    if (spk) {
+      if (ampIds.length) { const amp = pick(ampIds); conns.push({ from: amp, to: spk.id, signal: "speaker", channels: `${++ampCh}`, ...(z.scope !== "included" ? { scope: z.scope } : {}) }); }
+      else if (tv && rnd() < 0.5) conns.push({ from: tv.id, to: spk.id, signal: "audio" });
+    }
+    if (rnd() < 0.08) annotations.push({ text: `Note for ${z.name} & co <${k}>`, near: z.id });
+  }
+  for (const s of devs.filter(d => d.type === "source")) {
+    if (hasMatrix && rnd() < 0.8) conns.push({ from: s.id, to: "mx", signal: "video" });
+    if (hasAvb && rnd() < 0.4) conns.push({ from: s.id, to: "in", signal: "audio" });
+  }
+  if (hasAvb) { conns.push({ from: "avb", to: "in", signal: "network" }, { from: "avb", to: "out", signal: "network" }); for (const a of ampIds) conns.push({ from: "out", to: a, signal: "audio", ...(rnd() < 0.3 ? { count: 2 } : {}) }); }
+  if (hasMatrix && devs.some(d => d.id === "avr") && rnd() < 0.7) conns.push({ from: "mx", to: "avr", signal: "video" });
+  const r = conns.filter(c => c.signal === "audioReturn" || (c.from === "avb"));
+  for (const c of r) if (rnd() < 0.25) c.routeHint = pick([{ ch: "ab" }, { ch: "west" }, { ch: "staple" }, { ch: "ab", between: ["mx", "in"] }]);
+  const job = { generator: "SignalPath", schemaVersion: 1, job: { name: `Fuzz ${k}`, client: { name: "C", address: "1 A St, B, CA" }, stage: "proposal" },
+    house: { zones }, solutions: [{ id: "s1", name: "Proposed", racks: [{ id: "rack", name: "Equipment Rack", devices: devs }], localDevices: locals, companions, connections: conns, annotations }] };
+  if (rnd() < 0.3) {
+    const s2 = structuredClone(job.solutions[0]); s2.id = "s2"; s2.name = "Option B";
+    const ep = zones.flatMap(z => z.endpoints).find(e => e.type === "display");
+    s2.overrides = { zones: { [zones[0].id]: { scope: "future" } }, endpoints: ep ? { [ep.id]: { size: 99 } } : {} };
+    job.solutions.push(s2);
+  }
+  return job;
+}
+let randFails = 0;
+const t0 = performance.now();
+for (let k = 0; k < N; k++) {
+  const j = randomJob(k);
+  const p = exercise(j, `random #${k} (seed ${SEED})`, true);
+  if (p.length) { randFails++; if (randFails <= 25) log(false, `random #${k}`, p.slice(0, 2).join(" | ")); }
+}
+log(randFails === 0, `random jobs: ${N - randFails}/${N} clean`, `${Math.round(performance.now() - t0)}ms`);
+const mli = document.createElement("li");
+mli.textContent = `ℹ router capacity metric (not a failure): ${METRIC.fallbackWires} best-effort fallback wires across ${METRIC.jobsWithFallback} layouts — dense wrapped video bands and direct source→TV runs exceed the channel plan`;
+out.appendChild(mli);
+
+window.FUZZ = { failures, randomJob, exercise, METRIC };
+const bad = failures.length;
+document.getElementById("summary").innerHTML = bad === 0
+  ? `<span class="pass">ALL ${runs} FUZZ RUNS CLEAN</span>`
+  : `<span class="fail">${bad} of ${runs} runs broke an invariant</span>`;
+document.title = bad === 0 ? `✓ fuzz ${runs}` : `✗ fuzz ${bad}`;
+</script>
+</body>
+</html>

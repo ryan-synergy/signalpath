@@ -13,7 +13,8 @@ const today = () => new Date().toISOString().slice(0, 10);
    native file must have before it may replace a working job. */
 const UNSAFE_KEYS = ["__proto__", "constructor", "prototype"];
 export function stripUnsafe(v, depth = 0) {
-  if (depth > 64 || !v || typeof v !== "object") return v;
+  if (!v || typeof v !== "object") return v;
+  if (depth > 200) throw new Error("File rejected: nested too deeply");   // never leave a subtree unscanned
   if (Array.isArray(v)) { for (const x of v) stripUnsafe(x, depth + 1); return v; }
   for (const k of Object.keys(v)) {
     if (UNSAFE_KEYS.includes(k)) delete v[k];
@@ -22,26 +23,41 @@ export function stripUnsafe(v, depth = 0) {
   return v;
 }
 
+// ids flow into HTML attributes, CSS selectors and the "from→to" wire key —
+// everything the app itself generates fits this set, so an imported id that
+// doesn't is either corrupt or hostile
+const SAFE_ID = /^[A-Za-z0-9_.:-]{1,80}$/;
+
 export function assertJobShape(job) {
   const bad = m => { throw new Error("SignalPath file rejected: " + m); };
+  const list = (o, k, where) => { if (o[k] == null) o[k] = []; else if (!Array.isArray(o[k])) bad(`${where}${k} is not a list`); return o[k]; };
+  const idOk = (x, what) => { if (!x || typeof x !== "object" || typeof x.id !== "string" || !SAFE_ID.test(x.id)) bad(`${what} has a missing or invalid id`); };
   if (job.schemaVersion !== 1) bad("unsupported schemaVersion " + job.schemaVersion);
   if (!job.job || typeof job.job !== "object") bad("missing job block");
   if (!job.house || !Array.isArray(job.house.zones)) bad("missing house.zones");
   if (!Array.isArray(job.solutions) || !job.solutions.length) bad("missing solutions");
+  for (const a of list(job.house, "areas", "house.")) idOk(a, "area");
   for (const z of job.house.zones) {
-    if (!z || typeof z.id !== "string" || !z.id) bad("zone without id");
-    if (!Array.isArray(z.endpoints)) z.endpoints = [];
-    for (const e of z.endpoints) if (!e || typeof e.id !== "string" || !e.id) bad(`endpoint without id in zone ${z.id}`);
+    idOk(z, "zone");
+    for (const e of list(z, "endpoints", "zone.")) idOk(e, `endpoint in zone ${z.id}`);
   }
   for (const sol of job.solutions) {
     if (!sol || typeof sol !== "object") bad("bad solution entry");
-    if (!Array.isArray(sol.racks)) sol.racks = [];
-    if (!Array.isArray(sol.connections)) sol.connections = [];
-    if (!Array.isArray(sol.localDevices)) sol.localDevices = sol.localDevices == null ? [] : bad("localDevices is not a list");
-    for (const r of sol.racks) if (!Array.isArray(r.devices)) r.devices = [];
-    for (const c of sol.connections) if (!c || typeof c !== "object") bad("bad connection entry");
+    for (const r of list(sol, "racks", "solution.")) { idOk(r, "rack"); for (const d of list(r, "devices", "rack.")) idOk(d, `device in rack ${r.id}`); }
+    for (const d of list(sol, "localDevices", "solution.")) idOk(d, "local device");
+    for (const c of list(sol, "companions", "solution.")) idOk(c, "companion");
+    list(sol, "annotations", "solution.");
+    for (const c of list(sol, "connections", "solution.")) {
+      if (!c || typeof c !== "object" || !SAFE_ID.test(String(c.from)) || !SAFE_ID.test(String(c.to))) bad("bad connection entry");
+    }
   }
   return job;
+}
+
+// adapters derive ids from room names — two "Bedroom"s must not collide
+function idMaker() {
+  const used = new Set();
+  return base => { let id = base, n = 2; while (used.has(id)) id = `${base}-${n++}`; used.add(id); return id; };
 }
 
 /* ---------- sniffing ---------- */
@@ -86,18 +102,22 @@ export function importSiteWalk(raw) {
   const sol = job.solutions[0];
 
   // areas from floors (only when the walk recorded more than one)
-  const floors = [...new Set((raw.rooms || []).map(r => (r.floor || "").trim()).filter(Boolean))];
+  const rooms = (Array.isArray(raw.rooms) ? raw.rooms : []).filter(r => r && typeof r === "object");
+  const floorOf = r => String(r.floor ?? "").trim();
+  const floors = [...new Set(rooms.map(floorOf).filter(Boolean))];
   if (floors.length > 1) job.house.areas = floors.map(f => ({ id: "area-" + slug(f), name: f }));
+  const newId = idMaker();
 
-  for (const r of raw.rooms || []) {
-    const zname = (r.zoneName || r.name || "Zone").trim();
-    const zid = "z-" + slug(zname);
+  for (const r of rooms) {
+    const zname = String(r.zoneName || r.name || "Zone").trim() || "Zone";
+    const zid = newId("z-" + slug(zname));
     const zone = { id: zid, name: zname, scope: "included", endpoints: [] };
-    if (floors.length > 1 && r.floor) zone.area = "area-" + slug(r.floor);
+    if (floors.length > 1 && floorOf(r)) zone.area = "area-" + slug(floorOf(r));
     const znotes = [];
 
     // speakers
     const audio = r.audio || "tv";
+    if (!SW_AUDIO[audio] && audio !== "tv") unmapped.push(`${zname}: audio "${audio}" not recognized — no speakers added`);
     if (SW_AUDIO[audio]) {
       const ep = { id: zid + "-spk", type: "speakers", config: SW_AUDIO[audio], status: swStatus(r.audStatus) };
       if (SW_AUDIO[audio] === "stereo") ep.count = 2;
@@ -183,10 +203,12 @@ export function importBlueprinted(raw) {
   for (const a of raw.system?.advisories || []) warnings.push(a);
   notes.push(raw.note || "Everything below is the OLD system as programmed — verify on the walk");
 
-  for (const r of raw.rooms || []) {
+  const newId = idMaker();
+  for (const r of (Array.isArray(raw.rooms) ? raw.rooms : []).filter(r => r && typeof r === "object")) {
     if (r.zoneType === "No AV endpoints") { unmapped.push(`${r.name}: no AV — skipped`); continue; }
-    const zid = "z-" + slug(r.name);
-    const zone = { id: zid, name: r.name, scope: "included", endpoints: [] };
+    const zname = String(r.name || "Zone").trim() || "Zone";
+    const zid = newId("z-" + slug(zname));
+    const zone = { id: zid, name: zname, scope: "included", endpoints: [] };
     const znotes = [];
     const cfg = BP_ZONE_CFG[r.zoneType];
     if (cfg) {
@@ -258,29 +280,68 @@ export function importAny(raw) {
 export function mergeHouse(existingJob, importedJob) {
   const changes = [];
   const norm = s => String(s || "").trim().toLowerCase();
-  const byName = new Map(existingJob.house.zones.map(z => [norm(z.name), z]));
+  const house = existingJob.house;
+  house.zones ||= [];
+  const byName = new Map(house.zones.map(z => [norm(z.name), z]));
+  // every id already in the job (zones, endpoints, and all solution gear) —
+  // an added zone must not reuse one, or connections re-point silently
+  const taken = new Set();
+  for (const z of house.zones) { taken.add(z.id); for (const e of z.endpoints || []) taken.add(e.id); }
+  for (const sol of existingJob.solutions || []) {
+    for (const r of sol.racks || []) for (const d of r.devices || []) taken.add(d.id);
+    for (const d of [...(sol.localDevices || []), ...(sol.companions || [])]) taken.add(d.id);
+  }
+  const freeId = base => { let id = base, n = 2; while (taken.has(id)) id = `${base}-${n++}`; taken.add(id); return id; };
+  // speakers come in two kinds a walk records separately: the room's main
+  // set and a landscape array — never let one overwrite the other
+  const kind = e => e.type === "speakers" ? (e.config === "landscape" ? "landscape" : "speakers") : e.type;
+
   for (const inc of importedJob.house.zones) {
     const cur = byName.get(norm(inc.name));
     if (!cur) {
-      existingJob.house.zones.push(inc);
+      const oldId = inc.id;
+      inc.id = freeId(inc.id);
+      for (const e of inc.endpoints || []) {
+        const rebased = oldId !== inc.id && e.id.startsWith(oldId) ? inc.id + e.id.slice(oldId.length) : e.id;
+        e.id = freeId(rebased);
+      }
+      house.zones.push(inc);
       changes.push({ kind: "added", zone: inc.name });
       continue;
     }
-    // refresh endpoints by type, keep ids stable so connections survive
-    for (const ep of inc.endpoints) {
-      const mine = (cur.endpoints || []).find(e => e.type === ep.type);
-      if (!mine) { cur.endpoints.push(ep); changes.push({ kind: "endpoint-added", zone: cur.name, type: ep.type }); }
-      else {
-        const before = JSON.stringify({ ...mine, id: 0 });
-        Object.assign(mine, { ...ep, id: mine.id });
-        if (before !== JSON.stringify({ ...mine, id: 0 })) changes.push({ kind: "updated", zone: cur.name, type: ep.type });
-      }
+    // refresh endpoints by kind, one-to-one; ids stay stable so connections survive
+    cur.endpoints ||= [];
+    const claimed = new Set();
+    for (const ep of inc.endpoints || []) {
+      const mine = cur.endpoints.find(e => !claimed.has(e) && kind(e) === kind(ep));
+      if (!mine) { ep.id = freeId(ep.id); cur.endpoints.push(ep); claimed.add(ep); changes.push({ kind: "endpoint-added", zone: cur.name, type: ep.type }); continue; }
+      claimed.add(mine);
+      const before = JSON.stringify({ ...mine, id: 0 });
+      const patch = { ...ep };
+      delete patch.id;
+      // a walk only knows what it saw: blank brand and a TBD (defaulted) size
+      // must not erase what the designer already entered
+      if (!patch.brand) delete patch.brand;
+      if (patch.confirm?.includes("size") && mine.size && !mine.confirm?.includes("size")) { delete patch.size; delete patch.confirm; }
+      Object.assign(mine, patch);
+      if (!ep.confirm?.length && !patch.confirm) delete mine.confirm;   // the import answered the open question
+      if (mine.config !== "stereo" && mine.config) delete mine.count;   // stale pair count from an old stereo set
+      if (before !== JSON.stringify({ ...mine, id: 0 })) changes.push({ kind: "updated", zone: cur.name, type: ep.type });
     }
     if (inc.note && inc.note !== cur.note) { cur.note = inc.note; }
     byName.delete(norm(inc.name));
   }
   for (const [, z] of byName) changes.push({ kind: "kept", zone: z.name, note: "not in import — left unchanged" });
-  if (importedJob.house.areas?.length && !existingJob.house.areas?.length)
-    existingJob.house.areas = importedJob.house.areas;
+  // areas: adopt the import's list when the job has none; otherwise add any the
+  // new zones reference, so no zone points at an area that doesn't exist
+  const incAreas = importedJob.house.areas || [];
+  if (incAreas.length && !house.areas?.length) house.areas = incAreas;
+  else if (incAreas.length) {
+    const have = new Set(house.areas.map(a => a.id));
+    for (const z of house.zones) if (z.area && !have.has(z.area)) {
+      const a = incAreas.find(x => x.id === z.area);
+      if (a) { house.areas.push(a); have.add(a.id); } else delete z.area;
+    }
+  }
   return changes;
 }

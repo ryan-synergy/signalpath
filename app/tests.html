@@ -326,7 +326,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
 /* hop-count regression guards (polish round 2026-09-19: returns route last
    and pick the least-crossing lane) */
 {
-  const ceiling = { residence: 5, estate: 24, stress: 309 };  // re-baselined 2026-09-21: AVB/switching bottom-anchored in col A — residence 7→5 (trunk to output module is now a straight neighbor run)
+  const ceiling = { residence: 5, estate: 25, stress: 319 };  // 2026-09-27 audit: col-C escape no longer cuts through its own amp — estate 24→25, stress 309→319 (the old counts were subsidized by 8 body-piercing wires)  // re-baselined 2026-09-21: AVB/switching bottom-anchored in col A — residence 7→5 (trunk to output module is now a straight neighbor run)
   for (const [name, raw] of Object.entries(fixtures)) {
     const { job, ix } = loadJob(raw);
     const p = place(job, ix);
@@ -408,7 +408,9 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
   {
     const z = one("gym 2 speakers prewire");
     t("quickadd: prewire scope + N speakers",
-      z.scope === "prewire" && z.endpoints[0].config === "stereo" && z.endpoints[0].status === "prewire" &&
+      // pre-wire lives on the zone's scope; the speaker itself stays "new" so
+      // switching the zone to included later doesn't leave it filed as PRE-WIRE
+      z.scope === "prewire" && z.endpoints[0].config === "stereo" && z.endpoints[0].status === "new" &&
       !z.endpoints.some(e => e.type === "display"));
   }
   {
@@ -641,8 +643,15 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     const a = advise(job, ix, CAT);
     t("advisor: 14 audio feeds into MDX-16 (12 inputs) → over-budget flag",
       a.io.some(x => x.device === "mdx16" && x.over), JSON.stringify(a.io.filter(x => x.over)));
-    t("advisor: PCM-only digital-input note surfaces for the MDX",
-      a.notes.some(n => n.code === "pcm-only"));
+    // analog sources and trunks never carry bitstream — no PCM caveat for them
+    t("advisor: PCM-only note stays quiet for analog-only feeds",
+      !a.notes.some(n => n.code === "pcm-only"));
+    const tvRet = structuredClone(bad);
+    tvRet.solutions[0].connections.push({ from: "family-tv", to: "mdx16", signal: "audioReturn" });
+    const v2 = loadJob(tvRet);
+    const pcm = advise(v2.job, v2.ix, CAT).notes.find(n => n.code === "pcm-only");
+    t("advisor: PCM-only note fires when a TV's optical return lands on the MDX (solution-tagged)",
+      !!pcm && pcm.solution === tvRet.solutions[0].id);
   }
   { // no catalog → legacy behavior intact
     const { job, ix } = withPlatforms(fixtures.stress, ["savant"]);
@@ -1123,6 +1132,209 @@ for (const [name, raw] of Object.entries(fixtures)) {
     !!rt.channels && rt.channels.h.length > 0 && rt.channels.v.length > 0 &&
     ["c", "a1", "a2"].every(k => k in rt.channels.h[0]));
   t("debug: channels stay private outside debug mode", !route(job, ix, p).channels);
+}
+
+/* ---------- audit 2026-09-27: engine / importer / quick-add regressions ---------- */
+{
+  const CAT = await (await fetch("./catalog.json")).json();
+  const { parseQuickZone } = await import("./quickadd.js");
+  const R = () => structuredClone(fixtures.residence);
+  const pipeline = raw => { const { job, ix } = loadJob(raw); const p = place(job, ix); const rt = route(job, ix, p); return { job, ix, p, rt, svg: render(job, ix, p, rt) }; };
+
+  // crashes that blanked the whole sheet
+  { const r = R(); r.solutions[0].localDevices.push({ id: "sonos-k", type: "amp", model: "Sonos Amp", zone: "z-kitchen", location: "at-display" });
+    r.solutions[0].connections.push({ from: "sonos-k", to: "sav-avb", signal: "network" });
+    let ok = true, puck = false; try { const o = pipeline(r); puck = o.svg.includes("Sonos Amp"); } catch { ok = false; }
+    t("audit: an at-display local in a TV-less zone gets a puck and routes (was a crash)", ok && puck); }
+  { const r = R(); r.house.zones[1].endpoints[0].count = -1;
+    let ok = true; try { pipeline(r); const r2 = R(); r2.house.zones[1].endpoints[0].count = 1.5; pipeline(r2); } catch { ok = false; }
+    t("audit: a typed -1 / 1.5 speaker count no longer blanks the sheet", ok); }
+  { const r = R(); r.solutions[0].platforms = ["savant", "josh", "control4"];
+    const { job, ix } = loadJob(r); let ok = true;
+    try { advise(job, ix, { devices: CAT.devices, licensing: {} }); } catch { ok = false; }
+    t("audit: a missing licensing table skips that pick instead of throwing", ok); }
+  { const r = R(); r.solutions[0].connections[0].routeHint = { between: "notarray" };
+    const { job, ix } = loadJob(r); let ok = true; try { validate(job, ix); } catch { ok = false; }
+    t("audit: a malformed routeHint can't crash validate", ok); }
+
+  // wrong output
+  { const r = R(); r.solutions[0].racks[0].devices.push(structuredClone(r.solutions[0].racks[0].devices[0]));
+    const { job, ix } = loadJob(r);
+    t("audit: duplicate device ids in one solution are flagged", validate(job, ix).errors.some(e => e.code === "dup-id")); }
+  { const r = R(); r.solutions[0].racks[0].devices.push({ id: "sav-out2", type: "audioOutputModule", model: "Out 2", catalogRef: "savant-avb-output-module" });
+    r.solutions[0].connections.push({ from: "sav-out2", to: "mdx16", signal: "audio" });
+    const { job, ix } = loadJob(r);
+    const ai = advise(job, ix, CAT).io.find(x => x.device === "mdx16" && x.kind === "analog-in");
+    t("audit: two modules sharing an amp split its runs (6/8, not 12/8)", ai?.used === 6 && !ai.over, JSON.stringify(ai)); }
+  { const bijou = CAT.devices["audiocontrol-bijou-3100"];
+    const r = R(); r.solutions[0].racks[0].devices.push({ id: "bj", type: "avr", model: "Bijou", catalogRef: "audiocontrol-bijou-3100" });
+    ["family-tv", "master-tv", "patio-tv"].forEach(tv => r.solutions[0].connections.push({ from: tv, to: "bj", signal: "audioReturn" }));
+    const { job, ix } = loadJob(r);
+    const rin = advise(job, ix, CAT).io.find(x => x.device === "bj" && x.kind === "return-in");
+    t("audit: eARC inputs count toward the digital return budget (catalog key eArc)",
+      !!bijou?.inputs?.eArc && rin && rin.capacity >= 3 && !rin.over, JSON.stringify(rin)); }
+  { const r = R(); r.house.zones[0].endpoints[0].config = "surround-7.1";
+    const o = pipeline(r); const z = o.p.zones.find(z => z.id === "z-family");
+    const uses = [...new DOMParser().parseFromString(o.svg, "image/svg+xml").querySelectorAll("g.zcard[data-zone='z-family'] use")];
+    const maxX = Math.max(...uses.map(u => +u.getAttribute("x") + (u.closest("g[transform]") ? 17 : 0)));
+    t("audit: the 7.1 back speaker row stays inside its card", maxX < z.x + z.w, `${maxX} vs card right ${z.x + z.w}`); }
+  { const r = R(); r.solutions[0].connections.filter(c => c.from === "mdx16").forEach(c => delete c.channels);
+    const o = pipeline(r);
+    const doc = new DOMParser().parseFromString(o.svg, "image/svg+xml");
+    const lit = [...doc.querySelectorAll("g.devtile[data-device='mdx16'] rect")].filter(x => x.getAttribute("fill") === "#3b82c4").length;
+    t("audit: channel-less feeds take the next free amp slot (not all on slot 1)", lit === 5, `${lit} lit`); }
+  { const r = R(); r.solutions[0].annotations.push({ text: "second gym note", near: "z-gym" });
+    const o = pipeline(r); const doc = new DOMParser().parseFromString(o.svg, "image/svg+xml");
+    const marks = [...doc.querySelectorAll("text")].filter(x => /^[①②]$/.test(x.textContent)).map(x => +x.getAttribute("x"));
+    t("audit: two keynotes on one card sit side by side", marks.length >= 2 && new Set(marks).size === marks.length); }
+  { const r = R(); r.solutions[0].connections = [];
+    const { job, ix } = loadJob(r);
+    t("audit: legend box fits its title with no signal rows", place(job, ix).legend.w >= 90); }
+  { const r = R(); r.solutions[0].platforms = ["control4"]; r.solutions[0].auxCounts = { cameras: "4", controls: "2" };
+    const { job, ix } = loadJob(r);
+    const c4 = advise(job, ix, CAT).licensing.find(l => l.platform === "control4");
+    t("audit: text-valued aux counts add as numbers (~27 devices, not ~2142)", /~27 devices/.test(c4?.lines?.[0] || ""), c4?.lines?.[0]); }
+  { const r = structuredClone(fixtures.estate);
+    r.house.areas.push({ id: "area-mech", name: "Mech Room" }); r.solutions[0].racks[0].area = "area-mech";
+    const { job, ix } = loadJob(r); const p = place(job, ix);
+    t("audit: a rack in a zone-less area doesn't relabel another area as primary",
+      p.clusters[0].areaId === "area-mech" && !p.areaHeaders.some(h => h.name === "MECH ROOM")); }
+  { const r = R(); const s2 = structuredClone(r.solutions[0]); s2.id = "sol-b"; s2.name = "B";
+    s2.overrides = { zones: { "z-patio": { scope: "prewire" } } }; r.solutions.push(s2);
+    const { job, ix } = loadJob(effectiveJob(r, 1));
+    const v = validate(job, ix);
+    t("audit: validate tags per-solution findings so a sibling's scope checks can be filtered",
+      v.warnings.filter(w => w.code === "scope-mismatch").every(w => w.solution)); }
+
+  // importers
+  { const base = R();
+    const inc = { house: { zones: [{ id: "z-family", name: "Den", endpoints: [{ id: "z-family-spk", type: "speakers", config: "stereo", count: 2 }] }], areas: [] } };
+    mergeHouse(base, inc);
+    const ids = base.house.zones.flatMap(z => [z.id, ...z.endpoints.map(e => e.id)]);
+    t("audit: re-import never duplicates an existing zone/endpoint id", new Set(ids).size === ids.length); }
+  { const base = R();
+    base.house.zones.find(z => z.id === "z-patio").endpoints.push({ id: "patio-land", type: "speakers", config: "landscape", satCount: 6 });
+    const tv = base.house.zones.find(z => z.id === "z-master").endpoints.find(e => e.type === "display"); tv.brand = "Samsung"; tv.size = 85;
+    const inc = { house: { zones: [
+      { id: "z-patio", name: "Patio", endpoints: [{ id: "p-spk", type: "speakers", config: "stereo", count: 2 }, { id: "p-land", type: "speakers", config: "landscape", satCount: 10 }] },
+      { id: "z-master", name: "Master Bed", endpoints: [{ id: "m-tv", type: "display", displayType: "tv", brand: "", size: 65, confirm: ["size"] }] }], areas: [] } };
+    mergeHouse(base, inc);
+    const patio = base.house.zones.find(z => z.id === "z-patio");
+    const master = base.house.zones.find(z => z.id === "z-master").endpoints.find(e => e.type === "display");
+    t("audit: merge matches speakers by kind (stereo stays stereo, landscape updates)",
+      patio.endpoints.find(e => e.id === "patio-spk")?.config === "stereo" && patio.endpoints.find(e => e.id === "patio-land")?.satCount === 10);
+    t("audit: a TBD re-walk keeps the designer's brand and confirmed size", master.brand === "Samsung" && master.size === 85 && !master.confirm); }
+  { const sw = { rooms: [{ name: "Bedroom", audio: "2.0" }, { name: "Bedroom", audio: "2.0" }, null, { name: 7, floor: 2, audio: "7.2" }], rack: {}, controlSystem: "Savant" };
+    let res = null, ok = true; try { res = importSiteWalk(sw); } catch { ok = false; }
+    const ids = res ? res.job.house.zones.map(z => z.id) : [];
+    t("audit: SiteWalk adapter survives null rooms / numeric fields and de-dupes ids",
+      ok && new Set(ids).size === ids.length && res.unmapped.some(u => u.includes("7.2"))); }
+  { const bad = R(); bad.solutions[0].companions = {};
+    let rej = false; try { importAny(bad); } catch { rej = true; }
+    t("audit: import rejects a non-list companions block instead of adopting a crashing job", rej); }
+
+  // quick-add
+  const qa = s => parseQuickZone(s).zone;
+  t("audit: quick-add 'owner's suite 5.1 75' is a room, not OFE", qa("owner's suite 5.1 75").endpoints.every(e => e.status !== "ofe") && /Owner/.test(qa("owner's suite 5.1 75").name));
+  t("audit: quick-add 'den soundbar sub' → soundbar-sub, clean name", qa("den sound bar sub").endpoints[0].config === "soundbar-sub" && qa("den sound bar sub").name === "Den");
+  t("audit: quick-add 'study 4 pair' = 8 speakers", qa("study 4 pair").endpoints[0].count === 8 && qa("study 4 pair").name === "Study");
+  t("audit: quick-add 'suite #101 stereo' keeps the room number, no phantom TV", !qa("suite #101 stereo").endpoints.some(e => e.type === "display") && /101/.test(qa("suite #101 stereo").name));
+  t("audit: quick-add '75in' / brand casing (LG)", qa("den 75in lg").endpoints.find(e => e.type === "display")?.size === 75 && qa("den 75in lg").endpoints.find(e => e.type === "display")?.brand === "LG");
+}
+
+/* ---------- print pages: pagination + run/label correctness (audit 2026-09-27) ---------- */
+{
+  const { sheetTotal } = await import("./pages.js");
+  const CAT = await (await fetch("./catalog.json")).json();   // other blocks' CAT is block-scoped
+  // stress (25 zones) used to run rows off the bottom of the 11×17 sheet
+  const raw = structuredClone(fixtures.stress);
+  raw.job.pages = { channelMap: true, equipment: true, wireSchedule: true };
+  const { job, ix } = loadJob(raw);
+  const a = advise(job, ix, CAT);
+  const pages = renderExtraPages(job, ix, a, {});
+  const n = sheetTotal(job, ix, a, {});
+  let overflow = null;
+  pages.forEach(pg => {
+    const doc = new DOMParser().parseFromString(pg.svg, "image/svg+xml");
+    for (const el of doc.querySelectorAll("text, rect")) {
+      if (el.closest("g[transform]") || el.getAttribute("width") === "1612") continue;
+      const y = +(el.getAttribute("y") || 0) + +(el.getAttribute("height") || 0);
+      if (y > 900 && y < 1000 && !(el.tagName === "text" && +el.getAttribute("y") === 920)) overflow ??= `${pg.title}: "${el.textContent.slice(0, 30)}" at y=${y}`;
+    }
+  });
+  t("pages: stress packet paginates — nothing drawn below the footnote line", overflow === null, overflow || "");
+  t("pages: continuation sheets exist and say (cont.)", pages.length > 3 && pages.some(p => p.title.endsWith("(cont.)")));
+  t("pages: every sheet label is sequential against the true total",
+    n === pages.length + 1 && pages.every((p, i) => p.svg.includes(`Sheet ${i + 2} of ${n}`)));
+
+  // wire schedule: 7.1.4 pulls 11 speaker runs + a sub; 2.1 gets its sub; direct video counts
+  const r2 = structuredClone(fixtures.residence);
+  r2.house.zones[0].endpoints[0].config = "surround-7.1.4";
+  r2.house.zones.find(z => z.id === "z-kitchen").endpoints[0].config = "2.1";
+  r2.solutions[0].connections.push({ from: "axion8", to: "patio-tv", signal: "video" });
+  const v2 = loadJob(r2);
+  const runs = wireRuns(v2.job, v2.ix, {});
+  const fam = runs.filter(r => r.to.startsWith("Family Room"));
+  t("wire schedule: 7.1.4 = 11 speaker runs + 1 LFE", fam.some(r => r.count === 11) && fam.some(r => r.cable === "RG6 / LFE"));
+  t("wire schedule: a 2.1 zone gets its sub run", runs.some(r => r.to.startsWith("Kitchen") && r.cable === "RG6 / LFE"));
+  t("wire schedule: a direct rack→TV video feed is a V run", runs.some(r => r.prefix === "V" && r.to.startsWith("Patio") && r.carries === "Video (direct)"));
+
+  // channel map: spares computed from every channel a feed spans, listed as runs
+  const r3 = structuredClone(fixtures.residence);
+  const mdx = r3.solutions[0].racks[0].devices.find(d => d.id === "mdx16");
+  const feeds = r3.solutions[0].connections.filter(c => c.from === "mdx16" && c.signal === "speaker");
+  feeds.forEach((c, i) => { c.channels = ["1-4", "7-8", "13-14", "15-16", "", ""][i] || ""; });
+  const v3 = loadJob(r3);
+  const cm = renderChannelMap(v3.job, v3.ix, {});
+  t("channel map: spare zone-outs exclude every out a feed spans (\"1-4\" = outs 1–2)",
+    cm.includes(">3, 5–6<") || cm.includes(">3, 5–6, "), cm.match(/>[\d, –]+<\/text><text[^>]*>[\d, –]+<\/text><text[^>]*>— spare —/)?.[0] || "no spare row");
+
+  // takeoff prints only the printed solution's licensing
+  const r4 = structuredClone(fixtures.residence);
+  r4.solutions[0].platforms = ["savant"];
+  const s2 = structuredClone(r4.solutions[0]); s2.id = "sol-b"; s2.name = "B"; r4.solutions.push(s2);
+  const v4 = loadJob(r4);
+  const tk = renderTakeoff(v4.job, v4.ix, advise(v4.job, v4.ix, CAT), { solution: 0 });
+  t("takeoff: licensing box lists only the printed solution's pick", (tk.match(/>savant: /g) || []).length === 1);
+
+  // no "undefined" reaches paper even for a dangling zone reference
+  const r5 = structuredClone(fixtures.residence);
+  r5.house.zones = r5.house.zones.filter(z => z.id !== "z-kitchen");
+  delete r5.house.zones[0].endpoints[1].size;
+  const v5 = loadJob(r5);
+  const all = [renderChannelMap(v5.job, v5.ix, {}), renderTakeoff(v5.job, v5.ix, null, {}), renderWireSchedule(v5.job, v5.ix, {})].join("");
+  t("pages: missing zone / size / model never print as \"undefined\"", !/undefined|NaN/.test(all));
+}
+
+/* ---------- no wire of any class crosses a device, chip or card body (audit 2026-09-27) ---------- */
+{
+  const PAD = 2;
+  const inside = (x1, y1, x2, y2, o) => Math.min(x1, x2) < o.x + o.w - PAD && Math.max(x1, x2) > o.x + PAD &&
+    Math.min(y1, y2) < o.y + o.h - PAD && Math.max(y1, y2) > o.y + PAD;
+  for (const name of ["residence", "estate", "stress"]) {
+    const { job, ix } = loadJob(structuredClone(fixtures[name]));
+    const p = place(job, ix);
+    const rt = route(job, ix, p);
+    const bodies = [...p.racks.flatMap(r => r.devices), ...p.chips, ...p.zones];
+    const bad = [];
+    for (const w of rt.wires) {
+      if (w.insideCard || w.cls === "local") continue;
+      for (let i = 0; i + 1 < w.pts.length; i++) {
+        const hit = bodies.find(o => inside(...w.pts[i], ...w.pts[i + 1], o));
+        if (hit) { bad.push(`${w.id}→${hit.id}`); break; }
+      }
+    }
+    t(`${name}: no wire crosses any device, chip or card body`, bad.length === 0, bad.slice(0, 4).join(", "));
+    // hop arcs fit their own segment and never overlap (they drew paths backwards)
+    let arcBad = null;
+    for (const w of rt.wires) for (const h of w.hops || []) {
+      const [a, b] = [w.pts[h.si], w.pts[h.si + 1]], vert = a[0] === b[0];
+      const lo = Math.min(vert ? a[1] : a[0], vert ? b[1] : b[0]), hi = Math.max(vert ? a[1] : a[0], vert ? b[1] : b[0]);
+      const c = vert ? h.y : h.x;
+      if (c - h.w / 2 < lo - 0.5 || c + h.w / 2 > hi + 0.5) arcBad ??= w.id;
+    }
+    t(`${name}: every hop arc fits inside its segment`, arcBad === null, arcBad || "");
+  }
 }
 
 /* ---------- returns must never pierce their target (user redline 2026-09-20) ---------- */

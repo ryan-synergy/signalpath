@@ -6,6 +6,11 @@ const uid = p => p + "-" + Math.random().toString(36).slice(2, 7);
 const slug = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || uid("z");
 
 const BRANDS = ["sony", "samsung", "lg", "tcl", "vizio", "hisense", "panasonic", "sharp", "seura", "sunbrite", "c-seed"];
+const BRAND_LABEL = { lg: "LG", tcl: "TCL", "c-seed": "C SEED" };
+// "#101" or "unit 4" is a room NUMBER, never a TV size. Words like suite/room
+// stay ambiguous on purpose — "family room 75" and "primary suite 85" are the
+// core dictation phrases — so a numbered suite is typed "suite #101".
+const NUMBERED_ROOM = /\b(unit|apt|apartment)\s+(\d{1,4})(?![\d.])/;
 const CONFIGS = {
   "mono": "mono", "2.0": "stereo", "stereo": "stereo", "2.1": "2.1",
   "5.1": "surround-5.1", "5.1.2": "surround-5.1", "7.1": "surround-7.1", "7.1.4": "surround-7.1.4",
@@ -20,12 +25,14 @@ const SPOKEN = [
   [/\bseven\s*(point\s*)?one\b/g, "7.1"],
   [/\btwo\s*(point\s*)?one\b/g, "2.1"],
   [/\btwo\s*(point\s*)?(oh|zero)\b/g, "2.0"],
-  [/\bsound\s*bar\b/g, "soundbar"],
+  [/\bsound\s+bar(\s*(and|\+|with)?\s*sub)?\b/g, (m, sub) => sub ? "soundbar-sub" : "soundbar"],
 ];
 
 export function parseQuickZone(text) {
   let t = " " + String(text || "").toLowerCase().trim() + " ";
-  for (const [re, sub] of SPOKEN) t = t.replace(re, " " + sub + " ");
+  for (const [re, sub] of SPOKEN) t = t.replace(re, (...m) => " " + (typeof sub === "function" ? sub(...m) : sub) + " ");
+  // protect a numbered room name from the TV-size reader: "suite 101" → "suite #101"
+  t = t.replace(NUMBERED_ROOM, (m, w, n) => `${w} #${n}`);
   const chips = [];
   const zone = { scope: "included" };
   let spk = null, tv = null, ofe = false, local = false, matrix = false;
@@ -34,7 +41,7 @@ export function parseQuickZone(text) {
 
   if (eat(/\bprewire(d)?\b|\bpre-wire(d)?\b/)) { zone.scope = "prewire"; chips.push({ kind: "scope", label: "PRE-WIRE" }); }
   if (eat(/\bfuture\b/)) { zone.scope = "future"; chips.push({ kind: "scope", label: "FUTURE" }); }
-  if (eat(/\bofe\b|\bexisting\b|\bowner\b/)) ofe = true;
+  if (eat(/\bofe\b|\bexisting\b|\bowner\b(?!'s|s\b)/)) ofe = true;   // "owner's suite" is a room, not OFE
   if (eat(/\blocal\b/)) local = true;
   if (eat(/\bmatrix\b|\bdistributed\b/)) matrix = true;
 
@@ -59,7 +66,9 @@ export function parseQuickZone(text) {
   }
   // "N speakers" / "pair"
   if (!spk) {
-    const m = eat(/\b(\d{1,2})\s*(x\s*)?(speakers?|spk)\b/) || (eat(/\bpair\b/) && [null, "2"]);
+    const pairs = eat(/\b(\d{1,2})\s*(x\s*)?pairs?\b/);
+    const m = pairs ? [null, String(+pairs[1] * 2)]
+      : eat(/\b(\d{1,2})\s*(x\s*)?(speakers?|spk)\b/) || (eat(/\bpair\b/) && [null, "2"]);
     if (m) spk = { config: "stereo", count: +m[1] || 2 };
   }
 
@@ -67,15 +76,16 @@ export function parseQuickZone(text) {
   const proj = eat(/\bprojector\s*(\d{2,3})?\b|\bproj\s*(\d{2,3})?\b/);
   // brand
   let brand = "";
-  for (const b of BRANDS) { const re = new RegExp(`\\b${b}\\b`); if (re.test(t)) { t = t.replace(re, " "); brand = b[0].toUpperCase() + b.slice(1); break; } }
-  // TV size: standalone 32–220 number (after configs consumed)
-  const size = eat(/\b(3[2-9]|[4-9]\d|1\d\d|2[0-2]\d)\b/);
+  for (const b of BRANDS) { const re = new RegExp(`\\b${b}\\b`); if (re.test(t)) { t = t.replace(re, " "); brand = BRAND_LABEL[b] || b[0].toUpperCase() + b.slice(1); break; } }
+  // TV size: standalone 32–229 number (after configs consumed), with an optional
+  // inch suffix ("75in", "75\"", "75 inch")
+  const size = eat(/(?<![#\d])\b(3[2-9]|[4-9]\d|1\d\d|2[0-2]\d)(?:\s*(?:in|inch|inches|"))?(?![\d.])/);
   if (proj) tv = { displayType: "projector", size: +(proj[1] || proj[2] || size?.[1] || 120) };
   else if (!noTv && (size || brand || eat(/\btv\b/))) tv = { displayType: "tv", size: size ? +size[1] : null, brand };
   if (tv && brand && !tv.brand) tv.brand = brand;
 
   // leftover words = zone name
-  const name = t.replace(/\s+/g, " ").trim().split(" ")
+  const name = t.replace(/#(\d)/g, "$1").replace(/\s+/g, " ").trim().split(" ")
     .filter(w => w && !/^(the|a|an|with|and|in|room)$/.test(w) || w === "room")
     .map(w => w[0] ? w[0].toUpperCase() + w.slice(1) : w).join(" ").trim() || "New Zone";
   zone.name = name;
@@ -84,7 +94,9 @@ export function parseQuickZone(text) {
   chips.unshift({ kind: "name", label: name });
 
   if (spk) {
-    const ep = { id: zone.id + "-spk", type: "speakers", ...spk, status: zone.scope === "prewire" ? "prewire" : ofe ? "ofe" : "new" };
+    // pre-wire is the ZONE's scope, not a speaker status — tagging the endpoint
+    // left it filed under PRE-WIRE after the zone was later switched to included
+    const ep = { id: zone.id + "-spk", type: "speakers", ...spk, status: ofe ? "ofe" : "new" };
     if (ep.config === "stereo" && !ep.count) ep.count = 2;
     zone.endpoints.push(ep);
     const cfgLabel = ep.config === "landscape" ? `landscape ${ep.satCount}+1`

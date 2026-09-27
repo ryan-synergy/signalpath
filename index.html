@@ -204,7 +204,7 @@
 <script type="module">
 import { loadJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates } from "./app/engine.js";
 import { importAny, mergeHouse } from "./app/importers.js";
-import { renderExtraPages, sheetCount, pageFlags, takeoffCSV } from "./app/pages.js";
+import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
 
 /* ============ IndexedDB jobs store ============ */
@@ -241,6 +241,11 @@ let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
     if (!SETTINGS.catalog.devices || typeof SETTINGS.catalog.devices !== "object") SETTINGS.catalog.devices = {};
     for (const [id, d] of Object.entries(SHIPPED.devices || {}))      // shipped catalog grows over time:
       if (!SETTINGS.catalog.devices[id]) SETTINGS.catalog.devices[id] = structuredClone(d); // new entries join, user edits win
+    // licensing tables too: a platform table missing from older stored settings
+    // left its editor (and its advisor pick) broken
+    SETTINGS.catalog.licensing = SETTINGS.catalog.licensing && typeof SETTINGS.catalog.licensing === "object" ? SETTINGS.catalog.licensing : {};
+    for (const [plat, tbl] of Object.entries(SHIPPED.licensing || {}))
+      if (!SETTINGS.catalog.licensing[plat]) SETTINGS.catalog.licensing[plat] = structuredClone(tbl);
   }
 }
 const saveSettings = () => dbPut({ id: "__settings", updated: Date.now(), settings: SETTINGS });
@@ -271,38 +276,53 @@ function blankJob(name = "New Job") {
 }
 
 /* ============ live pipeline ============ */
-let saveTimer;
+let saveTimer = null;
+// a pending autosave belongs to the job that armed it: flush it before S moves
+// to another job, and cancel it before a delete (an overdue timer firing
+// mid-delete wrote the deleted job straight back)
+async function flushSave() { if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; await persist(); } }
+function cancelSave() { clearTimeout(saveTimer); saveTimer = null; }
 function refresh(save = true) {
   const sol = S.job.solutions[S.sol] || S.job.solutions[0];
   S.sol = S.job.solutions.indexOf(sol);
-  let v, a, svg = "", err;
+  let v, a, svg = "", err, routeWarn = [], placeWarn = [];
   try {
     autoLinkCatalog(S.job, effectiveCatalog());                // self-heal: fill missing catalog links by model
     const { job, ix } = loadJob(effectiveJob(S.job, S.sol));   // active solution's overrides applied
     S.view = { job, ix };                                      // interactive sheet resolves names from here
     v = validate(job, ix); a = advise(job, ix, effectiveCatalog());
+    // "1 of N" counts the continuation sheets a long schedule/map paginates into
     const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, company: SETTINGS.company,
-                   sheet: `1 of ${sheetCount(S.job)}` };
+                   sheet: `1 of ${sheetTotal(job, ix, a, { solution: S.sol, rawJob: S.job })}` };
     if (S.job.house.zones.length) {
       const p = place(job, ix, opts);
       const rt = route(job, ix, p, opts);
       svg = render(job, ix, p, rt, opts);
+      routeWarn = rt.warnings; placeWarn = p.warnings || [];
       S.view.p = p; S.view.opts = opts;                        // reroute picker re-runs the router from these
     }
   } catch (e) { err = e; console.error(e); }
 
   $("#canvas").innerHTML = svg || `<div style="color:#888;padding:60px;text-align:center">Add a zone to start drawing${err ? "<br><small>" + esc(err.message) + "</small>" : ""}</div>`;
   hideTip(); applySel(); syncGlow();
-  const chip = $("#rulesChip");
-  if (err) { chip.className = "bad"; chip.textContent = "engine error"; }
-  else if (v.errors.length) { chip.className = "bad"; chip.textContent = `✗ ${v.errors.length} issue${v.errors.length > 1 ? "s" : ""}`; }
-  else { chip.className = "ok"; chip.textContent = `✓ valid${v.warnings.length ? " · " + v.warnings.length + "⚠" : ""}`; }
-
-  const adv = [];
   const activeSolId = S.job.solutions[S.sol]?.id;
   const mine = e => !e.solution || e.solution === activeSolId;   // advisor speaks for the ACTIVE solution only
-  for (const e of v?.errors || []) adv.push(`<div class="item e">✗ ${esc(e.msg)}</div>`);
-  for (const w of v?.warnings || []) adv.push(`<div class="item w">⚠ ${esc(w.msg)}</div>`);
+  const errs = (v?.errors || []).filter(mine), warns = (v?.warnings || []).filter(mine);
+  const chip = $("#rulesChip");
+  if (err) { chip.className = "bad"; chip.textContent = "engine error"; }
+  else if (errs.length) { chip.className = "bad"; chip.textContent = `✗ ${errs.length} issue${errs.length > 1 ? "s" : ""}`; }
+  else { chip.className = "ok"; chip.textContent = `✓ valid${warns.length ? " · " + warns.length + "⚠" : ""}`; }
+
+  const adv = [];
+  for (const e of errs) adv.push(`<div class="item e">✗ ${esc(e.msg)}</div>`);
+  for (const w of warns) adv.push(`<div class="item w">⚠ ${esc(w.msg)}</div>`);
+  // the router knows when a drawing is compromised — say so instead of leaving
+  // a wire through a box unexplained
+  for (const w of routeWarn.filter(w => w.code === "unrouted")) adv.push(`<div class="item e">✗ wire not drawn: ${esc(w.msg)}</div>`);
+  const fb = routeWarn.filter(w => w.code === "route-fallback").map(w => w.msg);
+  if (fb.length) adv.push(`<div class="item w">⚠ ${fb.length} wire${fb.length > 1 ? "s have" : " has"} no clean path on this layout — drawn best-effort and may cross gear: ${esc(fb.slice(0, 4).join(", "))}${fb.length > 4 ? "…" : ""}</div>`);
+  for (const w of routeWarn.filter(w => w.code === "hint-unroutable")) adv.push(`<div class="item w">⚠ custom route for ${esc(w.msg)} can't be honored on this layout — routed automatically</div>`);
+  for (const w of placeWarn) adv.push(`<div class="item w">⚠ ${esc(w.msg)}</div>`);
   for (const io of (a?.io || []).filter(mine)) {
     if (io.over) adv.push(`<div class="item e">✗ ${esc(io.msg)}</div>`);
     else if (io.msg && (io.kind === "analog-in" || io.kind === "audio-out" || io.kind === "return-in")) adv.push(`<div class="item i">🔌 ${esc(io.msg)}</div>`);
@@ -317,7 +337,7 @@ function refresh(save = true) {
 
   renderTopbar();
   renderPanel();
-  if (save) { clearTimeout(saveTimer); saveTimer = setTimeout(persist, 400); }
+  if (save) { clearTimeout(saveTimer); saveTimer = setTimeout(() => { saveTimer = null; persist(); }, 400); }
 }
 let saveWarned = false;
 async function persist() {
@@ -366,9 +386,10 @@ $("#solSel").onchange = e => {
   } else S.sol = +e.target.value;
   refresh();
 };
-$("#newJob").onclick = async () => { S.job = blankJob(); S.id = uid("job"); S.editScope = "house"; await persist(); refresh(); };
+$("#newJob").onclick = async () => { await flushSave(); S.job = blankJob(); S.id = uid("job"); S.editScope = "house"; await persist(); refresh(); };
 $("#delJob").onclick = async () => {
   if (!confirm(`Delete "${S.job.job.name}"?`)) return;
+  cancelSave();
   await dbDel(S.id);
   const jobs = await dbAll();
   if (jobs.length) { S.id = jobs[0].id; S.job = jobs[0].data; } else { S.job = blankJob(); S.id = uid("job"); await persist(); }
@@ -376,6 +397,7 @@ $("#delJob").onclick = async () => {
 };
 $("#jobsSel").onchange = async e => {
   const v = e.target.value;
+  await flushSave();
   S.editScope = "house";
   if (v.startsWith("__")) {
     const raw = await (await fetch(`./mock-system-${v.slice(2)}.json`)).json();
@@ -386,13 +408,24 @@ $("#jobsSel").onchange = async e => {
   }
   refresh(false);
 };
-$("#exportJson").onclick = () => download(`${S.job.job.name}.json`, JSON.stringify(S.job, null, 2), "application/json");
-$("#exportSvg").onclick = () => { const svg = $("#canvas svg"); if (svg) download(`${S.job.job.name} — schematic.svg`, svg.outerHTML, "image/svg+xml"); };
-$("#exportCsv").onclick = () => { const { job, ix } = loadJob(effectiveJob(S.job, S.sol)); download(`${S.job.job.name} — takeoff.csv`, takeoffCSV(job, ix, { solution: S.sol }), "text/csv"); };
+// job names become filenames — strip the characters file systems reject
+const fileBase = () => String(S.job.job.name || "SignalPath job").replace(/[\\/:*?"<>|\u0000-\u001f]+/g, "-").trim() || "SignalPath job";
+$("#exportJson").onclick = () => download(`${fileBase()}.json`, JSON.stringify(S.job, null, 2), "application/json");
+$("#exportSvg").onclick = () => {
+  const svg = $("#canvas svg"); if (!svg) return;
+  // export the drawing, not the editing session: no picker ghosts, no selection dimming
+  const clone = svg.cloneNode(true);
+  clone.querySelector("#altghost")?.remove();
+  clone.classList.remove("wiresel");
+  clone.querySelectorAll(".sel, .selnode, .zglow").forEach(n => n.classList.remove("sel", "selnode", "zglow"));
+  download(`${fileBase()} — schematic.svg`, clone.outerHTML, "image/svg+xml");
+};
+$("#exportCsv").onclick = () => { const { job, ix } = loadJob(effectiveJob(S.job, S.sol)); download(`${fileBase()} — takeoff.csv`, takeoffCSV(job, ix, { solution: S.sol }), "text/csv"); };
 
 /* ---- Field Kit TOOLS switcher (hub manifest, cached; self marked) ---- */
 const KIT_SELF = "signalpath";
 $("#toolsBtn").onclick = () => {
+  let open = true;   // a slow hub reply must not reopen a closed overlay — or hijack an import review
   let cached = null;
   try { cached = JSON.parse(localStorage.getItem("signalpath.kit") || "null"); } catch { /* corrupt cache = no cache */ }
   const draw = kit => {
@@ -408,13 +441,14 @@ $("#toolsBtn").onclick = () => {
     $("#rvBody").innerHTML = rows || `<div class="mini">Hub unreachable — try again online.</div>`;
     $("#rvNew").style.display = "none"; $("#rvMerge").style.display = "none"; $("#rvTarget").style.display = "none";
     $("#review").classList.add("show");
-    $("#rvCancel").onclick = () => { $("#review").classList.remove("show");
+    $("#rvCancel").onclick = () => { open = false; $("#review").classList.remove("show");
       $("#rvNew").style.display = ""; $("#rvMerge").style.display = ""; $("#rvTarget").style.display = ""; };
   };
+  const stillMine = () => open && (!$("#review").classList.contains("show") || $("#rvTitle").textContent === "SYNERGY FIELD KIT");
   if (cached) draw(cached);
   fetch("https://ryan-synergy.github.io/tools.json", { cache: "no-store" }).then(r => r.json())
-    .then(j => { if (j?.tools) { localStorage.setItem("signalpath.kit", JSON.stringify(j)); draw(j); } })
-    .catch(() => { if (!cached) draw(null); });
+    .then(j => { if (j?.tools) { try { localStorage.setItem("signalpath.kit", JSON.stringify(j)); } catch {} if (stillMine()) draw(j); } })
+    .catch(() => { if (!cached && stillMine()) draw(null); });
 };
 
 /* ---- print packet: sheet 1 + enabled pages, print-CSS one page each ---- */
@@ -423,11 +457,13 @@ $("#printBtn").onclick = () => {
     const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
     const a = advise(job, ix, effectiveCatalog());
     const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, company: SETTINGS.company,
-                   sheet: `1 of ${sheetCount(S.job)}`, rawJob: S.job };
+                   rawJob: S.job };
+    opts.sheet = `1 of ${sheetTotal(job, ix, a, opts)}`;
     const p = place(job, ix, opts);
     const rt = route(job, ix, p, opts);
     const pagesSvg = [render(job, ix, p, rt, opts), ...renderExtraPages(job, ix, a, opts).map(pg => pg.svg)];
     const w = window.open("", "_blank");
+    if (!w) { alert("The print packet opens in a new window — allow pop-ups for this site, then press Print again."); return; }
     w.document.write(`<!doctype html><html><head><title>${esc(S.job.job.name)} — AV Schematic Packet</title><style>
       @page { size: 17in 11in landscape; margin: 0; }
       html, body { margin: 0; padding: 0; background: #888; }
@@ -442,12 +478,19 @@ $("#printBtn").onclick = () => {
 $("#importBtn").onclick = () => $("#importFile").click();
 $("#importFile").onchange = async e => {
   const file = e.target.files[0]; if (!file) return;
-  let text = await file.text();
-  const fence = text.match(/```json\s*([\s\S]*?)```/);         // Markdown round-trip: parse the fenced block only
-  if (fence) text = fence[1];
+  const text = await file.text();
   try {
-    const res = importAny(JSON.parse(text));
-    if (res.kind === "signalpath") { S.job = res.job; S.id = uid("job"); S.sol = 0; await persist(); refresh(false); }
+    // plain JSON first; only a Markdown file (or a non-JSON body) falls back to
+    // its fenced block — a JSON string containing ```json must not be truncated
+    let data;
+    try { data = JSON.parse(text); }
+    catch (parseErr) {
+      const fence = text.match(/```json\s*([\s\S]*?)```/);
+      if (!fence) throw parseErr;
+      data = JSON.parse(fence[1]);
+    }
+    const res = importAny(data);
+    if (res.kind === "signalpath") { await flushSave(); S.job = res.job; S.id = uid("job"); S.sol = 0; await persist(); refresh(false); }
     else await showReview(res);
   } catch (err) { alert("Import failed: " + err.message); }
   e.target.value = "";
@@ -478,11 +521,14 @@ async function showReview(res) {
   return new Promise(done => {
     const close = () => { $("#review").classList.remove("show"); done(); };
     $("#rvCancel").onclick = close;
-    $("#rvNew").onclick = async () => { S.job = j; S.id = uid("job"); S.sol = 0; await persist(); refresh(false); close(); };
+    $("#rvNew").onclick = async () => { await flushSave(); S.job = j; S.id = uid("job"); S.sol = 0; await persist(); refresh(false); close(); };
     $("#rvMerge").onclick = async () => {
       const rec = jobs.find(r => r.id === $("#rvTarget").value); if (!rec) return;
-      const changes = mergeHouse(rec.data, j);
-      S.job = rec.data; S.id = rec.id; S.sol = 0; await persist(); refresh(false); close();
+      await flushSave();
+      // merging into the OPEN job must use the live object, not the stored copy
+      const target = rec.id === S.id ? S.job : rec.data;
+      const changes = mergeHouse(target, j);
+      S.job = target; S.id = rec.id; S.sol = 0; await persist(); refresh(false); close();
       alert("House updated (Solutions kept):\n" + changes.map(c => `${c.kind}: ${c.zone}${c.type ? " (" + c.type + ")" : ""}`).join("\n"));
     };
   });
@@ -495,8 +541,10 @@ function download(name, text, type) {
 /* ============ interactive sheet: tap a wire to trace it, tap a card to edit it ============ */
 let selWire = null;
 const tip = document.createElement("div"); tip.id = "wiretip"; document.body.appendChild(tip);
-const showTip = (x, y, html) => { tip.innerHTML = html; tip.style.display = "block";
-  tip.style.left = Math.min(x + 14, innerWidth - 280) + "px"; tip.style.top = (y + 14) + "px"; };
+let tipAt = { x: 200, y: 200 };   // the click point, so reopening doesn't creep 14px per open
+const showTip = (x, y, html) => { tipAt = { x, y }; tip.innerHTML = html; tip.style.display = "block";
+  tip.style.left = Math.max(4, Math.min(x + 14, innerWidth - 310)) + "px";
+  tip.style.top = Math.max(4, Math.min(y + 14, innerHeight - tip.offsetHeight - 8)) + "px"; };
 const hideTip = () => { tip.style.display = "none"; };
 
 function nodeName(id) {
@@ -517,27 +565,31 @@ function applySel() {
   const svg = $("#canvas svg"); if (!svg) { selWire = null; return; }
   svg.querySelectorAll("path.wire.sel").forEach(p => p.classList.remove("sel"));
   svg.querySelectorAll(".selnode").forEach(g => g.classList.remove("selnode"));
-  const p = selWire && svg.querySelector(`path.wire[data-wire="${selWire}"]`);
+  const p = selWire && svg.querySelector(`path.wire[data-wire="${CSS.escape(selWire)}"]`);
   if (!p) { selWire = null; svg.classList.remove("wiresel"); return; }
   svg.classList.add("wiresel");
   p.classList.add("sel");
   for (const nid of [p.dataset.from, p.dataset.to]) {
-    const g = svg.querySelector(`[data-device="${nid}"]`) ||
-      svg.querySelector(`[data-zone="${S.view?.ix.endpointZone[nid] || ""}"]`);
+    const g = svg.querySelector(`[data-device="${CSS.escape(nid)}"]`) ||
+      svg.querySelector(`[data-zone="${CSS.escape(S.view?.ix.endpointZone[nid] || "")}"]`);
     g?.classList.add("selnode");
   }
 }
-function clearSel() { selWire = null; hideTip(); applySel(); $("#canvas svg")?.querySelector("#altghost")?.remove(); }
+function clearSel() { selWire = null; hideTip(); applySel(); clearGhosts(); }
 
 /* ---- guided rerouting: pick from legal alternate routes for the selected wire ---- */
 let ALTS = null;
-const connOf = wid => { const [f, t] = String(wid).split("→");
-  return (S.job.solutions[S.sol].connections || []).find(c => c.from === f && c.to === t); };
+// two connections can share from→to (video + audio to one AVR): match the signal too
+const connOf = (wid, signal) => { const [f, t] = String(wid).split("→");
+  return (S.job.solutions[S.sol].connections || []).find(c => c.from === f && c.to === t && (!signal || c.signal === signal)); };
+const selSignal = () => $("#canvas svg")?.querySelector(`path.wire[data-wire="${CSS.escape(selWire || "")}"]`)?.dataset.signal;
+const clearGhosts = () => { $("#canvas svg")?.querySelector("#altghost")?.remove(); ALTS = null; };
 function startReroute(x, y) {
   const svg = $("#canvas svg");
   if (!selWire || !S.view?.p || !svg) return;
-  svg.querySelector("#altghost")?.remove();
-  ALTS = routeAlternates(S.view.job, S.view.ix, S.view.p, S.view.opts, selWire);
+  clearGhosts();
+  const list = routeAlternates(S.view.job, S.view.ix, S.view.p, S.view.opts, selWire);
+  ALTS = Object.assign(list, { wid: selWire });   // bound to THIS wire — a stale ghost can't retarget another
   if (ALTS.length <= 1) { showTip(x, y, `<b>${esc(selWire)}</b><div class="mini">No alternates for this wire yet. Rerouting works on audio returns / network backhauls and box-to-box runs inside the rack — zone feeds route as a nested group with their siblings, so moving one would tangle the rest.</div>`); return; }
   const NS = "http://www.w3.org/2000/svg";
   const g = document.createElementNS(NS, "g"); g.id = "altghost";
@@ -554,18 +606,21 @@ function startReroute(x, y) {
     t.setAttribute("text-anchor", "middle"); t.textContent = i + 1;
     g.appendChild(c); g.appendChild(t);
   });
-  svg.appendChild(g);
+  // ghosts live in the wires' own drawing group (translate + fitScale), or
+  // they draw offset — badly so on large, scaled-down sheets
+  const host = svg.querySelector(`path.wire[data-wire="${CSS.escape(selWire)}"]`)?.parentNode || svg;
+  host.appendChild(g);
   showTip(x, y, `<b>Pick a route</b> <span class="mini">— tap a dashed path or a line below</span>` +
     ALTS.map((a, i) => `<div class="altrow" data-alt="${i}">${i + 1} · ${esc(a.label)} <span class="mini">(${a.crossings} sheet hops)</span></div>`).join(""));
 }
 function applyAlt(i) {
-  const a = ALTS?.[i]; if (!a) return;
-  const conn = connOf(selWire); if (!conn) return;
+  const a = ALTS?.[i]; if (!a || ALTS.wid !== selWire) { clearGhosts(); return; }
+  const conn = connOf(selWire, selSignal()); if (!conn) return;
   if (a.hint) conn.routeHint = a.hint; else delete conn.routeHint;
   clearSel(); refresh();
 }
 tip.addEventListener("click", e => {
-  if (e.target.closest("#rrGo")) { startReroute(parseInt(tip.style.left) || 200, parseInt(tip.style.top) || 200); return; }
+  if (e.target.closest("#rrGo")) { startReroute(tipAt.x, tipAt.y); return; }
   const row = e.target.closest(".altrow");
   if (row) applyAlt(+row.dataset.alt);
 });
@@ -574,7 +629,7 @@ function syncGlow() {
   const svg = $("#canvas svg"); if (!svg) return;
   svg.querySelectorAll("g.zglow").forEach(g => g.classList.remove("zglow"));
   if (S.tab !== "zones") return;
-  for (const id of S.openRows) svg.querySelector(`[data-zone="${id}"]`)?.classList.add("zglow");
+  for (const id of S.openRows) svg.querySelector(`[data-zone="${CSS.escape(id)}"]`)?.classList.add("zglow");
 }
 
 function switchTab(tab) {
@@ -589,8 +644,8 @@ function flashRow(sel) {
   row.classList.add("flash");
   setTimeout(() => row.classList.remove("flash"), 1300);
 }
-function openZone(zid) { switchTab("zones"); S.openRows.add(zid); renderPanel(); flashRow(`[data-zid="${zid}"]`); syncGlow(); }
-function openGear(did) { switchTab("gear"); S.openRows.add(did); renderPanel(); flashRow(`[data-did="${did}"]`); syncGlow(); }
+function openZone(zid) { switchTab("zones"); S.openRows.add(zid); renderPanel(); flashRow(`[data-zid="${CSS.escape(zid)}"]`); syncGlow(); }
+function openGear(did) { switchTab("gear"); S.openRows.add(did); renderPanel(); flashRow(`[data-did="${CSS.escape(did)}"]`); syncGlow(); }
 
 $("#canvas").addEventListener("click", e => {
   if (!$("#canvas svg")) return;
@@ -604,11 +659,12 @@ $("#canvas").addEventListener("click", e => {
   if (ids.length) {
     const idx = ids.indexOf(selWire);
     if (idx !== -1 && ids.length === 1) { clearSel(); return; }
+    clearGhosts();   // a new selection retires the previous wire's picker
     selWire = ids[(idx + 1) % ids.length];
     applySel();
-    const p = $("#canvas svg").querySelector(`path.wire[data-wire="${selWire}"]`);
+    const p = $("#canvas svg").querySelector(`path.wire[data-wire="${CSS.escape(selWire)}"]`);
     showTip(e.clientX, e.clientY,
-      `<b>${esc(nodeName(p.dataset.from))}</b> → <b>${esc(nodeName(p.dataset.to))}</b> · ${esc(p.dataset.signal)}${connOf(selWire)?.routeHint ? ' · <span class="mini">custom route</span>' : ""}${ids.length > 1 ? ` <span class="mini">(${idx + 2 > ids.length ? 1 : idx + 2}/${ids.length} here — tap to cycle)</span>` : ""}` +
+      `<b>${esc(nodeName(p.dataset.from))}</b> → <b>${esc(nodeName(p.dataset.to))}</b> · ${esc(p.dataset.signal)}${connOf(selWire, p.dataset.signal)?.routeHint ? ' · <span class="mini">custom route</span>' : ""}${ids.length > 1 ? ` <span class="mini">(${idx + 2 > ids.length ? 1 : idx + 2}/${ids.length} here — tap to cycle)</span>` : ""}` +
       `<div id="rrGo" class="altrow">⟲ Reroute…</div>`);
     return;
   }
@@ -637,7 +693,26 @@ const DEV_TYPES = ["source", "avr", "amp", "videoMatrix", "avSwitch", "avbSwitch
 const SIGNALS = ["video", "audio", "speaker", "network", "audioReturn"];
 
 function field(label, inner) { return `<div class="f"><label>${label}</label>${inner}</div>`; }
-const sel = (cls, opts, val) => `<select class="${cls}">${opts.map(o => `<option ${o === val ? "selected" : ""}>${o}</option>`).join("")}</select>`;
+const sel = (cls, opts, val) => `<select class="${cls}">${opts.map(o => `<option ${o === val ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+
+/* House objects are shared by every solution — removing an endpoint or zone
+   must clean ALL of them (connections, the chips serving it and the wires
+   into those chips, locals seated in the zone, overrides), or the other
+   solutions keep dangling "connection to missing node" errors */
+function purgeHouseRefs(epIds, zoneId = null) {
+  const eps = new Set(epIds);
+  for (const so of S.job.solutions) {
+    const locals = new Set((so.localDevices || []).filter(d => zoneId && d.zone === zoneId).map(d => d.id));
+    const chips = new Set((so.companions || []).filter(c => eps.has(c.serves)).map(c => c.id));
+    const gone = id => eps.has(id) || chips.has(id) || locals.has(id);
+    so.connections = (so.connections || []).filter(c => !gone(c.from) && !gone(c.to));
+    so.companions = (so.companions || []).filter(c => !chips.has(c.id));
+    so.localDevices = (so.localDevices || []).filter(d => !locals.has(d.id));
+    so.annotations = (so.annotations || []).filter(a => !zoneId || a.near !== zoneId);
+    if (so.overrides?.zones && zoneId) delete so.overrides.zones[zoneId];
+    if (so.overrides?.endpoints) for (const eid of eps) delete so.overrides.endpoints[eid];
+  }
+}
 
 function renderPanel() {
   const body = $("#panelBody");
@@ -667,7 +742,7 @@ function zonesHTML() {
   const ovHas = (kind, id, f) => ov[kind]?.[id] != null && f in ov[kind][id];
   const fieldO = (label, inner, kind, id, f) => {
     const has = ovHas(kind, id, f);
-    return `<div class="f${has ? " ov" : ""}"><label>${label}${has ? `<button class="ovx" data-ovk="${kind}" data-ovid="${id}" data-ovf="${f}" title="Overridden in ${esc(sol.name)} — revert to House">×</button>` : ""}</label>${inner}</div>`;
+    return `<div class="f${has ? " ov" : ""}"><label>${label}${has ? `<button class="ovx" data-ovk="${esc(kind)}" data-ovid="${esc(id)}" data-ovf="${esc(f)}" title="Overridden in ${esc(sol.name)} — revert to House">×</button>` : ""}</label>${inner}</div>`;
   };
   const rows = S.job.house.zones.map((z, i) => {
     const spkH = (z.endpoints || []).find(e => e.type === "speakers");
@@ -677,24 +752,24 @@ function zonesHTML() {
     const zEff = { ...z, ...(ov.zones || {})[z.id] };
     const sub = [spk && (spk.config || "stereo"), tv && `TV ${tv.size || "?"}"`].filter(Boolean).join(" · ") || "empty";
     const open = S.openRows.has(z.id);
-    return `<div class="row ${open ? "open" : ""}" data-zid="${z.id}">
-      <div class="head" data-toggle="${z.id}"><span class="t">${esc(z.name)}</span>
-        ${zEff.scope !== "included" ? `<span class="badge${ovHas("zones", z.id, "scope") ? " ovb" : ""}">${zEff.scope}</span>` : ""}<span class="sub">${esc(sub)}</span></div>
+    return `<div class="row ${open ? "open" : ""}" data-zid="${esc(z.id)}">
+      <div class="head" data-toggle="${esc(z.id)}"><span class="t">${esc(z.name)}</span>
+        ${zEff.scope !== "included" ? `<span class="badge${ovHas("zones", z.id, "scope") ? " ovb" : ""}">${esc(zEff.scope)}</span>` : ""}<span class="sub">${esc(sub)}</span></div>
       <div class="fields">
         ${field("Name", `<input class="zname" value="${esc(z.name)}">`)}
         ${fieldO("Scope", sel("zscope", ["included", "prewire", "future"], zEff.scope || "included"), "zones", z.id, "scope")}
         ${fieldO("Remote", sel("zremote", ["none", "savant", "appletv", "josh", "factory"], zEff.remote || "none"), "zones", z.id, "remote")}
-        ${S.job.house.areas.length ? field("Area", sel("zarea", ["", ...S.job.house.areas.map(a => a.id)], z.area || "")) : ""}
+        ${(S.job.house.areas || []).length ? field("Area", sel("zarea", ["", ...S.job.house.areas.map(a => a.id)], z.area || "")) : ""}
         <div class="sect">SPEAKERS</div>
         ${spk ? fieldO("Config", sel("spkcfg", SPK_CONFIGS, spk.config || "stereo"), "endpoints", spkH.id, "config")
               : field("Config", sel("spkcfg", SPK_CONFIGS, "none"))}
-        ${spk ? fieldO("Count", `<input class="spkcount" type="number" min="1" max="12" value="${spk.count || 2}">`, "endpoints", spkH.id, "count") : ""}
+        ${spk ? fieldO("Count", `<input class="spkcount" type="number" min="1" max="12" value="${esc(spk.count || 2)}">`, "endpoints", spkH.id, "count") : ""}
         ${spk ? fieldO("Status", sel("spkstatus", STATUSES, spk.status || "new"), "endpoints", spkH.id, "status") : ""}
         <div class="sect">DISPLAY</div>
         ${tv ? fieldO("Type", sel("tvtype", ["none", "tv", "projector"], tv.displayType || "tv"), "endpoints", tvH.id, "displayType")
              : field("Type", sel("tvtype", ["none", "tv", "projector"], "none"))}
         ${tv ? fieldO("Brand", `<input class="tvbrand" value="${esc(tv.brand || "")}">`, "endpoints", tvH.id, "brand") : ""}
-        ${tv ? fieldO("Size", `<input class="tvsize" type="number" min="24" max="220" value="${tv.size || 65}">`, "endpoints", tvH.id, "size") : ""}
+        ${tv ? fieldO("Size", `<input class="tvsize" type="number" min="24" max="220" value="${esc(tv.size || 65)}">`, "endpoints", tvH.id, "size") : ""}
         ${tv ? fieldO("Status", sel("tvstatus", STATUSES.slice(0, 2), tv.status || "new"), "endpoints", tvH.id, "status") : ""}
         ${tv ? field("Confirm", `<input type="checkbox" class="tvconfirm" ${tvH.confirm?.length ? "checked" : ""}> <span class="mini">size needs confirmation</span>`) : ""}
         <div style="text-align:right"><button class="del zdel">delete zone</button></div>
@@ -712,23 +787,23 @@ function gearHTML() {
   const catSel = d => `<select class="dcat"><option value="">— not linked —</option>${catDevs
     .slice().sort((a, b) => ((b[1].type === d.type) - (a[1].type === d.type)) ||
       String((a[1].brand || "") + a[1].model).localeCompare(String((b[1].brand || "") + b[1].model)))
-    .map(([id, c]) => `<option value="${id}" ${d.catalogRef === id ? "selected" : ""}>${esc([c.brand, c.model].filter(Boolean).join(" "))}${c.verified === false ? " ⚠" : ""}${c.type === d.type ? "" : " · " + esc(c.type)}</option>`).join("")}</select>`;
+    .map(([id, c]) => `<option value="${esc(id)}" ${d.catalogRef === id ? "selected" : ""}>${esc([c.brand, c.model].filter(Boolean).join(" "))}${c.verified === false ? " ⚠" : ""}${c.type === d.type ? "" : " · " + esc(c.type)}</option>`).join("")}</select>`;
   const racks = sol.racks.map(r => `
-    <div class="sect">${esc(r.name.toUpperCase())}</div>
+    <div class="sect">${esc(String(r.name || r.id).toUpperCase())}</div>
     ${r.devices.map(d => {
       const open = S.openRows.has(d.id);
-      return `<div class="row ${open ? "open" : ""}" data-did="${d.id}" data-rid="${r.id}">
-      <div class="head" data-toggle="${d.id}"><span class="t">${esc(d.model || d.id)}</span><span class="sub">${esc(d.type)}${d.zones ? ` · ${d.zones}z` : ""}</span></div>
+      return `<div class="row ${open ? "open" : ""}" data-did="${esc(d.id)}" data-rid="${esc(r.id)}">
+      <div class="head" data-toggle="${esc(d.id)}"><span class="t">${esc(d.model || d.id)}</span><span class="sub">${esc(d.type)}${d.zones ? ` · ${esc(d.zones)}z` : ""}</span></div>
       <div class="fields">
         ${field("Model", `<input class="dmodel" value="${esc(d.model || "")}">`)}
         ${field("Type", sel("dtype", DEV_TYPES, d.type))}
         ${field("Catalog", catSel(d))}
-        ${d.type === "amp" ? field("Zones", `<input class="dzones" type="number" min="1" max="32" value="${d.zones || 8}">`) : ""}
+        ${d.type === "amp" ? field("Zones", `<input class="dzones" type="number" min="1" max="32" value="${esc(d.zones || 8)}">`) : ""}
         ${field("Status", sel("dstatus", STATUSES.slice(0, 2), d.status || "new"))}
         <div style="text-align:right"><button class="del ddel">delete device</button></div>
       </div></div>`;
     }).join("")}
-    <button class="addbtn adddev" data-rid="${r.id}">＋ Add device to ${esc(r.name)}</button>`).join("");
+    <button class="addbtn adddev" data-rid="${esc(r.id)}">＋ Add device to ${esc(r.name || r.id)}</button>`).join("");
 
   const conns = `<div class="sect">CONNECTIONS <span class="badge">${sol.connections.length}</span></div>` +
     sol.connections.map((c, i) => `<div class="row open" data-ci="${i}"><div class="fields" style="display:block;border-top:none">
@@ -774,7 +849,7 @@ function jobHTML() {
     </div></div>
     <div class="sect">REVISIONS</div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
-      ${(J.revisions || []).map(r => `<div class="mini">Rev ${r.rev} · ${r.date} · ${esc(r.description)} · ${esc(r.by)}</div>`).join("")}
+      ${(J.revisions || []).map(r => `<div class="mini">Rev ${esc(r.rev)} · ${esc(r.date)} · ${esc(r.description)} · ${esc(r.by)}</div>`).join("")}
       <button class="addbtn" id="addRev" style="margin-top:6px">＋ Add revision</button>
     </div></div>`;
 }
@@ -782,7 +857,7 @@ function jobHTML() {
 /* ---- settings tab: company, licensing rules, device catalog ---- */
 function settingsHTML() {
   const co = SETTINGS.company, L = SETTINGS.catalog.licensing || {};
-  const numf = (cls, val, ph = "∞") => `<input class="${cls}" type="number" placeholder="${ph}" value="${val ?? ""}">`;
+  const numf = (cls, val, ph = "∞") => `<input class="${cls}" type="number" placeholder="${ph}" value="${esc(val ?? "")}">`;
   const savant = (L.savant?.hosts || []).map((h, i) => `<div class="f" data-sv="${i}">
       <input class="svname" value="${esc(h.name)}" style="flex:2">${numf("svzones", h.maxZones)}${numf("svipa", h.maxIpAudio)}</div>`).join("");
   const josh = (L.josh?.processors || []).map((p, i) => `<div class="f" data-jp="${i}">
@@ -793,9 +868,9 @@ function settingsHTML() {
   const devs = Object.entries(SETTINGS.catalog.devices || {}).map(([id, d]) => {
     const open = S.openRows.has("cat-" + id);
     const io = d.inputs || {};
-    return `<div class="row ${open ? "open" : ""}" data-cat="${id}">
-      <div class="head" data-toggle="cat-${id}"><span class="t">${esc(d.brand)} ${esc(d.model)}</span>
-        <span class="sub">${esc(d.type)}${d.zones ? ` · ${d.zones}z` : ""}${d.verified === false ? " · ⚠unverified" : ""}</span></div>
+    return `<div class="row ${open ? "open" : ""}" data-cat="${esc(id)}">
+      <div class="head" data-toggle="cat-${esc(id)}"><span class="t">${esc(d.brand)} ${esc(d.model)}</span>
+        <span class="sub">${esc(d.type)}${d.zones ? ` · ${esc(d.zones)}z` : ""}${d.verified === false ? " · ⚠unverified" : ""}</span></div>
       <div class="fields">
         ${field("Model", `<input class="catmodel" value="${esc(d.model)}">`)}
         ${field("Zones", numf("catzones", d.zones, "-"))}
@@ -835,7 +910,7 @@ function wireSettings(body) {
   on(".coname", el => SETTINGS.company.name = el.value);
   on(".cotag", el => SETTINGS.company.tagline = el.value);
   on(".coinfo", el => SETTINGS.company.info = el.value);
-  on(".svess", el => L.savant.essentials = el.value);
+  on(".svess", el => (L.savant ||= { hosts: [] }).essentials = el.value);
   on(".svname", el => L.savant.hosts[+el.closest("[data-sv]").dataset.sv].name = el.value);
   on(".svzones", el => L.savant.hosts[+el.closest("[data-sv]").dataset.sv].maxZones = num(el.value));
   on(".svipa", el => L.savant.hosts[+el.closest("[data-sv]").dataset.sv].maxIpAudio = num(el.value));
@@ -843,7 +918,7 @@ function wireSettings(body) {
   on(".jpdev", el => L.josh.processors[+el.closest("[data-jp]").dataset.jp].maxDevices = num(el.value));
   on(".jpmic", el => L.josh.processors[+el.closest("[data-jp]").dataset.jp].maxMics = num(el.value));
   on(".jpplan", el => L.josh.processors[+el.closest("[data-jp]").dataset.jp].plan = el.value);
-  on(".c4conn", el => L.control4.connect = el.value);
+  on(".c4conn", el => (L.control4 ||= { controllers: [] }).connect = el.value);
   on(".c4name", el => L.control4.controllers[+el.closest("[data-c4]").dataset.c4].name = el.value);
   on(".c4dev", el => L.control4.controllers[+el.closest("[data-c4]").dataset.c4].maxDevices = num(el.value));
   on(".c4rooms", el => L.control4.controllers[+el.closest("[data-c4]").dataset.c4].rooms = num(el.value));
@@ -862,7 +937,9 @@ function wireSettings(body) {
   });
   const addCat = body.querySelector("#addCat");
   if (addCat) addCat.onclick = () => {
-    const id = prompt("Catalog id (e.g. sonos-amp):"); if (!id) return;
+    const id = (prompt("Catalog id (e.g. sonos-amp):") || "").trim(); if (!id) return;
+    if (!/^[A-Za-z0-9_.:-]{1,80}$/.test(id)) { alert("Use letters, numbers, dots, dashes or underscores for the id."); return; }
+    if (SETTINGS.catalog.devices[id]) { alert(`"${id}" is already in the catalog — edit that entry instead.`); S.openRows.add("cat-" + id); renderPanel(); return; }
     SETTINGS.catalog.devices[id] = { brand: "", model: id, type: "amp", zones: 1, inputs: {}, verified: false };
     S.openRows.add("cat-" + id); save(); renderPanel();
   };
@@ -915,7 +992,7 @@ function wirePanel(body) {
     z.endpoints = z.endpoints || [];
     let spk = z.endpoints.find(e => e.type === "speakers");
     if (scopeSol && (el.value === "none" || !spk)) return structural();
-    if (el.value === "none") { z.endpoints = z.endpoints.filter(e => e.type !== "speakers"); }
+    if (el.value === "none") { z.endpoints = z.endpoints.filter(e => e.type !== "speakers"); purgeHouseRefs([spk?.id].filter(Boolean)); }
     else if (spk) setF("endpoints", spk, "config", el.value);
     else z.endpoints.unshift({ id: uid(z.id + "-spk"), type: "speakers", config: el.value, count: 2, status: "new" });
   });
@@ -926,7 +1003,7 @@ function wirePanel(body) {
     z.endpoints = z.endpoints || [];
     let tv = z.endpoints.find(e => e.type === "display");
     if (scopeSol && (el.value === "none" || !tv)) return structural();
-    if (el.value === "none") z.endpoints = z.endpoints.filter(e => e.type !== "display");
+    if (el.value === "none") { z.endpoints = z.endpoints.filter(e => e.type !== "display"); purgeHouseRefs([tv?.id].filter(Boolean)); }
     else if (tv) setF("endpoints", tv, "displayType", el.value);
     else z.endpoints.push({ id: uid(z.id + "-tv"), type: "display", displayType: el.value, brand: "", size: 65, status: "new" });
   });
@@ -936,17 +1013,9 @@ function wirePanel(body) {
   on(".tvconfirm", el => { const t = zoneOf(el)?.endpoints.find(e => e.type === "display"); if (t) { if (el.checked) t.confirm = ["size"]; else delete t.confirm; } });
   body.querySelectorAll(".zdel").forEach(el => el.onclick = () => {
     const z = zoneOf(el); if (!z || !confirm(`Delete zone "${z.name}"?`)) return;
-    const eps = new Set((z.endpoints || []).map(e => e.id));
     S.job.house.zones = S.job.house.zones.filter(x => x !== z);
-    const sol = S.job.solutions[S.sol];
-    sol.connections = sol.connections.filter(c => !eps.has(c.from) && !eps.has(c.to));
-    sol.companions = (sol.companions || []).filter(c => !eps.has(c.serves));
-    sol.localDevices = (sol.localDevices || []).filter(d => d.zone !== z.id);
-    for (const so of S.job.solutions) {                       // overrides die with their House objects
-      if (!so.overrides) continue;
-      if (so.overrides.zones) delete so.overrides.zones[z.id];
-      if (so.overrides.endpoints) for (const eid of eps) delete so.overrides.endpoints[eid];
-    }
+    purgeHouseRefs((z.endpoints || []).map(e => e.id), z.id);
+    S.openRows.delete(z.id);
     refresh();
   });
   const addZone = body.querySelector("#addZone");
@@ -1043,8 +1112,12 @@ function wirePanel(body) {
     const { d, r } = devOf(el); if (!d || !confirm(`Delete "${d.model || d.id}"?`)) return;
     r.devices = r.devices.filter(x => x !== d);
     const sol = S.job.solutions[S.sol];
-    sol.connections = sol.connections.filter(c => c.from !== d.id && c.to !== d.id);
-    sol.companions = (sol.companions || []).filter(c => c.serves !== d.id);
+    // the device's chips go with it — and so do the wires into those chips
+    const gone = new Set([d.id, ...(sol.companions || []).filter(c => c.serves === d.id).map(c => c.id)]);
+    sol.connections = sol.connections.filter(c => !gone.has(c.from) && !gone.has(c.to));
+    sol.companions = (sol.companions || []).filter(c => !gone.has(c.id));
+    for (const c of sol.connections) if (c.routeHint?.between?.includes?.(d.id)) delete c.routeHint;   // custom route named it
+    S.openRows.delete(d.id);
     refresh();
   });
   body.querySelectorAll(".adddev").forEach(el => el.onclick = () => {

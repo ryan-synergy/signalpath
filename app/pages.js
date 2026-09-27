@@ -14,11 +14,11 @@ const W = 1632, H = 1056;
 export function pageFlags(job) {
   const p = job.job?.pages || {};
   return { channelMap: p.channelMap !== false, equipment: p.equipment !== false,
-           wireSchedule: p.wireSchedule === true, bomCompare: p.bomCompare === true, network: p.network !== false };
+           wireSchedule: p.wireSchedule === true, bomCompare: p.bomCompare === true, network: p.network !== false, labels: p.labels === true, elevation: p.elevation !== false };
 }
 export function sheetCount(job) {
   const f = pageFlags(job);
-  return 1 + (f.channelMap ? 1 : 0) + (f.equipment ? 1 : 0) + (f.wireSchedule ? 1 : 0) + (f.network ? 1 : 0) +
+  return 1 + (f.channelMap ? 1 : 0) + (f.equipment ? 1 : 0) + (f.wireSchedule ? 1 : 0) + (f.network ? 1 : 0) + (f.labels ? 1 : 0) + (f.elevation ? 1 : 0) +
          (f.bomCompare && (job.solutions || []).length > 1 ? 1 : 0);
 }
 
@@ -447,7 +447,7 @@ export function wireRuns(job, ix, opts = {}) {
         ep.config === "landscape" ? cnt(ep.satCount, 4) : ep.config?.startsWith("soundbar") ? 0 : cnt(ep.count, 2);
       const amp = s.devices[c.from];
       const chs = expandChannels(c.channels || "");
-      if (n > 0) runs.push({ prefix: "S", cable: `${spkCable(ep)} ×${n}`, from: rackName,
+      if (n > 0) runs.push({ prefix: "S", legs: speakerLegs(ep, n, sm), zone: zoneName(ix, c.to), cable: `${spkCable(ep)} ×${n}`, from: rackName,
         to: `${zoneName(ix, c.to)} — ${ep.config === "landscape" ? "landscape array" : n > 2 ? "speaker set" : "ceiling pair"}`,
         carries: gray ? "PRE-WIRE — coil & label" : "Speaker level", color: gray ? null : "#1a5fa0",
         term: `${amp?.model || nameOf(job, s, c.from)}${chs.length ? ` ch ${chs[0]}–${chs[chs.length - 1]}` : ""}${gray ? " (reserved)" : ""}`, count: n, gray });
@@ -492,10 +492,70 @@ export function wireRuns(job, ix, opts = {}) {
   for (const r of runs) {
     const start = (counters[r.prefix] || 0) + 1;
     counters[r.prefix] = start + r.count - 1;
+    r.first = start;
     r.id = r.count > 1 ? `${r.prefix}-${String(start).padStart(2, "0")}…${String(counters[r.prefix]).padStart(2, "0")}`
                        : `${r.prefix}-${String(start).padStart(2, "0")}`;
   }
   return runs;
+}
+
+// one name per speaker wire, the way a tech labels them at the rack
+function speakerLegs(ep, n, sm) {
+  if (sm) {
+    const bed = { 5: ["FL", "FR", "C", "SL", "SR"], 7: ["FL", "FR", "C", "SL", "SR", "SBL", "SBR"] }[+sm[1]]
+      || Array.from({ length: +sm[1] }, (_, i) => `CH ${i + 1}`);
+    const tops = { 2: ["TFL", "TFR"], 4: ["TFL", "TFR", "TRL", "TRR"] }[+sm[2] || 0]
+      || Array.from({ length: +sm[2] || 0 }, (_, i) => `HT ${i + 1}`);
+    return [...bed, ...tops].slice(0, n);
+  }
+  if (ep.config === "landscape") return Array.from({ length: n }, (_, i) => `SAT ${i + 1}`);
+  if (n === 1) return ["SPK"];
+  if (n === 2) return ["L", "R"];
+  return Array.from({ length: n }, (_, i) => `SPK ${i + 1}`);
+}
+
+/* ============ CABLE LABELS ============
+   One label per wire, both ends (copies: 2): the wire schedule's run ids,
+   speaker runs split per wire (S-05 FL … S-09 SR). The CSV imports into
+   label-printer software (Brady Workstation, P-touch Editor database). */
+export function cableLabels(job, ix, opts = {}) {
+  const out = [];
+  const pad = n => String(n).padStart(2, "0");
+  const shortTo = t => String(t).replace(/ — TV location$/, " TV").replace(/ — (buried )?sub( location)?$/, (m, b) => b ? " BURIED SUB" : " SUB").replace(/ — /g, " · ");
+  for (const r of wireRuns(job, ix, opts)) {
+    const field = String(r.from).includes(" — ") ? r.from : r.to;   // the end that isn't the rack (returns run field → rack)
+    const base = { cable: r.cable.split(" ×")[0], from: r.from, to: r.to, carries: r.carries, prewire: !!r.gray, copies: 2 };
+    if (r.legs?.length) r.legs.forEach((leg, i) => out.push({ ...base, id: `${r.prefix}-${pad(r.first + i)}`, line1: `${r.zone} ${leg}`, line2: `${r.term.replace(/ ch \d+–\d+/, "")}` }));
+    else if (r.count > 1) for (let i = 0; i < r.count; i++) out.push({ ...base, id: `${r.prefix}-${pad(r.first + i)}`, line1: shortTo(field), line2: `${r.carries} ${i + 1}/${r.count}` });
+    else out.push({ ...base, id: r.id, line1: shortTo(field), line2: r.carries });
+  }
+  return out;
+}
+export function labelsCSV(job, ix, opts = {}) {
+  const q = s => { let v = String(s ?? ""); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; return `"${v.replace(/"/g, '""')}"`; };
+  return ["Label,Line 1,Line 2,Cable,From,To,Copies,Pre-wire"].concat(cableLabels(job, ix, opts).map(l =>
+    [q(l.id), q(l.line1), q(l.line2), q(l.cable), q(l.from), q(l.to), l.copies, l.prewire ? "yes" : ""].join(","))).join("\n");
+}
+function labelPages(job, ix, opts, label) {
+  const labels = cableLabels(job, ix, opts);
+  if (!labels.length) return [];
+  // 4 across × 8 down per sheet; each wire prints twice (one per end), side by side
+  const cw = 372, ch = 92, gx = 16, gy = 14, perRow = 4, rows = Math.floor((LIMIT - TOP) / (ch + gy));
+  const cards = labels.flatMap(l => [l, l]);
+  const bodies = [];
+  for (let k = 0; k < cards.length; k += perRow * rows) {
+    bodies.push(cards.slice(k, k + perRow * rows).map((l, i) => {
+      const x = 40 + (i % perRow) * (cw + gx), y = TOP + Math.floor(i / perRow) * (ch + gy);
+      const fit = (t, n) => String(t).length > n ? String(t).slice(0, n - 1) + "…" : String(t);
+      return `<g><rect x="${x}" y="${y}" width="${cw}" height="${ch}" rx="6" fill="${l.prewire ? "#f4f4f6" : "#fff"}" stroke="#9aa" stroke-dasharray="4 3"/>
+<text x="${x + 14}" y="${y + 34}" font-size="26" font-weight="700" fill="#111">${esc(l.id)}</text>
+<text x="${x + cw - 14}" y="${y + 30}" text-anchor="end" font-size="11" fill="#666">${esc(fit(l.cable, 22))}</text>
+<text x="${x + 14}" y="${y + 58}" font-size="14" fill="#222">${esc(fit(l.line1, 40))}</text>
+<text x="${x + 14}" y="${y + 78}" font-size="11.5" fill="#666">${esc(fit(l.line2 + (l.prewire ? " · PRE-WIRE" : ""), 52))}</text></g>`;
+    }));
+  }
+  return assemble(job, opts, "Cable Labels", "One label per wire, two copies — rack end and field end. Run IDs match the wire schedule.", bodies, label,
+    () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Cut on the dashed lines, or print the Labels CSV on a label printer (Brady Workstation / P-touch Editor import). Gray = pre-wire.</text>`);
 }
 
 function wireSchedulePages(job, ix, opts, label) {
@@ -633,6 +693,68 @@ export function renderBomCompare(job, ix, adviseResult, opts = {}) {
   return bomComparePages(job, ix, adviseResult, opts, () => opts.sheetLabel || "")[0];
 }
 
+/* ============ PAGE: RACK ELEVATION ============
+   Front view per rack from advise().racks (rack.js): U numbers from the
+   bottom, gear top-down in build order, blank space shaded. Two racks per
+   sheet, each with its summary column. */
+const RACK_FILL = { patch: "#e8f0fb", vent: "#eceef1", shelf: "#f7f3e8" };
+const TIER_FILL = ["#e8f0fb", "#e6f4ea", "#ecebf8", "#f7f3e8", "#f6e9e7", "#fdf0d2"];
+function rackElevationPages(job, ix, adviseResult, opts, label) {
+  const s = ix.solutions[opts.solution ?? 0];
+  const racks = (adviseResult?.racks || []).filter(r => r.solution === s?.sol.id && (r.items.length || r.rear.length));
+  if (!racks.length) return [];
+  const bodies = [];
+  racks.forEach((r, k) => {
+    if (k % 2 === 0) bodies.push([]);
+    const body = bodies[bodies.length - 1];
+    const ox = k % 2 ? 840 : 40, rw = 380, top = TOP + 34;
+    const uPx = Math.min(20, Math.floor((LIMIT - top - 10) / Math.max(r.size, r.used)));
+    const rows = Math.max(r.size, r.used), h = rows * uPx, rx = ox + 40;
+    body.push(heading(ox, TOP + 8, `${r.name} — ${r.size}U`));
+    body.push(`<rect x="${rx}" y="${top}" width="${rw}" height="${h}" fill="#f4f5f7" stroke="#333" stroke-width="2"/>`);
+    if (r.over) body.push(`<rect x="${rx}" y="${top + r.size * uPx}" width="${rw}" height="${(rows - r.size) * uPx}" fill="#fbe3e1"/>
+<line x1="${rx - 6}" y1="${top + r.size * uPx}" x2="${rx + rw + 6}" y2="${top + r.size * uPx}" stroke="#b32017" stroke-width="2"/>`);   // the rack floor; red below = doesn't fit
+    for (let u = 0; u < rows; u++) {
+      const y = top + u * uPx, n = r.size - u;
+      body.push(`<line x1="${rx}" y1="${y}" x2="${rx + rw}" y2="${y}" stroke="#dde0e5" stroke-width="0.6"/>`);
+      if (n >= 1 && (uPx >= 14 || n % 2 === 1)) body.push(`<text x="${rx - 8}" y="${y + uPx * 0.72}" text-anchor="end" font-size="${Math.min(10, uPx * 0.6)}" fill="#888">${n}</text>`);
+    }
+    // gear dresses the top; amps, receivers and power sit on the floor of the rack
+    // (only when it all fits — an over-full rack just stacks in order)
+    const low = r.over ? [] : r.items.filter(i => i.tier >= 4);
+    const lowStart = top + (r.size - low.reduce((n, i) => n + i.u, 0)) * uPx;
+    let y = top;
+    for (const it of r.items) {
+      if (it === low[0]) y = lowStart;
+      const ih = it.u * uPx;
+      const fill = RACK_FILL[it.kind] || TIER_FILL[it.tier] || "#fff";
+      const fs = Math.max(7, Math.min(12, ih * 0.62));
+      const maxCh = Math.floor((rw - 20) / (fs * 0.56));
+      const text = it.label.length > maxCh ? it.label.slice(0, maxCh - 1) + "…" : it.label;
+      body.push(`<rect x="${rx + 2}" y="${y + 1}" width="${rw - 4}" height="${ih - 2}" rx="2" fill="${fill}" stroke="${it.guess ? "#a45a12" : "#8a93a3"}"${it.guess ? ' stroke-dasharray="4 3"' : ""}/>` +
+        (it.kind === "vent" ? `<g stroke="#b9bec7">${Array.from({ length: 9 }, (_, i) => `<line x1="${rx + 60 + i * 30}" y1="${y + 4}" x2="${rx + 60 + i * 30}" y2="${y + ih - 4}"/>`).join("")}</g>` : "") +
+        `<text x="${rx + 12}" y="${y + ih / 2 + fs * 0.36}" font-size="${fs}" fill="${it.kind === "vent" ? "#888" : "#222"}"${it.kind === "device" ? ' font-weight="600"' : ""}>${esc(text)}</text>` +
+        `<text x="${rx + rw - 10}" y="${y + ih / 2 + 4}" text-anchor="end" font-size="${Math.min(10, fs)}" fill="#888">${it.u}U</text>`);
+      y += ih;
+    }
+    // summary column
+    const sx = rx + rw + 26;
+    const lines = [
+      [`${r.used}U used · ${r.over ? `${r.over}U OVER` : `${r.spare}U spare`}`, r.over ? "#b32017" : "#222", true],
+      [`Cat6 home runs: ${r.cat6}${r.cat6 ? ` → ${Math.ceil(r.cat6 / 24)} patch panel${Math.ceil(r.cat6 / 24) > 1 ? "s" : ""}` : ""}`, "#444"],
+      ...(r.rear.length ? [["Rear rails (no U):", "#444", true], ...r.rear.map(n => ["  " + n, "#444"])] : []),
+      ...r.items.filter(i => i.kind === "shelf").flatMap((i, n) => [[`Shelf ${n + 1}:`, "#444", true], ...i.members.map(m => ["  " + m, "#444"])]),
+      ...(r.unknown.length ? [["Height unknown — drawn 1U:", "#a45a12", true], ...r.unknown.map(n => ["  " + n, "#a45a12"])] : []),
+      ["Order: patch · network · control ·", "#888"], ["sources · amps (vent under each) · power", "#888"],
+    ];
+    const fitN = Math.floor((LIMIT - top - 14) / 18);
+    if (lines.length > fitN) lines.splice(fitN - 1, lines.length, ["  … (full list on the Equipment page)", "#888"]);
+    body.push(`<g font-size="12">${lines.map(([t, c, b], i) => `<text x="${sx}" y="${top + 14 + i * 18}" fill="${c}"${b ? ' font-weight="700"' : ""} xml:space="preserve">${esc(String(t).slice(0, 44))}</text>`).join("")}</g>`);
+  });
+  return assemble(job, opts, "Rack Elevation", "Front view — gear heights from the catalog; shelves hold up to 3 small boxes", bodies, label,
+    () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Build order top to bottom: patch panels, network, control/processing, sources on shelves, receivers + amps (1U vent under each), power. Dashed = height not in the catalog.</text>`);
+}
+
 /* ============ PAGE: NETWORK & POWER ============
    The switch port plan (network.js) and the rack outlet budget (power.js),
    both computed by advise(). One full-width column; long tables continue on
@@ -652,7 +774,7 @@ function networkPowerPages(job, ix, adviseResult, opts, label) {
   let colY = [TOP, TOP];
   const newSheet = () => { bodies.push([]); colY = [TOP, TOP]; };
   const put = svg => bodies[bodies.length - 1].push(svg);
-  const block = (title, sub, cols, rows, after = []) => {
+  const block = (title, sub, cols, rows, after = [], lead = "Set up:") => {
     let rest = [...rows], first = true;
     for (let guard = 0; guard < 200; guard++) {
       const head = 20 + (first && sub ? 18 : 0);
@@ -667,7 +789,7 @@ function networkPowerPages(job, ix, adviseResult, opts, label) {
       colY[c] = t.bottom; rest = t.rest; first = false;
       if (!rest.length) {
         if (after.length && colY[c] + 10 + after.length * 18 <= LIMIT) {
-          put(`<g font-size="12" fill="#444">${after.map((l, i) => `<text x="${x}" y="${colY[c] + 22 + i * 18}">${i ? "·" : "Set up:"} ${esc(l)}</text>`).join("")}</g>`);
+          put(`<g font-size="12" fill="#444">${after.map((l, i) => `<text x="${x}" y="${colY[c] + 22 + i * 18}">${i ? "·" : lead} ${esc(l)}</text>`).join("")}</g>`);
           colY[c] += 10 + after.length * 18;
         }
         colY[c] += 46;
@@ -694,10 +816,14 @@ function networkPowerPages(job, ix, adviseResult, opts, label) {
       : "No power conditioner";
     const verdict = power.supply == null ? (power.units.length ? "outlet count not in the catalog" : `spec ${power.pick ? `${power.pick.qty > 1 ? power.pick.qty + " × " : ""}${power.pick.model}` : "a WattBox"}`)
       : power.short ? `${power.short} SHORT` : `${power.supply - power.need} spare${power.tight ? ` (aim for ${power.spare})` : ""}`;
-    const rows = power.loads.map(l => ({ cells: [clip(l.what, 60), String(l.outlets), l.why] }));
-    for (const p of power.poe) rows.push({ gray: true, cells: [clip(p.what, 60), "0", "PoE from its switch"] });
-    block("Rack power — outlet budget", `${units} · ${power.need} outlet${power.need === 1 ? "" : "s"} needed · ${verdict}`,
-      [{ label: "Device", dx: 12 }, { label: "Outlets", dx: 470 }, { label: "Note", dx: 560 }], rows);
+    const w = l => l.typicalW == null && l.maxW == null ? { text: "?", color: "#a45a12" }
+      : l.maxW != null && l.typicalW != null && l.maxW !== l.typicalW ? `${l.typicalW} / ${l.maxW}` : String(l.typicalW ?? l.maxW);
+    const rows = power.loads.map(l => ({ cells: [clip(l.what, 50), String(l.outlets), w(l), l.why] }));
+    for (const p of power.poe) rows.push({ gray: true, cells: [clip(p.what, 50), "0", "", "PoE from its switch"] });
+    const load = `~${power.typicalW} W typical${power.maxW !== power.typicalW ? ` / ${power.maxW} W max` : ""} of ${power.circuitW} W (${power.circuits > 1 ? `${power.circuits} × ` : ""}${power.circuitA}A)`;
+    block("Rack power — outlets & load", `${units} · ${power.need} outlet${power.need === 1 ? "" : "s"} · ${verdict} · ${load}`,
+      [{ label: "Device", dx: 12 }, { label: "Outlets", dx: 390 }, { label: "Watts (typ / max)", dx: 460 }, { label: "Note", dx: 610 }], rows,
+      power.noWatts.length ? [`${power.noWatts.length} box${power.noWatts.length > 1 ? "es" : ""} with no wattage on file (?) — load is a floor, not a ceiling`] : [], "Note:");
   }
   if (!bodies[bodies.length - 1].length) bodies.pop();
   return assemble(job, opts, "Network & Power", "Switch ports, networks and the rack outlet budget — derived from the schematic", bodies, label,
@@ -714,8 +840,10 @@ function pageGroups(job, ix, adviseResult, opts) {
   if (flags.channelMap) g.push(["Channel Map", lbl => channelMapPages(job, ix, opts, lbl)]);
   if (flags.equipment) g.push(["Equipment & Takeoff", lbl => takeoffPages(job, ix, adviseResult, opts, lbl)]);
   if (flags.wireSchedule) g.push(["Wire Schedule", lbl => wireSchedulePages(job, ix, opts, lbl)]);
+  if (flags.elevation) g.push(["Rack Elevation", lbl => rackElevationPages(job, ix, adviseResult, opts, lbl)]);
   if (flags.network) g.push(["Network & Power", lbl => networkPowerPages(job, ix, adviseResult, opts, lbl)]);
   if (flags.bomCompare && (job.solutions || []).length > 1) g.push(["Solution Comparison", lbl => bomComparePages(job, ix, adviseResult, opts, lbl)]);
+  if (flags.labels) g.push(["Cable Labels", lbl => labelPages(job, ix, opts, lbl)]);
   return g;
 }
 export function sheetTotal(job, ix, adviseResult, opts = {}) {

@@ -5,6 +5,7 @@
 import { describeNode, adapterName, adapterTag, isOutdoorZone, SIGNAL_SHORT, SCOPE_NAME } from "./names.js";
 import { networkPlan, suggestLanSwitch } from "./network.js";
 import { powerPlan } from "./power.js";
+import { rackPlans } from "./rack.js";
 
 export const SIGNAL_COLORS = {
   video: "#d22b1f",
@@ -2715,6 +2716,15 @@ export function advise(job, ix = indexJob(job), catalog = null) {
     if (p.needsInjector) out.notes.push({ code: "switch-no-poe", solution: p.solution, ref: p.switch,
       msg: `${p.model} doesn't power PoE — ${p.needsInjector} PoE device${p.needsInjector > 1 ? "s" : ""} on it need${p.needsInjector > 1 ? "" : "s"} an injector or local power supply` });
   }
+  /* -- rack space: the elevation's U count against the rack's size -- */
+  out.racks = catalog?.devices ? rackPlans(job, ix, catalog) : [];
+  for (const r of out.racks) {
+    if (r.over) out.notes.push({ code: "rack-full", solution: r.solution, ref: r.rack,
+      msg: `${r.name}: ${r.used}U of gear, shelves, vents and patch panels in a ${r.size}U rack — ${r.over}U over; a bigger rack or a second one` });
+    if (r.unknown.length) out.notes.push({ code: "rack-unknown-u", solution: r.solution, ref: r.rack,
+      msg: `${r.name}: rack height unknown for ${r.unknown.join(", ")} — drawn as 1U on the elevation; confirm` });
+  }
+
   /* -- rack outlets: every box needs one on the WattBox unless PoE powers it -- */
   out.power = catalog?.devices ? powerPlan(job, ix, catalog, out.network) : [];
   for (const p of out.power) {
@@ -2725,6 +2735,12 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       out.notes.push({ code: "power-short", solution: p.solution, msg: `Rack power: ${p.need} outlets needed, ${p.supply} on the power conditioner — ${p.short} short; step up to ${pick}` });
     else if (p.tight)
       out.notes.push({ code: "power-tight", solution: p.solution, msg: `Rack power: ${p.need} of ${p.supply} outlets used — under ${p.spare} spare for the ISP modem, router and add-ons` });
+    if (p.typicalW > p.circuitW)
+      out.notes.push({ code: "power-circuit", solution: p.solution,
+        msg: `Rack power: ~${p.typicalW} W typical draw is over ${p.circuits > 1 ? `${p.circuits} × ${p.circuitA}A circuits'` : `the ${p.circuitA}A circuit's`} ${p.circuitW} W continuous — split the amps onto a second circuit + WattBox, or a WB-820 on a 20A circuit` });
+    else if (p.maxW > p.circuitW)
+      out.notes.push({ code: "power-peak", solution: p.solution,
+        msg: `Rack power: ~${p.typicalW} W typical, up to ${p.maxW} W at full output — over ${p.circuits > 1 ? `${p.circuits} × ${p.circuitA}A circuits'` : `the ${p.circuitA}A circuit's`} ${p.circuitW} W continuous at peak; give the amps a dedicated 20A circuit` });
   }
   return out;
 }

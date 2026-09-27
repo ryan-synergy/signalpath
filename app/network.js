@@ -122,8 +122,8 @@ export function networkPlan(job, ix, catalog) {
           const zid = host ? null : ix.endpointZone[comp.serves];
           const z = zid ? ix.zonesById[zid] : null;
           const model = catOf(id)?.model;
-          what = `${adapterName(comp)}${model ? ` (${model})` : ""}`;
-          where = host ? "Rack" : z ? `${z.name} — TV location` : "(zone removed)";
+          what = model || adapterName(comp);
+          where = host ? `Rack · ${host.model || comp.serves}` : z ? `${z.name} — TV location` : "(zone removed)";
           label = `${adapterTag(comp)} ${host ? host.model || comp.serves : z?.name || ""}`.trim();
           rank = host ? 1 : 2; zi = zid ? zoneIx.get(zid) ?? 999 : -1;
         } else if (loc) {

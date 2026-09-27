@@ -453,8 +453,8 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
   const parseOk = svg => !new DOMParser().parseFromString(svg, "image/svg+xml").querySelector("parsererror");
 
   t("pages: default flags = channel map + equipment + network on, wire schedule + comparison opt-in",
-    JSON.stringify(pageFlags(fixtures.residence)) === JSON.stringify({ channelMap: true, equipment: true, wireSchedule: false, bomCompare: false, network: true }) &&
-    sheetCount(fixtures.residence) === 4);
+    JSON.stringify(pageFlags(fixtures.residence)) === JSON.stringify({ channelMap: true, equipment: true, wireSchedule: false, bomCompare: false, network: true, labels: false, elevation: true }) &&
+    sheetCount(fixtures.residence) === 5);
 
   const cm = renderChannelMap(job, ix, { sheetLabel: "Sheet 2 of 4" });
   t("channel map: valid SVG, no leaks", parseOk(cm) && !/NaN|undefined/.test(cm));
@@ -496,9 +496,9 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
   withWs.job.pages = { wireSchedule: true };
   const pages = renderExtraPages(loadJob(withWs).job, loadJob(withWs).ix, a, {});
   t("packet: flags drive page list + sheet numbering",
-    pages.length === 4 && pages[2].title === "Wire Schedule" && pages[3].svg.includes("Sheet 5 of 5") && sheetCount(withWs) === 5);
+    pages.length === 5 && pages[2].title === "Wire Schedule" && pages[4].svg.includes("Sheet 6 of 6") && sheetCount(withWs) === 6);
   const noPages = structuredClone(fixtures.residence);
-  noPages.job.pages = { channelMap: false, equipment: false, network: false };
+  noPages.job.pages = { channelMap: false, equipment: false, network: false, elevation: false };
   t("packet: all pages off → schematic only, sheet 1 of 1",
     renderExtraPages(loadJob(noPages).job, loadJob(noPages).ix, a, {}).length === 0 && sheetCount(noPages) === 1);
 }
@@ -1128,7 +1128,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
     raw.job.pages = { bomCompare: true };
     const n2 = sheetCount(raw);
     const single = structuredClone(raw); single.solutions = [single.solutions[0]];
-    return !f1.bomCompare && n2 === 5 && sheetCount(single) === 4;
+    return !f1.bomCompare && n2 === 6 && sheetCount(single) === 5;
   })());
 
   const { job, ix } = loadJob(raw);
@@ -1149,7 +1149,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
 
   const pages = renderExtraPages(raw, ix, a, { rawJob: raw });
   t("bom: renderExtraPages includes the comparison sheet when flagged",
-    pages.some(p => p.title === "Solution Comparison") && pages.length === 4);
+    pages.some(p => p.title === "Solution Comparison") && pages.length === 5);
 }
 
 /* ---------- catalog auto-link: saved jobs self-heal their catalogRefs ---------- */
@@ -2245,6 +2245,62 @@ for (const [name, raw] of Object.entries(fixtures)) {
     wireRuns(J, ix).find(r => r.carries === "Network (TV)" && r.to.startsWith("Guest")).gray);
   const md = X.aiReviewMarkdown(job, 0, CAT);
   t("ai export: carries the port plan and the outlet budget", md.includes("## Network & power") && md.includes("### Rack power (outlets)"));
+}
+
+/* ---------- cable labels: one per wire, both ends (2026-09-27) ---------- */
+{
+  const P = await import("./pages.js");
+  const { job, ix } = loadJob(structuredClone(fixtures.residence));
+  const L = P.cableLabels(job, ix), runs = wireRuns(job, ix);
+  const wires = runs.reduce((n, r) => n + r.count, 0);
+  t("labels: one label per wire (speaker runs split per wire), two copies each", L.length === wires && L.every(l => l.copies === 2), `${L.length} vs ${wires}`);
+  t("labels: a 5.1 room's wires are named FL FR C SL SR, ids consecutive",
+    ["FL", "FR", "C", "SL", "SR"].every(c => L.some(l => l.line1 === `Family Room ${c}`)) &&
+    new Set(L.map(l => l.id)).size === L.length);
+  t("labels: a return names its field end, not the rack; subs read SUB",
+    L.find(l => l.id.startsWith("R-")).line1.startsWith("Master Bed") && L.some(l => l.line1 === "Family Room SUB"));
+  const csv = P.labelsCSV(job, ix);
+  t("labels: CSV has a header + one row per wire, formula-safe", csv.split("\n").length === L.length + 1 && csv.startsWith("Label,Line 1,Line 2"));
+  const lp = structuredClone(fixtures.residence); lp.job.pages = { labels: true };
+  const pg = renderExtraPages(loadJob(lp).job, loadJob(lp).ix, null, {}).filter(p => p.title.startsWith("Cable Labels"));
+  t("labels: opt-in page prints, valid SVG", pg.length >= 1 && pg.every(p => !new DOMParser().parseFromString(p.svg, "image/svg+xml").querySelector("parsererror") && !/NaN|undefined/.test(p.svg)));
+}
+
+/* ---------- rack elevation + circuit load (2026-09-27) ---------- */
+{
+  const CAT = await (await fetch("./catalog.json")).json();
+  const S = await import("./starters.js"), C = await import("./commands.js");
+  const blank = () => ({ generator: "SignalPath", schemaVersion: 1, job: { name: "r", client: { name: "c" }, revisions: [] },
+    house: { areas: [], zones: [] }, solutions: [{ id: "s", name: "A", platforms: [], racks: [{ id: "rack-main", name: "Rack", devices: [] }], localDevices: [], companions: [], connections: [], annotations: [] }] });
+  const job = C.planCommands(S.applyStarter(blank(), S.STARTERS.find(x => x.id === "dante-director"), CAT), 0,
+    [{ op: "add_zones", text: "kitchen stereo 55 matrix, family room 5.1 75 matrix, office stereo 43, theater 7.1 85 matrix" }], CAT).job;
+  const { job: J, ix } = loadJob(job);
+  const a = advise(J, ix, CAT);
+  const r = a.racks[0], kinds = r.items.map(i => i.kind);
+  t("rack: patch panels sized from the Cat6 home runs (24 per panel), at the top",
+    r.cat6 > 0 && r.items.filter(i => i.kind === "patch").length === Math.ceil(r.cat6 / 24) && kinds[0] === "patch");
+  t("rack: small boxes (Apple TVs, CBOX, encoders) ride shelves of up to 3",
+    r.items.filter(i => i.kind === "shelf").every(i => i.members.length <= 3 && i.u === 2) && r.items.some(i => i.kind === "shelf" && i.members.some(m => /CBOX/.test(m))));
+  const tiers = r.items.map(i => i.tier);
+  t("rack: build order — network above control above sources above amps, power last",
+    tiers.every((x, i) => !i || x >= tiers[i - 1]) && r.items[r.items.length - 1].type === "power");
+  t("rack: a 1U vent panel under each amp / receiver",
+    r.items.some((it, i) => it.kind === "vent" && r.items[i - 1]?.tier === 4));
+  t("rack: U used = sum of items, spare against 42U", r.used === r.items.reduce((n, i) => n + i.u, 0) && r.size === 42 && r.spare === 42 - r.used);
+  const small = structuredClone(job); small.job.rackUnits = 12;
+  { const L = loadJob(small), a2 = advise(L.job, L.ix, CAT);
+    t("rack: a 12U rack that can't hold the gear → rack-full note", a2.notes.some(n => n.code === "rack-full")); }
+  const lp = structuredClone(job);
+  const pg = renderExtraPages(J, ix, a, {}).find(p => p.title === "Rack Elevation");
+  t("rack elevation page: prints by default, valid SVG, no leaks", !!pg && !new DOMParser().parseFromString(pg.svg, "image/svg+xml").querySelector("parsererror") && !/NaN|undefined/.test(pg.svg));
+  const pw = a.power[0];
+  const swLoad = pw.loads.find(l => l.id === "sw");
+  t("power: a PoE switch draws its own electronics + its PoE gear — not its whole PoE budget",
+    swLoad.typicalW >= 30 && swLoad.typicalW < 200 && swLoad.maxW <= 450, `${swLoad.typicalW}/${swLoad.maxW}`);
+  t("power: load totals and the 15A circuit (1440 W continuous) are on the plan", pw.circuitW === 1440 && pw.typicalW > 0 && pw.maxW >= pw.typicalW);
+  const hot = structuredClone(CAT); hot.devices["audiocontrol-m6800d"].powerTypicalW = 1600;
+  { const a3 = advise(J, ix, hot);
+    t("power: typical load over the circuit → power-circuit note naming the 20A option", a3.notes.some(n => n.code === "power-circuit" && /20A/.test(n.msg))); }
 }
 
 document.getElementById("summary").innerHTML =

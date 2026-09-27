@@ -256,6 +256,7 @@
   <button id="exportJson">JSON</button>
   <button id="exportSvg">SVG</button>
   <button id="exportCsv" title="Takeoff CSV">CSV</button>
+  <button id="exportLabels" title="Cable labels CSV — one row per wire, for label-printer software">Labels</button>
   <button id="exportPq" title="PlanQueue proposal import (.md) — two files when the job has pre-wire-only rooms">PlanQueue</button>
   <button id="exportAi" title="Markdown for an AI to review: rooms, feeds, rack usage, open items, wire list, quote lines + the full job">AI .md</button>
   <button id="printBtn" title="Print packet / save as PDF">Print</button>
@@ -319,7 +320,8 @@
 import { loadJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock } from "./app/engine.js";
 import { importAny, mergeHouse, drawFromWalk, decodeHandoff } from "./app/importers.js";
 import { planQueueFiles, aiReviewMarkdown } from "./app/exports.js";
-import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV } from "./app/pages.js";
+import { RACK_SIZES, DEFAULT_RACK_U } from "./app/rack.js";
+import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV, labelsCSV } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
 import { STARTERS, applyStarter } from "./app/starters.js";
 import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/commands.js";
@@ -744,6 +746,7 @@ $("#exportPq").onclick = () => {
   toast(files.length > 1 ? "2 PlanQueue files: technology-systems + technology-prewire (the pre-wire-only rooms)" : "PlanQueue file saved");
 };
 $("#exportAi").onclick = () => download(`${fileBase()} — AI review.md`, aiReviewMarkdown(S.job, S.sol, SETTINGS.catalog), "text/markdown");
+$("#exportLabels").onclick = () => { const { job, ix } = loadJob(effectiveJob(S.job, S.sol)); download(`${fileBase()} — cable labels.csv`, labelsCSV(job, ix, { solution: S.sol }), "text/csv"); };
 $("#exportCsv").onclick = () => { const { job, ix } = loadJob(effectiveJob(S.job, S.sol)); download(`${fileBase()} — takeoff.csv`, takeoffCSV(job, ix, { solution: S.sol }), "text/csv"); };
 
 /* ---- Field Kit TOOLS switcher (hub manifest, cached; self marked) ---- */
@@ -1419,6 +1422,7 @@ function jobHTML() {
       ${field("Address", `<input class="jaddr" value="${esc(J.client?.address || "")}">`)}
       ${field("Drawn by", `<input class="jdrawn" value="${esc(J.drawnBy || "")}">`)}
       ${field("Group zones", sel("jgroup", ["type", "type-outdoor", "order"], J.zoneGrouping || "type", ZONE_GROUPING_NAME))}
+      ${field("Rack size", sel("jrack", RACK_SIZES.map(String), String(J.rackUnits || DEFAULT_RACK_U), Object.fromEntries(RACK_SIZES.map(n => [String(n), `${n}U`]))))}
     </div></div>
     <div class="sect">SOLUTION</div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
@@ -1432,7 +1436,7 @@ function jobHTML() {
     <button class="addbtn" id="addConn">＋ Add connection</button>
     <div class="sect">PACKET PAGES <span class="mini">sheet 1 always prints</span></div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
-      ${["channelMap:Channel Map", "equipment:Equipment & Takeoff", "wireSchedule:Wire Schedule", "network:Network & Power",
+      ${["channelMap:Channel Map", "equipment:Equipment & Takeoff", "wireSchedule:Wire Schedule", "elevation:Rack Elevation", "network:Network & Power", "labels:Cable Labels",
          ...(S.job.solutions.length > 1 ? ["bomCompare:Solution Comparison"] : [])].map(kv => {
         const [k, label] = kv.split(":");
         return `<div class="f"><input type="checkbox" class="pgflag" data-pg="${k}" ${pageFlags(S.job)[k] ? "checked" : ""}> <span>${label}</span></div>`;
@@ -1904,6 +1908,7 @@ function wirePanel(body) {
   on(".jclient", el => { S.job.job.client.name = el.value; });
   on(".jaddr", el => { S.job.job.client.address = el.value; });
   on(".jdrawn", el => { S.job.job.drawnBy = el.value; });
+  on(".jrack", el => { if (+el.value === DEFAULT_RACK_U) delete S.job.job.rackUnits; else S.job.job.rackUnits = +el.value; });
   on(".jgroup", el => { if (el.value === "type") delete S.job.job.zoneGrouping; else S.job.job.zoneGrouping = el.value; });
   on(".solname", el => { S.job.solutions[S.sol].name = el.value; });
   on(".solplat", el => { S.job.solutions[S.sol].platforms = el.value ? [el.value] : []; });

@@ -25,9 +25,10 @@
         "anyInputAnyZone"
       ],
       "verified": true,
-      "notes": "Digital ins are PCM-only (bitstream mutes) — pair sources with a 2ch downmix. No HDMI/eARC. AUDIT 2026-09-27: the 2 stereo line outs are hard-wired passthroughs of analog inputs 6 and 7 (live even in standby), not matrix outputs; the optical out repeats the selected digital input. Anthem's web spec omits the 2 coax inputs — the manual (§3.8) confirms 2 coax + 2 optical.",
+      "notes": "Digital ins are PCM-only (bitstream mutes) — pair sources with a 2ch downmix. No HDMI/eARC. AUDIT 2026-09-27: the 2 stereo line outs are hard-wired passthroughs of analog inputs 6 and 7 (live even in standby), not matrix outputs; the optical out repeats the selected digital input. Anthem's web spec omits the 2 coax inputs — the manual (§3.8) confirms 2 coax + 2 optical. POWER/RU 2026-09-27: 2U (rack ears fitted); Anthem publishes no power draw ('--') — anthemav.com + MDX manual 2025-12",
       "partNo": "MDX-16",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "rackUnits": 2
     },
     "anthem-mdx-8": {
       "brand": "Anthem",
@@ -46,9 +47,10 @@
         "pcmOnlyDigital"
       ],
       "verified": true,
-      "notes": "No coax, no line outs, no digital out.",
+      "notes": "No coax, no line outs, no digital out. POWER/RU 2026-09-27: 2U (rack ears fitted); no power draw published — anthemav.com",
       "partNo": "MDX-8",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "rackUnits": 2
     },
     "anthem-mrx-540-8k": {
       "brand": "Anthem",
@@ -72,9 +74,11 @@
         "eARC"
       ],
       "verified": true,
-      "notes": "HDMI out 1 = eARC. AUDIT 2026-09-27: added 1 optical out + 1 line out; pre-outs 7.2. Anthem lists NO Zone 2 on the 540 (Zone 2 HDMI + zone-2 amp reassignment are 740/1140 only) — confirm before promising a second zone.",
+      "notes": "HDMI out 1 = eARC. AUDIT 2026-09-27: added 1 optical out + 1 line out; pre-outs 7.2. Anthem lists NO Zone 2 on the 540 (Zone 2 HDMI + zone-2 amp reassignment are 740/1140 only) — confirm before promising a second zone. POWER/RU 2026-09-27: Typical Load 365W (no max published), 4U with the optional rack kit — Anthem MRX Gen4 8K spec sheet",
       "partNo": "MRX 540 8K",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "powerTypicalW": 365,
+      "rackUnits": 4
     },
     "anthem-mrx-740-8k": {
       "brand": "Anthem",
@@ -98,9 +102,11 @@
         "eARC"
       ],
       "verified": true,
-      "notes": "Zone-2 HDMI or amp-reassign. AUDIT 2026-09-27: added 1 optical out + 1 line out; pre-outs 11.2; third HDMI out is Zone-2 HDMI. Anthem's web spec lists the 740's two sub outs as PARALLEL (the 540/1140 are independent) — don't plan independent subs on a 740.",
+      "notes": "Zone-2 HDMI or amp-reassign. AUDIT 2026-09-27: added 1 optical out + 1 line out; pre-outs 11.2; third HDMI out is Zone-2 HDMI. Anthem's web spec lists the 740's two sub outs as PARALLEL (the 540/1140 are independent) — don't plan independent subs on a 740. POWER/RU 2026-09-27: Typical Load 485W, 4U with rack kit — Anthem spec sheet",
       "partNo": "MRX 740 8K",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "powerTypicalW": 485,
+      "rackUnits": 4
     },
     "anthem-mrx-1140-8k": {
       "brand": "Anthem",
@@ -124,9 +130,11 @@
         "eARC"
       ],
       "verified": true,
-      "notes": "AUDIT 2026-09-27: added 1 optical out + 1 line out; 15.2 processing with 2 independent subs (web page's '15.4 pre-outs' conflicts — treat 15.2 as right).",
+      "notes": "AUDIT 2026-09-27: added 1 optical out + 1 line out; 15.2 processing with 2 independent subs (web page's '15.4 pre-outs' conflicts — treat 15.2 as right). POWER/RU 2026-09-27: Typical Load 570W, 4U with rack kit — Anthem spec sheet",
       "partNo": "MRX 1140 8K",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "powerTypicalW": 570,
+      "rackUnits": 4
     },
     "avpro-ac-avdm-v3": {
       "brand": "AVPro Edge",
@@ -146,8 +154,11 @@
         "arcExtract"
       ],
       "verified": true,
-      "notes": "Inline HDMI de-embedder; Atmos/DTS-HD → LPCM 2.0. The no-video-distribution bridge.",
-      "partNo": "AC-AVDM-V3"
+      "notes": "Inline HDMI de-embedder; Atmos/DTS-HD → LPCM 2.0. The no-video-distribution bridge. POWER/RU 2026-09-27: 6W max, desktop box (shelf) — avproglobal.com product page",
+      "partNo": "AC-AVDM-V3",
+      "powerMaxW": 6,
+      "rackUnits": null,
+      "desktop": true
     },
     "avpro-mxnet-1g-avdm-ev2": {
       "brand": "AVPro Edge",
@@ -189,8 +200,10 @@
         "poe"
       ],
       "verified": true,
-      "notes": "TV audio → Dante/AES67: eARC + Toslink + coax inputs (auto-switch on signal), 2 Dante channels out on 1 RJ45 (PoE 802.3af or USB-C 5V). The eARC Dante encoder (ACP-DANTE-ETV) is listed discontinued; AVPro doesn't name the AXIS2 its successor. AUDIT 2026-09-27: added optical + coax inputs. AUDIT 2026-09-27: manual — the TV MUST be set to stereo PCM output ('loud noises will ensue' with bitstream). Unicast: each channel to 2 receivers; multicast: up to 8 devices.",
-      "partNo": "ACP-AXIS2"
+      "notes": "TV audio → Dante/AES67: eARC + Toslink + coax inputs (auto-switch on signal), 2 Dante channels out on 1 RJ45 (PoE 802.3af or USB-C 5V). The eARC Dante encoder (ACP-DANTE-ETV) is listed discontinued; AVPro doesn't name the AXIS2 its successor. AUDIT 2026-09-27: added optical + coax inputs. AUDIT 2026-09-27: manual — the TV MUST be set to stereo PCM output ('loud noises will ensue' with bitstream). Unicast: each channel to 2 receivers; multicast: up to 8 devices. POWER/RU 2026-09-27: ~2W avg, PoE af or 5V USB-C — avproglobal.com product page",
+      "partNo": "ACP-AXIS2",
+      "powerTypicalW": 2,
+      "desktop": true
     },
     "avpro-ac-mx-88": {
       "brand": "AVPro Edge",
@@ -208,8 +221,10 @@
         "audioMatrix"
       ],
       "verified": true,
-      "notes": "8x HDMI in/out (no HDBaseT outs — 'HDBaseT compatibility mode' only). AUDIO 1–8 on the rear panel: each block = 1 Toslink/SPDIF (up to 5.1 bitstream) + 1 balanced 5-pin 2ch. NO DOWNMIX (manual pp.42–43: 'this unit does NOT down mix … see AC-AXION-4') — the balanced outs only play if the source sends 2ch PCM; set Apple TV/cable boxes to stereo for zones fed this way, or use the Toslink. Extraction modes bind-to-input (default) / bind-to-output / independent matrix. AUDIT 2026-09-27: optical 4 → 8, confirmed from the manual's rear-panel drawing (p.6); downmix flag removed.",
-      "partNo": "AC-MX-88"
+      "notes": "8x HDMI in/out (no HDBaseT outs — 'HDBaseT compatibility mode' only). AUDIO 1–8 on the rear panel: each block = 1 Toslink/SPDIF (up to 5.1 bitstream) + 1 balanced 5-pin 2ch. NO DOWNMIX (manual pp.42–43: 'this unit does NOT down mix … see AC-AXION-4') — the balanced outs only play if the source sends 2ch PCM; set Apple TV/cable boxes to stereo for zones fed this way, or use the Toslink. Extraction modes bind-to-input (default) / bind-to-output / independent matrix. AUDIT 2026-09-27: optical 4 → 8, confirmed from the manual's rear-panel drawing (p.6); downmix flag removed. POWER/RU 2026-09-27: 30W max, 1U, 12V/5A brick — avproglobal.com product page",
+      "partNo": "AC-MX-88",
+      "powerMaxW": 30,
+      "rackUnits": 1
     },
     "avpro-mxnet-sw12": {
       "brand": "AVPro Edge",
@@ -225,10 +240,12 @@
         "poe"
       ],
       "verified": true,
-      "notes": "12 ports are NOT 12 endpoint ports: 8x GbE PoE+ endpoint + 4x 10G SFP+ uplink/aggregation. SKU transitioning to AC-MXNET-SW8P — identical hardware, renamed to match the true 8-endpoint-port count. AUDIT 2026-09-27: PoE budget 125W (AVPro page + datasheet — the datasheet still carries an editor's note 'change 370W to 125W'). Plus 1 console port.",
+      "notes": "12 ports are NOT 12 endpoint ports: 8x GbE PoE+ endpoint + 4x 10G SFP+ uplink/aggregation. SKU transitioning to AC-MXNET-SW8P — identical hardware, renamed to match the true 8-endpoint-port count. AUDIT 2026-09-27: PoE budget 125W (AVPro page + datasheet — the datasheet still carries an editor's note 'change 370W to 125W'). Plus 1 console port. POWER/RU 2026-09-27: <150W incl. 125W PoE, 1U — avproglobal.com product page (now SKU AC-MXNET-SW8P)",
       "poeBudgetW": 125,
       "gen": "1g",
-      "partNo": "AC-MXNET-SW12"
+      "partNo": "AC-MXNET-SW12",
+      "powerMaxW": 150,
+      "rackUnits": 1
     },
     "avpro-mxnet-cbox-ha": {
       "brand": "AVPro Edge",
@@ -240,8 +257,11 @@
         "mxnet"
       ],
       "verified": true,
-      "notes": "MXNet control box, high-availability: 8 RJ45 LAN (one is the 802.3af PoE power port), 5-pin RS-232 (system control), RJ45 RS-232 HA heartbeat, USB-C service, optional 12V DC. HA units run in MATCHED PAIRS and don't mix with older CBOX models. TAA version is its own SKU (AC-MXNET-CBOX-HA-TAA). 10G-CBOX discontinued. AUDIT 2026-09-27: verified from the AVPro datasheet (was '6 LAN ports'). AUDIT 2026-09-27: CBOX-HA runs ONE discrete mode — 1G, USP, 10G or Dante ('only devices of that type are supported'): a 1G + 10G house needs one per platform, plus one for Dante.",
-      "partNo": "AC-MXNET-CBOX-HA"
+      "notes": "MXNet control box, high-availability: 8 RJ45 LAN (one is the 802.3af PoE power port), 5-pin RS-232 (system control), RJ45 RS-232 HA heartbeat, USB-C service, optional 12V DC. HA units run in MATCHED PAIRS and don't mix with older CBOX models. TAA version is its own SKU (AC-MXNET-CBOX-HA-TAA). 10G-CBOX discontinued. AUDIT 2026-09-27: verified from the AVPro datasheet (was '6 LAN ports'). AUDIT 2026-09-27: CBOX-HA runs ONE discrete mode — 1G, USP, 10G or Dante ('only devices of that type are supported'): a 1G + 10G house needs one per platform, plus one for Dante. POWER/RU 2026-09-27: 4.5W max, PoE (af) or 12V brick, small box (AC-MXNET-1G-R15 rack kit) — avproglobal.com product page",
+      "partNo": "AC-MXNET-CBOX-HA",
+      "powerMaxW": 4.5,
+      "rackUnits": null,
+      "desktop": true
     },
     "ubiquiti-udm-se": {
       "brand": "Ubiquiti",
@@ -258,8 +278,10 @@
         "protectNvr"
       ],
       "verified": true,
-      "notes": "AUDIT 2026-09-27: 2 x 10G SFP+ (one WAN, one LAN) + 1 x 2.5G RJ45 WAN + 8 x 1G LAN.",
-      "partNo": "UDM-SE"
+      "notes": "AUDIT 2026-09-27: 2 x 10G SFP+ (one WAN, one LAN) + 1 x 2.5G RJ45 WAN + 8 x 1G LAN. POWER/RU 2026-09-27: 50W excl. PoE, 180W PoE, 1U — techspecs.ui.com",
+      "partNo": "UDM-SE",
+      "powerNoPoeW": 50,
+      "rackUnits": 1
     },
     "ubiquiti-usw-pro-24-poe": {
       "brand": "Ubiquiti",
@@ -275,7 +297,11 @@
         "igmpSnooping"
       ],
       "verified": true,
-      "partNo": "USW-Pro-24-PoE"
+      "partNo": "USW-Pro-24-PoE",
+      "powerMaxW": 450,
+      "powerNoPoeW": 50,
+      "rackUnits": 1,
+      "notes": " POWER/RU 2026-09-27: 450W incl. PoE / 50W excl., 1U — techspecs.ui.com"
     },
     "ubiquiti-usw-pro-max-24-poe": {
       "brand": "Ubiquiti",
@@ -292,8 +318,11 @@
         "igmpSnooping"
       ],
       "verified": true,
-      "notes": "MXNet on UniFi = viable, integrator-configured, not AVPro-qualified (~9W/endpoint PoE). AUDIT 2026-09-27: 24 RJ45 TOTAL = 16 x 1G + 8 x 2.5G (was double-counted as 24 + 8).",
-      "partNo": "USW-Pro-Max-24-PoE"
+      "notes": "MXNet on UniFi = viable, integrator-configured, not AVPro-qualified (~9W/endpoint PoE). AUDIT 2026-09-27: 24 RJ45 TOTAL = 16 x 1G + 8 x 2.5G (was double-counted as 24 + 8). POWER/RU 2026-09-27: 450W incl. PoE / 50W excl., 1U — techspecs.ui.com",
+      "partNo": "USW-Pro-Max-24-PoE",
+      "powerMaxW": 450,
+      "powerNoPoeW": 50,
+      "rackUnits": 1
     },
     "ubiquiti-usw-pro-max-48-poe": {
       "brand": "Ubiquiti",
@@ -310,8 +339,11 @@
         "igmpSnooping"
       ],
       "verified": true,
-      "notes": "AUDIT 2026-09-27: 48 RJ45 TOTAL = 32 x 1G + 16 x 2.5G (was double-counted as 48 + 16).",
-      "partNo": "USW-Pro-Max-48-PoE"
+      "notes": "AUDIT 2026-09-27: 48 RJ45 TOTAL = 32 x 1G + 16 x 2.5G (was double-counted as 48 + 16). POWER/RU 2026-09-27: 820W incl. PoE / 100W excl., 1U — techspecs.ui.com",
+      "partNo": "USW-Pro-Max-48-PoE",
+      "powerMaxW": 820,
+      "powerNoPoeW": 100,
+      "rackUnits": 1
     },
     "audiocontrol-m4800d": {
       "brand": "AudioControl",
@@ -333,8 +365,12 @@
         "ipControl"
       ],
       "verified": true,
-      "notes": "No RS-232. 1 local analog per zone. AUDIT 2026-09-27: Dante 16x16 on a Broadway chipset (manual); 8 stereo VIRTUAL Dante inputs per amp; more than 8 non-AudioControl Dante sources needs a controller (the Dante-mode CBOX).",
-      "partNo": "ACP-DMZ-M4800D"
+      "notes": "No RS-232. 1 local analog per zone. AUDIT 2026-09-27: Dante 16x16 on a Broadway chipset (manual); 8 stereo VIRTUAL Dante inputs per amp; more than 8 non-AudioControl Dante sources needs a controller (the Dante-mode CBOX). POWER/RU 2026-09-27: 1800W full power (20A-service limited), 186W at 1/8 power, 41W idle, 1U — AudioControl spec sheet",
+      "partNo": "ACP-DMZ-M4800D",
+      "powerMaxW": 1800,
+      "powerTypicalW": 186,
+      "powerIdleW": 41,
+      "rackUnits": 1
     },
     "audiocontrol-m6800d": {
       "brand": "AudioControl",
@@ -357,8 +393,12 @@
         "ipControl"
       ],
       "verified": true,
-      "notes": "MANUAL-CONFIRMED (M6400/M6800 user manual): analog inputs are per-zone stereo RCA (8 zones = 8 stereo ins) with hard-wired loop outs; the 2 bus inputs are DIGITAL (coax/Toslink selectable) — analog count corrected from 10 to 8. AUDIT 2026-09-27: Dante 16x16 CONFIRMED in the manual (tx no longer presumed); added 2 coax S/PDIF outs. 8 stereo VIRTUAL Dante inputs; internal 10x10 stereo matrix. Surround from an AXIS16 works with static routing: one zone per pair (FL/FR, SL/SR, SBL/SBR), center and LFE each on their OWN zone (mono/bridged, LFE low-pass) — never pair C with LFE (DSP/crossover are per zone).",
-      "partNo": "ACP-DMZ-M6800D"
+      "notes": "MANUAL-CONFIRMED (M6400/M6800 user manual): analog inputs are per-zone stereo RCA (8 zones = 8 stereo ins) with hard-wired loop outs; the 2 bus inputs are DIGITAL (coax/Toslink selectable) — analog count corrected from 10 to 8. AUDIT 2026-09-27: Dante 16x16 CONFIRMED in the manual (tx no longer presumed); added 2 coax S/PDIF outs. 8 stereo VIRTUAL Dante inputs; internal 10x10 stereo matrix. Surround from an AXIS16 works with static routing: one zone per pair (FL/FR, SL/SR, SBL/SBR), center and LFE each on their OWN zone (mono/bridged, LFE low-pass) — never pair C with LFE (DSP/crossover are per zone). POWER/RU 2026-09-27: 2400W full power (20A-service limited), 330W at 1/8, 53W idle, 2U; AudioControl recommends its own 15A circuit per unit — M6800D manual",
+      "partNo": "ACP-DMZ-M6800D",
+      "powerMaxW": 2400,
+      "powerTypicalW": 330,
+      "powerIdleW": 53,
+      "rackUnits": 2
     },
     "audiocontrol-d2800": {
       "brand": "AudioControl",
@@ -377,9 +417,13 @@
         "controlLanOnly"
       ],
       "verified": true,
-      "notes": "LAN is control/DSP ONLY — never give it a Dante edge. AUDIT 2026-09-27: added 1 stereo Bus-B loop out (manual rear panel; AVPro's web page claims 4 local + 1 bus loop outs — conflicts, verify on a unit). Bus A is one source selectable as RCA/coax/optical.",
+      "notes": "LAN is control/DSP ONLY — never give it a Dante edge. AUDIT 2026-09-27: added 1 stereo Bus-B loop out (manual rear panel; AVPro's web page claims 4 local + 1 bus loop outs — conflicts, verify on a unit). Bus A is one source selectable as RCA/coax/optical. POWER/RU 2026-09-27: 1800W full / 186W 1/8 / 41W idle, 1U — D2800 manual",
       "partNo": "ACP-DMZ-D2800",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "powerMaxW": 1800,
+      "powerTypicalW": 186,
+      "powerIdleW": 41,
+      "rackUnits": 1
     },
     "audiocontrol-d4600": {
       "brand": "AudioControl",
@@ -397,9 +441,13 @@
         "controlLanOnly"
       ],
       "verified": true,
-      "notes": "AUDIT 2026-09-27: added 9 stereo RCA loop outs (8 local hard-wired + 1 Bus A).",
+      "notes": "AUDIT 2026-09-27: added 9 stereo RCA loop outs (8 local hard-wired + 1 Bus A). POWER/RU 2026-09-27: 2400W full / 330W 1/8 / 53W idle, 2U — D4600 manual",
       "partNo": "ACP-DMZ-D4600",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "powerMaxW": 2400,
+      "powerTypicalW": 330,
+      "powerIdleW": 53,
+      "rackUnits": 2
     },
     "audiocontrol-cm2-750d": {
       "brand": "AudioControl",
@@ -421,9 +469,13 @@
         "seventyVolt"
       ],
       "verified": true,
-      "notes": "750W/ch @70V — the landscape workhorse. AUDIT 2026-09-27: inputs 16 → 2 stereo (4 mono channels, each on RCA or Phoenix; the web page's '8 balanced, 8 unbalanced' is copied from the CM4). Added 2 coax outs. Zones = 1 stereo (2 mono zones in CM firmware). Per channel: 70V 750W or Lo-Z 625W; 100V is BRIDGED only (1500W).",
+      "notes": "750W/ch @70V — the landscape workhorse. AUDIT 2026-09-27: inputs 16 → 2 stereo (4 mono channels, each on RCA or Phoenix; the web page's '8 balanced, 8 unbalanced' is copied from the CM4). Added 2 coax outs. Zones = 1 stereo (2 mono zones in CM firmware). Per channel: 70V 750W or Lo-Z 625W; 100V is BRIDGED only (1500W). POWER/RU 2026-09-27: 2250W full / 274W 1/8 / 37W idle, 2U — CM Series manual (CM2-750 column)",
       "partNo": "CM2-750D",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "powerMaxW": 2250,
+      "powerTypicalW": 274,
+      "powerIdleW": 37,
+      "rackUnits": 2
     },
     "audiocontrol-bijou-3100": {
       "brand": "AudioControl",
@@ -446,9 +498,13 @@
         "ipControl"
       ],
       "verified": true,
-      "notes": "Compact zone amp with eARC in — a TV-return path. Outputs: 1 sub + 1 stereo pair of assignable line/preamp outs (headphone/BT-adapter downmix tap). AUDIT 2026-09-27: line outs are ONE stereo pair (assignable as surrounds/heights/headphone downmix), not 2.",
+      "notes": "Compact zone amp with eARC in — a TV-return path. Outputs: 1 sub + 1 stereo pair of assignable line/preamp outs (headphone/BT-adapter downmix tap). AUDIT 2026-09-27: line outs are ONE stereo pair (assignable as surrounds/heights/headphone downmix), not 2. POWER/RU 2026-09-27: 700W max / 125W 1/8, half-width 1U (shelf/tray) — Bijou 3100 data sheet",
       "partNo": "BIJOU 3100",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "powerMaxW": 700,
+      "powerTypicalW": 125,
+      "rackUnits": 1,
+      "halfRack": true
     },
     "audiocontrol-acp-dante-e-poe": {
       "brand": "AudioControl",
@@ -467,8 +523,9 @@
         "ultimo"
       ],
       "verified": true,
-      "notes": "Legacy source → Dante on-ramp. AUDIT 2026-09-27: 1 stereo RCA pair (was 2); Toslink takes priority over analog — one source at a time. Ultimo-class: unicast each channel to 2 receivers, multicast to 8 — set multicast when 3+ amps subscribe.",
-      "partNo": "ACP-DANTE-E-POE"
+      "notes": "Legacy source → Dante on-ramp. AUDIT 2026-09-27: 1 stereo RCA pair (was 2); Toslink takes priority over analog — one source at a time. Ultimo-class: unicast each channel to 2 receivers, multicast to 8 — set multicast when 3+ amps subscribe. POWER/RU 2026-09-27: PoE or 5V 1A USB-C; no wattage published — avproglobal.com product page",
+      "partNo": "ACP-DANTE-E-POE",
+      "desktop": true
     },
     "savant-avb-output-module": {
       "brand": "Savant",
@@ -522,9 +579,12 @@
         "anyInputAnyZone"
       ],
       "verified": true,
-      "notes": "1U, 60W/ch @4/8Ω Lo-Z (500W total) or 125W/ch Hi-Z (70V/100V). 8 balanced Euroblock + 8 unbalanced RCA analog inputs (paired 1:1 with channels), full-matrix DSP via PowerZone Control web app. No Dante — use 1008D for that. AUDIT 2026-09-27: zones counted as STEREO zones: 4 (8/4 channels). Analog = 4 stereo sources (8/4 RCA mono + 8/4 Euroblock mono — whether RCA and Euroblock are independent sources is unconfirmed; counted conservatively). Added S/PDIF in + out (connector type unconfirmed, logged as coax). AUDIT 2026-09-27: Hi-Z is 4 x 125W (channels pair up); the 1U line has NO Lo-Z bridge mode.",
+      "notes": "1U, 60W/ch @4/8Ω Lo-Z (500W total) or 125W/ch Hi-Z (70V/100V). 8 balanced Euroblock + 8 unbalanced RCA analog inputs (paired 1:1 with channels), full-matrix DSP via PowerZone Control web app. No Dante — use 1008D for that. AUDIT 2026-09-27: zones counted as STEREO zones: 4 (8/4 channels). Analog = 4 stereo sources (8/4 RCA mono + 8/4 Euroblock mono — whether RCA and Euroblock are independent sources is unconfirmed; counted conservatively). Added S/PDIF in + out (connector type unconfirmed, logged as coax). AUDIT 2026-09-27: Hi-Z is 4 x 125W (channels pair up); the 1U line has NO Lo-Z bridge mode. POWER/RU 2026-09-27: 'Power Consumption' 150W (unlabeled), 97W at 1/8 (4Ω), 1U — Blaze 1U data sheet",
       "partNo": "PZC 508",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "powerMaxW": 150,
+      "powerTypicalW": 97,
+      "rackUnits": 1
     },
     "sonance-blaze-pzc-1008d": {
       "brand": "Sonance",
@@ -547,9 +607,12 @@
         "anyInputAnyZone"
       ],
       "verified": true,
-      "notes": "1U, 125W/ch Lo-Z (1000W total) or 250W/ch Hi-Z 70V/100V. 8 balanced Euroblock + 8 unbalanced RCA analog inputs. GOTCHA: Dante is a fixed Ultimo 4x4 chip regardless of amp channel count — an 8-channel amp only gets 4 Dante channels in/out, not 8. Full-matrix DSP via PowerZone Control web app. AUDIT 2026-09-27: zones counted as STEREO zones: 4 (8/4 channels). Analog = 4 stereo sources (8/4 RCA mono + 8/4 Euroblock mono — whether RCA and Euroblock are independent sources is unconfirmed; counted conservatively). Added S/PDIF in + out (connector type unconfirmed, logged as coax). AUDIT 2026-09-27: Hi-Z is 4 x 250W (4 outputs), not per channel.",
+      "notes": "1U, 125W/ch Lo-Z (1000W total) or 250W/ch Hi-Z 70V/100V. 8 balanced Euroblock + 8 unbalanced RCA analog inputs. GOTCHA: Dante is a fixed Ultimo 4x4 chip regardless of amp channel count — an 8-channel amp only gets 4 Dante channels in/out, not 8. Full-matrix DSP via PowerZone Control web app. AUDIT 2026-09-27: zones counted as STEREO zones: 4 (8/4 channels). Analog = 4 stereo sources (8/4 RCA mono + 8/4 Euroblock mono — whether RCA and Euroblock are independent sources is unconfirmed; counted conservatively). Added S/PDIF in + out (connector type unconfirmed, logged as coax). AUDIT 2026-09-27: Hi-Z is 4 x 250W (4 outputs), not per channel. POWER/RU 2026-09-27: 'Power Consumption' 300W, 200W at 1/8 (4Ω), 1U — Blaze 1U data sheet",
       "partNo": "PZC 1008D",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "powerMaxW": 300,
+      "powerTypicalW": 200,
+      "rackUnits": 1
     },
     "sonance-blaze-pzc-2004d": {
       "brand": "Sonance",
@@ -572,9 +635,12 @@
         "anyInputAnyZone"
       ],
       "verified": true,
-      "notes": "2U full-rack, 500W/ch SE or 1000W/ch bridged (BTL), 1000W @70V/100V. Dante Ultimo 4x4 chip — matches the 4 amp channels exactly here (unlike the 1008D). AUDIT 2026-09-27: zones counted as STEREO zones: 2 (8/4 channels). Analog = 2 stereo sources (8/4 RCA mono + 8/4 Euroblock mono — whether RCA and Euroblock are independent sources is unconfirmed; counted conservatively). Added S/PDIF in + out (connector type unconfirmed, logged as coax). AUDIT 2026-09-27: 500W/ch is @4Ω (250W @8Ω); 70V/100V is 2 x 1000W BRIDGED, not per channel.",
+      "notes": "2U full-rack, 500W/ch SE or 1000W/ch bridged (BTL), 1000W @70V/100V. Dante Ultimo 4x4 chip — matches the 4 amp channels exactly here (unlike the 1008D). AUDIT 2026-09-27: zones counted as STEREO zones: 2 (8/4 channels). Analog = 2 stereo sources (8/4 RCA mono + 8/4 Euroblock mono — whether RCA and Euroblock are independent sources is unconfirmed; counted conservatively). Added S/PDIF in + out (connector type unconfirmed, logged as coax). AUDIT 2026-09-27: 500W/ch is @4Ω (250W @8Ω); 70V/100V is 2 x 1000W BRIDGED, not per channel. POWER/RU 2026-09-27: 'Power Consumption' 700W, 346W at 1/8 (4Ω), 2U — Blaze 2U data sheet rev K",
       "partNo": "PZC 2004D",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "powerMaxW": 700,
+      "powerTypicalW": 346,
+      "rackUnits": 2
     },
     "sonance-blaze-pzc-6008d": {
       "brand": "Sonance",
@@ -597,9 +663,12 @@
         "anyInputAnyZone"
       ],
       "verified": true,
-      "notes": "2U full-rack flagship, 750W/ch SE or 1500W/ch bridged (BTL), 1200W @70V/100V. Same Dante-4x4-on-8-channel gotcha as the 1008D. 6000W total system power — verify house electrical service before spec'ing multiples. AUDIT 2026-09-27: zones counted as STEREO zones: 4 (8/4 channels). Analog = 4 stereo sources (8/4 RCA mono + 8/4 Euroblock mono — whether RCA and Euroblock are independent sources is unconfirmed; counted conservatively). Added S/PDIF in + out (connector type unconfirmed, logged as coax). AUDIT 2026-09-27: 750W is @4Ω (400W @8Ω); Hi-Z is 4 x 1200W @70V / 4 x 1500W @100V.",
+      "notes": "2U full-rack flagship, 750W/ch SE or 1500W/ch bridged (BTL), 1200W @70V/100V. Same Dante-4x4-on-8-channel gotcha as the 1008D. 6000W total system power — verify house electrical service before spec'ing multiples. AUDIT 2026-09-27: zones counted as STEREO zones: 4 (8/4 channels). Analog = 4 stereo sources (8/4 RCA mono + 8/4 Euroblock mono — whether RCA and Euroblock are independent sources is unconfirmed; counted conservatively). Added S/PDIF in + out (connector type unconfirmed, logged as coax). AUDIT 2026-09-27: 750W is @4Ω (400W @8Ω); Hi-Z is 4 x 1200W @70V / 4 x 1500W @100V. POWER/RU 2026-09-27: 'Power Consumption' 1400W, 999W at 1/8 (4Ω), 2U — Blaze 2U data sheet rev K",
       "partNo": "PZC 6008D",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "powerMaxW": 1400,
+      "powerTypicalW": 999,
+      "rackUnits": 2
     },
     "sonance-dsp-2-150-mkiii": {
       "brand": "Sonance",
@@ -619,9 +688,14 @@
         "anyInputAnyZone"
       ],
       "verified": true,
-      "notes": "MANUAL-CONFIRMED (2023 DSP 2-150 MKIII manual + datasheet): factory Hybrid Input/Output Module = 1 stereo RCA analog in + loop out + 1 coax + 1 Toslink — USE ONLY ONE INPUT TYPE at a time (selectable, not simultaneous sources). 150W/ch @8Ω, 224W @4Ω, bridged 473W. SonARC v2 DSP. Half-width 1U. AUDIT 2026-09-27: zones = 1 stereo (manual: channels as stereo pairs); added 1 unbuffered stereo RCA loop out.",
+      "notes": "MANUAL-CONFIRMED (2023 DSP 2-150 MKIII manual + datasheet): factory Hybrid Input/Output Module = 1 stereo RCA analog in + loop out + 1 coax + 1 Toslink — USE ONLY ONE INPUT TYPE at a time (selectable, not simultaneous sources). 150W/ch @8Ω, 224W @4Ω, bridged 473W. SonARC v2 DSP. Half-width 1U. AUDIT 2026-09-27: zones = 1 stereo (manual: channels as stereo pairs); added 1 unbuffered stereo RCA loop out. POWER/RU 2026-09-27: 392W full / 74W 1/8 / 17W idle (4Ω, 120V), half-width 1U — DSP 2-150 MKIII manual",
       "partNo": "DSP 2-150 MKIII",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "powerMaxW": 392,
+      "powerTypicalW": 74,
+      "powerIdleW": 17,
+      "rackUnits": 1,
+      "halfRack": true
     },
     "sonance-dsp-8-130-mkiii": {
       "brand": "Sonance",
@@ -639,9 +713,13 @@
         "anyInputAnyZone"
       ],
       "verified": true,
-      "notes": "MANUAL-CONFIRMED (2023 DSP 8-130 MKIII manual): rear panel carries 4 stereo RCA analog input pairs STANDARD (1L-4L/1R-4R — all 8 channels fed as 4 stereo sources) + non-buffered loop outs. CORRECTS the distributor claim of shipping half-populated. Manual prose references coax/optical digital inputs but the rear-panel figure shows analog only — digital arrives via optional DIM/HIM modules, count unpublished. 130W/ch Class-D, stable to 2Ω, bridgeable. 1RU. AUDIT 2026-09-27: zones = 4 stereo (manual: channels as stereo pairs); added 4 unbuffered stereo RCA loop outs.",
+      "notes": "MANUAL-CONFIRMED (2023 DSP 8-130 MKIII manual): rear panel carries 4 stereo RCA analog input pairs STANDARD (1L-4L/1R-4R — all 8 channels fed as 4 stereo sources) + non-buffered loop outs. CORRECTS the distributor claim of shipping half-populated. Manual prose references coax/optical digital inputs but the rear-panel figure shows analog only — digital arrives via optional DIM/HIM modules, count unpublished. 130W/ch Class-D, stable to 2Ω, bridgeable. 1RU. AUDIT 2026-09-27: zones = 4 stereo (manual: channels as stereo pairs); added 4 unbuffered stereo RCA loop outs. POWER/RU 2026-09-27: 1650W full / 254W 1/8 / 80W idle (4Ω), 1U — DSP 8-130 MKIII manual",
       "partNo": "DSP 8-130 MKIII",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "powerMaxW": 1650,
+      "powerTypicalW": 254,
+      "powerIdleW": 80,
+      "rackUnits": 1
     },
     "sonance-dsp-2-750-mkiii": {
       "brand": "Sonance",
@@ -662,9 +740,13 @@
         "anyInputAnyZone"
       ],
       "verified": true,
-      "notes": "MANUAL-CONFIRMED (2023 DSP 2-750 MKIII manual, rear-panel diagram): analog stereo in + loop out + 1 coax + 1 Toslink — 'Use Only One Type Of Input Connection'. 750W/ch @4Ω or 70V (70V is default mode), bridgeable. The landscape/garden workhorse — pairs with Sonance Garden Series (8 sats + 1 sub per amp, expandable 16+2). AUDIT 2026-09-27: zones = 1 stereo (manual: channels as stereo pairs); added 1 unbuffered stereo RCA loop out. AUDIT 2026-09-27: 500W/ch @8Ω; 750W is @4Ω/70V; bridged 2000W.",
+      "notes": "MANUAL-CONFIRMED (2023 DSP 2-750 MKIII manual, rear-panel diagram): analog stereo in + loop out + 1 coax + 1 Toslink — 'Use Only One Type Of Input Connection'. 750W/ch @4Ω or 70V (70V is default mode), bridgeable. The landscape/garden workhorse — pairs with Sonance Garden Series (8 sats + 1 sub per amp, expandable 16+2). AUDIT 2026-09-27: zones = 1 stereo (manual: channels as stereo pairs); added 1 unbuffered stereo RCA loop out. AUDIT 2026-09-27: 500W/ch @8Ω; 750W is @4Ω/70V; bridged 2000W. POWER/RU 2026-09-27: 1850W full / 290W 1/8 / 37W idle (4Ω), 2U — DSP 2-750 MKIII manual",
       "partNo": "DSP 2-750 MKIII",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "powerMaxW": 1850,
+      "powerTypicalW": 290,
+      "powerIdleW": 37,
+      "rackUnits": 2
     },
     "audiocontrol-acp-dante-d-poe": {
       "brand": "AudioControl",
@@ -703,9 +785,12 @@
         "poe"
       ],
       "verified": true,
-      "notes": "Standard (non-downmixing) MXNet 1G Evolution II encoder. HDMI loop-out + balanced stereo analog de-embed (5-pin Phoenix) + Toslink. GOTCHA: Toslink is currently 'Future Audio Return Support Only' — eARC/ARC not active yet. This is a straight PCM de-embed, not a Dolby/DTS downmixer — use the AC-MXNET-1G-AVDM-EV2 (already in catalog) for Atmos/DTS-HD → 2ch. PoE 802.3af (15.4W). AUDIT 2026-09-27: added 1 unbalanced 3.5mm analog IN (embedded into the stream); network = 1 RJ45 PoE + 1 SFP. CONFLICT: the EV2 datasheet says the 5-pin out is 'downmixed to PCM 2ch' — possibly copied from the AVDM sheet; test on a unit before relying on either.",
+      "notes": "Standard (non-downmixing) MXNet 1G Evolution II encoder. HDMI loop-out + balanced stereo analog de-embed (5-pin Phoenix) + Toslink. GOTCHA: Toslink is currently 'Future Audio Return Support Only' — eARC/ARC not active yet. This is a straight PCM de-embed, not a Dolby/DTS downmixer — use the AC-MXNET-1G-AVDM-EV2 (already in catalog) for Atmos/DTS-HD → 2ch. PoE 802.3af (15.4W). AUDIT 2026-09-27: added 1 unbalanced 3.5mm analog IN (embedded into the stream); network = 1 RJ45 PoE + 1 SFP. CONFLICT: the EV2 datasheet says the 5-pin out is 'downmixed to PCM 2ch' — possibly copied from the AVDM sheet; test on a unit before relying on either. POWER/RU 2026-09-27: 9.7W max, ~7W typical, PoE af — avproglobal.com product page",
       "gen": "1g-ev2",
-      "partNo": "AC-MXNET-1G-EV2"
+      "partNo": "AC-MXNET-1G-EV2",
+      "powerMaxW": 9.7,
+      "powerTypicalW": 7,
+      "desktop": true
     },
     "avpro-mxnet-1g-dv2": {
       "brand": "AVPro Edge",
@@ -723,9 +808,11 @@
         "poe"
       ],
       "verified": true,
-      "notes": "Standard MXNet 1G Evolution II decoder. 1x HDMI out, balanced stereo analog de-embed, Toslink (same 'future ARC support only' caveat as the EV2 encoder — no active downmix/eARC today). PoE 802.3af (15.4W). AUDIT 2026-09-27: the decoder's Toslink is an INPUT (future audio return), not an output. Also 2 USB-A (KVM), 3 IR, RS-232; network = 1 RJ45 PoE + 1 SFP.",
+      "notes": "Standard MXNet 1G Evolution II decoder. 1x HDMI out, balanced stereo analog de-embed, Toslink (same 'future ARC support only' caveat as the EV2 encoder — no active downmix/eARC today). PoE 802.3af (15.4W). AUDIT 2026-09-27: the decoder's Toslink is an INPUT (future audio return), not an output. Also 2 USB-A (KVM), 3 IR, RS-232; network = 1 RJ45 PoE + 1 SFP. POWER/RU 2026-09-27: 6.8W max, PoE af — avproglobal.com product page",
       "gen": "1g-ev2",
-      "partNo": "AC-MXNET-1G-DV2"
+      "partNo": "AC-MXNET-1G-DV2",
+      "powerMaxW": 6.8,
+      "desktop": true
     },
     "avpro-mxnet-sw24": {
       "brand": "AVPro Edge",
@@ -742,9 +829,11 @@
         "poe"
       ],
       "verified": true,
-      "notes": "DISCONTINUED (AVPro Global) — replaced by AC-MXNET-SW24P (same 24x GbE PoE+ + 4x 10G SFP+). 370W PoE budget confirmed. Still fielded; for new designs spec the SW24P, or the SW24E economy variant (Layer 2.5, 4x 1G SFP stacking, also 370W). AUDIT 2026-09-27: also 4 x 1G SFP combo ports, OOB management + console + USB.",
+      "notes": "DISCONTINUED (AVPro Global) — replaced by AC-MXNET-SW24P (same 24x GbE PoE+ + 4x 10G SFP+). 370W PoE budget confirmed. Still fielded; for new designs spec the SW24P, or the SW24E economy variant (Layer 2.5, 4x 1G SFP stacking, also 370W). AUDIT 2026-09-27: also 4 x 1G SFP combo ports, OOB management + console + USB. POWER/RU 2026-09-27: <471W incl. 370W PoE, 1U — avproglobal.com product page",
       "gen": "1g",
-      "partNo": "AC-MXNET-SW24"
+      "partNo": "AC-MXNET-SW24",
+      "powerMaxW": 471,
+      "rackUnits": 1
     },
     "avpro-ac-mx-44": {
       "brand": "AVPro Edge",
@@ -762,8 +851,10 @@
         "audioMatrix"
       ],
       "verified": true,
-      "notes": "4x4, 18Gbps, dual audio de-embed per output: 4x Toslink (up to 7CH PCM/DD/DTS) + 4x balanced 5-pin analog (2CH PCM). Rear panel confirmed from AVPro cut sheet 2026-09-20: AUDIO 1-4 blocks, each TOS + L+/L-/gnd/R+/R-. Extracted audio has 3 modes: bind to input, bind to output, or independent matrix. Per-output audio delay up to 630ms. AUDIT 2026-09-27: no downmix (manual pp.40–41) — balanced outs need a 2ch PCM source; Toslink carries 5.1.",
-      "partNo": "AC-MX-44"
+      "notes": "4x4, 18Gbps, dual audio de-embed per output: 4x Toslink (up to 7CH PCM/DD/DTS) + 4x balanced 5-pin analog (2CH PCM). Rear panel confirmed from AVPro cut sheet 2026-09-20: AUDIO 1-4 blocks, each TOS + L+/L-/gnd/R+/R-. Extracted audio has 3 modes: bind to input, bind to output, or independent matrix. Per-output audio delay up to 630ms. AUDIT 2026-09-27: no downmix (manual pp.40–41) — balanced outs need a 2ch PCM source; Toslink carries 5.1. POWER/RU 2026-09-27: 38W max, 1U, 12V brick — avproglobal.com product page",
+      "partNo": "AC-MX-44",
+      "powerMaxW": 38,
+      "rackUnits": 1
     },
     "avpro-ac-mx-1616": {
       "brand": "AVPro Edge",
@@ -780,8 +871,10 @@
         "audioMatrix"
       ],
       "verified": true,
-      "notes": "CONFIRMED (Markertek AC-MX-1616 Gen 2 spec): 16x16 HDMI 18Gbps, 16x balanced analog de-embed (5-pin terminal, ships with 16 extraction cables), 3 extraction modes (bind input / bind output / independent matrix). NO Toslink/coax digital de-embed — the distributor 'digital coax outputs' blurb was wrong. AUDIT 2026-09-27: 16 balanced 5-pin analog outs, 2ch PCM only; no Toslink/coax/HDBaseT. SKU AC-MX1616-AUHD-GEN2.",
-      "partNo": "AC-MX1616-AUHD-GEN2"
+      "notes": "CONFIRMED (Markertek AC-MX-1616 Gen 2 spec): 16x16 HDMI 18Gbps, 16x balanced analog de-embed (5-pin terminal, ships with 16 extraction cables), 3 extraction modes (bind input / bind output / independent matrix). NO Toslink/coax digital de-embed — the distributor 'digital coax outputs' blurb was wrong. AUDIT 2026-09-27: 16 balanced 5-pin analog outs, 2ch PCM only; no Toslink/coax/HDBaseT. SKU AC-MX1616-AUHD-GEN2. POWER/RU 2026-09-27: 92W max, 1U, 48V brick (current AC-MX-1616 page; older AUHD-Gen2 unpublished) — avproglobal.com product page",
+      "partNo": "AC-MX1616-AUHD-GEN2",
+      "powerMaxW": 92,
+      "rackUnits": 1
     },
     "savant-pav-aim7c": {
       "brand": "Savant",
@@ -861,8 +954,10 @@
         "ipAudio"
       ],
       "verified": true,
-      "notes": "All-in-one amplified host: 4 amplified stereo zones @125W/ch (8 channels, 4-pin connectors) + 2 pre-amp zones (1 RCA + 1 Toslink out), 2 stereo RCA + 2 Toslink local inputs, built-in Savant Music 2.0 server (1 stream), Ecosystem/IP-Audio-Host licensing tier. AC powered (515W max) — no PoE. 2U. Also 6 IR, 2 RS-232, relay, GPIO. AUDIT 2026-09-27: verified from QRGs 009-1657-07 / 009-1584-01: inputs added, amp channels 4 → 8, PoE removed.",
-      "partNo": "PAV-SIPA125SM-10"
+      "notes": "All-in-one amplified host: 4 amplified stereo zones @125W/ch (8 channels, 4-pin connectors) + 2 pre-amp zones (1 RCA + 1 Toslink out), 2 stereo RCA + 2 Toslink local inputs, built-in Savant Music 2.0 server (1 stream), Ecosystem/IP-Audio-Host licensing tier. AC powered (515W max) — no PoE. 2U. Also 6 IR, 2 RS-232, relay, GPIO. AUDIT 2026-09-27: verified from QRGs 009-1657-07 / 009-1584-01: inputs added, amp channels 4 → 8, PoE removed. POWER/RU 2026-09-27: 515W max, 10A input, 2U — Savant QRG 009-1657-07",
+      "partNo": "PAV-SIPA125SM-10",
+      "powerMaxW": 515,
+      "rackUnits": 2
     },
     "savant-ip-audio-50v2": {
       "brand": "Savant",
@@ -886,8 +981,10 @@
         "ipAudio"
       ],
       "verified": true,
-      "notes": "All-in-one amplified host, smaller sibling of the IP Audio 125: 4 amplified zones @50W/ch (rated, 8Ω) + 2 pre-amp zones (one RCA, one Toslink out — explicitly confirmed, not the same zone). 4 local audio inputs (2 analog + 2 digital) feeding the amp/AVB network in addition to whatever arrives over AVB. Built-in Savant Music 2.0 server. Max power draw 225W. AUDIT 2026-09-27: digital inputs are 2 TOSLINK (not coax/optical combo); 8 amp channels (4 stereo zones); AC powered, no PoE; 100Base-T Ethernet; 4 IR + 1 RS-232.",
-      "partNo": "PAV-SIPA50SMV2-00"
+      "notes": "All-in-one amplified host, smaller sibling of the IP Audio 125: 4 amplified zones @50W/ch (rated, 8Ω) + 2 pre-amp zones (one RCA, one Toslink out — explicitly confirmed, not the same zone). 4 local audio inputs (2 analog + 2 digital) feeding the amp/AVB network in addition to whatever arrives over AVB. Built-in Savant Music 2.0 server. Max power draw 225W. AUDIT 2026-09-27: digital inputs are 2 TOSLINK (not coax/optical combo); 8 amp channels (4 stereo zones); AC powered, no PoE; 100Base-T Ethernet; 4 IR + 1 RS-232. POWER/RU 2026-09-27: 225W max, 3.6A input, 2U — Savant QRG 009-1658-03",
+      "partNo": "PAV-SIPA50SMV2-00",
+      "powerMaxW": 225,
+      "rackUnits": 2
     },
     "savant-pav-sms2001": {
       "brand": "Savant",
@@ -905,9 +1002,11 @@
         "poeOnDash10"
       ],
       "verified": true,
-      "notes": "All-native AVB music streamer/source — 1x Ethernet port carries AVB to feed amps/AOMs directly over the network, plus 1x physical coax and 1x physical optical output for feeding a legacy (non-AVB) zone amp or AVR directly. Max 15W (PoE on -10 SKU; -00 is 5V DC). Supersedes the legacy SMS-1001/SMS-100AM single-stream servers and the older SMS-002A SmartMedia Server (500GB local storage, 2 simultaneous streams — EOL, see Unresolved). AUDIT 2026-09-27: PoE is the -10 SKU only.",
+      "notes": "All-native AVB music streamer/source — 1x Ethernet port carries AVB to feed amps/AOMs directly over the network, plus 1x physical coax and 1x physical optical output for feeding a legacy (non-AVB) zone amp or AVR directly. Max 15W (PoE on -10 SKU; -00 is 5V DC). Supersedes the legacy SMS-1001/SMS-100AM single-stream servers and the older SMS-002A SmartMedia Server (500GB local storage, 2 simultaneous streams — EOL, see Unresolved). AUDIT 2026-09-27: PoE is the -10 SKU only. POWER/RU 2026-09-27: 15W max, 5V 3A brick, fits a 1U shelf — Savant QRG",
       "partNo": "PAV-SMS2001-00",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "powerMaxW": 15,
+      "desktop": true
     },
     "sonos-amp": {
       "brand": "Sonos",
@@ -931,9 +1030,12 @@
         "wifiOrEthernet"
       ],
       "verified": true,
-      "notes": "One stereo zone, 2 amplified channels. 125W/ch RMS @8Ω (0.1% THD), roughly doubles into 4Ω (4Ω minimum load) — GOTCHA: several retailers title the SKU '250W' (125x2 summed, not per-channel); don't let that inflate a per-channel power figure in capacity math. 1x HDMI **ARC** input (not eARC) for TV sound — note the Amp is 2-channel only, so even over ARC it plays TV audio as a stereo downmix, no Atmos object/height decoding (contrast with the Arc Ultra/Beam Gen 2 soundbars below, which DO decode Atmos because they have the driver array for it). 1x stereo RCA line-in (turntable/CD), shareable/groupable to play on other Sonos rooms subject to the same 75ms line-in buffering as the Port (see headline note above). Auto-detecting sub output, adjustable 50–110Hz crossover. Dual 10/100 Ethernet (NOT gigabit — irrelevant for the Amp's own low-bitrate audio stream, but a hard ceiling if daisy-chaining other gear off it) or WiFi. Each of the 2 channels can drive 2 pairs of 8Ω speakers wired in parallel (4Ω net) — i.e. up to 4 speakers total (2 pairs) off one Amp, but they're all ONE volume zone; a second physical area needing independent volume needs its own Amp or a volume-control speaker selector downstream. NO 70V/100V capability — confirmed absent from every spec source found; Sonos amps are low-Z consumer-grade only, never spec this for a 70V distributed run. AUDIT 2026-09-27: optical in only via the Sonos Optical Audio Adapter (sold separately) on the HDMI port.",
+      "notes": "One stereo zone, 2 amplified channels. 125W/ch RMS @8Ω (0.1% THD), roughly doubles into 4Ω (4Ω minimum load) — GOTCHA: several retailers title the SKU '250W' (125x2 summed, not per-channel); don't let that inflate a per-channel power figure in capacity math. 1x HDMI **ARC** input (not eARC) for TV sound — note the Amp is 2-channel only, so even over ARC it plays TV audio as a stereo downmix, no Atmos object/height decoding (contrast with the Arc Ultra/Beam Gen 2 soundbars below, which DO decode Atmos because they have the driver array for it). 1x stereo RCA line-in (turntable/CD), shareable/groupable to play on other Sonos rooms subject to the same 75ms line-in buffering as the Port (see headline note above). Auto-detecting sub output, adjustable 50–110Hz crossover. Dual 10/100 Ethernet (NOT gigabit — irrelevant for the Amp's own low-bitrate audio stream, but a hard ceiling if daisy-chaining other gear off it) or WiFi. Each of the 2 channels can drive 2 pairs of 8Ω speakers wired in parallel (4Ω net) — i.e. up to 4 speakers total (2 pairs) off one Amp, but they're all ONE volume zone; a second physical area needing independent volume needs its own Amp or a volume-control speaker selector downstream. NO 70V/100V capability — confirmed absent from every spec source found; Sonos amps are low-Z consumer-grade only, never spec this for a 70V distributed run. AUDIT 2026-09-27: optical in only via the Sonos Optical Audio Adapter (sold separately) on the HDMI port. POWER/RU 2026-09-27: 15W at 1/8 power, 7.3W idle; no rated max; shelf (Middle Atlantic RSHA-SONOS-AMP2/4) — Sonos support articles",
       "partNo": "Amp",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "powerTypicalW": 15,
+      "powerIdleW": 7.3,
+      "desktop": true
     },
     "sonos-port": {
       "brand": "Sonos",
@@ -953,9 +1055,12 @@
         "trigger12v"
       ],
       "verified": true,
-      "notes": "Bidirectional bridge box, not just a one-way source: the SAME unit simultaneously (a) ingests a legacy analog source (turntable, CD player, an AVR's 2ch preout) via its 1x stereo RCA line-in and makes it available/groupable across the Sonos system, AND (b) decodes whatever the Sonos system is playing back out to a legacy zone amp/receiver via 1x stereo RCA line-out + 1x digital coax out (NO optical out — coax only). Also has a 12V trigger output (200mA) to power on a downstream amp, not counted in the port totals above. Dual 10/100 Ethernet, no PoE. LIP-SYNC GOTCHA (see headline note): minimum 75ms buffered latency on the line-in path the moment it's grouped with other rooms, by design, for multiroom sync — stacks with the TV's own ~100–150ms video-processing delay if used to encode TV audio. Sonos added Group Audio Delay + Audio Delay compensation settings in app/firmware 10.6.2 specifically for this; treat as 'viable with per-room tuning,' not 'automatically lip-synced out of the box.' No successor SKU found as of this research date — 'Port 2' appears to be unfounded/no active rumor (see Unresolved).",
+      "notes": "Bidirectional bridge box, not just a one-way source: the SAME unit simultaneously (a) ingests a legacy analog source (turntable, CD player, an AVR's 2ch preout) via its 1x stereo RCA line-in and makes it available/groupable across the Sonos system, AND (b) decodes whatever the Sonos system is playing back out to a legacy zone amp/receiver via 1x stereo RCA line-out + 1x digital coax out (NO optical out — coax only). Also has a 12V trigger output (200mA) to power on a downstream amp, not counted in the port totals above. Dual 10/100 Ethernet, no PoE. LIP-SYNC GOTCHA (see headline note): minimum 75ms buffered latency on the line-in path the moment it's grouped with other rooms, by design, for multiroom sync — stacks with the TV's own ~100–150ms video-processing delay if used to encode TV audio. Sonos added Group Audio Delay + Audio Delay compensation settings in app/firmware 10.6.2 specifically for this; treat as 'viable with per-room tuning,' not 'automatically lip-synced out of the box.' No successor SKU found as of this research date — 'Port 2' appears to be unfounded/no active rumor (see Unresolved). POWER/RU 2026-09-27: 3.6W idle (Sonos article); 12W = adapter rating, no published max",
       "partNo": "Port",
-      "partNoUnsure": true
+      "partNoUnsure": true,
+      "powerTypicalW": 3.6,
+      "powerMaxW": 12,
+      "desktop": true
     },
     "sonos-arc-ultra": {
       "brand": "Sonos",
@@ -1168,9 +1273,11 @@
         "poe"
       ],
       "verified": true,
-      "notes": "Current successor to the discontinued AC-MXNET-SW24: 24x GbE PoE+ endpoint ports, 4x 10G SFP+ uplink/aggregation, 370W PoE budget. Sibling AC-MXNET-SW24E = economy Layer 2.5 variant (4x 1G SFP stacking, same 370W) for smaller deployments.",
+      "notes": "Current successor to the discontinued AC-MXNET-SW24: 24x GbE PoE+ endpoint ports, 4x 10G SFP+ uplink/aggregation, 370W PoE budget. Sibling AC-MXNET-SW24E = economy Layer 2.5 variant (4x 1G SFP stacking, same 370W) for smaller deployments. POWER/RU 2026-09-27: '<880W' max as published (looks high for a 370W PoE budget), 1U — avproglobal.com product page",
       "gen": "1g",
-      "partNo": "AC-MXNET-SW24P"
+      "partNo": "AC-MXNET-SW24P",
+      "powerMaxW": 880,
+      "rackUnits": 1
     },
     "avpro-acp-axis16": {
       "brand": "AVPro Edge",
@@ -1191,8 +1298,9 @@
         "surroundDsp"
       ],
       "verified": true,
-      "notes": "Hyperion Axis16 — TV eARC (or Toslink/coax; coax wins, digital overrides eARC, falls back after 10s) → up to 16 Dante/AES67 channels: 9.1.6, or up to 9.1.4 + a stereo downmix pair (UBL/UBR slots become DM-L/DM-R). DECODES Dolby Atmos / DTS-HD. On-board EQ, crossover, distance and level — the receiver's job, so a Hyperion or Director amp can run a surround room with no AVR. CEC volume pass-through, TCP control + API. 1 RJ45 Dante (PoE 802.3af in) + 1 RJ45 control; or USB-C 5V 2A. Manual/datasheet text says '10 channels'/'Axis10' in places — copy-paste from the ACP-AXIS10 sibling. Chipset/flows unpublished. Source: avproglobal.com/products/acp-axis16 + datasheet + manual (2026-09-27).",
-      "partNo": "ACP-AXIS16"
+      "notes": "Hyperion Axis16 — TV eARC (or Toslink/coax; coax wins, digital overrides eARC, falls back after 10s) → up to 16 Dante/AES67 channels: 9.1.6, or up to 9.1.4 + a stereo downmix pair (UBL/UBR slots become DM-L/DM-R). DECODES Dolby Atmos / DTS-HD. On-board EQ, crossover, distance and level — the receiver's job, so a Hyperion or Director amp can run a surround room with no AVR. CEC volume pass-through, TCP control + API. 1 RJ45 Dante (PoE 802.3af in) + 1 RJ45 control; or USB-C 5V 2A. Manual/datasheet text says '10 channels'/'Axis10' in places — copy-paste from the ACP-AXIS10 sibling. Chipset/flows unpublished. Source: avproglobal.com/products/acp-axis16 + datasheet + manual (2026-09-27). POWER/RU 2026-09-27: PoE af or 5V 2A USB-C; no wattage published — avproglobal.com product page",
+      "partNo": "ACP-AXIS16",
+      "desktop": true
     },
     "audiocontrol-hype-tetra": {
       "brand": "AudioControl",
@@ -1212,8 +1320,9 @@
         "theaterAmp"
       ],
       "verified": true,
-      "notes": "Hyperion Tetra — 4-channel Class-H theater amp, 230W/ch @8Ω, 300W/ch @4Ω, bridges to 600W @8Ω. Inputs: 4 XLR + 4 RCA (mono, one per channel) and 4 Dante RX channels on one RJ45 (receive only); RCA thru outs pass analog only. Trigger in/out. Counted as ONE zone (one surround set, or a height layer). No IP control in the manual (the Hyperion page mentions a web GUI — conflict). 2U, 38 lb. Pair with an ACP-AXIS16 for a receiver-less theater. Source: avproglobal.com/products/acp-hype-tetra + Hepta manual.",
-      "partNo": "ACP-HYPE-TETRA"
+      "notes": "Hyperion Tetra — 4-channel Class-H theater amp, 230W/ch @8Ω, 300W/ch @4Ω, bridges to 600W @8Ω. Inputs: 4 XLR + 4 RCA (mono, one per channel) and 4 Dante RX channels on one RJ45 (receive only); RCA thru outs pass analog only. Trigger in/out. Counted as ONE zone (one surround set, or a height layer). No IP control in the manual (the Hyperion page mentions a web GUI — conflict). 2U, 38 lb. Pair with an ACP-AXIS16 for a receiver-less theater. Source: avproglobal.com/products/acp-hype-tetra + Hepta manual. POWER/RU 2026-09-27: 2U; no power draw published — avproglobal.com",
+      "partNo": "ACP-HYPE-TETRA",
+      "rackUnits": 2
     },
     "audiocontrol-hype-penta": {
       "brand": "AudioControl",
@@ -1233,8 +1342,9 @@
         "theaterAmp"
       ],
       "verified": true,
-      "notes": "Hyperion Penta — 5-channel Class-H theater amp, 230W/ch @8Ω, 300W/ch @4Ω, bridges to 600W @8Ω. Inputs: 5 XLR + 5 RCA (mono, one per channel) and 5 Dante RX channels on one RJ45 (receive only); RCA thru outs pass analog only. Trigger in/out. Counted as ONE zone (one surround set, or a height layer). No IP control in the manual (the Hyperion page mentions a web GUI — conflict). 3U, 43 lb. Pair with an ACP-AXIS16 for a receiver-less theater. Source: avproglobal.com/products/acp-hype-penta + Hepta manual.",
-      "partNo": "ACP-HYPE-PENTA"
+      "notes": "Hyperion Penta — 5-channel Class-H theater amp, 230W/ch @8Ω, 300W/ch @4Ω, bridges to 600W @8Ω. Inputs: 5 XLR + 5 RCA (mono, one per channel) and 5 Dante RX channels on one RJ45 (receive only); RCA thru outs pass analog only. Trigger in/out. Counted as ONE zone (one surround set, or a height layer). No IP control in the manual (the Hyperion page mentions a web GUI — conflict). 3U, 43 lb. Pair with an ACP-AXIS16 for a receiver-less theater. Source: avproglobal.com/products/acp-hype-penta + Hepta manual. POWER/RU 2026-09-27: 3U; no power draw published — avproglobal.com",
+      "partNo": "ACP-HYPE-PENTA",
+      "rackUnits": 3
     },
     "audiocontrol-hype-hepta": {
       "brand": "AudioControl",
@@ -1254,8 +1364,9 @@
         "theaterAmp"
       ],
       "verified": true,
-      "notes": "Hyperion Hepta — 7-channel Class-H theater amp, 230W/ch @8Ω, 300W/ch @4Ω, bridges to 600W @8Ω. Inputs: 7 XLR + 7 RCA (mono, one per channel) and 7 Dante RX channels on one RJ45 (receive only); RCA thru outs pass analog only. Trigger in/out. Counted as ONE zone (one surround set, or a height layer). No IP control in the manual (the Hyperion page mentions a web GUI — conflict). 3U, 43 lb. Pair with an ACP-AXIS16 for a receiver-less theater. Source: avproglobal.com/products/acp-hype-hepta + Hepta manual.",
-      "partNo": "ACP-HYPE-HEPTA"
+      "notes": "Hyperion Hepta — 7-channel Class-H theater amp, 230W/ch @8Ω, 300W/ch @4Ω, bridges to 600W @8Ω. Inputs: 7 XLR + 7 RCA (mono, one per channel) and 7 Dante RX channels on one RJ45 (receive only); RCA thru outs pass analog only. Trigger in/out. Counted as ONE zone (one surround set, or a height layer). No IP control in the manual (the Hyperion page mentions a web GUI — conflict). 3U, 43 lb. Pair with an ACP-AXIS16 for a receiver-less theater. Source: avproglobal.com/products/acp-hype-hepta + Hepta manual. POWER/RU 2026-09-27: 3U; no power draw published — Hepta manual",
+      "partNo": "ACP-HYPE-HEPTA",
+      "rackUnits": 3
     },
     "avpro-mxnet-sw24e": {
       "brand": "AVPro Edge",
@@ -1272,9 +1383,12 @@
         "danteReady"
       ],
       "verified": true,
-      "notes": "24 x 1G PoE+ + 4 x 1G SFP + RJ45 console; 370W PoE (450W max draw); rated 23 endpoints + CBOX. Ships PRE-CONFIGURED for MXNet USP, 1G V1/V2 AND Dante (VLAN, QoS, IGMP — 'no additional adjustments required'); 4-switch-hop max. Economy Layer 2.5 sibling of the SW24P. The default dedicated Dante switch too. Source: AVPro datasheet (2026-09-27).",
+      "notes": "24 x 1G PoE+ + 4 x 1G SFP + RJ45 console; 370W PoE (450W max draw); rated 23 endpoints + CBOX. Ships PRE-CONFIGURED for MXNet USP, 1G V1/V2 AND Dante (VLAN, QoS, IGMP — 'no additional adjustments required'); 4-switch-hop max. Economy Layer 2.5 sibling of the SW24P. The default dedicated Dante switch too. Source: AVPro datasheet (2026-09-27). POWER/RU 2026-09-27: 450W max incl. PoE, switch alone <30W, 1U — avproglobal.com product page",
       "gen": "1g",
-      "partNo": "AC-MXNET-SW24E"
+      "partNo": "AC-MXNET-SW24E",
+      "powerMaxW": 450,
+      "powerNoPoeW": 30,
+      "rackUnits": 1
     },
     "avpro-mxnet-sw48e": {
       "brand": "AVPro Edge",
@@ -1291,9 +1405,12 @@
         "danteReady"
       ],
       "verified": true,
-      "notes": "48 x 1G PoE+ + 6 x 1/10G SFP+; 740W PoE (850W max draw); rated 47 endpoints + CBOX. Pre-configured for MXNet USP, 1G V1/V2 and Dante; 4-switch-hop max. Source: AVPro datasheet (2026-09-27).",
+      "notes": "48 x 1G PoE+ + 6 x 1/10G SFP+; 740W PoE (850W max draw); rated 47 endpoints + CBOX. Pre-configured for MXNet USP, 1G V1/V2 and Dante; 4-switch-hop max. Source: AVPro datasheet (2026-09-27). POWER/RU 2026-09-27: 850W max incl. PoE, switch alone <30W, 1U — avproglobal.com product page",
       "gen": "1g",
-      "partNo": "AC-MXNET-SW48E"
+      "partNo": "AC-MXNET-SW48E",
+      "powerMaxW": 850,
+      "powerNoPoeW": 30,
+      "rackUnits": 1
     },
     "avpro-mxnet-dante-cbox": {
       "brand": "AVPro Edge",
@@ -1308,8 +1425,11 @@
         "poe"
       ],
       "verified": true,
-      "notes": "The Dante controller = an AC-MXNET-CBOX-HA running the Dante firmware (a CBOX-HA is 'converted'; order it as a CBOX-HA if AVPro has no separate SKU on the quote). Uses Audinate's Dante API: discovers AVPro/AudioControl/third-party Dante devices, makes/breaks subscriptions from a web routing grid (Mentor), no PC running Dante Controller needed; not Dante Domain Manager. MODES ARE EXCLUSIVE — in Dante mode it manages no MXNet, so MXNet video + Dante audio = TWO CBOX-HAs. Lets the control system re-route Dante on the fly: Control4 'MXNET Dante Router' driver v103 (needs CBOX Dante fw 1.03; 2-ch virtual I/O, source selection only — volume stays on the amp driver); Savant/RTI/Crestron Home/Q-SYS/ELAN/URC listed as supported — confirm the Savant driver before quoting. 8 RJ45 (7 control/Mentor + 1 AV/network PoE-PD), RS-232, HA RJ45, USB-C; 12V or PoE, 4.5W. Source: AVPro KB 'AC-MXNET-DANTE-CBOX introduction guide' (2026-09-27).",
-      "partNo": "AC-MXNET-CBOX-HA"
+      "notes": "The Dante controller = an AC-MXNET-CBOX-HA running the Dante firmware (a CBOX-HA is 'converted'; order it as a CBOX-HA if AVPro has no separate SKU on the quote). Uses Audinate's Dante API: discovers AVPro/AudioControl/third-party Dante devices, makes/breaks subscriptions from a web routing grid (Mentor), no PC running Dante Controller needed; not Dante Domain Manager. MODES ARE EXCLUSIVE — in Dante mode it manages no MXNet, so MXNet video + Dante audio = TWO CBOX-HAs. Lets the control system re-route Dante on the fly: Control4 'MXNET Dante Router' driver v103 (needs CBOX Dante fw 1.03; 2-ch virtual I/O, source selection only — volume stays on the amp driver); Savant/RTI/Crestron Home/Q-SYS/ELAN/URC listed as supported — confirm the Savant driver before quoting. 8 RJ45 (7 control/Mentor + 1 AV/network PoE-PD), RS-232, HA RJ45, USB-C; 12V or PoE, 4.5W. Source: AVPro KB 'AC-MXNET-DANTE-CBOX introduction guide' (2026-09-27). POWER/RU 2026-09-27: same hardware as CBOX-HA (4.5W, PoE or brick) — AVPro KB DANTE-CBOX intro guide",
+      "partNo": "AC-MXNET-CBOX-HA",
+      "powerMaxW": 4.5,
+      "rackUnits": null,
+      "desktop": true
     },
     "avpro-mxnet-1g-dante-ev2": {
       "brand": "AVPro Edge",
@@ -1382,8 +1502,10 @@
         "transceiver"
       ],
       "verified": true,
-      "notes": "MXNet 10G (SDVoE) transceiver — set as encoder or decoder by switch (factory default decoder). Video: uncompressed to 4K30 4:4:4 8-bit; 4K60 4:4:4 8-bit / 4:2:2 10-bit / 4:2:0 12-bit with light 1.3:1 compression; ~0.1ms in genlock mode, else 1–2 frames; Dolby Vision/HDR10+/HLG; scaler, multiview up to 32 windows, walls up to 8x8. HDMI passes Atmos/DTS:X; Toslink out up to DD 5.1 (no DD+/Atmos); 3-pin 2ch analog out; 3.5mm = in as encoder / out as decoder; no ARC/eARC documented. 1 x 10GBase-T RJ45 (PoE 802.3af in) OR 1 x 10G SFP+, plus 1 x 1G RJ45 (extension/control; sources PoE when the 10G link is fiber). ~9W; 12V PSU optional. Does NOT interoperate with 1G. Managed by a CBOX-HA in 10G mode (the 10G-CBOX is discontinued). Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27).",
-      "partNo": "AC-MXNET-10G-TCVR"
+      "notes": "MXNet 10G (SDVoE) transceiver — set as encoder or decoder by switch (factory default decoder). Video: uncompressed to 4K30 4:4:4 8-bit; 4K60 4:4:4 8-bit / 4:2:2 10-bit / 4:2:0 12-bit with light 1.3:1 compression; ~0.1ms in genlock mode, else 1–2 frames; Dolby Vision/HDR10+/HLG; scaler, multiview up to 32 windows, walls up to 8x8. HDMI passes Atmos/DTS:X; Toslink out up to DD 5.1 (no DD+/Atmos); 3-pin 2ch analog out; 3.5mm = in as encoder / out as decoder; no ARC/eARC documented. 1 x 10GBase-T RJ45 (PoE 802.3af in) OR 1 x 10G SFP+, plus 1 x 1G RJ45 (extension/control; sources PoE when the 10G link is fiber). ~9W; 12V PSU optional. Does NOT interoperate with 1G. Managed by a CBOX-HA in 10G mode (the 10G-CBOX is discontinued). Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27). POWER/RU 2026-09-27: ~9.1W enc / 9.2W dec, PoE af — avproglobal.com product page",
+      "partNo": "AC-MXNET-10G-TCVR",
+      "powerTypicalW": 9.2,
+      "desktop": true
     },
     "avpro-mxnet-10g-tcvr-avdm": {
       "brand": "AVPro Edge",
@@ -1477,9 +1599,11 @@
         "poe"
       ],
       "verified": true,
-      "notes": "MXNet 10G switch: 12 x 10G multi-gig RJ45 with PoE up to 802.3bt (370W) + 6 x SFP28. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27).",
+      "notes": "MXNet 10G switch: 12 x 10G multi-gig RJ45 with PoE up to 802.3bt (370W) + 6 x SFP28. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27). POWER/RU 2026-09-27: 430W max incl. 370W PoE, 1U, AC + DC redundant inputs — avproglobal.com product page",
       "poeBudgetW": 370,
-      "partNo": "AC-MXNET-10G-SW12C"
+      "partNo": "AC-MXNET-10G-SW12C",
+      "powerMaxW": 430,
+      "rackUnits": 1
     },
     "avpro-mxnet-10g-sw24c": {
       "brand": "AVPro Edge",
@@ -1496,9 +1620,11 @@
         "poe"
       ],
       "verified": true,
-      "notes": "MXNet 10G switch: 24 x 10G RJ45 PoE++ (960W) + 2 x 40G QSFP+. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27).",
+      "notes": "MXNet 10G switch: 24 x 10G RJ45 PoE++ (960W) + 2 x 40G QSFP+. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27). POWER/RU 2026-09-27: 530W per PSU (1060W with optional 2nd PSU), 1000W PoE needs both PSUs, 1U — avproglobal.com product page",
       "poeBudgetW": 960,
-      "partNo": "AC-MXNET-10G-SW24C"
+      "partNo": "AC-MXNET-10G-SW24C",
+      "powerMaxW": 530,
+      "rackUnits": 1
     },
     "avpro-mxnet-10g-sw24q": {
       "brand": "AVPro Edge",
@@ -1513,8 +1639,11 @@
         "mxnet10g"
       ],
       "verified": true,
-      "notes": "MXNet 10G switch: 24 x SFP+ + 2 x 40G QSFP+, no PoE. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27).",
-      "partNo": "AC-MXNET-10G-SW24Q"
+      "notes": "MXNet 10G switch: 24 x SFP+ + 2 x 40G QSFP+, no PoE. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27). POWER/RU 2026-09-27: 70W max, no PoE, 1U — avproglobal.com product page",
+      "partNo": "AC-MXNET-10G-SW24Q",
+      "powerMaxW": 70,
+      "powerNoPoeW": 70,
+      "rackUnits": 1
     },
     "avpro-mxnet-10g-sw48q": {
       "brand": "AVPro Edge",
@@ -1529,8 +1658,12 @@
         "mxnet10g"
       ],
       "verified": true,
-      "notes": "MXNet 10G switch: 48 x SFP+ + 6 x 40G QSFP+, no PoE. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27).",
-      "partNo": "AC-MXNET-10G-SW48Q"
+      "notes": "MXNet 10G switch: 48 x SFP+ + 6 x 40G QSFP+, no PoE. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27). POWER/RU 2026-09-27: 400W max, no PoE, 1U, dual hot-swap AC PSUs (2 cords) — avproglobal.com product page",
+      "partNo": "AC-MXNET-10G-SW48Q",
+      "powerMaxW": 400,
+      "powerNoPoeW": 400,
+      "rackUnits": 1,
+      "outlets": 2
     },
     "wattbox-800-ipvm-6": {
       "brand": "WattBox",
@@ -1541,7 +1674,7 @@
       "outlets": 6,
       "controlledOutlets": 6,
       "amps": 15,
-      "rackUnits": "1U horizontal / 10U vertical",
+      "rackUnits": 1,
       "lan": 1,
       "flags": [
         "ipControl",
@@ -1549,7 +1682,8 @@
       ],
       "verified": true,
       "notes": "800 Series 6-outlet strip, individually metered, 15A (12A continuous), NEMA 5-15. All rear outlets IP-switchable; one Ethernet port (no built-in switch); no battery — OvrC UPS link for a separate WattBox UPS pack. Source: Snap One product pages + WattBox comparison chart (WB-060420), checked 2026-09-27.",
-      "partNo": "WB-800-IPVM-6"
+      "partNo": "WB-800-IPVM-6",
+      "rackNote": "1U mounted horizontally; can also mount vertically (10U)"
     },
     "wattbox-800ch1u-ipvm-8": {
       "brand": "WattBox",
@@ -1598,14 +1732,16 @@
       "outlets": 12,
       "controlledOutlets": 12,
       "amps": 15,
-      "rackUnits": "vertical 36.38\" (≥21U rack)",
+      "rackUnits": 0,
       "lan": 1,
       "flags": [
         "ipControl"
       ],
       "verified": true,
       "notes": "800 Series vertical strip, 12 outlets, 15A, NEMA 5-15P cord. All rear outlets IP-switchable; one Ethernet port (no built-in switch); no battery — OvrC UPS link for a separate WattBox UPS pack. Source: Snap One product pages + WattBox comparison chart (WB-060420), checked 2026-09-27.",
-      "partNo": "WB-800VPS-IPVM-12"
+      "partNo": "WB-800VPS-IPVM-12",
+      "rackNote": "vertical 36.38\" (≥21U rack)",
+      "mount": "vertical"
     },
     "wattbox-800vps-ipvm-18": {
       "brand": "WattBox",
@@ -1616,7 +1752,7 @@
       "outlets": 18,
       "controlledOutlets": 18,
       "amps": 15,
-      "rackUnits": "vertical 50.16\" (≥29U rack)",
+      "rackUnits": 0,
       "lan": 1,
       "flags": [
         "ipControl",
@@ -1624,7 +1760,9 @@
       ],
       "verified": true,
       "notes": "800 Series vertical strip, 18 outlets, 15A, NEMA 5-15P cord. All rear outlets IP-switchable; one Ethernet port (no built-in switch); no battery — OvrC UPS link for a separate WattBox UPS pack. Source: Snap One product pages + WattBox comparison chart (WB-060420), checked 2026-09-27.",
-      "partNo": "WB-800VPS-IPVM-18"
+      "partNo": "WB-800VPS-IPVM-18",
+      "rackNote": "vertical 50.16\" (≥29U rack)",
+      "mount": "vertical"
     },
     "wattbox-820-ipvm-12": {
       "brand": "WattBox",
@@ -1692,14 +1830,15 @@
       "outlets": 5,
       "controlledOutlets": 5,
       "amps": 15,
-      "rackUnits": "VersaBox / rack kit KIT-WB-300VB-RM",
+      "rackUnits": null,
       "lan": 1,
       "flags": [
         "ipControl"
       ],
       "verified": true,
       "notes": "300 Series compact, 5 controlled outlets, 15A — rack-mounts only with KIT-WB-300VB-RM. All rear outlets IP-switchable; one Ethernet port (no built-in switch); no battery — OvrC UPS link for a separate WattBox UPS pack. Source: Snap One product pages + WattBox comparison chart (WB-060420), checked 2026-09-27.",
-      "partNo": "WB-300VB-IP-5"
+      "partNo": "WB-300VB-IP-5",
+      "rackNote": "VersaBox / rack kit KIT-WB-300VB-RM"
     }
   },
   "licensing": {

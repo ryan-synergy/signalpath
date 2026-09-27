@@ -125,6 +125,46 @@ export function autoLinkCatalog(job, catalog) {
   return n;
 }
 
+/* ---------- catalog lockfile ----------
+   A job freezes the catalog entries its gear uses the first time it saves them,
+   so a quote advises the same way next month even if Settings change. Newer
+   catalog data never slips in silently: catalogDrift() reports it, and
+   refreshCatalogLock() pulls it in on the user's say-so. */
+const usedRefs = job => {
+  const refs = new Set();
+  for (const sol of job.solutions || []) {
+    for (const r of sol.racks || []) for (const d of r.devices || []) if (d.catalogRef) refs.add(d.catalogRef);
+    for (const d of sol.localDevices || []) if (d.catalogRef) refs.add(d.catalogRef);
+  }
+  return refs;
+};
+export function lockCatalog(job, catalog) {
+  const snap = job.job.catalogSnapshot || {};
+  const prev = snap.devices || {};
+  const devices = {};
+  for (const ref of usedRefs(job)) {
+    const entry = prev[ref] || catalog?.devices?.[ref];     // first lock wins; later saves never overwrite it
+    if (entry) devices[ref] = entry;
+  }
+  job.job.catalogSnapshot = { asOf: snap.asOf || catalog?.asOf, ...(Object.keys(devices).length ? { devices } : {}) };
+  return job.job.catalogSnapshot;
+}
+export function catalogDrift(job, catalog) {
+  const prev = job.job?.catalogSnapshot?.devices || {};
+  const drift = [];
+  for (const ref of usedRefs(job)) {
+    const live = catalog?.devices?.[ref];
+    if (prev[ref] && live && JSON.stringify(prev[ref]) !== JSON.stringify(live)) drift.push({ ref, model: live.model || ref });
+  }
+  return drift;
+}
+export function refreshCatalogLock(job, catalog) {
+  const devices = {};
+  for (const ref of usedRefs(job)) if (catalog?.devices?.[ref]) devices[ref] = structuredClone(catalog.devices[ref]);
+  job.job.catalogSnapshot = { asOf: catalog?.asOf || job.job.catalogSnapshot?.asOf, ...(Object.keys(devices).length ? { devices } : {}) };
+  return job.job.catalogSnapshot;
+}
+
 export function trunkCount(conn, s) {
   const from = s.devices[conn.from], to = s.devices[conn.to];
   const authored = c => Math.max(0, Math.floor(+c.count) || 0);   // imported "4" / -3 must not skew budgets
@@ -512,6 +552,7 @@ export function place(job, ix = indexJob(job), opts = {}) {
     if (fCol === "B" && tCol === "C") bcDemand++;
     if ((ix.endpointsById[c.from] || s.locals[c.from]) && devColOf[c.to] != null) abDemand++; // returns + local backhauls descend the AB gap (in-room links don't)
     if (s.companions[c.from] && devColOf[s.companions[c.from].serves] === "A") abDemand++; // ENC-chip outputs
+    if (fCol === "A" && toZoneSide) abDemand++;   // direct colA→zone feeds rise in the AB gap
   }
   const gapAB = Math.max(80, abDemand * 12 + 24);
   const gapBC = Math.max(60, bcDemand * 12 + 24);
@@ -1098,6 +1139,9 @@ export function route(job, ix, placement, opts = {}) {
      takes the TOP corridor lane and the EASTMOST riser of its channel. For
      right-side risers over left-side drops this ordering is crossing-free
      across fan-out groups — the least-hops rule applied at corridor scale. */
+  // feeds with no lane of their own wait for the harness pass (after 4b), when
+  // every sibling they could ride along with has been committed
+  const harnessQueue = [];
   const westNetsByDev = {};
   const allWest = plans.flatMap(plan => plan.west.map(o => ({ plan, o }))); // plan order (farthest-first within device) — measured better than global river order
   for (const { plan, o } of allWest) {
@@ -1108,8 +1152,11 @@ export function route(job, ix, placement, opts = {}) {
       const { tx, landY, cardBot } = o.t;
       const land = landY ?? cardBot;                 // chip bottom or card bottom border
       const skip = new Set([d.id, o.t.chipId].filter(Boolean));
-      // riser channel by source column: colB uses gapBC, colC/right uses the right corridor
-      const rr = d.col === "B" ? gapBCx : riserRange;
+      // riser channel by source column: colA rises in the A|B gap beside it,
+      // colB in the B|C gap, colC/right in the right corridor. (colA used to
+      // fall through to the right corridor — its exit leg then crossed every
+      // B and C device, so direct source→TV feeds always fell back.)
+      const rr = d.col === "A" ? gapABx : d.col === "B" ? gapBCx : riserRange;
       const corTop = P.corridors.find(c => c.id === "top");
       const laneLo = land + 14;
       const laneHi = (corTop?.y ?? land) + (corTop?.h ?? 200) - 8;
@@ -1140,7 +1187,7 @@ export function route(job, ix, placement, opts = {}) {
       }
       if (pts && !usedRelax) westNets.push(commit(o.c, "zone-west", pts, { group: d.id + "-west" }).net);
       else if (pts) { commit(o.c, "zone-west", pts, { group: d.id + "-west", relaxed: true }); out.warnings.push({ code: "route-relaxed", msg: wireId(o.c) }); }
-      else { commit(o.c, "zone-west-fallback", [[sx, o.portY], [tx, o.portY], [tx, land]], { group: d.id }); out.warnings.push({ code: "route-fallback", msg: wireId(o.c) }); }
+      else harnessQueue.push({ o, d, sx, tx, land, cls: "zone-west" });
       done.add(o.i);
     }
   }
@@ -1306,15 +1353,71 @@ export function route(job, ix, placement, opts = {}) {
           if (fb) break;
         }
         if (fb) { commit(o.c, "zone-east", fb, { group: d.id + "-east", relaxed: true }); out.warnings.push({ code: "route-relaxed", msg: wireId(o.c) + " (flyover)" }); }
-        else {
-          commit(o.c, "zone-east-fallback", [[sx, o.portY], [tx, o.portY], [tx, land]], { group: d.id });
-          out.warnings.push({ code: "route-fallback", msg: wireId(o.c), why });
-        }
+        else harnessQueue.push({ o, d, sx, tx, land, cls: "zone-east", why });
       }
       done.add(o.i);
     }
     if (westNets.length > 1) out.groups.push({ dev: d.id + "-west", nets: westNets });
     if (eastNets.length > 1) out.groups.push({ dev: d.id + "-east", nets: eastNets });
+  }
+
+  /* ============ pass 4b': HARNESS — electrical-drawing bundling ============
+     A feed that found no lane of its own rides an already-routed sibling (same
+     source device, same signal) as ONE conductor — it takes the sibling's net,
+     so the shared run is a single line the registry and hop pass treat as one —
+     and breaks out as close to its own destination as the geometry allows.
+     Render draws the shared trunk heavier with a ×N count. Only feeds that
+     would otherwise fall back are bundled, so clean sheets never change. */
+  for (const h of harnessQueue) {
+    const { o, d, sx, tx, land } = h;
+    const t = o.t;
+    const skip = new Set([t.chipId].filter(Boolean));
+    // landings: a chip is entered from below; a card from below or above
+    const lands = t.landY != null ? [{ y: t.landY, below: true }] : [{ y: t.cardBot, below: true }, { y: t.cardTop, below: false }];
+    let best = null, bestCost = Infinity;
+    const leaders = out.wires.filter(w => w.from === o.c.from && w.signal === o.c.signal && !w.cls.endsWith("-fallback") && w.pts?.length > 1);
+    for (const L of leaders) {
+      for (let i = 0; i + 1 < L.pts.length; i++) {
+        const [a, b] = [L.pts[i], L.pts[i + 1]];
+        const picks = [];
+        if (a[1] === b[1]) {
+          // off a horizontal run: straight above/below the target, plus samples
+          // along the run for Z-shaped breakouts
+          const lo = Math.min(a[0], b[0]), hi = Math.max(a[0], b[0]);
+          picks.push([Math.max(lo, Math.min(hi, tx)), a[1]]);
+          for (let x = lo; x <= hi; x += 24) picks.push([x, a[1]]);
+          picks.push([hi, a[1]]);
+        } else { const lo = Math.min(a[1], b[1]), hi = Math.max(a[1], b[1]); for (let y = lo; y < hi; y += RT.lane) picks.push([a[0], y]); picks.push([a[0], hi]); }
+        for (const B of picks) for (const ln of lands) {
+          // L: across at the trunk's height, then straight into the landing;
+          // Z: step to a strip just outside the landing edge first, then across
+          const shapes = [];
+          if (ln.below ? B[1] >= ln.y + 8 : B[1] <= ln.y - 8) shapes.push([B, [tx, B[1]], [tx, ln.y]]);
+          for (let k = 1; k <= 5; k++) {
+            const y2 = ln.below ? ln.y + 2 + k * RT.lane : ln.y - 2 - k * RT.lane;
+            shapes.push([B, [B[0], y2], [tx, y2], [tx, ln.y]]);
+          }
+          for (const raw of shapes) {
+            const branch = raw.filter((q, k, arr) => k === 0 || q[0] !== arr[k - 1][0] || q[1] !== arr[k - 1][1]);
+            if (branch.length < 2) continue;
+            const len = branch.reduce((n, q, k) => k ? n + Math.abs(q[0] - branch[k - 1][0]) + Math.abs(q[1] - branch[k - 1][1]) : n, 0);
+            if (len >= bestCost) continue;   // can't beat the best even with zero hops
+            if (pathBlocked(branch, skip) || !pathRegisterable(branch, L.net)) continue;
+            const cost = countCrossings(branch) * 100 + len;   // fewest hops, then the shortest breakout
+            if (cost < bestCost) { bestCost = cost; best = { L, i, B, branch }; }
+          }
+        }
+      }
+    }
+    if (best) {
+      const { L, i, B, branch } = best;
+      const trunk = [...L.pts.slice(0, i + 1), B];
+      commit(o.c, h.cls, [...trunk, ...branch.slice(1)], { net: L.net, group: d.id + "-harness", bundleOf: L.bundleOf || L.id, trunkLen: trunk.length });
+      out.warnings.push({ code: "route-bundled", msg: wireId(o.c) });
+    } else {
+      commit(o.c, h.cls + "-fallback", [[sx, o.portY], [tx, o.portY], [tx, land]], { group: d.id });
+      out.warnings.push({ code: "route-fallback", msg: wireId(o.c), why: h.why });
+    }
   }
 
   function tryCommit(conn, cls, cands, skip) {
@@ -2040,9 +2143,45 @@ export function render(job, ix, P, rt, opts = {}) {
     push(`<text x="${z.x + 9 + (k - 1) * 13}" y="${z.y + 17}" font-size="11" font-weight="700" fill="${bw ? "#333" : "#b32017"}">${keynote(a.n)}</text>`);
   }
 
+  /* harness underlay: bundled feeds share their root's trunk as one heavier
+     run, then break out thin toward their own destinations (electrical-drawing
+     convention). The count rides the root segment carrying the most wires. */
+  const busTicks = [];
+  const colorOf = w => {
+    const key = w.scope !== "included" ? "prewire" : (w.signal === "speaker" ? "audio" : w.signal);
+    const gs = bw ? (SIGNAL_DASHES[key] || SIGNAL_DASHES.video) : null;
+    return gs ? gs.stroke : SIGNAL_COLORS[key] || "#555";
+  };
+  const members = rt.wires.filter(w => w.bundleOf && w.trunkLen > 1);
+  if (members.length) {
+    push(`<g class="harness" fill="none" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.32">`);
+    const roots = new Map();
+    for (const m of members) {
+      push(`<path d="${m.pts.slice(0, m.trunkLen).map((q, k) => `${k ? "L" : "M"}${q[0]} ${q[1]}`).join("")}" stroke="${colorOf(m)}"/>`);
+      (roots.get(m.bundleOf) ?? roots.set(m.bundleOf, []).get(m.bundleOf)).push(m);
+    }
+    push(`</g>`);
+    for (const [rid, ms] of roots) {
+      const R = rt.wires.find(w => w.id === rid && !w.bundleOf);
+      if (!R) continue;
+      const pairs = m => new Set(m.pts.slice(0, m.trunkLen).map((q, k, a) => k ? `${a[k - 1]}|${q}` : null).filter(Boolean));
+      const trunks = ms.map(pairs);
+      let best = null;
+      for (let j = 1; j < R.pts.length; j++) {
+        const key = `${R.pts[j - 1]}|${R.pts[j]}`;
+        const n = 1 + trunks.filter(t => t.has(key)).length;
+        const len = Math.abs(R.pts[j][0] - R.pts[j - 1][0]) + Math.abs(R.pts[j][1] - R.pts[j - 1][1]);
+        if (n > 1 && (!best || n > best.n || (n === best.n && len > best.len))) best = { j, n, len };
+      }
+      if (best) {
+        const [x1, y1] = R.pts[best.j - 1], [x2, y2] = R.pts[best.j];
+        busTicks.push({ mx: (x1 + x2) / 2, my: (y1 + y2) / 2, vert: x1 === x2, n: best.n, color: colorOf(R) });
+      }
+    }
+  }
+
   /* wires (under chips so badges sit inline on their runs) */
   push(`<g fill="none" stroke-width="2.2" stroke-linecap="round">`);
-  const busTicks = [];
   for (const w of rt.wires) {
     const key = w.scope !== "included" ? "prewire" : (w.signal === "speaker" ? "audio" : w.signal);
     const gs = bw ? (SIGNAL_DASHES[key] || SIGNAL_DASHES.video) : null;

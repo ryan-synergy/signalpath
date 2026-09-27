@@ -202,7 +202,7 @@
 </div></div>
 
 <script type="module">
-import { loadJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates } from "./app/engine.js";
+import { loadJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock } from "./app/engine.js";
 import { importAny, mergeHouse } from "./app/importers.js";
 import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
@@ -323,6 +323,8 @@ function refresh(save = true) {
   if (fb.length) adv.push(`<div class="item w">⚠ ${fb.length} wire${fb.length > 1 ? "s have" : " has"} no clean path on this layout — drawn best-effort and may cross gear: ${esc(fb.slice(0, 4).join(", "))}${fb.length > 4 ? "…" : ""}</div>`);
   for (const w of routeWarn.filter(w => w.code === "hint-unroutable")) adv.push(`<div class="item w">⚠ custom route for ${esc(w.msg)} can't be honored on this layout — routed automatically</div>`);
   for (const w of placeWarn) adv.push(`<div class="item w">⚠ ${esc(w.msg)}</div>`);
+  const drift = catalogDrift(S.job, SETTINGS.catalog);
+  if (drift.length) adv.push(`<div class="item i">📦 The catalog has newer specs for ${drift.length} device${drift.length > 1 ? "s" : ""} on this job (${esc(drift.slice(0, 3).map(d => d.model).join(", "))}${drift.length > 3 ? "…" : ""}) — this job still uses the specs it was quoted with. JOB tab → Update catalog specs.</div>`);
   for (const io of (a?.io || []).filter(mine)) {
     if (io.over) adv.push(`<div class="item e">✗ ${esc(io.msg)}</div>`);
     else if (io.msg && (io.kind === "analog-in" || io.kind === "audio-out" || io.kind === "return-in")) adv.push(`<div class="item i">🔌 ${esc(io.msg)}</div>`);
@@ -342,11 +344,9 @@ function refresh(save = true) {
 let saveWarned = false;
 async function persist() {
   try {
-    // lockfile: freeze the catalog entries this job uses, so it advises the same forever
-    const used = {};
-    for (const sol of S.job.solutions) for (const r of sol.racks || []) for (const d of r.devices || [])
-      if (d.catalogRef && SETTINGS.catalog.devices[d.catalogRef]) used[d.catalogRef] = SETTINGS.catalog.devices[d.catalogRef];
-    S.job.job.catalogSnapshot = { asOf: SETTINGS.catalog.asOf, ...(Object.keys(used).length ? { devices: used } : {}) };
+    // lockfile: freeze the catalog entries this job uses the first time they're
+    // saved — later saves never overwrite them (JOB tab → Update catalog specs)
+    lockCatalog(S.job, SETTINGS.catalog);
     await dbPut({ id: S.id, updated: Date.now(), data: S.job });
     await renderJobsSel();
     if (!DB && !saveWarned) { saveWarned = true; alert("Heads up: browser storage is unavailable, so autosave only lasts for this tab. Use Export JSON to keep your work."); }
@@ -847,6 +847,12 @@ function jobHTML() {
         return `<div class="f"><input type="checkbox" class="pgflag" data-pg="${k}" ${pageFlags(S.job)[k] ? "checked" : ""}> <span>${label}</span></div>`;
       }).join("")}
     </div></div>
+    <div class="sect">CATALOG SPECS <span class="mini">locked ${esc(J.catalogSnapshot?.asOf || "—")}</span></div>
+    <div class="row open"><div class="fields" style="display:block;border-top:none">
+      ${(() => { const d = catalogDrift(S.job, SETTINGS.catalog); return d.length
+        ? `<div class="mini">Newer catalog data for: ${esc(d.map(x => x.model).join(", "))}</div><button class="addbtn" id="updCat" style="margin-top:6px">Update catalog specs</button>`
+        : `<div class="mini">This job's gear matches the current catalog.</div>`; })()}
+    </div></div>
     <div class="sect">REVISIONS</div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       ${(J.revisions || []).map(r => `<div class="mini">Rev ${esc(r.rev)} · ${esc(r.date)} · ${esc(r.description)} · ${esc(r.by)}</div>`).join("")}
@@ -1153,6 +1159,13 @@ function wirePanel(body) {
   on(".solname", el => { S.job.solutions[S.sol].name = el.value; });
   on(".solplat", el => { S.job.solutions[S.sol].platforms = el.value ? [el.value] : []; });
   on(".pgflag", el => { (S.job.job.pages ||= {})[el.dataset.pg] = el.checked; });
+  const updCat = body.querySelector("#updCat");
+  if (updCat) updCat.onclick = () => {
+    const d = catalogDrift(S.job, SETTINGS.catalog);
+    if (!confirm(`Update ${d.length} device spec${d.length > 1 ? "s" : ""} on this job to the current catalog?\n\n${d.map(x => x.model).join("\n")}\n\nPort budgets and advice may change.`)) return;
+    refreshCatalogLock(S.job, SETTINGS.catalog);
+    refresh();
+  };
   const addRev = body.querySelector("#addRev");
   if (addRev) addRev.onclick = () => {
     const desc = prompt("Revision note:"); if (!desc) return;

@@ -17,6 +17,8 @@ No build step, no dependencies, no server. Pure static HTML + ES modules.
 - **Print pages:** channel map (per-device port tables), takeoff (NEW/OFE rollup + CSV export), wire schedule (numbered runs with cable totals), BOM compare. Long jobs paginate onto continuation sheets with true "Sheet N of M" numbering. One-click print to 17×11 landscape.
 - **Quick-add / dictation entry:** type or speak `family room 5.1 75 sony matrix, patio landscape 8 prewire` and get parsed zones with preview chips.
 - **Importers** for SiteWalk survey JSON and Blueprinted (Savant config) exports, with non-destructive re-import merge.
+- **Harness bundling:** when a corridor is too crowded for every wire to get its own lane, feeds from the same device travel as one heavier run with a ×N count and break out near their destinations, electrical-drawing style (each wire still traces individually).
+- **Catalog lock:** each job freezes the device specs it was quoted with; the advisor flags when the catalog has newer data and JOB → Update catalog specs pulls it in.
 - **Interactive sheet:** tap a wire to trace it end-to-end, tap a zone card or device tile to jump to its editor row.
 - **Guided rerouting:** don't like a wire's path? Tap it → Reroute → pick from ghost previews of every legal alternate (with live crossing counts). Choices are stored as topological hints, so they survive re-layout and re-import.
 - **Autosave** to IndexedDB (with an in-memory fallback and a warning when browser storage is unavailable); native JSON and Markdown round-trip import/export; SVG export.
@@ -47,11 +49,12 @@ app/tests.html          The test suite — open it in a browser, everything runs
 app/fuzz.html           Pipeline fuzzer — edge cases + seeded random jobs vs crash/geometry invariants (?n=500&seed=7)
 app/place-preview.html  Debug view: placement boxes, routed wires, congestion overlay
 mock-system-*.json      Three fixtures: residence (typical), estate (large), stress (25 zones)
+app/test-fixtures/      Test-only jobs (dense-harness.json: one source → 9 TVs, exercises bundling)
 ```
 
 ## Tests
 
-Open `app/tests.html` in a served browser tab. 331 assertions run on load and report pass/fail with a summary line. The suite covers the data model, validation, advisor budgets, placement geometry, router hop ceilings per fixture (regression guards), render output, importers, quick-add parsing, catalog integrity, and print pages. **All tests green is the bar for every change.** `app/fuzz.html` complements it: hand-built edge cases plus hundreds of seeded random jobs pushed through the whole pipeline, checking for crashes, malformed SVG, `undefined`/`NaN` on paper, wires crossing any device or card body, overlapping hop arcs, vanished wires, and whether a picked reroute reproduces its preview. Router fallbacks on overloaded layouts are reported as a capacity metric, not a failure.
+Open `app/tests.html` in a served browser tab. 344 assertions run on load and report pass/fail with a summary line. The suite covers the data model, validation, advisor budgets, placement geometry, router hop ceilings per fixture (regression guards), render output, importers, quick-add parsing, catalog integrity, and print pages. **All tests green is the bar for every change.** `app/fuzz.html` complements it: hand-built edge cases plus hundreds of seeded random jobs pushed through the whole pipeline, checking for crashes, malformed SVG, `undefined`/`NaN` on paper, wires crossing any device or card body, overlapping hop arcs, vanished wires, and whether a picked reroute reproduces its preview. Router fallbacks on overloaded layouts are reported as a capacity metric, not a failure.
 
 ## Architecture in one paragraph
 

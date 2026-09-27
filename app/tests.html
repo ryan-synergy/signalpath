@@ -1134,6 +1134,63 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("debug: channels stay private outside debug mode", !route(job, ix, p).channels);
 }
 
+/* ---------- harness bundling: crowded feeds ride a sibling as one conductor (2026-09-27) ---------- */
+{
+  const dense = await (await fetch("./test-fixtures/dense-harness.json")).json();
+  const { job, ix } = loadJob(dense);
+  const p = place(job, ix);
+  const rt = route(job, ix, p);
+  const members = rt.wires.filter(w => w.bundleOf);
+  t("harness: a dense one-source job routes with zero fallbacks", !rt.warnings.some(w => w.code === "route-fallback" || w.code === "unrouted"),
+    rt.warnings.filter(w => w.code === "route-fallback").map(w => w.msg).join(", "));
+  t("harness: crowded feeds bundle instead of falling back", members.length >= 3);
+  const byId = Object.fromEntries(rt.wires.map(w => [w.id, w]));
+  t("harness: every member shares its root's net and exits from the root's port",
+    members.every(m => { const R = byId[m.bundleOf]; return R && R.net === m.net && m.pts[0][0] === R.pts[0][0] && m.pts[0][1] === R.pts[0][1] && m.from === R.from && m.signal === R.signal; }));
+  const PAD = 2;
+  const inside = (x1, y1, x2, y2, o) => Math.min(x1, x2) < o.x + o.w - PAD && Math.max(x1, x2) > o.x + PAD && Math.min(y1, y2) < o.y + o.h - PAD && Math.max(y1, y2) > o.y + PAD;
+  const bodies = [...p.racks.flatMap(r => r.devices), ...p.chips, ...p.zones];
+  t("harness: bundled breakouts never cross a device or card body",
+    members.every(m => m.pts.every((q, i) => i === 0 || !bodies.some(o => inside(...m.pts[i - 1], ...q, o)))));
+  const svg = render(job, ix, p, rt);
+  const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+  t("harness: trunks draw heavier with a ×N count", doc.querySelectorAll("g.harness path").length === members.length &&
+    [...doc.querySelectorAll("text.bustick")].some(x => /^×[2-9]/.test(x.textContent)));
+  // clean sheets never change: nothing on the shipped samples needs bundling
+  for (const name of ["residence", "estate", "stress"]) {
+    const v = loadJob(structuredClone(fixtures[name]));
+    t(`harness: ${name} sample draws no bundles (clean sheets unchanged)`, !route(v.job, v.ix, place(v.job, v.ix)).wires.some(w => w.bundleOf));
+  }
+  // column-A sources rise in the A|B gap (they used to cross the whole rack and always fall back)
+  const r = structuredClone(fixtures.residence);
+  r.solutions[0].connections.push({ from: "cablebox", to: "patio-tv", signal: "video" });
+  const v2 = loadJob(r); const rt2 = route(v2.job, v2.ix, place(v2.job, v2.ix));
+  t("router: a column-A source feeds a top-band TV without falling back", rt2.wires.find(w => w.from === "cablebox" && w.to === "patio-tv")?.cls === "zone-west");
+}
+
+/* ---------- catalog lockfile: frozen until the user updates (2026-09-27) ---------- */
+{
+  const { lockCatalog, catalogDrift, refreshCatalogLock } = await import("./engine.js");
+  const CAT = await (await fetch("./catalog.json")).json();
+  const j = structuredClone(fixtures.residence);
+  delete j.job.catalogSnapshot.devices;
+  lockCatalog(j, CAT);
+  const frozen = JSON.stringify(j.job.catalogSnapshot.devices["anthem-mdx-16"]);
+  const newer = structuredClone(CAT);
+  newer.devices["anthem-mdx-16"].inputs.analog = 99;
+  lockCatalog(j, newer);                                       // a later save with a changed catalog
+  t("lockfile: later saves never overwrite a locked entry", JSON.stringify(j.job.catalogSnapshot.devices["anthem-mdx-16"]) === frozen);
+  const drift = catalogDrift(j, newer);
+  t("lockfile: drift reports exactly the changed device", drift.length === 1 && drift[0].ref === "anthem-mdx-16");
+  refreshCatalogLock(j, newer);
+  t("lockfile: update pulls the new specs in and clears drift",
+    j.job.catalogSnapshot.devices["anthem-mdx-16"].inputs.analog === 99 && catalogDrift(j, newer).length === 0);
+  const j2 = structuredClone(fixtures.residence);
+  j2.solutions[0].localDevices.push({ id: "sa", type: "amp", model: "Sonos Amp", catalogRef: "sonos-amp", zone: "z-patio", location: "at-display" });
+  lockCatalog(j2, CAT);
+  t("lockfile: local (at-display) gear is locked too", !!j2.job.catalogSnapshot.devices["sonos-amp"]);
+}
+
 /* ---------- audit 2026-09-27: engine / importer / quick-add regressions ---------- */
 {
   const CAT = await (await fetch("./catalog.json")).json();

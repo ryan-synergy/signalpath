@@ -236,8 +236,10 @@ function randomJob(k) {
 }
 let randFails = 0;
 const t0 = performance.now();
+const jobs = [];
 for (let k = 0; k < N; k++) {
   const j = randomJob(k);
+  jobs.push(structuredClone(j));
   const p = exercise(j, `random #${k} (seed ${SEED})`, true);
   if (p.length) { randFails++; if (randFails <= 25) log(false, `random #${k}`, p.slice(0, 2).join(" | ")); }
 }
@@ -246,7 +248,7 @@ const mli = document.createElement("li");
 mli.textContent = `ℹ router capacity metric (not a failure): ${METRIC.fallbackWires} best-effort fallback wires across ${METRIC.jobsWithFallback} layouts — dense wrapped video bands and direct source→TV runs exceed the channel plan`;
 out.appendChild(mli);
 
-window.FUZZ = { failures, randomJob, exercise, METRIC };
+window.FUZZ = { failures, randomJob, exercise, METRIC, jobs };
 const bad = failures.length;
 document.getElementById("summary").innerHTML = bad === 0
   ? `<span class="pass">ALL ${runs} FUZZ RUNS CLEAN</span>`

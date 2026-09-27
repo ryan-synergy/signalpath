@@ -201,6 +201,8 @@ Print = new window, `@page 17in 11in landscape`, one SVG per page, `print()`. Pa
 
 27. **One export per reader.** The quote file's contract forbids any text outside its lines; the review file is all explanation. Two files, each strict to its reader, beat one file that half-serves both. The review file carries the machine truth (the job JSON) *and* the human reading — and when a Markdown file holds several fences, import takes the **last** ```json block (an intro sentence that merely mentions a json fence once broke the round trip).
 
+28. **Grouping is a view over the existing cluster machinery.** "Outdoor separate" didn't need new layout code: outdoor zones get a synthetic area (`__outdoor`, with `__indoor` for the rest when the job has no areas) and ride the area-cluster path the router already knew. Type grouping is a stable sort inside each cluster's TV band and speaker band. The new layouts found one old router bug straight away (a zone-east wire's lane at chip height ran through its own target chip, which was exempt from blocking so it could land) — the target is now exempt for the landing leg only. Adding the variant to the fuzz loop is what caught it.
+
 ## 10. Order of construction (what to build when)
 
 1. Data model + `loadJob`/`indexJob` + first fixtures — get tests running the same day.

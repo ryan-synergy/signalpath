@@ -40,6 +40,12 @@ export const STATUS_NAME = { new: "New", ofe: "Owner-furnished (OFE)", prewire: 
 // the audio network a job runs on — Dante OR Savant AVB, never both (the
 // control platform is a separate choice: Savant can drive either)
 export const AUDIO_NET_NAME = { "": "Not set", dante: "Dante", avb: "Savant AVB" };
+// outdoor rooms: an explicit zone.outdoor wins; otherwise the name or landscape speakers say so
+const OUTDOOR = /\b(patio|pool|yard|backyard|deck|garden|landscape|exterior|outdoor|outside|terrace|courtyard|lanai|spa|dock|balcony|porch|veranda|loggia|firepit|fire pit|cabana|driveway|lawn)\b/i;
+export const isOutdoorZone = z => typeof z?.outdoor === "boolean" ? z.outdoor
+  : OUTDOOR.test(z?.name || "") || (z?.endpoints || []).some(e => e.config === "landscape");
+// how the drawing groups zones (job.job.zoneGrouping)
+export const ZONE_GROUPING_NAME = { type: "By type (surround + TV · TV + 2-ch · speakers only)", "type-outdoor": "By type, outdoor zones separate", order: "In the order I added them" };
 export const SCOPE_NAME = { included: "Included", prewire: "Pre-wire only", future: "Future" };
 export const SPEAKER_SETUP = {
   none: "None", mono: "Mono (1 speaker)", stereo: "Stereo pair", "2.1": "2.1 (pair + sub)",

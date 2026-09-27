@@ -2170,6 +2170,32 @@ for (const [name, raw] of Object.entries(fixtures)) {
     back.job.solutions[0].connections.length === job.solutions[0].connections.length);
 }
 
+/* ---------- zone grouping on the drawing ---------- */
+{
+  const CAT = await (await fetch("./catalog.json")).json();
+  const S = await import("./starters.js"), C = await import("./commands.js");
+  const blank = () => ({ generator: "SignalPath", schemaVersion: 1, job: { name: "g", client: { name: "c" }, revisions: [] },
+    house: { areas: [], zones: [] }, solutions: [{ id: "s", name: "A", platforms: [], racks: [{ id: "rack-main", name: "Rack", devices: [] }], localDevices: [], companions: [], connections: [], annotations: [] }] });
+  const j0 = S.applyStarter(blank(), S.STARTERS.find(x => x.id === "savant-whole-home"), CAT);
+  const job = C.planCommands(j0, 0, [{ op: "add_zones", text: "guest tv 43 matrix, kitchen stereo 55 matrix, family room 5.1 75 matrix, patio stereo 55 matrix, office stereo, pool landscape 8, theater 7.1 85 matrix" }], CAT).job;
+  const topOrder = j => { const { job: jj, ix } = loadJob(j); const p = place(jj, ix); return p.zones.filter(z => z.band === "top").sort((a, b) => a.y - b.y || a.x - b.x).map(z => z.name); };
+  const def = topOrder(job);
+  t("grouping (default): surround+TV rooms first, then TV + 2-ch, then TV only — added order kept inside each group",
+    def.join() === "Family Room,Theater,Kitchen,Patio,Guest Tv", def.join());
+  const ord = structuredClone(job); ord.job.zoneGrouping = "order";
+  t("grouping 'order': zones stay in the order they were added", topOrder(ord).join() === "Guest Tv,Kitchen,Family Room,Patio,Theater", topOrder(ord).join());
+  const od = structuredClone(job); od.job.zoneGrouping = "type-outdoor";
+  { const { job: jj, ix } = loadJob(od); const p = place(jj, ix), rt = route(jj, ix, p);
+    const cl = p.zones.filter(z => z.band === "cluster").map(z => z.name).sort();
+    t("grouping 'outdoor separate': patio + pool (landscape) form an OUTDOOR cluster; indoor stays in the main band",
+      cl.join() === "Patio,Pool" && p.areaHeaders.some(h => h.name === "OUTDOOR") && !topOrder(od).includes("Patio"), cl.join() + " / " + p.areaHeaders.map(h => h.name));
+    t("grouping 'outdoor separate': still routes clean", !rt.warnings.some(w => /unrouted|fallback/.test(w.code)), rt.warnings.map(w => w.msg).join(" | ")); }
+  const ov = structuredClone(od); ov.house.zones.find(z => z.name === "Patio").outdoor = false;
+  { const { job: jj, ix } = loadJob(ov); const p = place(jj, ix);
+    t("grouping: a zone's Outdoor setting overrides the guess (Patio set indoor stays in the main band)",
+      p.zones.find(z => z.name === "Patio").band === "top" && p.zones.find(z => z.name === "Pool").band === "cluster"); }
+}
+
 document.getElementById("summary").innerHTML =
   fail === 0 ? `<span class="pass">ALL ${pass} TESTS PASS</span>` : `<span class="fail">${fail} FAILED</span> · ${pass} passed`;
 document.title = fail === 0 ? `✓ ${pass} pass` : `✗ ${fail} fail`;

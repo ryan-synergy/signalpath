@@ -328,7 +328,7 @@ import { setDanteAudio, danteAmpFor } from "./app/hookup.js";
 import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, nextFreeOutputs, outputsNeeded,
          VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS } from "./app/hookup.js";
 import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME, AUDIO_NET_NAME,
-         signalName, describeNode, humanizeWireIds, productName, productSku, ADAPTER } from "./app/names.js";
+         signalName, describeNode, humanizeWireIds, productName, productSku, ADAPTER, isOutdoorZone, ZONE_GROUPING_NAME } from "./app/names.js";
 
 /* ============ IndexedDB jobs store ============ */
 const DB = await new Promise((res, rej) => {
@@ -1218,6 +1218,8 @@ function zonesHTML() {
           ${field("Name", `<input class="zname" value="${esc(z.name)}">`)}
           ${fieldO("Scope", chips("zscope", ["included", "prewire", "future"].map(k => [k, SCOPE_LABEL[k]]), zEff.scope || "included"), "zones", z.id, "scope")}
           ${fieldO("Remote", sel("zremote", ["none", "savant", "appletv", "josh", "factory"], zEff.remote || "none", REMOTE_LABEL), "zones", z.id, "remote")}
+          ${field("Outdoor", sel("zoutdoor", ["auto", "yes", "no"], typeof z.outdoor === "boolean" ? (z.outdoor ? "yes" : "no") : "auto",
+            { auto: `Auto (${isOutdoorZone({ ...z, outdoor: undefined }) ? "outdoor" : "indoor"})`, yes: "Outdoor", no: "Indoor" }))}
           ${(S.job.house.areas || []).length ? field("Area", sel("zarea", ["", ...S.job.house.areas.map(a => a.id)], z.area || "")) : ""}
           ${spk && !/^(surround|soundbar)/.test(spk.config || "") ? fieldO("Spk count", `<input class="spkcount" type="number" min="1" max="12" value="${esc(spk.count || 2)}">`, "endpoints", spkH.id, "count") : ""}
           ${spk ? fieldO("Speakers are", chips("spkstatus", STATUSES.map(k => [k, STATUS_LABEL[k]]), spk.status || "new"), "endpoints", spkH.id, "status") : ""}
@@ -1416,6 +1418,7 @@ function jobHTML() {
       ${field("Name", `<input class="jclient" value="${esc(J.client?.name || "")}">`)}
       ${field("Address", `<input class="jaddr" value="${esc(J.client?.address || "")}">`)}
       ${field("Drawn by", `<input class="jdrawn" value="${esc(J.drawnBy || "")}">`)}
+      ${field("Group zones", sel("jgroup", ["type", "type-outdoor", "order"], J.zoneGrouping || "type", ZONE_GROUPING_NAME))}
     </div></div>
     <div class="sect">SOLUTION</div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
@@ -1609,6 +1612,7 @@ function wirePanel(body) {
     refresh();
   });
   on(".zname", el => { const z = zoneOf(el); if (z) z.name = el.value; });
+  on(".zoutdoor", el => { const z = zoneOf(el); if (!z) return; if (el.value === "auto") delete z.outdoor; else z.outdoor = el.value === "yes"; });
   zon(".zscope", el => { const z = zoneOf(el); setF("zones", z, "scope", el.value); });
   on(".zremote", el => {
     const z = zoneOf(el); if (!z) return;
@@ -1900,6 +1904,7 @@ function wirePanel(body) {
   on(".jclient", el => { S.job.job.client.name = el.value; });
   on(".jaddr", el => { S.job.job.client.address = el.value; });
   on(".jdrawn", el => { S.job.job.drawnBy = el.value; });
+  on(".jgroup", el => { if (el.value === "type") delete S.job.job.zoneGrouping; else S.job.job.zoneGrouping = el.value; });
   on(".solname", el => { S.job.solutions[S.sol].name = el.value; });
   on(".solplat", el => { S.job.solutions[S.sol].platforms = el.value ? [el.value] : []; });
   on(".solnet", el => { const sol = S.job.solutions[S.sol]; if (el.value) sol.audioNetwork = el.value; else delete sol.audioNetwork; });

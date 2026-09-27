@@ -89,18 +89,20 @@ function exercise(raw, label, strict = false) {
       const { job, ix } = loadJob(eff);
       validate(job, ix);
       const a = advise(job, ix, catalog);
-      for (const opts of [{ solution: si }, { solution: si, grayscale: true, hideSignals: ["network"] }, { solution: si, harness: true }]) {
+      for (const opts of [{ solution: si }, { solution: si, grayscale: true, hideSignals: ["network"] }, { solution: si, harness: true }, { solution: si, outdoor: true }]) {
         if (!job.house.zones.length) continue;
-        const p = place(job, ix, opts);
-        const rt = route(job, ix, p, opts);
-        svgCheck(render(job, ix, p, rt, opts), `sheet sol${si}${opts.grayscale ? " bw" : ""}`);
+        // the outdoor variant draws the same job with outdoor zones as their own cluster
+        const J = opts.outdoor ? { ...job, job: { ...job.job, zoneGrouping: "type-outdoor" } } : job;
+        const p = place(J, ix, opts);
+        const rt = route(J, ix, p, opts);
+        svgCheck(render(J, ix, p, rt, opts), `sheet sol${si}${opts.grayscale ? " bw" : ""}${opts.outdoor ? " outdoor" : ""}`);
         if (!opts.grayscale) {
           const fb0 = METRIC.fallbackWires;
-          problems.push(...geometryProblems(p, rt).slice(0, 3).map(x => opts.harness ? "harness: " + x : x));
-          if (opts.harness) METRIC.fallbackWires = fb0;   // the metric tracks the default drawing
+          problems.push(...geometryProblems(p, rt).slice(0, 3).map(x => opts.harness ? "harness: " + x : opts.outdoor ? "outdoor: " + x : x));
+          if (opts.harness || opts.outdoor) METRIC.fallbackWires = fb0;   // the metric tracks the default drawing
           // a well-formed job must route every wire — "unrouted" means a wire silently vanished
           if (strict) for (const w of rt.warnings.filter(w => w.code === "unrouted")) problems.push(`${w.code}: ${w.msg}`);
-          if (!opts.harness && rt.warnings.some(w => w.code === "route-fallback")) METRIC.jobsWithFallback++;
+          if (!opts.harness && !opts.outdoor && rt.warnings.some(w => w.code === "route-fallback")) METRIC.jobsWithFallback++;
         }
         for (const w of rt.wires) if (w.pts) for (const pt of w.pts)
           if (!Number.isFinite(pt[0]) || !Number.isFinite(pt[1])) { problems.push(`non-finite wire point on ${w.id}`); break; }
@@ -109,9 +111,9 @@ function exercise(raw, label, strict = false) {
           const cands = [...rt.wires.filter(w => w.pts && (w.signal === "audioReturn" || w.cls === "intra" || w.cls === "staple" || w.cls === "wrap")).slice(0, 2),
                          ...rt.wires.filter(w => w.pts && /^zone-(west|east)$/.test(w.cls)).slice(0, 2)];
           for (const w of cands) {
-            const alts = routeAlternates(job, ix, p, opts, w.id);
+            const alts = routeAlternates(J, ix, p, opts, w.id);
             for (const alt of alts.slice(1, 3)) {
-              const j2 = structuredClone(job);
+              const j2 = structuredClone(J);
               const conn = j2.solutions[si].connections.find(c => `${c.from}→${c.to}` === w.id);
               if (!conn) continue;
               conn.routeHint = alt.hint;
@@ -244,6 +246,7 @@ function randomJob(k) {
 let randFails = 0;
 const t0 = performance.now();
 const jobs = [];
+window.__fuzzJobs = jobs;   // replay a failing job from the console: __fuzzJobs[k]
 for (let k = 0; k < N; k++) {
   const j = randomJob(k);
   jobs.push(structuredClone(j));

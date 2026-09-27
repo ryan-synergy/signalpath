@@ -2,7 +2,7 @@
    Layers: load → validate → advise → place → route → render(SVG)
    Pure functions, no DOM. Spec: ../DESIGN.md (FROZEN 2026-09-17). */
 
-import { describeNode, adapterName, adapterTag, SIGNAL_SHORT, SCOPE_NAME } from "./names.js";
+import { describeNode, adapterName, adapterTag, isOutdoorZone, SIGNAL_SHORT, SCOPE_NAME } from "./names.js";
 
 export const SIGNAL_COLORS = {
   video: "#d22b1f",
@@ -485,13 +485,20 @@ export function place(job, ix = indexJob(job), opts = {}) {
   const out = { sheet: SHEET, racks: [], zones: [], chips: [], corridors: [], areaHeaders: [], legend: null, warnings: [] };
 
   /* -- classify zones, preserve input order (layout stability) -- */
-  const areas = job.house.areas || [];
+  // grouping: by type (default) — within the TV band, surround+TV rooms, then TV
+  // + 2-channel/soundbar, then TV only (speaker-only zones are their own band) —
+  // optionally with outdoor zones as their own cluster; or plain added order
+  const grouping = job.job?.zoneGrouping || "type";
+  let areas = job.house.areas || [];
+  const outdoorSplit = grouping === "type-outdoor" && job.house.zones.some(isOutdoorZone) && job.house.zones.some(z => !isOutdoorZone(z));
+  if (outdoorSplit) areas = [...(areas.length ? areas : [{ id: "__indoor", name: "Indoor" }]), { id: "__outdoor", name: "Outdoor" }];
+  const areaOf = z => outdoorSplit && isOutdoorZone(z) ? "__outdoor" : z.area;
   const multiArea = areas.length > 1;
   const primaryAreaId = areas.length ? (sol.racks?.[0]?.area || areas[0].id) : null;
   const clusters = []; // [{areaId, name, video:[], audio:[]}] — cluster 0 = primary
   const clusterFor = z => {
     // an area id that isn't declared falls back to the primary (validate flags it)
-    const aid = multiArea ? (areas.some(a => a.id === z.area) ? z.area : primaryAreaId) : null;
+    const aid = multiArea ? (areas.some(a => a.id === areaOf(z)) ? areaOf(z) : primaryAreaId) : null;
     let c = clusters.find(c => c.areaId === aid);
     if (!c) {
       c = { areaId: aid, name: areas.find(a => a.id === aid)?.name || null, video: [], audio: [] };
@@ -506,6 +513,13 @@ export function place(job, ix = indexJob(job), opts = {}) {
   for (const z of job.house.zones) {
     const c = clusterFor(z);
     (z.endpoints || []).some(e => e.type === "display") ? c.video.push(z) : c.audio.push(z);
+  }
+  if (grouping !== "order") {
+    const tvRank = z => { const spk = (z.endpoints || []).find(e => e.type === "speakers")?.config || "";
+      return /^surround/.test(spk) ? 0 : spk ? 1 : 2; };
+    const spkRank = z => /^surround/.test((z.endpoints || []).find(e => e.type === "speakers")?.config || "") ? 0 : 1;
+    const stable = (list, rank) => list.map((z, i) => [z, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]);
+    for (const c of clusters) { c.video = stable(c.video, tvRank); c.audio = stable(c.audio, spkRank); }
   }
   // primary cluster first, others in area order
   clusters.sort((a, b) => {
@@ -1250,12 +1264,21 @@ export function route(job, ix, placement, opts = {}) {
       const side = landY == null && (zh?.land === "top" || zh?.land === "bottom") ? zh.land : null;
       const skip = new Set([d.id, o.t.chipId].filter(Boolean));
 
+      // the target chip is exempt (the wire lands on it) — but only the LAST leg may
+      // touch it: an earlier leg at chip height would run through its body
+      const tChip = o.t.chipId ? chipById[o.t.chipId] : null;
+      const piercesChip = pts => tChip && pts.slice(0, -1).some((q, i) => i && (() => {
+        const [x1, y1] = pts[i - 1], [x2, y2] = q;
+        return Math.min(x1, x2) < tChip.x + tChip.w - 1 && Math.max(x1, x2) > tChip.x + 1 &&
+               Math.min(y1, y2) < tChip.y + tChip.h - 1 && Math.max(y1, y2) > tChip.y + 1;
+      })());
+      const blockedHere = pts => pathBlocked(pts, skip) || (piercesChip(pts) ? "target chip" : null);
       const finishFrom = (px, py, prefix, inverted = false, relax = false) => {
         const sibNets = relax ? [] : eastNets;
         const above = side ? side === "top" : py < cardTop;
         const land = landY ?? (above ? cardTop : cardBot);
         let pts = [...prefix, [px, py], [tx, py], [tx, land]];
-        if (!pathBlocked(pts, skip) && pathRegisterable(pts, nWire) && !crossesSiblings(pts, sibNets)) return pts;
+        if (!blockedHere(pts) && pathRegisterable(pts, nWire) && !crossesSiblings(pts, sibNets)) return pts;
         const gutter = gutterFor(tx);
         let found = null;
         const tryStaged = (landAt, rng, desired, dir) => {
@@ -1274,7 +1297,7 @@ export function route(job, ix, placement, opts = {}) {
               x => segBlocked(x, Math.min(py, y), x, Math.max(py, y), skip), rRange);
             if (riserX == null) { dbg(o, { y, fail: "riser" }); return false; }
             const cand = [...prefix, [px, py], [riserX, py], [riserX, y], [tx, y], [tx, landAt]];
-            const bl = pathBlocked(cand, skip);
+            const bl = blockedHere(cand);
             if (bl) { dbg(o, { y, riserX, fail: "blocked:" + bl }); return false; }
             if (!pathRegisterable(cand, nWire)) {
               if (opts.debug) {
@@ -1315,7 +1338,7 @@ export function route(job, ix, placement, opts = {}) {
               x => segBlocked(x, Math.min(py, y), x, Math.max(py, y), skip), [g0, rDesired]);
             if (riserX == null) { dbg(o, { y, fail: "dive-riser" }); return false; }
             const cand = [...prefix, [px, py], [riserX, py], [riserX, y], [tx, y], [tx, landAt]];
-            if (pathBlocked(cand, skip) || !pathRegisterable(cand, nWire)) { dbg(o, { y, riserX, fail: "dive-blocked" }); return false; }
+            if (blockedHere(cand) || !pathRegisterable(cand, nWire)) { dbg(o, { y, riserX, fail: "dive-blocked" }); return false; }
             if (crossesSiblings(cand, sibNets)) { dbg(o, { y, riserX, fail: "dive-sibling" }); return false; }
             found = cand;
             riserTrack[rk] = riserX;

@@ -17,9 +17,8 @@ import { loadJob, validate, advise, effectiveJob, expandChannels } from "./engin
 import { wireRuns } from "./pages.js";
 import { readHookup } from "./hookup.js";
 import { vocabularyText } from "./commands.js";
-import { describeNode, adapterName, SPEAKER_SETUP, STATUS_NAME, SCOPE_NAME, PLATFORM_NAME, AUDIO_NET_NAME, signalName } from "./names.js";
+import { describeNode, adapterName, isOutdoorZone, SPEAKER_SETUP, STATUS_NAME, SCOPE_NAME, PLATFORM_NAME, AUDIO_NET_NAME, signalName } from "./names.js";
 
-const OUTDOOR = /\b(patio|pool|yard|backyard|deck|garden|landscape|exterior|outdoor|outside|terrace|courtyard|lanai|spa|dock|balcony|porch|veranda|loggia|firepit|fire pit|cabana|driveway|lawn)\b/i;
 // speaker sets as package names (PlanQueue maps them to its real packages)
 const PACKAGE_NAME = { mono: "Mono", stereo: "Stereo Pair", "2.1": "2.1 (Pair + Sub)", "surround-5.1": "5.1 Surround",
   "surround-7.1": "7.1 Surround", "surround-7.1.4": "7.1.4 Surround", soundbar: "Soundbar", "soundbar-sub": "Soundbar + Sub", landscape: "Landscape" };
@@ -59,7 +58,7 @@ function quoteRooms(job, sol, catalog, adv) {
   const cat = id => catalog?.devices?.[id];
   const rooms = new Map();   // "floor\u0000room" → {floor, room, scope, lines: Map}
   const areaName = id => job.house.areas?.find(a => a.id === id)?.name;
-  const floorOf = z => areaName(z.area) || (OUTDOOR.test(z.name) ? "Exterior" : "Floor 1");
+  const floorOf = z => areaName(z.area) || (isOutdoorZone(z) ? "Exterior" : "Floor 1");
   const add = (floor, room, scope, p, extraNotes = []) => {
     const k = floor + "\u0000" + room;
     if (!rooms.has(k)) rooms.set(k, { floor, room, scope, lines: new Map() });

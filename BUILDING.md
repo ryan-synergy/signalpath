@@ -193,6 +193,9 @@ Print = new window, `@page 17in 11in landscape`, one SVG per page, `print()`. Pa
 
 22. **Bridge apps through the fragment, not a server.** Two static apps on different devices can hand off a whole survey with nothing in between: compress it into the URL `#fragment` (never sent over the wire), open or AirDrop the link, and strip it with `history.replaceState` on arrival so it doesn't sit in the address bar. Build the link at tap time; verify the pair by decoding a link the *other* side made.
 
+23. **A seed catalog needs an update path, not just an add path.** "New entries join, user edits win" meant every spec correction (Beam Ultra, the whole I/O audit) silently never reached a browser that had opened the app once. Fix: remember what was shipped when each entry was taken (`catalogBase`, stable-stringified); an entry still equal to it is unedited and follows the new shipped version; an edited one is kept and listed with an Update button. Legacy entries with no base can't be told from edits — list them, never overwrite.
+24. **One port vocabulary, enforced by a test.** The advisor only reads the keys it knows. `lineOut`, `loopOut`, `balancedAnalog`, `eArc`, `ports` all crept in from different research rounds and were silently uncounted. Canonical keys — in: hdmi, earc, analog, coax, optical, digitalCombo, dante; out: hdmi, analog, sub, coax, optical, dante, gbe, gbe25, sfpPlus — with a test that fails on anything else. Details (balanced, loop-through, via-adapter) go in flags/notes, not new keys. `analog` = stereo pairs; amp `zones` = stereo zones (8 channels = 4 zones — the Sonance line had been counted in channels, doubling its capacity).
+
 ## 10. Order of construction (what to build when)
 
 1. Data model + `loadJob`/`indexJob` + first fixtures — get tests running the same day.

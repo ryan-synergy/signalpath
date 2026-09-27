@@ -355,11 +355,10 @@ let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
     SETTINGS = { ...SETTINGS, ...rec.settings };
     if (!SETTINGS.company || typeof SETTINGS.company !== "object") SETTINGS.company = { name: "SYNERGY", tagline: "", info: "" };
   }
-  if (!SETTINGS.catalog || typeof SETTINGS.catalog !== "object") SETTINGS.catalog = structuredClone(SHIPPED);
+  if (!SETTINGS.catalog || typeof SETTINGS.catalog !== "object") { SETTINGS.catalog = structuredClone(SHIPPED); CAT_SYNCED = syncShippedCatalog(); }
   else {
     if (!SETTINGS.catalog.devices || typeof SETTINGS.catalog.devices !== "object") SETTINGS.catalog.devices = {};
-    for (const [id, d] of Object.entries(SHIPPED.devices || {}))      // shipped catalog grows over time:
-      if (!SETTINGS.catalog.devices[id]) SETTINGS.catalog.devices[id] = structuredClone(d); // new entries join, user edits win
+    CAT_SYNCED = syncShippedCatalog();
     // licensing tables too: a platform table missing from older stored settings
     // left its editor (and its advisor pick) broken
     SETTINGS.catalog.licensing = SETTINGS.catalog.licensing && typeof SETTINGS.catalog.licensing === "object" ? SETTINGS.catalog.licensing : {};
@@ -367,7 +366,37 @@ let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
       if (!SETTINGS.catalog.licensing[plat]) SETTINGS.catalog.licensing[plat] = structuredClone(tbl);
   }
 }
+/* shipped catalog → this browser's catalog. New entries join; an entry the
+   user never edited follows the shipped one (spec corrections must reach
+   everyone); an edited entry is kept and listed as "differs from shipped".
+   catalogBase remembers what was shipped when each entry was last taken, which
+   is how "never edited" is known. Entries saved before catalogBase existed
+   can't be told apart from edits — they're listed, never overwritten. */
+function stableStr(v) {
+  if (Array.isArray(v)) return "[" + v.map(stableStr).join(",") + "]";
+  if (v && typeof v === "object") return "{" + Object.keys(v).sort().map(k => JSON.stringify(k) + ":" + stableStr(v[k])).join(",") + "}";
+  return JSON.stringify(v);
+}
+var CAT_STALE, CAT_SYNCED;   // var, no initializer: the boot block above already set them
+function takeShipped(id) {
+  SETTINGS.catalog.devices[id] = structuredClone(SHIPPED.devices[id]);
+  (SETTINGS.catalogBase ||= {})[id] = stableStr(SHIPPED.devices[id]);
+}
+function syncShippedCatalog() {
+  const mine = SETTINGS.catalog.devices, base = (SETTINGS.catalogBase ||= {});
+  let changed = false; CAT_STALE = [];
+  for (const [id, d] of Object.entries(SHIPPED.devices || {})) {
+    const ship = stableStr(d), cur = mine[id] ? stableStr(mine[id]) : null;
+    if (cur === null) { takeShipped(id); changed = true; continue; }
+    if (cur === ship) { if (base[id] !== ship) { base[id] = ship; changed = true; } continue; }
+    if (base[id] && cur === base[id]) { takeShipped(id); changed = true; continue; }   // unedited → follow the shipped fix
+    CAT_STALE.push(id);
+  }
+  if (SHIPPED.asOf && SETTINGS.catalog.asOf !== SHIPPED.asOf) { SETTINGS.catalog.asOf = SHIPPED.asOf; changed = true; }
+  return changed;
+}
 const saveSettings = () => dbPut({ id: "__settings", updated: Date.now(), settings: SETTINGS });
+if (CAT_SYNCED) await saveSettings();
 /* job snapshot wins over the live catalog (old jobs advise identically forever) */
 function effectiveCatalog() {
   const snap = S.job?.job?.catalogSnapshot;
@@ -1332,7 +1361,8 @@ function portCaps(d, cat, ins, outs) {
   if (I.hdmi) inParts.push(`HDMI ${cnt(ins, "video")} of ${I.hdmi}`);
   if (I.analog) inParts.push(`analog ${cnt(ins, "audio")} of ${I.analog}`);
   if (I.optical) inParts.push(`optical ${cnt(ins, "audioReturn")} of ${I.optical}`);
-  if (I.ports) inParts.push(`ports ${cnt(ins, "network") + cnt(outs, "network")} of ${I.ports}`);
+  const net = (O.gbe || 0) + (O.gbe25 || 0) + (O.sfpPlus || 0);
+  if (net && /switch|avSwitch/i.test(d.type)) inParts.push(`ports ${cnt(ins, "network") + cnt(outs, "network")} of ${net}`);
   if (O.hdmi) outParts.push(`HDMI ${cnt(outs, "video")} of ${O.hdmi}`);
   if (O.analog && d.type !== "videoMatrix") outParts.push(`analog ${cnt(outs, "audio")} of ${O.analog}`);
   if (d.type === "amp" && (d.zones || cat.zones)) outParts.push(`zones ${cnt(outs, "speaker")} of ${d.zones || cat.zones}`);
@@ -1421,7 +1451,7 @@ function settingsHTML() {
           <span class="mini">analog</span>${numf("catan", io.analog, "0")}<span class="mini">coax</span>${numf("catco", io.coax, "0")}
           <span class="mini">opt</span>${numf("catop", io.optical, "0")}<span class="mini">hdmi</span>${numf("cathd", io.hdmi, "0")}</div>
         ${field("Notes", `<input class="catnotes" value="${esc(d.notes || "")}">`)}
-        <div style="text-align:right"><button class="del catdel">delete entry</button></div>
+        <div style="text-align:right">${CAT_STALE.includes(id) ? `<button class="cattake">use shipped specs</button> ` : ""}<button class="del catdel">delete entry</button></div>
       </div></div>`;
   }).join("");
   const conn = loadConn();
@@ -1451,6 +1481,9 @@ function settingsHTML() {
     <div class="row open"><div class="fields" style="display:block;border-top:none">${c4}
       ${field("Connect", `<input class="c4conn" value="${esc(L.control4?.connect || "")}">`)}</div></div>
     <div class="sect">DEVICE CATALOG <span class="badge">${Object.keys(SETTINGS.catalog.devices || {}).length}</span> <span class="mini">asOf ${esc(SETTINGS.catalog.asOf || "")}</span></div>
+    ${CAT_STALE.length ? `<div class="drift">⚠ ${CAT_STALE.length} entr${CAT_STALE.length === 1 ? "y differs" : "ies differ"} from the latest shipped specs — your edits, or specs saved before a correction:
+      ${CAT_STALE.map(id => esc(`${SETTINGS.catalog.devices[id]?.brand || ""} ${SETTINGS.catalog.devices[id]?.model || id}`.trim())).join(", ")}.
+      <button class="addbtn" id="catTakeAll" style="margin-top:6px">Update all to the shipped specs</button></div>` : ""}
     ${devs}
     <button class="addbtn" id="addCat">＋ Add catalog device</button>
     <button class="addbtn" id="resetCat" style="margin-top:8px;border-color:#d99;color:#b55">Reset licensing &amp; catalog to shipped defaults</button>`;
@@ -1468,6 +1501,9 @@ function wireSettings(body) {
   const save = () => { saveSettings(); refresh(false); };
   const on = (selctor, fn) => body.querySelectorAll(selctor).forEach(el => el.onchange = () => { fn(el); save(); });
   const num = v => v === "" ? null : +v;
+  const retake = ids => { for (const id of ids) takeShipped(id); syncShippedCatalog(); save(); renderPanel(); };
+  body.querySelector("#catTakeAll")?.addEventListener("click", () => retake([...CAT_STALE]));
+  body.querySelectorAll(".cattake").forEach(b => b.onclick = () => retake([b.closest("[data-cat]").dataset.cat]));
   const L = SETTINGS.catalog.licensing;
   on(".coname", el => SETTINGS.company.name = el.value);
   on(".cotag", el => SETTINGS.company.tagline = el.value);
@@ -1508,7 +1544,7 @@ function wireSettings(body) {
   const resetCat = body.querySelector("#resetCat");
   if (resetCat) resetCat.onclick = () => {
     if (!confirm("Replace licensing rules and device catalog with the shipped defaults?")) return;
-    SETTINGS.catalog = structuredClone(SHIPPED); save(); renderPanel();
+    SETTINGS.catalog = structuredClone(SHIPPED); SETTINGS.catalogBase = {}; syncShippedCatalog(); save(); renderPanel();
   };
 }
 

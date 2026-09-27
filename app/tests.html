@@ -1003,7 +1003,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("sonos: catalog research merged (verified Amp, Port both-ways, legacy flagged)",
     catalog.devices["sonos-amp"].verified === true && catalog.devices["sonos-amp"].flags.includes("sonos") &&
     catalog.devices["sonos-port"].outputs.coax === 1 &&
-    catalog.devices["sonos-connect"]?.verified === false && !!catalog.devices["sonos-arc-ultra"]);
+    catalog.devices["sonos-connect"]?.flags.includes("legacy") && !!catalog.devices["sonos-arc-ultra"]);
   t("sonos: Beam Ultra verified post-launch (eARC, no DTS:X/ethernet gotchas noted)",
     catalog.devices["sonos-beam-ultra"]?.verified === true && catalog.devices["sonos-beam-ultra"].flags.includes("eARC") &&
     /Combo Adapter/.test(catalog.devices["sonos-beam-ultra"].notes) && /DTS:X/.test(catalog.devices["sonos-beam-ultra"].notes));
@@ -1044,7 +1044,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("catalog: research round merged (37 devices incl. Sonance Blaze line)",
     Object.keys(cat.devices).length >= 37 && !!cat.devices["sonance-blaze-pzc-1008d"] && !!cat.devices["avpro-mxnet-sw24"]);
   t("catalog: Bijou 3100 output gap fixed", cat.devices["audiocontrol-bijou-3100"].outputs.sub === 1 &&
-    cat.devices["audiocontrol-bijou-3100"].outputs.lineOut === 2);
+    cat.devices["audiocontrol-bijou-3100"].outputs.analog === 1);
   t("catalog: Blaze Dante gotcha encoded (8ch amp, 4ch Dante)",
     cat.devices["sonance-blaze-pzc-1008d"].inputs.dante === 4 && cat.devices["sonance-blaze-pzc-1008d"].ampCh === 8);
   // PDF verification pass 2026-09-20: manuals settled what web text couldn't
@@ -1061,9 +1061,28 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("catalog: MX-44 rear panel confirmed (4x Toslink + 4x balanced analog de-embed)",
     cat.devices["avpro-ac-mx-44"].verified === true && cat.devices["avpro-ac-mx-44"].outputs.optical === 4 &&
     cat.devices["avpro-ac-mx-44"].outputs.analog === 4);
-  t("catalog: only the known intentional unverifieds remain (pre-ship / legacy / placeholder)",
-    JSON.stringify(Object.keys(cat.devices).filter(k => !cat.devices[k].verified).sort()) ===
-    JSON.stringify(["avpro-mxnet-cbox-ha", "savant-ip-audio-125", "sonos-connect", "sonos-connect-amp"]));
+  t("catalog: every entry verified after the 2026-09-27 I/O audit",
+    Object.keys(cat.devices).filter(k => !cat.devices[k].verified).length === 0);
+  { // one port vocabulary, so every count the advisor reads is actually read
+    const IN = ["hdmi", "earc", "analog", "coax", "optical", "digitalCombo", "dante"];
+    const OUT = ["hdmi", "analog", "sub", "coax", "optical", "dante", "gbe", "gbe25", "sfpPlus"];
+    const bad = Object.entries(cat.devices).flatMap(([k, d]) => [
+      ...Object.keys(d.inputs || {}).filter(p => !IN.includes(p)).map(p => `${k} in.${p}`),
+      ...Object.keys(d.outputs || {}).filter(p => !OUT.includes(p)).map(p => `${k} out.${p}`)]);
+    t("catalog: every port uses the canonical names (no lineOut/loopOut/eArc/ports aliases)", !bad.length, bad.join(", "));
+    const dv = k => cat.devices[k];
+    t("audit: MX-88 = 8 Toslink + 8 balanced outs, no downmix flag",
+      dv("avpro-ac-mx-88").outputs.optical === 8 && dv("avpro-ac-mx-88").outputs.analog === 8 && !dv("avpro-ac-mx-88").flags.includes("downmix2ch"));
+    t("audit: SW12 PoE budget 125W", dv("avpro-mxnet-sw12").poeBudgetW === 125);
+    t("audit: MXNet decoder Toslink is an input", dv("avpro-mxnet-1g-dv2").inputs.optical === 1 && !dv("avpro-mxnet-1g-dv2").outputs.optical);
+    t("audit: amp zones are STEREO zones (Sonance DSP 8-130 = 4, 2-150 = 1, Blaze 1008D = 4)",
+      dv("sonance-dsp-8-130-mkiii").zones === 4 && dv("sonance-dsp-2-150-mkiii").zones === 1 && dv("sonance-blaze-pzc-1008d").zones === 4);
+    t("audit: Pro Max RJ45 not double-counted (24 = 16x1G + 8x2.5G)",
+      dv("ubiquiti-usw-pro-max-24-poe").outputs.gbe + dv("ubiquiti-usw-pro-max-24-poe").outputs.gbe25 === 24);
+    t("audit: Savant -00 modules not flagged PoE; IP Audio 125 has its inputs",
+      !dv("savant-pav-aim7c").flags.includes("poe") && dv("savant-ip-audio-125").inputs.optical === 2);
+    t("audit: legacy Sonos Connect had only an analog input", JSON.stringify(dv("sonos-connect").inputs) === '{"analog":1}');
+  }
   t("catalog: SW24 lineage settled (legacy 370W, SW24P successor present)",
     cat.devices["avpro-mxnet-sw24"].poeBudgetW === 370 && cat.devices["avpro-mxnet-sw24"].flags.includes("legacy") &&
     cat.devices["avpro-mxnet-sw24p"]?.verified === true);
@@ -1641,8 +1660,8 @@ for (const [name, raw] of Object.entries(fixtures)) {
     ["family-tv", "master-tv", "patio-tv"].forEach(tv => r.solutions[0].connections.push({ from: tv, to: "bj", signal: "audioReturn" }));
     const { job, ix } = loadJob(r);
     const rin = advise(job, ix, CAT).io.find(x => x.device === "bj" && x.kind === "return-in");
-    t("audit: eARC inputs count toward the digital return budget (catalog key eArc)",
-      !!bijou?.inputs?.eArc && rin && rin.capacity >= 3 && !rin.over, JSON.stringify(rin)); }
+    t("audit: eARC inputs count toward the digital return budget (catalog key earc)",
+      !!bijou?.inputs?.earc && rin && rin.capacity >= 3 && !rin.over, JSON.stringify(rin)); }
   { const r = R(); r.house.zones[0].endpoints[0].config = "surround-7.1";
     const o = pipeline(r); const z = o.p.zones.find(z => z.id === "z-family");
     const uses = [...new DOMParser().parseFromString(o.svg, "image/svg+xml").querySelectorAll("g.zcard[data-zone='z-family'] use")];

@@ -2481,7 +2481,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
               ? `${d.model || d.id}: ${analogRuns} analog runs into ${cat.inputs.analog} analog inputs (${cat.model}) — over capacity`
               : `${d.model || d.id}: ${analogRuns}/${cat.inputs.analog} analog inputs fed · ${cat.inputs.analog - analogRuns} spare` });
         // audio returns land on DIGITAL inputs (optical/coax/eARC) — budget them
-        // (the catalog spells it "eArc"; accept either)
+        // (catalog key "earc"; older user-edited catalogs may still say "eArc")
         const earc = cat.inputs?.earc ?? cat.inputs?.eArc ?? 0;
         const retIn = inbound.filter(c => c.signal === "audioReturn").length;
         const retCap = (cat.inputs?.optical || 0) + (cat.inputs?.coax || 0) + (cat.inputs?.digitalCombo || 0) + earc;

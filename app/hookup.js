@@ -162,9 +162,26 @@ export function autoHookup(job, sol, zone, hints = {}) {
     if (spk) setSpeakers(job, sol, zone, avr);
     return;
   }
-  if (hints.matrix && tv) {
-    const m = devs.find(d => d.type === "videoMatrix") || devs.find(d => d.type === "avSwitch");
-    if (m) setVideo(job, sol, zone, m.id);
+  const m = devs.find(d => d.type === "videoMatrix") || devs.find(d => d.type === "avSwitch");
+  if (hints.matrix && tv && m) setVideo(job, sol, zone, m.id);
+  // speakers: stereo-style sets take the next free amp zone; surround wants a
+  // receiver (fed from the matrix, like a family room off a whole-home rack)
+  if (spk && !readHookup(job, sol, zone).speakers) {
+    const cfg = spk.config || "stereo";
+    if (/^surround/.test(cfg)) {
+      if (hints.matrix && m) {
+        const busy = new Set((sol.connections || []).filter(c => c.signal === "speaker").map(c => c.from));
+        let avr = rackDevices(sol).find(d => d.type === "avr" && !busy.has(d.id))?.id;
+        if (!avr) avr = addRackDevice(job, sol, "avr", `AV receiver — ${zone.name}`);
+        setSpeakers(job, sol, zone, avr);
+        if (!(sol.connections || []).some(c => c.from === m.id && c.to === avr && c.signal === "video"))
+          sol.connections.push({ from: m.id, to: avr, signal: "video" });
+      }
+    } else if (!/^soundbar/.test(cfg)) {
+      const used = id => (sol.connections || []).filter(c => c.from === id && c.signal === "speaker").length;
+      const amp = rackDevices(sol).find(d => d.type === "amp" && used(d.id) < (d.zones || 8));
+      if (amp) setSpeakers(job, sol, zone, amp.id);
+    }
   }
 }
 

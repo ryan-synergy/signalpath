@@ -1325,6 +1325,43 @@ for (const [name, raw] of Object.entries(fixtures)) {
     ["video", "audio", "audioReturn", "network"].every(k => SIGNAL_NAME[k].startsWith(legend.match(new RegExp(`>(${SIGNAL_NAME[k].split(" (")[0]})</text>`))?.[1] || "\u0000")));
 }
 
+/* ---------- rack starting points: rack + quick-add zones → a clean job (2026-09-27) ---------- */
+{
+  const { STARTERS, applyStarter } = await import("./starters.js");
+  const { parseQuick } = await import("./quickadd.js");
+  const H = await import("./hookup.js");
+  const { productName } = await import("./names.js");
+  const CAT = await (await fetch("./catalog.json")).json();
+  const blank = () => ({ generator: "SignalPath", schemaVersion: 1,
+    job: { name: "T", client: { name: "C", address: "A" }, stage: "proposal", drawnBy: "SP", revisions: [], catalogSnapshot: {} },
+    house: { areas: [], zones: [] },
+    solutions: [{ id: "sol-a", name: "Proposed System", platforms: [], auxCounts: {}, racks: [{ id: "rack-main", name: "Equipment Rack", devices: [] }],
+                  localDevices: [], companions: [], connections: [], annotations: [] }] });
+  const PAD = 2;
+  const inside = (x1, y1, x2, y2, o) => Math.min(x1, x2) < o.x + o.w - PAD && Math.max(x1, x2) > o.x + PAD && Math.min(y1, y2) < o.y + o.h - PAD && Math.max(y1, y2) > o.y + PAD;
+  for (const st of STARTERS) {
+    const j = applyStarter(blank(), st, CAT);
+    const devs = j.solutions[0].racks[0].devices;
+    t(`starter ${st.name}: every catalog ref exists and names its box`, devs.every(d => !d.catalogRef || (CAT.devices[d.catalogRef] && d.model === productName(CAT.devices[d.catalogRef]))));
+    const L0 = loadJob(structuredClone(j));
+    t(`starter ${st.name}: the rack alone validates`, validate(L0.job, L0.ix).errors.length === 0, validate(L0.job, L0.ix).errors.map(e => e.msg).join(" | "));
+    // its suggested quick-add builds wired zones
+    for (const p of parseQuick(st.tip).filter(p => !p.empty)) {
+      const z = p.zone, hints = z._hints || {}; delete z._hints;
+      j.house.zones.push(z);
+      H.autoHookup(j, j.solutions[0], z, hints);   // quick-add wires what it can: amps for stereo sets, a receiver for surround
+    }
+    const L = loadJob(j), v = validate(L.job, L.ix), pl = place(L.job, L.ix), rt = route(L.job, L.ix, pl);
+    const orphans = v.errors.filter(e => e.code === "orphan-endpoint");
+    const bodies = [...pl.racks.flatMap(r => r.devices), ...pl.chips, ...pl.zones];
+    const through = rt.wires.some(w => w.pts && !w.insideCard && w.cls !== "local" && !/fallback/.test(w.cls) && w.pts.some((q, i) => i && bodies.some(o => inside(...w.pts[i - 1], ...q, o))));
+    if (st.id !== "blank") {
+      t(`starter ${st.name}: its suggested zones come out wired (no errors)`, v.errors.length === 0, v.errors.map(e => e.msg).join(" | "));
+      t(`starter ${st.name}: routes clean`, !rt.warnings.some(w => /unrouted|fallback/.test(w.code)) && !through);
+    } else t("starter Blank rack: zones added but not wired say so", orphans.length > 0);
+  }
+}
+
 /* ---------- a linked box is called by its product's name (2026-09-27) ---------- */
 {
   const { productName, productSku } = await import("./names.js");

@@ -34,7 +34,7 @@
 
   /* ---- main split ---- */
   #main { flex: 1; display: flex; min-height: 0; }
-  #panel { width: 330px; flex: 0 0 auto; background: var(--panel); border-right: 1px solid var(--line);
+  #panel { width: 360px; flex: 0 0 auto; background: var(--panel);
            display: flex; flex-direction: column; min-height: 0; transition: width .15s; }
   #panel.collapsed { width: 42px; }
   #panel.collapsed .body, #panel.collapsed .tabs .lbl { display: none; }
@@ -50,13 +50,46 @@
   .row > .head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; }
   .row > .head .t { font-weight: 600; font-size: 13.5px; flex: 1; }
   .row > .head .sub { font-size: 11px; color: #777; }
-  .row .fields { border-top: 1px solid var(--line); padding: 9px 10px; display: none; }
-  .row.open .fields { display: block; }
+  .row > .fields { border-top: 1px solid var(--line); padding: 9px 10px; display: none; }
+  .row.open > .fields { display: block; }   /* child-only: a box's connection rows open on their own */
+  /* ---- panel v2: summary rows, tap chips, status marks, back panel ---- */
+  .row > .head.zhead { align-items: flex-start; }
+  .zmain { flex: 1; min-width: 0; }
+  .zt { display: flex; align-items: center; gap: 6px; }
+  .zt .t { flex: 1; }
+  .zsum { font-size: 11.5px; color: #666; margin-top: 2px; line-height: 1.35; }
+  .ziss { font-size: 11.5px; margin-top: 3px; line-height: 1.35; }
+  .ziss.e { color: var(--bad); } .ziss.w { color: #8a5a00; }
+  .st { flex: 0 0 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+        font-size: 11px; font-weight: 800; color: #fff; margin-top: 1px; }
+  .st.ok { background: #2f7a3a; } .st.w { background: #c58a0a; } .st.e { background: var(--bad); } .st.none { background: #c9ccd2; }
+  .zissues { margin: 0 0 8px; }
+  .zissues div { font-size: 12px; padding: 5px 8px; border-radius: 6px; margin-bottom: 4px; }
+  .zissues .e { background: #fdecea; color: #8f1d14; } .zissues .w { background: #fff6e0; color: #6b4a00; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; min-width: 0; }
+  .chip { font: inherit; font-size: 12px; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--line);
+          background: #fff; color: #333; cursor: pointer; }
+  .chip:hover { border-color: #9db4d0; }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .f.ov .chip.on { background: #e8842c; border-color: #e8842c; }
+  details.more { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 6px; }
+  details.more > summary { font-size: 11.5px; color: var(--accent); cursor: pointer; padding: 4px 0; list-style: none; }
+  details.more > summary::before { content: "▸ "; } details.more[open] > summary::before { content: "▾ "; }
+  .ports { margin: 4px 0 8px; }
+  .ports .cap { font-size: 11px; color: #777; margin: 0 2px 5px; }
+  .ports .row { margin-bottom: 5px; }
+  .ports .empty { font-size: 11.5px; color: #999; margin: 0 2px 6px; }
+  .addconn { width: 100%; font: inherit; font-size: 12px; padding: 5px; border-radius: 6px; cursor: pointer;
+             background: #fff; border: 1px dashed #9db4d0; color: var(--accent); margin-bottom: 4px; }
+  #connSearch { width: 100%; font: inherit; font-size: 12.5px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 6px; }
+  #grip { flex: 0 0 6px; cursor: col-resize; background: transparent; border-right: 1px solid var(--line); }
+  #grip:hover, #grip.drag { background: #c7d6ea; }
   .cgrp { font-size: 11.5px; color: #555; margin: 12px 2px 5px; }
   .cgrp b { color: #222; }
   .drift { background: #fff7e6; border: 1px solid #f0d49a; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; font-size: 12px; color: #6b4a00; }
   .drift .addbtn { margin-top: 6px; }
-  [data-ci] > .head { padding: 6px 10px; }
+  [data-ci] > .head { padding: 6px 10px; flex-direction: column; align-items: flex-start; gap: 1px; }
+  [data-ci] > .head .t { width: 100%; }
   [data-ci] > .head .t { font-weight: 500; font-size: 12.5px; }
   .fields .f { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
   .fields label { font-size: 11px; color: #666; width: 74px; flex: 0 0 auto; }
@@ -156,6 +189,22 @@
   #review .ft button, #review .ft select { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 7px;
     border: 1px solid var(--line); background: #fff; cursor: pointer; }
   #review .ft .primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  /* ---- new job: rack starting points ---- */
+  #starter { position: fixed; inset: 0; background: rgba(10,12,16,.55); display: none; z-index: 50; align-items: center; justify-content: center; }
+  #starter.show { display: flex; }
+  #starter .card { background: #fff; border-radius: 12px; width: min(760px, 94vw); max-height: 88vh; overflow-y: auto;
+                   box-shadow: 0 12px 40px rgba(0,0,0,.35); padding: 18px 20px; }
+  #starter h2 { margin: 0 0 2px; font-size: 18px; }
+  #starter .s { font-size: 12.5px; color: #666; margin-bottom: 12px; }
+  #starter .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  #starter .opt { text-align: left; font: inherit; background: #f8f9fb; border: 1px solid var(--line); border-radius: 10px;
+                  padding: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; }
+  #starter .opt:hover { border-color: var(--accent); background: #f1f6fc; }
+  #starter .opt b { font-size: 14px; }
+  #starter .opt .bl { font-size: 12px; color: #555; }
+  #starter .opt .gear { font-size: 11px; color: #777; line-height: 1.4; }
+  #starter .ft { display: flex; justify-content: flex-end; margin-top: 12px; }
+  #starter .ft button { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 7px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -192,11 +241,19 @@
     </div>
     <div class="body" id="panelBody"></div>
   </div>
+  <div id="grip" title="Drag to resize the panel"></div>
   <div id="right">
     <div id="canvas"></div>
     <div id="advisor"></div>
   </div>
 </div>
+
+<div id="starter" role="dialog" aria-modal="true" aria-labelledby="stTitle"><div class="card">
+  <h2 id="stTitle">New job — start from a rack</h2>
+  <div class="s">Pick the rack this job looks most like. Its gear and the patching inside the rack are filled in; then add zones with quick-add and they wire themselves to it.</div>
+  <div class="grid" id="stGrid"></div>
+  <div class="ft"><button id="stCancel">Cancel</button></div>
+</div></div>
 
 <div id="review"><div class="card">
   <div class="hd"><div class="t" id="rvTitle"></div><div class="s" id="rvSub"></div></div>
@@ -213,6 +270,7 @@ import { loadJob, validate, advise, place, route, render, effectiveJob, autoLink
 import { importAny, mergeHouse } from "./app/importers.js";
 import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
+import { STARTERS, applyStarter } from "./app/starters.js";
 import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, nextFreeOutputs, outputsNeeded,
          VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS } from "./app/hookup.js";
 import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME,
@@ -325,14 +383,14 @@ function refresh(save = true) {
   else if (errs.length) { chip.className = "bad"; chip.textContent = `✗ ${errs.length} issue${errs.length > 1 ? "s" : ""}`; }
   else { chip.className = "ok"; chip.textContent = `✓ valid${warns.length ? " · " + warns.length + "⚠" : ""}`; }
 
+  const vsol = S.view?.job?.solutions[S.sol];
+  const wname = t => S.view ? humanizeWireIds(S.view.job, vsol, t) : t;
   const adv = [];
   for (const e of errs) adv.push(`<div class="item e">✗ ${esc(e.msg)}</div>`);
   for (const w of warns) adv.push(`<div class="item w">⚠ ${esc(w.msg)}</div>`);
   // the router knows when a drawing is compromised — say so instead of leaving
   // a wire through a box unexplained
   for (const w of routeWarn.filter(w => w.code === "unrouted")) adv.push(`<div class="item e">✗ Wire not drawn: ${esc(wname(w.msg).replace(/^no route class for /, ""))}</div>`);
-  const vsol = S.view?.job?.solutions[S.sol];
-  const wname = t => S.view ? humanizeWireIds(S.view.job, vsol, t) : t;
   const fb = routeWarn.filter(w => w.code === "route-fallback").map(w => wname(w.msg));
   if (fb.length) adv.push(`<div class="item w">⚠ ${fb.length} wire${fb.length > 1 ? "s have" : " has"} no clean path on this layout — drawn best-effort and may cross gear: ${esc(fb.slice(0, 4).join("; "))}${fb.length > 4 ? "…" : ""}</div>`);
   for (const w of new Map(routeWarn.filter(w => w.code === "hint-unroutable").map(w => [w.msg, w])).values()) adv.push(`<div class="item w">⚠ The custom route for ${esc(wname(w.msg))} can't be drawn on this layout — routed automatically</div>`);
@@ -352,10 +410,39 @@ function refresh(save = true) {
     : `<div class="item i">${n.code === "avb-switch" || n.code === "sonos-net" ? "🌐" : "🎛"} ${esc(n.msg)}</div>`);
   $("#advisor").innerHTML = adv.join("") || `<div class="item ok">✓ No issues</div>`;
 
+  S.findings = collectFindings(errs, warns, a, mine);
+  // the advisor's port counts (a trunk can carry several channels) win over counting rows
+  S.ioByDev = new Map();
+  for (const io of (a?.io || []).filter(mine)) (S.ioByDev.get(io.device) ?? S.ioByDev.set(io.device, {}).get(io.device))[io.kind] = io;   // each finding also shows on its own zone / box row
   renderTopbar();
   renderPanel();
   if (save) { clearTimeout(saveTimer); saveTimer = setTimeout(() => { saveTimer = null; persist(); }, 400); }
 }
+/* findings → the row they belong to: zones by the endpoint / adapter / in-zone
+   gear they name (`ref`), boxes by device id (validator refs, port budgets) */
+function collectFindings(errs, warns, a, mine) {
+  const byZone = new Map(), byDev = new Map();
+  const ix = S.view?.ix, sol = S.view?.job?.solutions[S.sol];
+  const push = (m, k, level, msg) => { if (k == null) return; (m.get(k) ?? m.set(k, []).get(k)).push({ level, msg }); };
+  const zoneOfRef = ref => {
+    if (!ix || ref == null) return null;
+    if (ix.zonesById[ref]) return ref;
+    if (ix.endpointZone[ref]) return ix.endpointZone[ref];
+    const comp = (sol?.companions || []).find(c => c.id === ref); if (comp) return ix.endpointZone[comp.serves] || null;
+    return (sol?.localDevices || []).find(d => d.id === ref)?.zone || null;
+  };
+  const isDev = ref => (sol?.racks || []).some(r => r.devices.some(d => d.id === ref));
+  for (const [list, level] of [[errs, "e"], [warns, "w"]])
+    for (const f of list) isDev(f.ref) ? push(byDev, f.ref, level, f.msg) : push(byZone, zoneOfRef(f.ref), level, f.msg);
+  for (const n of a?.notes || []) if (n.code === "earc-extender" && mine(n)) push(byZone, zoneOfRef(n.ref), "w", n.msg);
+  for (const io of a?.io || []) if (io.over && mine(io)) push(byDev, io.device, "e", io.msg);
+  return { byZone, byDev };
+}
+const statusMark = (list, wired) => {
+  const lvl = list?.some(f => f.level === "e") ? "e" : list?.length ? "w" : wired ? "ok" : "none";
+  return `<span class="st ${lvl}" aria-label="${lvl === "e" ? "Has a problem" : lvl === "w" ? "Needs attention" : lvl === "ok" ? "Done" : "Not set up"}">${lvl === "e" ? "!" : lvl === "w" ? "!" : lvl === "ok" ? "✓" : ""}</span>`;
+};
+
 let saveWarned = false;
 async function persist() {
   try {
@@ -402,7 +489,26 @@ $("#solSel").onchange = e => {
   } else S.sol = +e.target.value;
   refresh();
 };
-$("#newJob").onclick = async () => { await flushSave(); S.job = blankJob(); S.id = uid("job"); S.editScope = "house"; await persist(); refresh(); };
+// new job: pick a rack starting point (or blank); quick-add then wires zones to it
+$("#newJob").onclick = () => {
+  const cat = SETTINGS.catalog;
+  $("#stGrid").innerHTML = STARTERS.map(st => `<button class="opt" data-st="${esc(st.id)}"><b>${esc(st.name)}</b>
+    <span class="bl">${esc(st.blurb)}</span>
+    <span class="gear">${st.devices.length ? esc(st.devices.map(d => d.model || productName(cat.devices?.[d.catalogRef]) || d.id).join(" · ")) : "No gear yet"}</span></button>`).join("");
+  $("#starter").classList.add("show");
+  $("#stGrid").querySelectorAll("[data-st]").forEach(b => b.onclick = async () => {
+    const st = STARTERS.find(x => x.id === b.dataset.st);
+    $("#starter").classList.remove("show");
+    await flushSave();
+    S.job = applyStarter(blankJob(), st, SETTINGS.catalog); S.id = uid("job"); S.sol = 0; S.editScope = "house";
+    S.qaHint = st.tip;                               // the quick-add box suggests how to add zones to this rack
+    S.tab = "zones"; switchTab("zones");
+    await persist(); refresh();
+    setTimeout(() => $("#qaInput")?.focus(), 50);
+  });
+};
+$("#stCancel").onclick = () => $("#starter").classList.remove("show");
+$("#starter").onclick = e => { if (e.target.id === "starter") $("#starter").classList.remove("show"); };
 $("#delJob").onclick = async () => {
   if (!confirm(`Delete "${S.job.job.name}"?`)) return;
   cancelSave();
@@ -657,7 +763,7 @@ function flashRow(sel) {
   row.classList.add("flash");
   setTimeout(() => row.classList.remove("flash"), 1300);
 }
-function openZone(zid) { switchTab("zones"); S.openRows.add(zid); renderPanel(); flashRow(`[data-zid="${CSS.escape(zid)}"]`); syncGlow(); }
+function openZone(zid) { focusRows(zid); switchTab("zones"); renderPanel(); flashRow(`[data-zid="${CSS.escape(zid)}"]`); syncGlow(); }
 /* sheet → panel: a tapped wire opens its connection row (GEAR) or its zone's
    HOOKUP; the wire stays selected so the edit is visible as it happens */
 function connIndex(wid, signal) {
@@ -667,12 +773,23 @@ function connIndex(wid, signal) {
 function openConn(wid, signal) {
   const i = connIndex(wid, signal); if (i < 0) return;
   hideTip(); clearGhosts();
-  // focus: this connection is the one open row, so it lands where you look
-  for (const k of [...S.openRows]) if (k.startsWith("conn:")) S.openRows.delete(k);
+  const sol = S.job.solutions[S.sol], c = sol.connections[i];
+  // its home: the box it leaves (outputs), else the box it enters (inputs),
+  // else JOB's full list (e.g. balun → TV)
+  const home = isRackDev(sol, c.from) ? c.from : isRackDev(sol, c.to) ? c.to : null;
+  focusRows(home);
+  S.openRows.add(`conn:${i}@${home || "job"}`);
   const wasCollapsed = $("#panel").classList.contains("collapsed");
-  switchTab("gear"); S.openRows.add("conn:" + i); renderPanel();
+  switchTab(home ? "gear" : "job"); renderPanel();
   // scroll after the panel finishes opening, or it measures a moving layout
-  setTimeout(() => flashRow(`[data-ci="${i}"]`), wasCollapsed ? 350 : 30);
+  setTimeout(() => flashRow(home ? `[data-did="${CSS.escape(home)}"] [data-ci="${i}"]` : `#connList [data-ci="${i}"]`), wasCollapsed ? 350 : 30);
+}
+// focus: what you tapped is the one open thing (other zones/boxes/connections close)
+function focusRows(keep) {
+  const zones = new Set(S.job.house.zones.map(z => z.id));
+  const devs = new Set(S.job.solutions[S.sol].racks.flatMap(r => r.devices.map(d => d.id)));
+  for (const k of [...S.openRows]) if (k.startsWith("conn:") || ((zones.has(k) || devs.has(k)) && k !== keep)) S.openRows.delete(k);
+  if (keep) S.openRows.add(keep);
 }
 // the zone a wire serves: its far end (or near end, for a return), through any adapter
 function wireZone(wid, signal) {
@@ -685,7 +802,7 @@ function wireZone(wid, signal) {
 }
 function openHookup(zid) {
   const wasCollapsed = $("#panel").classList.contains("collapsed");
-  switchTab("zones"); S.openRows.add(zid); renderPanel(); syncGlow();
+  focusRows(zid); switchTab("zones"); renderPanel(); syncGlow();
   setTimeout(() => {
   const sect = [...$("#panelBody").querySelectorAll(`[data-zid="${CSS.escape(zid)}"] .sect`)].find(x => x.textContent.startsWith("HOOKUP"));
   (sect || $("#panelBody").querySelector(`[data-zid="${CSS.escape(zid)}"]`))?.scrollIntoView({ block: "start", behavior: "smooth" });
@@ -693,7 +810,7 @@ function openHookup(zid) {
   row?.classList.add("flash"); setTimeout(() => row?.classList.remove("flash"), 1300);
   }, wasCollapsed ? 350 : 30);
 }
-function openGear(did) { switchTab("gear"); S.openRows.add(did); renderPanel(); flashRow(`[data-did="${CSS.escape(did)}"]`); syncGlow(); }
+function openGear(did) { focusRows(did); switchTab("gear"); renderPanel(); flashRow(`[data-did="${CSS.escape(did)}"]`); syncGlow(); }
 
 $("#canvas").addEventListener("click", e => {
   if (!$("#canvas svg")) return;
@@ -732,9 +849,29 @@ document.querySelectorAll(".tabs button[data-tab]").forEach(b => b.onclick = () 
   renderPanel();
   syncGlow();
 });
+// the panel's width is the viewer's own preference (per browser); collapsing
+// drops the inline width so the collapsed rule wins, and expanding restores it
+let panelW = 360;
+try { panelW = Math.min(640, Math.max(280, +localStorage.getItem("signalpath.panelW") || 360)); } catch {}
+$("#panel").style.width = panelW + "px";
 $("#collapse").onclick = () => {
-  $("#panel").classList.toggle("collapsed");
-  $("#collapse").textContent = $("#panel").classList.contains("collapsed") ? "⟩⟩" : "⟨⟨";
+  const p = $("#panel");
+  p.classList.toggle("collapsed");
+  p.style.width = p.classList.contains("collapsed") ? "" : panelW + "px";
+  $("#collapse").textContent = p.classList.contains("collapsed") ? "⟩⟩" : "⟨⟨";
+};
+$("#grip").onpointerdown = e => {
+  const p = $("#panel"); if (p.classList.contains("collapsed")) return;
+  e.preventDefault();
+  const x0 = e.clientX, w0 = p.getBoundingClientRect().width, g = $("#grip");
+  g.classList.add("drag"); p.style.transition = "none";
+  const move = ev => { panelW = Math.round(Math.min(640, Math.max(280, w0 + ev.clientX - x0))); p.style.width = panelW + "px"; };
+  const up = () => {
+    g.classList.remove("drag"); p.style.transition = "";
+    removeEventListener("pointermove", move); removeEventListener("pointerup", up);
+    try { localStorage.setItem("signalpath.panelW", String(panelW)); } catch {}
+  };
+  addEventListener("pointermove", move); addEventListener("pointerup", up);
 };
 
 const SPK_CONFIGS = ["none", "mono", "stereo", "2.1", "surround-5.1", "surround-7.1", "soundbar", "soundbar-sub", "landscape"];
@@ -748,6 +885,12 @@ const DEV_TYPE_LABEL = TYPE_NAME, SIGNAL_LABEL = SIGNAL_NAME, SCOPE_LABEL = SCOP
       SPK_LABEL = SPEAKER_SETUP, REMOTE_LABEL = REMOTE_NAME, PLATFORM_LABEL = PLATFORM_NAME;
 
 function field(label, inner) { return `<div class="f"><label>${label}</label>${inner}</div>`; }
+// small fixed choices are taps, not dropdowns
+const chips = (act, opts, cur) => `<div class="chips">${opts.map(([v, l]) =>
+  `<button type="button" class="chip${String(v) === String(cur) ? " on" : ""}" data-act="${esc(act)}" data-v="${esc(v)}" aria-pressed="${String(v) === String(cur)}">${esc(l)}</button>`).join("")}</div>`;
+const ZSPK = [["none", "None"], ["mono", "Mono"], ["stereo", "Stereo"], ["2.1", "2.1"], ["surround-5.1", "5.1"], ["surround-7.1", "7.1"],
+              ["soundbar", "Soundbar"], ["soundbar-sub", "Bar + sub"], ["landscape", "Landscape"]];
+const ZTV = [["none", "None"], ["tv", "TV"], ["projector", "Projector"]];
 const sel = (cls, opts, val, labels = {}) => `<select class="${cls}">${opts.map(o =>
   `<option value="${esc(o)}" ${o === val ? "selected" : ""}>${esc(labels[o] ?? o)}</option>`).join("")}</select>`;
 
@@ -811,46 +954,65 @@ function zonesHTML() {
     <label><input type="radio" name="escope" value="sol" ${scopeSol ? "checked" : ""}> ${esc(sol.name)} only</label>
     <span class="mini" title="Zone names and adding/removing zones, speakers or displays always edit the House.">ⓘ</span></div>` : "";
   const qa = `<div id="qa">
-    <div class="line"><input id="qaInput" placeholder="family room 5.1 75 sony matrix…" autocomplete="off">
+    <div class="line"><input id="qaInput" placeholder="${esc(S.qaHint || "family room 5.1 75 sony matrix")}…" autocomplete="off">
       <button id="qaMic" title="Dictate">🎤</button><button id="qaGo">Add</button></div>
     <div id="qaChips"></div>
-    <div class="ex">shorthand: name + config (5.1, stereo, 2.1, soundbar, landscape 8) + TV size + brand · "ofe" "prewire" "no tv" · comma = next zone</div>
+    <div class="ex">shorthand: name + config (5.1, stereo, 2.1, soundbar, landscape 8) + TV size + brand · "matrix" / "avr" wires it · "ofe" "prewire" "no tv" · comma = next zone</div>
   </div>`;
   const ovHas = (kind, id, f) => ov[kind]?.[id] != null && f in ov[kind][id];
   const fieldO = (label, inner, kind, id, f) => {
     const has = ovHas(kind, id, f);
     return `<div class="f${has ? " ov" : ""}"><label>${label}${has ? `<button class="ovx" data-ovk="${esc(kind)}" data-ovid="${esc(id)}" data-ovf="${esc(f)}" title="Overridden in ${esc(sol.name)} — revert to House">×</button>` : ""}</label>${inner}</div>`;
   };
-  const rows = S.job.house.zones.map((z, i) => {
+  const rows = S.job.house.zones.map(z => {
     const spkH = (z.endpoints || []).find(e => e.type === "speakers");
     const tvH = (z.endpoints || []).find(e => e.type === "display");
     const spk = spkH && { ...spkH, ...(ov.endpoints || {})[spkH.id] };
     const tv = tvH && { ...tvH, ...(ov.endpoints || {})[tvH.id] };
     const zEff = { ...z, ...(ov.zones || {})[z.id] };
-    const sub = [spk && (SPEAKER_SETUP[spk.config || "stereo"] || spk.config), tv && `${tv.displayType === "projector" ? "Projector" : "TV"} ${tv.size || "?"}"`].filter(Boolean).join(" · ") || "empty";
     const open = S.openRows.has(z.id);
-    return `<div class="row ${open ? "open" : ""}" data-zid="${esc(z.id)}">
-      <div class="head" data-toggle="${esc(z.id)}"><span class="t">${esc(z.name)}</span>
-        ${zEff.scope !== "included" ? `<span class="badge${ovHas("zones", z.id, "scope") ? " ovb" : ""}">${esc(SCOPE_NAME[zEff.scope] || zEff.scope)}</span>` : ""}<span class="sub">${esc(sub)}</span></div>
+    const found = S.findings?.byZone.get(z.id) || [];
+    const h = readHookup(S.job, sol, z);
+    const wired = (!h.tv || h.video) && (!h.spk || h.speakers) && (h.tv || h.spk);
+    // closed, a row answers "what is it, what feeds it, is it done?"
+    const what = [spk && (SPEAKER_SETUP[spk.config || "stereo"] || spk.config),
+                  tv && `${tv.size || "?"}" ${tv.displayType === "projector" ? "projector" : "TV"}${tv.brand ? " " + tv.brand : ""}`].filter(Boolean).join(" + ") || "Nothing in this zone yet";
+    // inside the zone's own row, "Apple TV in Patio" is just "Apple TV (in zone)"
+    const short = id => id ? describeNode(S.job, sol, id).short.replace(` in ${z.name}`, " (in zone)") : null;
+    let feed = "";
+    if (h.video?.from && h.video.from === h.speakers?.from) feed = `${short(h.video.from)} → TV + speakers`;
+    else feed = [h.tv && h.video?.from && `TV ← ${short(h.video.from)}`,
+                 h.spk && h.speakers?.from && `speakers ← ${short(h.speakers.from)}${h.speakers.channels ? " " + h.speakers.channels : ""}`].filter(Boolean).join(" · ");
+    if (h.earc) feed += " · eARC"; else if (h.ret) feed += " · optical back";
+    const issue = found.find(f => f.level === "e") || found[0];
+    const head = `<div class="head zhead" data-toggle="${esc(z.id)}">${statusMark(found, wired)}
+      <div class="zmain"><div class="zt"><span class="t">${esc(z.name)}</span>
+        ${zEff.scope !== "included" ? `<span class="badge${ovHas("zones", z.id, "scope") ? " ovb" : ""}">${esc(SCOPE_NAME[zEff.scope] || zEff.scope)}</span>` : ""}</div>
+        <div class="zsum">${esc(what)}${feed ? ` · ${esc(feed)}` : ""}</div>
+        ${issue && !open ? `<div class="ziss ${issue.level}">${esc(issue.msg)}${found.length > 1 ? ` <span class="mini">(+${found.length - 1} more)</span>` : ""}</div>` : ""}</div></div>`;
+    // open: the essentials as taps; the rarely-touched fields behind "More"
+    const spkCfg = spk ? spk.config || "stereo" : "none";
+    const tvType = tv ? tv.displayType || "tv" : "none";
+    const moreKey = "more:" + z.id;
+    return `<div class="row ${open ? "open" : ""}" data-zid="${esc(z.id)}">${head}
       <div class="fields">
-        ${field("Name", `<input class="zname" value="${esc(z.name)}">`)}
-        ${fieldO("Scope", sel("zscope", ["included", "prewire", "future"], zEff.scope || "included", SCOPE_LABEL), "zones", z.id, "scope")}
-        ${fieldO("Remote", sel("zremote", ["none", "savant", "appletv", "josh", "factory"], zEff.remote || "none", REMOTE_LABEL), "zones", z.id, "remote")}
-        ${(S.job.house.areas || []).length ? field("Area", sel("zarea", ["", ...S.job.house.areas.map(a => a.id)], z.area || "")) : ""}
-        <div class="sect">SPEAKERS</div>
-        ${spk ? fieldO("Config", sel("spkcfg", SPK_CONFIGS, spk.config || "stereo", SPK_LABEL), "endpoints", spkH.id, "config")
-              : field("Config", sel("spkcfg", SPK_CONFIGS, "none", SPK_LABEL))}
-        ${spk && !/^(surround|soundbar)/.test(spk.config || "") ? fieldO("Count", `<input class="spkcount" type="number" min="1" max="12" value="${esc(spk.count || 2)}">`, "endpoints", spkH.id, "count") : ""}
-        ${spk ? fieldO("Status", sel("spkstatus", STATUSES, spk.status || "new", STATUS_LABEL), "endpoints", spkH.id, "status") : ""}
-        <div class="sect">DISPLAY</div>
-        ${tv ? fieldO("Type", sel("tvtype", ["none", "tv", "projector"], tv.displayType || "tv", DISPLAY_NAME), "endpoints", tvH.id, "displayType")
-             : field("Type", sel("tvtype", ["none", "tv", "projector"], "none", DISPLAY_NAME))}
-        ${tv ? fieldO("Brand", `<input class="tvbrand" value="${esc(tv.brand || "")}">`, "endpoints", tvH.id, "brand") : ""}
-        ${tv ? fieldO("Size", `<input class="tvsize" type="number" min="24" max="220" value="${esc(tv.size || 65)}">`, "endpoints", tvH.id, "size") : ""}
-        ${tv ? fieldO("Status", sel("tvstatus", STATUSES.slice(0, 2), tv.status || "new", STATUS_LABEL), "endpoints", tvH.id, "status") : ""}
-        ${tv ? field("Confirm", `<input type="checkbox" class="tvconfirm" ${tvH.confirm?.length ? "checked" : ""}> <span class="mini">size needs confirmation</span>`) : ""}
+        ${found.length ? `<div class="zissues">${found.map(f => `<div class="${f.level}">${esc(f.msg)}</div>`).join("")}</div>` : ""}
+        ${spk ? fieldO("Speakers", chips("spkcfg", ZSPK, spkCfg), "endpoints", spkH.id, "config") : field("Speakers", chips("spkcfg", ZSPK, spkCfg))}
+        ${tv ? fieldO("Display", chips("tvtype", ZTV, tvType), "endpoints", tvH.id, "displayType") : field("Display", chips("tvtype", ZTV, tvType))}
+        ${tv ? fieldO("Size", `<input class="tvsize" type="number" min="24" max="220" value="${esc(tv.size || 65)}">${chips("tvsize", [55, 65, 75, 85, 98].map(n => [String(n), n + '"']), String(tv.size))}`, "endpoints", tvH.id, "size") : ""}
+        ${tv ? fieldO("Brand", `<input class="tvbrand" value="${esc(tv.brand || "")}" placeholder="e.g. Sony">`, "endpoints", tvH.id, "brand") : ""}
         ${hookupHTML(z, sol, multi)}
-        <div style="text-align:right"><button class="del zdel">delete zone</button></div>
+        <details class="more" data-more="${esc(moreKey)}" ${S.openRows.has(moreKey) ? "open" : ""}><summary>More — name, scope, status, remote${tv ? ", size check" : ""}</summary>
+          ${field("Name", `<input class="zname" value="${esc(z.name)}">`)}
+          ${fieldO("Scope", chips("zscope", ["included", "prewire", "future"].map(k => [k, SCOPE_LABEL[k]]), zEff.scope || "included"), "zones", z.id, "scope")}
+          ${fieldO("Remote", sel("zremote", ["none", "savant", "appletv", "josh", "factory"], zEff.remote || "none", REMOTE_LABEL), "zones", z.id, "remote")}
+          ${(S.job.house.areas || []).length ? field("Area", sel("zarea", ["", ...S.job.house.areas.map(a => a.id)], z.area || "")) : ""}
+          ${spk && !/^(surround|soundbar)/.test(spk.config || "") ? fieldO("Spk count", `<input class="spkcount" type="number" min="1" max="12" value="${esc(spk.count || 2)}">`, "endpoints", spkH.id, "count") : ""}
+          ${spk ? fieldO("Speakers are", chips("spkstatus", STATUSES.map(k => [k, STATUS_LABEL[k]]), spk.status || "new"), "endpoints", spkH.id, "status") : ""}
+          ${tv ? fieldO("TV is", chips("tvstatus", STATUSES.slice(0, 2).map(k => [k, STATUS_LABEL[k]]), tv.status || "new"), "endpoints", tvH.id, "status") : ""}
+          ${tv ? field("Confirm", `<input type="checkbox" class="tvconfirm" ${tvH.confirm?.length ? "checked" : ""}> <span class="mini">size needs confirmation</span>`) : ""}
+          <div style="text-align:right"><button class="del zdel">delete zone</button></div>
+        </details>
       </div>
     </div>`;
   }).join("");
@@ -877,7 +1039,7 @@ function hookupHTML(z, sol, multi) {
       <optgroup label="In the rack">${devOpts(VIDEO_FROM, cur)}</optgroup>
       ${locals.length ? `<optgroup label="In this zone">${locals.map(d => opt(d.id, nm(d.id), cur)).join("")}</optgroup>` : ""}
       <optgroup label="Add">${opt("__new_avr", "＋ New AV receiver…", "")}</optgroup></select>`));
-    if (byDev(cur)) rows.push(field("Run to TV", `<select class="hvrun">${Object.entries(RUNS).map(([k, l]) => opt(k, l, h.video.run)).join("")}</select>`));
+    if (byDev(cur)) rows.push(field("Run to TV", chips("hvrun", Object.entries(RUNS), h.video.run)));
   }
   if (h.spk) {
     const cur = h.speakers?.from || "";
@@ -913,14 +1075,15 @@ function hookupHTML(z, sol, multi) {
 function gearHTML() {
   const sol = S.job.solutions[S.sol];
   // catalog link: powers the port-budget advisor + snapshot lockfile (same-type entries listed first)
-  const catDevs = Object.entries(effectiveCatalog().devices || {});
+  const EC = effectiveCatalog();                       // one clone per render, not one per lookup
+  const catDevs = Object.entries(EC.devices || {});
   const catSel = d => `<select class="dcat"><option value="">— not linked —</option>${catDevs
     .slice().sort((a, b) => ((b[1].type === d.type) - (a[1].type === d.type)) ||
       String((a[1].brand || "") + a[1].model).localeCompare(String((b[1].brand || "") + b[1].model)))
     .map(([id, c]) => `<option value="${esc(id)}" ${d.catalogRef === id ? "selected" : ""}>${esc(productName(c))}${productSku(c) ? " · " + esc(productSku(c)) : ""}${c.verified === false ? " ⚠" : ""}${c.type === d.type ? "" : " · " + esc(DEV_TYPE_LABEL[c.type] || c.type)}</option>`).join("")}</select>`;
   // a linked box is called by its product's name — the drawing, this list and
   // the dropdown all read the same words; flag any that drifted
-  const catOf = d => d.catalogRef ? effectiveCatalog().devices?.[d.catalogRef] : null;
+  const catOf = d => d.catalogRef ? EC.devices?.[d.catalogRef] : null;
   const drifted = d => { const c = catOf(d); return c && (d.model || "") !== productName(c) ? productName(c) : null; };
   const nDrift = sol.racks.flatMap(r => r.devices).filter(drifted).length;
   const driftBar = nDrift ? `<div class="drift"><span>${nDrift} name${nDrift > 1 ? "s don't" : " doesn't"} match the catalog product ${nDrift > 1 ? "they're" : "it's"} linked to.</span>
@@ -929,32 +1092,50 @@ function gearHTML() {
     <div class="sect">${esc(String(r.name || r.id).toUpperCase())}</div>
     ${r.devices.map(d => {
       const open = S.openRows.has(d.id);
+      const found = S.findings?.byDev.get(d.id) || [];
+      const ins = sol.connections.map((c, i) => [c, i]).filter(([c]) => c.to === d.id);
+      const outs = sol.connections.map((c, i) => [c, i]).filter(([c]) => c.from === d.id);
+      const cap = portCaps(d, catOf(d), ins.map(x => x[0]), outs.map(x => x[0]));
+      const issue = found.find(f => f.level === "e") || found[0];
       return `<div class="row ${open ? "open" : ""}" data-did="${esc(d.id)}" data-rid="${esc(r.id)}">
-      <div class="head" data-toggle="${esc(d.id)}"><span class="t">${esc(d.model || d.id)}${drifted(d) ? ' <span class="mini" style="color:#b26a00" title="Name differs from its catalog product">●</span>' : ""}</span><span class="sub">${esc(DEV_TYPE_LABEL[d.type] || d.type)}${d.zones ? ` · ${esc(d.zones)} zones` : ""}</span></div>
+      <div class="head zhead" data-toggle="${esc(d.id)}">${statusMark(found, ins.length || outs.length)}
+        <div class="zmain"><div class="zt"><span class="t">${esc(d.model || d.id)}${drifted(d) ? ' <span class="mini" style="color:#b26a00" title="Name differs from its catalog product">●</span>' : ""}</span></div>
+          <div class="zsum">${esc(DEV_TYPE_LABEL[d.type] || d.type)}${d.zones ? ` · ${esc(d.zones)} zones` : ""} · ${ins.length} in · ${outs.length} out${cap.short ? " · " + esc(cap.short) : ""}</div>
+          ${issue && !open ? `<div class="ziss ${issue.level}">${esc(issue.msg)}</div>` : ""}</div></div>
       <div class="fields">
+        ${found.length ? `<div class="zissues">${found.map(f => `<div class="${f.level}">${esc(f.msg)}</div>`).join("")}</div>` : ""}
         ${field("Product", catSel(d))}
         ${field("Name", `<input class="dmodel" value="${esc(d.model || "")}" title="What the drawing and paperwork call this box — follows the product you pick">`)}
         ${drifted(d) ? `<div class="mini" style="margin:-2px 0 6px 80px;color:#8a5a00">The drawing says “${esc(d.model || "")}”, the product is “${esc(drifted(d))}”. <a href="#" class="dusecat">Use “${esc(drifted(d))}”</a></div>` : ""}
-        ${field("Type", sel("dtype", DEV_TYPES, d.type, { ...DEV_TYPE_LABEL, source: "Source (Apple TV, cable box, streamer…)" }))}
-        ${d.type === "amp" ? field("Zones", `<input class="dzones" type="number" min="1" max="32" value="${esc(d.zones || 8)}">`) : ""}
-        ${field("Status", sel("dstatus", STATUSES.slice(0, 2), d.status || "new", STATUS_LABEL))}
-        <div style="text-align:right"><button class="del ddel">delete device</button></div>
+        <div class="sect">INPUTS${cap.ins ? ` <span class="mini">${esc(cap.ins)}</span>` : ""}</div>
+        <div class="ports">${ins.length ? ins.map(([c, i]) => connRowHTML(c, i, sol, d.id, "in")).join("") : `<div class="empty">Nothing plugged in yet.</div>`}
+          <button class="addconn" data-dir="in">＋ Plug something into ${esc(d.model || "this box")}</button></div>
+        <div class="sect">OUTPUTS${cap.outs ? ` <span class="mini">${esc(cap.outs)}</span>` : ""}</div>
+        <div class="ports">${outs.length ? outs.map(([c, i]) => connRowHTML(c, i, sol, d.id, "out")).join("") : `<div class="empty">Not feeding anything yet.</div>`}
+          <button class="addconn" data-dir="out">＋ Connect an output</button></div>
+        <details class="more" data-more="more:${esc(d.id)}" ${S.openRows.has("more:" + d.id) ? "open" : ""}><summary>More — type, status${d.type === "amp" ? ", zones" : ""}</summary>
+          ${field("Type", sel("dtype", DEV_TYPES, d.type, { ...DEV_TYPE_LABEL, source: "Source (Apple TV, cable box, streamer…)" }))}
+          ${d.type === "amp" ? field("Zones", `<input class="dzones" type="number" min="1" max="32" value="${esc(d.zones || 8)}">`) : ""}
+          ${field("Status", sel("dstatus", STATUSES.slice(0, 2), d.status || "new", STATUS_LABEL))}
+          <div style="text-align:right"><button class="del ddel">delete device</button></div>
+        </details>
       </div></div>`;
     }).join("")}
     <button class="addbtn adddev" data-rid="${esc(r.id)}">＋ Add device to ${esc(r.name || r.id)}</button>`).join("");
+  const other = sol.connections.filter(c => !isRackDev(sol, c.from) && !isRackDev(sol, c.to)).length;
+  return racks + `<div class="mini" style="margin:12px 2px">Every connection, searchable, lives under <a href="#" id="toAllConns">JOB → All connections</a>${other ? ` (including ${other} that don't touch the rack, like baluns to TVs)` : ""}.</div>`;
+}
 
-  // each connection reads as a sentence ("Anthem MRX-540 → Family Room TV ·
-  // Video (HDMI)"); tap to edit. Grouped under the box the signal leaves.
-  const byFrom = new Map();
-  sol.connections.forEach((c, i) => (byFrom.get(c.from) ?? byFrom.set(c.from, []).get(c.from)).push([c, i]));
-  const conns = `<div class="sect">CONNECTIONS <span class="badge">${sol.connections.length}</span></div>
-    <div class="mini" style="margin:-2px 0 8px">What plugs into what. Grouped by the box the signal comes out of — tap one to change it.</div>` +
-    [...byFrom].map(([from, list]) => `<div class="cgrp">From <b>${esc(nodeInfo(from).label)}</b></div>` + list.map(([c, i]) => {
-      const key = "conn:" + i, open = S.openRows.has(key);
-      const tail = [signalName(c.signal), c.earc && "eARC back", c.backup && "backup to eARC", c.channels && `outputs ${c.channels}`, c.scope && c.scope !== "included" && SCOPE_LABEL[c.scope]].filter(Boolean).join(" · ");
-      const fromRcv = sol.racks.some(r => r.devices.some(d => d.id === c.from && d.type === "avr"));
-      return `<div class="row ${open ? "open" : ""}" data-ci="${i}">
-      <div class="head" data-toggle="${key}"><span class="t">→ ${esc(nodeInfo(c.to).label)}</span><span class="sub">${esc(tail)}</span></div>
+const isRackDev = (sol, id) => sol.racks.some(r => r.devices.some(d => d.id === id));
+/* one connection as a row; `ctx` keys its open state per place it's shown
+   (the same wire appears under both boxes it joins, and in JOB's full list) */
+function connRowHTML(c, i, sol, ctx, dir) {
+  const key = `conn:${i}@${ctx}`, open = S.openRows.has(key);
+  const tail = [signalName(c.signal), c.earc && "eARC back", c.backup && "backup to eARC", c.channels && `outputs ${c.channels}`, c.scope && c.scope !== "included" && SCOPE_LABEL[c.scope]].filter(Boolean).join(" · ");
+  const fromRcv = sol.racks.some(r => r.devices.some(d => d.id === c.from && d.type === "avr"));
+  const title = dir === "in" ? `← ${nodeInfo(c.from).label}` : `→ ${nodeInfo(c.to).label}`;
+  return `<div class="row ${open ? "open" : ""}" data-ci="${i}">
+      <div class="head" data-toggle="${esc(key)}"><span class="t">${esc(title)}</span><span class="sub">${esc(tail)}</span></div>
       <div class="fields">
         ${field("From", nodeSel("cfrom", c.from))}
         ${field("To", nodeSel("cto", c.to))}
@@ -965,9 +1146,27 @@ function gearHTML() {
         ${field("Scope", sel("cscope", ["included", "prewire", "future"], c.scope || "included", SCOPE_LABEL))}
         <div style="text-align:right"><button class="del cdel">delete connection</button></div>
       </div></div>`;
-    }).join("")).join("") +
-    `<button class="addbtn" id="addConn">＋ Add connection</button>`;
-  return racks + conns;
+}
+/* port use vs the catalog's jacks: "HDMI 2 of 7" per kind, a short head summary */
+function portCaps(d, cat, ins, outs) {
+  if (!cat) return {};
+  const io = S.ioByDev?.get(d.id) || {};
+  const rows = (list, sig) => list.filter(c => c.signal === sig).length;
+  const cnt = (list, sig) => {
+    const k = list === ins ? { video: "video-in", audio: "analog-in", audioReturn: "return-in" }[sig] : { video: "video-out", audio: "audio-out" }[sig];
+    return io[k]?.used ?? rows(list, sig);
+  };
+  const inParts = [], outParts = [];
+  const I = cat.inputs || {}, O = cat.outputs || {};
+  if (I.hdmi) inParts.push(`HDMI ${cnt(ins, "video")} of ${I.hdmi}`);
+  if (I.analog) inParts.push(`analog ${cnt(ins, "audio")} of ${I.analog}`);
+  if (I.optical) inParts.push(`optical ${cnt(ins, "audioReturn")} of ${I.optical}`);
+  if (I.ports) inParts.push(`ports ${cnt(ins, "network") + cnt(outs, "network")} of ${I.ports}`);
+  if (O.hdmi) outParts.push(`HDMI ${cnt(outs, "video")} of ${O.hdmi}`);
+  if (O.analog && d.type !== "videoMatrix") outParts.push(`analog ${cnt(outs, "audio")} of ${O.analog}`);
+  if (d.type === "amp" && (d.zones || cat.zones)) outParts.push(`zones ${cnt(outs, "speaker")} of ${d.zones || cat.zones}`);
+  const tight = [...inParts, ...outParts].find(p => { const m = p.match(/(\d+) of (\d+)/); return m && +m[1] >= +m[2]; });
+  return { ins: inParts.join(" · "), outs: outParts.join(" · "), short: tight ? tight + " (full)" : "" };
 }
 
 function allNodes() {
@@ -980,6 +1179,14 @@ function allNodes() {
   return n;
 }
 
+// every connection, grouped by the box the signal leaves — the checking view
+function allConnsHTML() {
+  const sol = S.job.solutions[S.sol];
+  const byFrom = new Map();
+  sol.connections.forEach((c, i) => (byFrom.get(c.from) ?? byFrom.set(c.from, []).get(c.from)).push([c, i]));
+  return [...byFrom].map(([from, list]) => `<div class="cgroup"><div class="cgrp">From <b>${esc(nodeInfo(from).label)}</b></div>` +
+    list.map(([c, i]) => connRowHTML(c, i, sol, "job", "out")).join("") + `</div>`).join("");
+}
 function jobHTML() {
   const J = S.job.job;
   return `
@@ -994,6 +1201,10 @@ function jobHTML() {
       ${field("Name", `<input class="solname" value="${esc(S.job.solutions[S.sol].name)}">`)}
       ${field("Platform", sel("solplat", ["", "savant", "josh", "control4"], (S.job.solutions[S.sol].platforms || [])[0] || "", PLATFORM_LABEL))}
     </div></div>
+    <div class="sect" id="allConns">ALL CONNECTIONS <span class="badge">${S.job.solutions[S.sol].connections.length}</span></div>
+    <input id="connSearch" placeholder="Search — a box, a zone, a signal…" value="${esc(S.connQuery || "")}">
+    <div id="connList">${allConnsHTML()}</div>
+    <button class="addbtn" id="addConn">＋ Add connection</button>
     <div class="sect">PACKET PAGES <span class="mini">sheet 1 always prints</span></div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       ${["channelMap:Channel Map", "equipment:Equipment & Takeoff", "wireSchedule:Wire Schedule",
@@ -1118,7 +1329,7 @@ function wirePanel(body) {
     S.openRows.has(id) ? S.openRows.delete(id) : S.openRows.add(id);
     // a connection row opened in the panel lights its wire on the sheet
     if (id.startsWith("conn:")) {
-      const c = S.job.solutions[S.sol].connections[+id.slice(5)];
+      const c = S.job.solutions[S.sol].connections[+id.slice(5).split("@")[0]];
       if (c && S.openRows.has(id)) { selWire = `${c.from}→${c.to}`; hideTip(); applySel(); }
       else if (c && selWire === `${c.from}→${c.to}`) { selWire = null; applySel(); }
     }
@@ -1127,6 +1338,10 @@ function wirePanel(body) {
   });
   const zoneOf = el => S.job.house.zones.find(z => z.id === el.closest("[data-zid]")?.dataset.zid);
   const on = (selctor, fn) => body.querySelectorAll(selctor).forEach(el => el.onchange = () => { fn(el); refresh(); });
+  // zone field handlers are also reachable from tap chips: a chip calls the
+  // same handler with its value (and closest() for the row lookup)
+  const ZH = {};
+  const zon = (selctor, fn) => { ZH[selctor] = fn; on(selctor, fn); };
 
   /* zones — writes go to the House, or to the active solution's overrides */
   const solA = S.job.solutions[S.sol] || S.job.solutions[0];
@@ -1147,14 +1362,14 @@ function wirePanel(body) {
     refresh();
   });
   on(".zname", el => { const z = zoneOf(el); if (z) z.name = el.value; });
-  on(".zscope", el => { const z = zoneOf(el); setF("zones", z, "scope", el.value); });
+  zon(".zscope", el => { const z = zoneOf(el); setF("zones", z, "scope", el.value); });
   on(".zremote", el => {
     const z = zoneOf(el); if (!z) return;
     if (scopeSol) setF("zones", z, "remote", el.value);      // "none" override = explicitly no remote in this solution
     else if (el.value === "none") delete z.remote; else z.remote = el.value;
   });
   on(".zarea", el => { const z = zoneOf(el); if (z) { if (el.value) z.area = el.value; else delete z.area; } });
-  on(".spkcfg", el => {
+  zon(".spkcfg", el => {
     const z = zoneOf(el); if (!z) return;
     z.endpoints = z.endpoints || [];
     let spk = z.endpoints.find(e => e.type === "speakers");
@@ -1164,8 +1379,8 @@ function wirePanel(body) {
     else z.endpoints.unshift({ id: uid(z.id + "-spk"), type: "speakers", config: el.value, count: 2, status: "new" });
   });
   on(".spkcount", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "speakers"), "count", +el.value); });
-  on(".spkstatus", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "speakers"), "status", el.value); });
-  on(".tvtype", el => {
+  zon(".spkstatus", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "speakers"), "status", el.value); });
+  zon(".tvtype", el => {
     const z = zoneOf(el); if (!z) return;
     z.endpoints = z.endpoints || [];
     let tv = z.endpoints.find(e => e.type === "display");
@@ -1175,8 +1390,8 @@ function wirePanel(body) {
     else z.endpoints.push({ id: uid(z.id + "-tv"), type: "display", displayType: el.value, brand: "", size: 65, status: "new" });
   });
   on(".tvbrand", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "brand", el.value); });
-  on(".tvsize", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "size", +el.value); });
-  on(".tvstatus", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "status", el.value); });
+  zon(".tvsize", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "size", +el.value); });
+  zon(".tvstatus", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "status", el.value); });
   on(".tvconfirm", el => { const t = zoneOf(el)?.endpoints.find(e => e.type === "display"); if (t) { if (el.checked) t.confirm = ["size"]; else delete t.confirm; } });
   body.querySelectorAll(".zdel").forEach(el => el.onclick = () => {
     const z = zoneOf(el); if (!z || !confirm(`Delete zone "${z.name}"?`)) return;
@@ -1195,6 +1410,14 @@ function wirePanel(body) {
     refresh();
   };
 
+  body.querySelectorAll(".chip[data-act]").forEach(b => b.onclick = () => {
+    const fn = ZH["." + b.dataset.act]; if (!fn) return;
+    fn({ value: b.dataset.v, checked: false, closest: q => b.closest(q) });
+    refresh();
+  });
+  body.querySelectorAll("details.more").forEach(d => d.ontoggle = () => { d.open ? S.openRows.add(d.dataset.more) : S.openRows.delete(d.dataset.more); });
+  ZH[".hvrun"] = el => { const z = zoneOf(el); const sol = S.job.solutions[S.sol]; if (z) setVideo(S.job, sol, z, readHookup(S.job, sol, z).video?.from, el.value); };
+
   /* zone hookup */
   const hook = (el, fn) => { const z = zoneOf(el); if (!z) return; fn(z, S.job.solutions[S.sol]); refresh(); };
   const newDev = (sol, v) => {
@@ -1206,8 +1429,6 @@ function wirePanel(body) {
     let v = el.value; if (v.startsWith("__new_")) { v = newDev(sol, v); if (!v) return; }
     setVideo(S.job, sol, z, v || null);
   }));
-  body.querySelectorAll(".hvrun").forEach(el => el.onchange = () => hook(el, (z, sol) =>
-    setVideo(S.job, sol, z, readHookup(S.job, sol, z).video?.from, el.value)));
   body.querySelectorAll(".hsfrom").forEach(el => el.onchange = () => hook(el, (z, sol) => {
     let v = el.value; if (v.startsWith("__new_")) { v = newDev(sol, v); if (!v) return; }
     setSpeakers(S.job, sol, z, v || null);
@@ -1348,7 +1569,7 @@ function wirePanel(body) {
   body.querySelectorAll(".cdel").forEach(el => el.onclick = () => {
     const sol = S.job.solutions[S.sol];
     sol.connections.splice(+el.closest("[data-ci]").dataset.ci, 1);
-    for (const k of [...S.openRows]) if (k.startsWith("conn:")) S.openRows.delete(k);   // indices shifted
+    for (const k of [...S.openRows]) if (k.startsWith("conn:")) S.openRows.delete(k);   // indices shifted (every context)
     refresh();
   });
   const addConn = body.querySelector("#addConn");
@@ -1358,9 +1579,49 @@ function wirePanel(body) {
     const to = nodes.find(id => nodeInfo(id).kind === "display") || nodes.find(id => id !== from) || "";
     const c = { from, to, signal: suggestSignal(from, to) || "video" };
     sol.connections.push(c);
-    S.openRows.add("conn:" + (sol.connections.length - 1));   // open it — the defaults are a starting point
+    S.openRows.add(`conn:${sol.connections.length - 1}@job`);   // open it — the defaults are a starting point
     refresh();
   };
+  // a box's back panel: plug something in / connect an output, starting from
+  // the likeliest other end (an unfed zone for amps and receivers)
+  body.querySelectorAll(".addconn").forEach(el => el.onclick = () => {
+    const { d } = devOf(el); if (!d) return;
+    const sol = S.job.solutions[S.sol], nodes = allNodes();
+    const fed = new Set(sol.connections.map(c => c.to)), used = new Set(sol.connections.map(c => c.from));
+    let from, to;
+    if (el.dataset.dir === "out") {
+      from = d.id;
+      // an output never lands on a source; prefer what this kind of box drives, unfed first
+      const want = d.type === "amp" ? ["speakers"] : d.type === "avr" ? ["display", "speakers"] : ["display", "speakers", "adapter"];
+      const ok = id => id !== d.id && nodeInfo(id).type !== "source";
+      to = nodes.find(id => ok(id) && !fed.has(id) && want.includes(nodeInfo(id).kind)) ||
+           nodes.find(id => ok(id) && want.includes(nodeInfo(id).kind)) ||
+           nodes.find(id => ok(id) && !fed.has(id)) || nodes.find(ok) || "";
+    } else {
+      to = d.id;
+      from = nodes.find(id => id !== d.id && nodeInfo(id).kind === "rack" && !used.has(id)) || nodes.find(id => id !== d.id) || "";
+    }
+    sol.connections.push({ from, to, signal: suggestSignal(from, to) || "video" });
+    S.openRows.add(`conn:${sol.connections.length - 1}@${d.id}`);
+    refresh();
+  });
+  const cs = body.querySelector("#connSearch");
+  if (cs) {
+    const filter = () => {
+      const q = (S.connQuery = cs.value).trim().toLowerCase();
+      body.querySelectorAll("#connList .cgroup").forEach(g => {
+        let any = false;
+        g.querySelectorAll("[data-ci]").forEach(r => {
+          const hit = !q || (g.querySelector(".cgrp").textContent + " " + r.querySelector(".head").textContent).toLowerCase().includes(q);
+          r.style.display = hit ? "" : "none"; any ||= hit;
+        });
+        g.style.display = any ? "" : "none";
+      });
+    };
+    cs.oninput = filter; filter();
+  }
+  const toAll = body.querySelector("#toAllConns");
+  if (toAll) toAll.onclick = ev => { ev.preventDefault(); switchTab("job"); renderPanel(); setTimeout(() => $("#allConns")?.scrollIntoView({ block: "start", behavior: "smooth" }), 30); };
 
   /* job */
   on(".jclient", el => { S.job.job.client.name = el.value; });

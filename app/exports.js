@@ -1,0 +1,289 @@
+/* ---------- exports.js — Markdown out ----------
+   Two Markdown files from one job:
+   1. planQueueFiles(): the PlanQueue proposal import (format
+      `planqueue: proposal-import/1` — front matter, `## Floor`, `### Room`,
+      `- qty | Manufacturer | Model | note`, nothing else). A job with
+      pre-wire-only rooms gives TWO files: technology-systems + technology-prewire.
+      The goal is "as close as possible": owner-supplied gear is listed (note
+      "customer supplied"), speakers are Packages PlanQueue picks, guessed part
+      numbers say "unsure".
+   2. aiReviewMarkdown(): everything an agent needs to review the design —
+      rooms and how each is fed, rack gear with specs and usage, open items,
+      licensing, connections, wire list, the quote lines — and the full job as
+      a ```json block at the end (SignalPath imports that block back).
+   Pure: job + catalog in, text out. */
+
+import { loadJob, validate, advise, effectiveJob, expandChannels } from "./engine.js";
+import { wireRuns } from "./pages.js";
+import { readHookup } from "./hookup.js";
+import { vocabularyText } from "./commands.js";
+import { describeNode, adapterName, SPEAKER_SETUP, STATUS_NAME, SCOPE_NAME, PLATFORM_NAME, AUDIO_NET_NAME, signalName } from "./names.js";
+
+const OUTDOOR = /\b(patio|pool|yard|backyard|deck|garden|landscape|exterior|outdoor|outside|terrace|courtyard|lanai|spa|dock|balcony|porch|veranda|loggia|firepit|fire pit|cabana|driveway|lawn)\b/i;
+// speaker sets as package names (PlanQueue maps them to its real packages)
+const PACKAGE_NAME = { mono: "Mono", stereo: "Stereo Pair", "2.1": "2.1 (Pair + Sub)", "surround-5.1": "5.1 Surround",
+  "surround-7.1": "7.1 Surround", "surround-7.1.4": "7.1.4 Surround", soundbar: "Soundbar", "soundbar-sub": "Soundbar + Sub", landscape: "Landscape" };
+const clean = s => String(s ?? "").replace(/\s*\|\s*/g, " / ").replace(/\s+/g, " ").trim();   // a "|" would split the line
+
+/* ---------- what a box is, for the quote ---------- */
+function fromCatalog(c) {
+  return { mfr: c.brand, model: c.partNo || c.model, unsure: !!c.partNoUnsure || !c.partNo };
+}
+// brands spelled the way the manufacturer does, longest first so "AVPro Edge" beats "AVPro"
+const BRANDS = ["James Loudspeaker", "Bowers & Wilkins", "AVPro Edge", "AudioControl", "Kaleidescape", "Josh.ai", "Control4", "Crestron",
+  "Ubiquiti", "Sonance", "Savant", "Anthem", "Araknis", "Lutron", "Marantz", "McIntosh", "Pro-Ject", "Samsung", "Klipsch", "Yamaha",
+  "Denon", "Triad", "Sonos", "Apple", "Epson", "Rega", "Luma", "Sony", "Roku", "JVC", "LG"].sort((a, b) => b.length - a.length);
+const brandOf = m => BRANDS.find(b => new RegExp(`^${b.replace(/[.+&]/g, "\\$&")}\\b`, "i").test(m));
+// gear with no catalog link: best guess from how it's named on the drawing
+function guessProduct(d) {
+  const raw = String(d.model || "").trim();
+  const m = d.type === "source" ? raw.replace(/\s+\d+$/, "") : raw;   // numbered copies ("Apple TV 2") are one product; "Axion 8" is a model
+  if (/apple\s*tv/i.test(m)) return { mfr: "Apple", model: "Apple TV 4K", unsure: true };
+  if (/cable/i.test(m)) return { mfr: "Cable Provider", model: "Cable Box", provider: true };
+  if (/directv/i.test(m)) return { mfr: "DirecTV", model: "Receiver", provider: true };
+  if (/dish/i.test(m)) return { mfr: "Dish", model: "Receiver", provider: true };
+  if (/roku/i.test(m)) return { mfr: "Roku", model: "Ultra", unsure: true };
+  if (/kaleidescape/i.test(m)) return { mfr: "Kaleidescape", model: "Strato", unsure: true };
+  if (/xbox|playstation|ps5|nintendo|game/i.test(m)) return { mfr: "Unspecified", model: m || "Game Console", unsure: true };
+  if (d.type === "avr" || /receiver/i.test(m)) return { mfr: "Unspecified", model: "AV Receiver", unsure: true };
+  if (d.type === "amp") return { mfr: "Unspecified", model: "Amplifier", unsure: true };
+  if (d.type === "avbSwitch") return { mfr: "Unspecified", model: "AVB Switch (Avnu-certified)", unsure: true };
+  if (d.type === "networkSwitch") return { mfr: "Unspecified", model: "Network Switch", unsure: true };
+  const b = brandOf(m);
+  if (b) return { mfr: b, model: m.slice(b.length).trim() || m, unsure: true };
+  return { mfr: "Unspecified", model: m || d.type, unsure: true };
+}
+
+/* ---------- walk the job into rooms of quote lines ---------- */
+function quoteRooms(job, sol, catalog, adv) {
+  const cat = id => catalog?.devices?.[id];
+  const rooms = new Map();   // "floor\u0000room" → {floor, room, scope, lines: Map}
+  const areaName = id => job.house.areas?.find(a => a.id === id)?.name;
+  const floorOf = z => areaName(z.area) || (OUTDOOR.test(z.name) ? "Exterior" : "Floor 1");
+  const add = (floor, room, scope, p, extraNotes = []) => {
+    const k = floor + "\u0000" + room;
+    if (!rooms.has(k)) rooms.set(k, { floor, room, scope, lines: new Map() });
+    const notes = [...extraNotes];
+    if (p.provider) notes.push("provider equipment");
+    if (p.unsure) notes.push("unsure");
+    const line = { mfr: clean(p.mfr), model: clean(p.model), note: clean([...new Set(notes)].join("; ")) };
+    const key = [line.mfr, line.model, line.note].join("|");
+    const L = rooms.get(k).lines;
+    if (L.has(key)) L.get(key).qty++; else L.set(key, { qty: 1, ...line });
+  };
+  const ofe = s => s === "ofe" ? ["customer supplied"] : [];
+  const tenG = (sol.racks || []).flatMap(r => r.devices || []).some(d => cat(d.catalogRef)?.gen === "10g");
+
+  // the rack(s)
+  for (const r of sol.racks || []) {
+    const room = r.name || "Equipment Rack", floor = areaName(r.area) || "Floor 1";
+    for (const d of r.devices || []) {
+      const c = cat(d.catalogRef);
+      const extra = [...ofe(d.status)];
+      if (d.danteSwitch) extra.push("dedicated Dante switch");
+      if (c && d.type === "controlBox" && c.flags?.includes("danteController")) extra.push("Dante mode");
+      add(floor, room, "included", c ? fromCatalog(c) : guessProduct(d), extra);
+    }
+    // encoders ride with their sources in the rack
+    for (const e of (sol.companions || []).filter(e => e.type === "enc" && (r.devices || []).some(d => d.id === e.serves))) {
+      const c = cat(tenG ? "avpro-mxnet-10g-tcvr" : e.dante ? "avpro-mxnet-1g-dante-ev2" : "avpro-mxnet-1g-ev2");
+      add(floor, room, "included", fromCatalog(c), tenG ? ["set as encoder"] : []);
+    }
+  }
+  // the control platform's host/controller, as the licensing advisor picked it
+  for (const lic of adv?.licensing || []) {
+    if (!lic.pick || lic.solution !== sol.id) continue;
+    const mfr = { savant: "Savant", josh: "Josh.ai", control4: "Control4" }[lic.platform] || PLATFORM_NAME[lic.platform] || lic.platform;
+    add(areaName(sol.racks?.[0]?.area) || "Floor 1", sol.racks?.[0]?.name || "Equipment Rack", "included",
+      { mfr, model: (String(lic.pick).match(/\b[A-Z]{2,}-?\d{2,}[A-Z0-9-]*\b/) || [String(lic.pick).replace(/^\d+×\s*/, "")])[0], unsure: true },
+      [`${lic.pick} — from the licensing advisor`]);
+  }
+  // the rooms
+  for (const z of job.house.zones) {
+    const scope = z.scope || "included";
+    if (scope === "future") continue;                          // not part of this proposal
+    const floor = floorOf(z);
+    const prewire = scope === "prewire";
+    for (const ep of z.endpoints || []) {
+      if (ep.type === "display") {
+        const what = ep.displayType === "projector" ? "Projector" : "TV";
+        if (prewire) { add(floor, z.name, scope, { mfr: "Package", model: `${what} Location Pre-Wire` }, ["PlanQueue picks the package"]); continue; }
+        const model = ep.model || `${ep.size ? `${ep.size}" ` : ""}${what}`;
+        add(floor, z.name, scope, { mfr: ep.brand || "Unspecified", model, unsure: !ep.model }, [...ofe(ep.status), ...(ep.confirm?.length ? ["size to confirm"] : [])]);
+      } else if (ep.type === "speakers") {
+        const cfg = ep.config || "stereo";
+        let desc = PACKAGE_NAME[cfg] || SPEAKER_SETUP[cfg] || cfg;
+        if (cfg === "landscape") desc = `Landscape (${ep.satCount || 8} Satellites${ep.buriedSub ? " + Buried Sub" : ""})`;
+        else if (cfg === "stereo" && (ep.count || 2) > 2) desc = `Stereo (${ep.count} Speakers)`;
+        add(floor, z.name, scope, { mfr: "Package", model: `${desc}${prewire ? " Pre-Wire" : " Speakers"}` },
+          ["PlanQueue picks the package", ...ofe(ep.status)]);
+      }
+    }
+    if (prewire) continue;
+    // what sits at the TV: extenders, decoders, Dante encoders
+    for (const comp of (sol.companions || []).filter(c => z.endpoints?.some(e => e.id === c.serves))) {
+      const ref = comp.type === "axis" ? "avpro-acp-axis2" : comp.type === "axis16" ? "avpro-acp-axis16"
+        : comp.type === "dec" ? (tenG ? "avpro-mxnet-10g-tcvr" : comp.dante ? "avpro-mxnet-1g-dante-dv2" : "avpro-mxnet-1g-dv2") : null;
+      const p = ref && cat(ref) ? fromCatalog(cat(ref))
+        : { mfr: "Unspecified", model: comp.type === "balun" ? "HDBaseT Extender Set" : `${adapterName(comp)} Set`, unsure: true };
+      add(floor, z.name, scope, p, comp.type === "dec" && tenG ? ["set as decoder"] : []);
+    }
+    for (const d of (sol.localDevices || []).filter(d => d.zone === z.id)) {
+      const c = cat(d.catalogRef);
+      add(floor, z.name, scope, c ? fromCatalog(c) : guessProduct(d), ofe(d.status));
+    }
+    // billable room remotes
+    if (z.remote === "savant") add(floor, z.name, scope, { mfr: "Savant", model: "Pro Remote", unsure: true });
+    if (z.remote === "josh") add(floor, z.name, scope, { mfr: "Josh.ai", model: "Josh Remote", unsure: true });
+  }
+  return [...rooms.values()];
+}
+
+const lastFirst = name => {
+  const n = String(name || "").trim();
+  if (!n || n === "Customer Name") return "";
+  if (n.includes(",")) return n;
+  const parts = n.split(/\s+/);
+  return parts.length > 1 ? `${parts[parts.length - 1]}, ${parts.slice(0, -1).join(" ")}` : n;
+};
+
+function planQueueText(job, type, label, rooms) {
+  const J = job.job || {};
+  const client = lastFirst(J.client?.name);
+  const who = client ? client.split(",")[0] : (J.name || "Proposal").replace(/\s+(residence|home|house)$/i, "");
+  const fm = ["---", "planqueue: proposal-import/1", `type: ${type}`, `name: ${clean(`${who} — ${label}`)}`];
+  if (client) fm.push(`client: ${clean(client)}`);
+  if (J.client?.address) fm.push(`site: ${clean(J.client.address)}`);
+  fm.push("---", "");
+  // floors in first-seen order, Exterior last; rooms in order under each
+  const floors = [...new Set(rooms.map(r => r.floor))].sort((a, b) => (a === "Exterior") - (b === "Exterior"));
+  const out = [...fm];
+  for (const f of floors) {
+    const rs = rooms.filter(r => r.floor === f && r.lines.size);
+    if (!rs.length) continue;
+    out.push(`## ${clean(f)}`);
+    for (const r of rs) {
+      out.push(`### ${clean(r.room)}`);
+      for (const l of r.lines.values()) out.push(`- ${l.qty} | ${l.mfr} | ${l.model}${l.note ? ` | ${l.note}` : ""}`);
+      out.push("");
+    }
+  }
+  return out.join("\n").replace(/\n+$/, "\n");
+}
+
+/* one file, or two when the job has pre-wire-only rooms */
+export function planQueueFiles(job, solIndex, catalog) {
+  const eff = effectiveJob(job, solIndex);
+  const { job: J, ix } = loadJob(eff);
+  const sol = J.solutions[solIndex] || J.solutions[0];
+  const adv = advise(J, ix, catalog);
+  const rooms = quoteRooms(J, sol, catalog, adv);
+  const sys = rooms.filter(r => r.scope !== "prewire"), pre = rooms.filter(r => r.scope === "prewire");
+  const files = [];
+  if (sys.some(r => r.lines.size)) files.push({ type: "technology-systems", text: planQueueText(J, "technology-systems", "Technology Systems", sys) });
+  if (pre.some(r => r.lines.size)) files.push({ type: "technology-prewire", text: planQueueText(J, "technology-prewire", "Technology Pre-Wire", pre) });
+  return files;
+}
+
+/* ---------- the AI review file ---------- */
+const mdCell = s => clean(s).replace(/\*/g, "\\*");
+const table = (head, rows) => rows.length
+  ? [`| ${head.join(" | ")} |`, `|${head.map(() => "---").join("|")}|`, ...rows.map(r => `| ${r.map(mdCell).join(" | ")} |`)].join("\n")
+  : "_none_";
+const ioText = io => Object.entries(io || {}).filter(([, n]) => n).map(([k, n]) => `${n}× ${k}`).join(", ") || "—";
+
+export function aiReviewMarkdown(job, solIndex, catalog, { today = new Date().toISOString().slice(0, 10) } = {}) {
+  const eff = effectiveJob(job, solIndex);
+  const { job: J, ix } = loadJob(eff);
+  const sol = J.solutions[solIndex] || J.solutions[0];
+  const v = validate(J, ix), adv = advise(J, ix, catalog);
+  const mine = x => !x.solution || x.solution === sol.id;
+  const nm = id => describeNode(J, sol, id).label;
+  const cat = id => catalog?.devices?.[id];
+  const devs = (sol.racks || []).flatMap(r => (r.devices || []).map(d => ({ ...d, rack: r.name })));
+  const gens = [...new Set(devs.map(d => cat(d.catalogRef)?.gen).filter(Boolean))];
+  const JJ = J.job || {};
+  const o = [];
+  o.push("---", "generator: SignalPath", "export: ai-review/1", `job: ${clean(JJ.name)}`,
+    `client: ${clean(JJ.client?.name)}`, `site: ${clean(JJ.client?.address)}`, `stage: ${clean(JJ.stage)}`,
+    `revision: ${(JJ.revisions || []).length || 1}`, `solution: ${clean(sol.name)}`,
+    `control_platform: ${clean((sol.platforms || []).map(p => PLATFORM_NAME[p] || p).join(", ") || "not set")}`,
+    `audio_network: ${clean(AUDIO_NET_NAME[sol.audioNetwork || ""] || sol.audioNetwork)}`,
+    `video_distribution: ${clean(gens.length ? gens.map(g => ({ "1g": "MXNet 1G", "1g-ev2": "MXNet 1G EVO II", "10g": "MXNet 10G" }[g] || g)).join(", ") : devs.some(d => d.type === "videoMatrix") ? "HDMI matrix" : "none")}`,
+    `catalog_as_of: ${clean(catalog?.asOf || JJ.catalogSnapshot?.asOf || "")}`, `exported: ${today}`, "---", "");
+  o.push(`# ${clean(JJ.name)} — design review`, "");
+  o.push("> For an AI reviewer. Everything below is generated from the SignalPath job; the JSON block at the end is the",
+    "> source of truth (SignalPath imports it back). To propose changes, reply with SignalPath command lines — the",
+    "> vocabulary is at the bottom — so they can be previewed, checked and undone before anything changes.", "");
+
+  const zones = J.house.zones;
+  const tvs = zones.flatMap(z => (z.endpoints || []).filter(e => e.type === "display"));
+  const spks = zones.flatMap(z => (z.endpoints || []).filter(e => e.type === "speakers"));
+  o.push("## Summary", "",
+    `- ${zones.length} zones (${zones.filter(z => (z.scope || "included") === "prewire").length} pre-wire only, ${zones.filter(z => z.scope === "future").length} future)`,
+    `- ${tvs.length} displays, ${spks.length} speaker sets`,
+    `- ${devs.length} rack devices, ${(sol.companions || []).length} adapters, ${(sol.localDevices || []).length} in-room devices, ${(sol.connections || []).length} connections`,
+    `- Checks: ${v.errors.length} errors, ${v.warnings.length} warnings, ${(adv.notes || []).filter(mine).length} advisor notes`, "");
+
+  // open items first — what a reviewer should chase
+  const confirms = zones.flatMap(z => (z.endpoints || []).filter(e => e.confirm?.length).map(e => `${z.name} ${e.type === "display" ? "TV" : "speakers"}: confirm ${e.confirm.join(", ")}`));
+  o.push("## Open items", "");
+  if (!v.errors.length && !v.warnings.length && !confirms.length) o.push("_Nothing flagged._");
+  for (const e of v.errors) o.push(`- **Error:** ${e.msg}`);
+  for (const w of v.warnings) o.push(`- Warning: ${w.msg}`);
+  for (const c of confirms) o.push(`- Confirm: ${c}`);
+  o.push("", "### Advisor notes", "");
+  const notes = (adv.notes || []).filter(mine);
+  o.push(notes.length ? notes.map(n => `- ${n.msg}`).join("\n") : "_none_", "");
+
+  o.push("## Rooms", "");
+  const areaName = id => J.house.areas?.find(a => a.id === id)?.name;
+  for (const z of zones) {
+    const h = readHookup(J, sol, z);
+    o.push(`### ${clean(z.name)}`, "");
+    const meta = [areaName(z.area) && `area: ${areaName(z.area)}`, `scope: ${SCOPE_NAME[z.scope || "included"] || z.scope}`, z.remote && `remote: ${z.remote}`].filter(Boolean);
+    o.push(`- ${meta.join(" · ")}`);
+    for (const e of z.endpoints || []) {
+      if (e.type === "display") o.push(`- Display: ${[e.brand, e.model, e.size && `${e.size}"`, e.displayType === "projector" ? "projector" : "TV"].filter(Boolean).join(" ")} — ${STATUS_NAME[e.status || "new"] || e.status}${e.confirm?.length ? ` — confirm ${e.confirm.join(", ")}` : ""}`);
+      else if (e.type === "speakers") o.push(`- Speakers: ${SPEAKER_SETUP[e.config || "stereo"] || e.config}${e.config === "landscape" ? ` (${e.satCount || 8} satellites${e.buriedSub ? " + buried sub" : ""})` : e.count ? ` (${e.count})` : ""} — ${STATUS_NAME[e.status || "new"] || e.status}`);
+    }
+    if (h.video) o.push(`- Video: ${nm(h.video.from)}${h.video.via ? ` via ${nm(h.video.via)}` : " (direct)"}${h.earc ? " · eARC back over the HDMI" : ""}`);
+    else if (h.tv) o.push(`- Video: **not fed**`);
+    if (h.tv && h.audioBack && h.audioBack !== "none") o.push(`- TV audio back: ${h.audioBack}${h.ret ? ` → ${nm(h.ret.to)}` : ""}`);
+    if (h.dante) o.push(`- Dante: ${nm(h.dante.via)} → ${h.dante.to.map(nm).join(", ") || "no amp"}`);
+    if (h.spk) o.push(h.speakers ? `- Speakers driven by: ${nm(h.speakers.from)}${h.speakers.channels ? ` outputs ${h.speakers.channels}` : ""}` : `- Speakers driven by: **nothing**`);
+    for (const d of (sol.localDevices || []).filter(d => d.zone === z.id)) o.push(`- In the room: ${d.model || d.id} (${d.location || "at display"})${d.status === "ofe" ? " — customer supplied" : ""}`);
+    if (z.note) o.push(`- Note: ${clean(z.note)}`);
+    o.push("");
+  }
+
+  o.push("## Rack", "");
+  const ioOf = id => (adv.io || []).filter(x => x.device === id && mine(x));
+  o.push(table(["Box", "Product", "Status", "Inputs", "Outputs", "In use"], devs.map(d => {
+    const c = cat(d.catalogRef);
+    const use = [...ioOf(d.id).map(x => `${x.kind} ${x.used}/${x.capacity}${x.over ? " OVER" : ""}`),
+      ...(adv.amps || []).filter(a => a.amp === d.id && mine(a)).map(a => `zones ${a.zonesUsed}/${a.zonesTotal ?? "?"}`)].join("; ");
+    return [d.model || d.id, c ? `${c.brand} ${c.partNo || c.model}${c.partNoUnsure ? " (part no. unsure)" : ""}` : "not in catalog",
+      STATUS_NAME[d.status || "new"] || d.status, c ? ioText(c.inputs) : "—", c ? ioText(c.outputs) : "—", use || "—"];
+  })), "");
+  const comps = sol.companions || [];
+  if (comps.length) o.push("### Adapters", "", table(["Adapter", "Serves"], comps.map(c => [adapterName(c), nm(c.serves)])), "");
+
+  o.push("## Licensing", "");
+  const lic = (adv.licensing || []).filter(mine);
+  o.push(lic.length ? lic.map(l => [`- **${PLATFORM_NAME[l.platform] || l.platform}:** ${l.pick || "no pick"}`, ...(l.lines || []).filter(Boolean).map(x => `  - ${clean(x)}`), ...(l.warns || []).map(x => `  - ⚠ ${clean(x)}`)].join("\n")).join("\n") : "_No control platform set._", "");
+
+  o.push("## Connections", "", table(["From", "To", "Signal", "Details"], (sol.connections || []).map(c => [nm(c.from), nm(c.to),
+    c.dante ? "Dante audio (network)" : signalName(c.signal),
+    [c.channels && `outputs ${c.channels}`, c.earc && "eARC", c.backup && "optical backup", c.scope && c.scope !== "included" && SCOPE_NAME[c.scope]].filter(Boolean).join(", ")])), "");
+
+  o.push("## Wire list", "", table(["Run", "Cable", "From", "To", "Carries", "Ends at"],
+    wireRuns(J, ix, { solution: solIndex }).map(r => [r.id, r.cable, r.from, r.to, r.carries, r.term])), "");
+
+  o.push("## Quote lines (as sent to PlanQueue)", "");
+  for (const f of planQueueFiles(job, solIndex, catalog)) o.push(`### ${f.type}`, "", "```markdown", f.text.trimEnd(), "```", "");
+
+  o.push("## SignalPath command vocabulary", "", "```text", vocabularyText().trimEnd(), "```", "");
+  o.push("## Source data (SignalPath job)", "", "```json", JSON.stringify(job, null, 2), "```", "");
+  return o.join("\n");
+}

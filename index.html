@@ -256,6 +256,8 @@
   <button id="exportJson">JSON</button>
   <button id="exportSvg">SVG</button>
   <button id="exportCsv" title="Takeoff CSV">CSV</button>
+  <button id="exportPq" title="PlanQueue proposal import (.md) — two files when the job has pre-wire-only rooms">PlanQueue</button>
+  <button id="exportAi" title="Markdown for an AI to review: rooms, feeds, rack usage, open items, wire list, quote lines + the full job">AI .md</button>
   <button id="printBtn" title="Print packet / save as PDF">Print</button>
   <button id="toolsBtn" title="Synergy Field Kit">TOOLS</button>
 </div>
@@ -316,6 +318,7 @@
 <script type="module">
 import { loadJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock } from "./app/engine.js";
 import { importAny, mergeHouse, drawFromWalk, decodeHandoff } from "./app/importers.js";
+import { planQueueFiles, aiReviewMarkdown } from "./app/exports.js";
 import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
 import { STARTERS, applyStarter } from "./app/starters.js";
@@ -734,6 +737,13 @@ $("#exportSvg").onclick = () => {
   clone.querySelectorAll(".sel, .selnode, .zglow").forEach(n => n.classList.remove("sel", "selnode", "zglow"));
   download(`${fileBase()} — schematic.svg`, clone.outerHTML, "image/svg+xml");
 };
+$("#exportPq").onclick = () => {
+  const files = planQueueFiles(S.job, S.sol, SETTINGS.catalog);
+  if (!files.length) return toast("Nothing to quote yet — add rooms or gear first");
+  files.forEach((f, i) => setTimeout(() => download(`${fileBase()} — PlanQueue ${f.type}.md`, f.text, "text/markdown"), i * 400));
+  toast(files.length > 1 ? "2 PlanQueue files: technology-systems + technology-prewire (the pre-wire-only rooms)" : "PlanQueue file saved");
+};
+$("#exportAi").onclick = () => download(`${fileBase()} — AI review.md`, aiReviewMarkdown(S.job, S.sol, SETTINGS.catalog), "text/markdown");
 $("#exportCsv").onclick = () => { const { job, ix } = loadJob(effectiveJob(S.job, S.sol)); download(`${fileBase()} — takeoff.csv`, takeoffCSV(job, ix, { solution: S.sol }), "text/csv"); };
 
 /* ---- Field Kit TOOLS switcher (hub manifest, cached; self marked) ---- */
@@ -799,9 +809,10 @@ $("#importFile").onchange = async e => {
     let data;
     try { data = JSON.parse(text); }
     catch (parseErr) {
-      const fence = text.match(/```json\s*([\s\S]*?)```/);
-      if (!fence) throw parseErr;
-      data = JSON.parse(fence[1]);
+      // the LAST json fence: an AI review file has other fences (and prose) before its source-data block
+      const fences = [...text.matchAll(/```json[ \t]*\n([\s\S]*?)```/g)];
+      if (!fences.length) throw parseErr;
+      data = JSON.parse(fences[fences.length - 1][1]);
     }
     const res = importAny(data);
     if (res.kind === "signalpath") { await flushSave(); S.job = res.job; S.id = uid("job"); S.sol = 0; await persist(); refresh(false); }

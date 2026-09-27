@@ -2115,6 +2115,61 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("dante: hookup reads the Dante path (Dante decoder → Director)", hk.dante?.type === "ddec" && hk.dante.to.length === 1);
 }
 
+/* ---------- Markdown exports: PlanQueue proposal import + AI review ---------- */
+{
+  const CAT = await (await fetch("./catalog.json")).json();
+  const X = await import("./exports.js"), S = await import("./starters.js"), C = await import("./commands.js");
+  const blank = () => ({ generator: "SignalPath", schemaVersion: 1, job: { name: "Smith Residence", client: { name: "John Smith", address: "123 Main St" }, revisions: [] },
+    house: { areas: [], zones: [] }, solutions: [{ id: "s", name: "A", platforms: ["savant"], racks: [{ id: "rack-main", name: "Equipment Rack", devices: [] }], localDevices: [], companions: [], connections: [], annotations: [] }] });
+  const j0 = S.applyStarter(blank(), S.STARTERS.find(x => x.id === "dante-director"), CAT);
+  j0.solutions[0].racks[0].devices.find(d => d.id === "cablebox").status = "ofe";
+  const job = C.planCommands(j0, 0, [{ op: "add_zones", text: "kitchen stereo 55 sony matrix, family room 5.1 75 matrix, patio landscape 8, guest bed stereo 50 prewire, master bed stereo 65 ofe matrix, bonus room stereo future" }], CAT).job;
+  const files = X.planQueueFiles(job, 0, CAT);
+  const TYPES = ["technology-prewire", "technology-systems", "lighting-prewire", "lighting-systems", "recessed-fixtures", "linear-fixtures", "shades-prewire", "shades", "surveillance", "networking", "service", "other"];
+  const wellFormed = txt => {
+    const L = txt.split("\n");
+    if (L[0] !== "---" || L[1] !== "planqueue: proposal-import/1") return "front matter must open with planqueue: proposal-import/1";
+    const end = L.indexOf("---", 1); if (end < 0) return "front matter not closed";
+    const type = L.slice(1, end).find(l => l.startsWith("type: "))?.slice(6);
+    if (!TYPES.includes(type)) return "bad type " + type;
+    let room = false;
+    for (const l of L.slice(end + 1)) {
+      if (!l.trim()) continue;
+      if (/^## \S/.test(l)) { room = false; continue; }
+      if (/^### \S/.test(l)) { room = true; continue; }
+      if (!/^- \d+ \| [^|]+ \| [^|]+( \| [^|]+)?$/.test(l)) return "bad line: " + l;
+      if (!room) return "product outside a room: " + l;
+    }
+    return "";
+  };
+  t("planqueue: a job with pre-wire rooms gives two files (systems + prewire); future rooms are left out",
+    files.map(f => f.type).join() === "technology-systems,technology-prewire" && !files.some(f => /Bonus Room/.test(f.text)));
+  t("planqueue: both files follow proposal-import/1 exactly (front matter, ## floor, ### room, 3–4 field lines, nothing else)",
+    files.every(f => !wellFormed(f.text)), files.map(f => wellFormed(f.text)).join(" / "));
+  const sys = files[0].text, pre = files[1].text;
+  t("planqueue: client as 'Last, First', proposal name, site", /^client: Smith, John$/m.test(sys) && /^name: Smith — Technology Systems$/m.test(sys) && /^site: 123 Main St$/m.test(sys));
+  t("planqueue: rack gear by part number; the Dante CBOX is a CBOX-HA noted 'Dante mode'; encoders counted",
+    /- 1 \| AudioControl \| ACP-DMZ-M6800D$/m.test(sys) && /- 1 \| AVPro Edge \| AC-MXNET-CBOX-HA \| Dante mode$/m.test(sys) && /- 3 \| AVPro Edge \| AC-MXNET-1G-DANTE-EV2$/m.test(sys));
+  t("planqueue: owner-supplied gear is listed, noted 'customer supplied' (cable box too)",
+    /Cable Box \| customer supplied/.test(sys) && /Master Bed[\s\S]*65" TV \| customer supplied/.test(sys));
+  t("planqueue: speakers are Packages PlanQueue picks; guessed part numbers say unsure",
+    /- 1 \| Package \| Stereo Pair Speakers \| PlanQueue picks the package/.test(sys) && /Apple TV 4K \| unsure/.test(sys));
+  t("planqueue: outdoor rooms land under ## Exterior, after the indoor floors", /## Exterior\n### Patio/.test(sys) && sys.indexOf("## Exterior") > sys.indexOf("## Floor 1"));
+  t("planqueue: the TV's own Dante adapter goes in its room (DANTE-DV2 in the kitchen, AXIS16 in the family room)",
+    /### Kitchen[^#]*AC-MXNET-1G-DANTE-DV2/.test(sys) && /### Family Room[^#]*ACP-AXIS16/.test(sys));
+  t("planqueue: the pre-wire file is packages only", /### Guest Bed\n- 1 \| Package \| Stereo Pair Pre-Wire/.test(pre) && /TV Location Pre-Wire/.test(pre) && !/AVPro|AudioControl/.test(pre));
+  const md = X.aiReviewMarkdown(job, 0, CAT);
+  t("ai review: front matter + every section an agent needs",
+    md.startsWith("---\ngenerator: SignalPath\nexport: ai-review/1") && ["## Open items", "## Rooms", "## Rack", "## Licensing", "## Connections", "## Wire list", "## Quote lines", "## SignalPath command vocabulary", "## Source data"].every(h => md.includes(h)));
+  t("ai review: rooms say how they're fed (Dante path, amp outputs) and the TV→AXIS link isn't mistaken for a return",
+    /### Kitchen[\s\S]*?Dante: MXNet Dante decoder/.test(md) && /outputs 1-2/.test(md) && !/audio back: optical → AXIS/.test(md));
+  // the file comes back into SignalPath through the normal import door
+  const fences = [...md.matchAll(/```json[ \t]*\n([\s\S]*?)```/g)];   // same rule as the app's import: the last json fence
+  const back = fences.length && importAny(JSON.parse(fences[fences.length - 1][1]));
+  t("ai review: its JSON block imports back as the same job", back?.kind === "signalpath" && back.job.house.zones.length === job.house.zones.length &&
+    back.job.solutions[0].connections.length === job.solutions[0].connections.length);
+}
+
 document.getElementById("summary").innerHTML =
   fail === 0 ? `<span class="pass">ALL ${pass} TESTS PASS</span>` : `<span class="fail">${fail} FAILED</span> · ${pass} passed`;
 document.title = fail === 0 ? `✓ ${pass} pass` : `✗ ${fail} fail`;

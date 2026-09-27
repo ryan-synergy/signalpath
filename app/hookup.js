@@ -40,7 +40,9 @@ export function readHookup(job, sol, zone) {
       out.video = comp ? { from: src?.from || null, run: comp.type, via: comp.id } : { from: inTv.from, run: "direct" };
       out.earc = !!src?.earc;
     }
-    const r = conns.find(c => c.from === tv.id && c.signal === "audioReturn");
+    // the TV's eARC into its own AXIS (Dante) is at the TV, not an audio return to the rack
+    const atTv = new Set((sol.companions || []).filter(c => c.serves === tv.id).map(c => c.id));
+    const r = conns.find(c => c.from === tv.id && c.signal === "audioReturn" && !atTv.has(c.to));
     if (r) out.ret = { to: r.to, backup: !!r.backup };
     // one word for the TV-audio choice: earc | earc+optical | optical | none
     out.audioBack = out.earc ? (r ? "earc+optical" : "earc") : r ? "optical" : "none";
@@ -147,7 +149,8 @@ export function setSpeakers(job, sol, zone, from, channels) {
 /* the TV's audio back to the rack (eARC / optical into a receiver or input module) */
 export function setReturn(job, sol, zone, to, backup = false) {
   const { tv } = endpointsOf(zone); if (!tv) return;
-  sol.connections = (sol.connections || []).filter(c => !(c.from === tv.id && c.signal === "audioReturn"));
+  const atTv = new Set((sol.companions || []).filter(c => c.serves === tv.id).map(c => c.id));   // eARC into its AXIS stays
+  sol.connections = (sol.connections || []).filter(c => !(c.from === tv.id && c.signal === "audioReturn" && !atTv.has(c.to)));
   if (to) sol.connections.push({ from: tv.id, to, signal: "audioReturn", ...(backup ? { backup: true } : {}), ...scopeOf(zone) });
 }
 

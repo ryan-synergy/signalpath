@@ -2735,6 +2735,10 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       out.notes.push({ code: "power-short", solution: p.solution, msg: `Rack power: ${p.need} outlets needed, ${p.supply} on the power conditioner — ${p.short} short; step up to ${pick}` });
     else if (p.tight)
       out.notes.push({ code: "power-tight", solution: p.solution, msg: `Rack power: ${p.need} of ${p.supply} outlets used — under ${p.spare} spare for the ISP modem, router and add-ons` });
+    if (p.cooling) out.notes.push({ code: "rack-heat", solution: p.solution,
+      msg: p.cooling === "room"
+        ? `Rack heat: ~${p.heatW} W (${p.btu.toLocaleString("en-US")} BTU/hr) at typical load — more than a closet sheds on its own; plan cooling for the room (HVAC supply + return, or a dedicated unit) plus rack fans`
+        : `Rack heat: ~${p.heatW} W (${p.btu.toLocaleString("en-US")} BTU/hr) at typical load — plan active ventilation (a top-exhaust rack fan) and a vented door or closet` });
     if (p.typicalW > p.circuitW)
       out.notes.push({ code: "power-circuit", solution: p.solution,
         msg: `Rack power: ~${p.typicalW} W typical draw is over ${p.circuits > 1 ? `${p.circuits} × ${p.circuitA}A circuits'` : `the ${p.circuitA}A circuit's`} ${p.circuitW} W continuous — split the amps onto a second circuit + WattBox, or a WB-820 on a 20A circuit` });

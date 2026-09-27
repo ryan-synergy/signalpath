@@ -2280,7 +2280,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("rack: patch panels sized from the Cat6 home runs (24 per panel), at the top",
     r.cat6 > 0 && r.items.filter(i => i.kind === "patch").length === Math.ceil(r.cat6 / 24) && kinds[0] === "patch");
   t("rack: small boxes (Apple TVs, CBOX, encoders) ride shelves of up to 3",
-    r.items.filter(i => i.kind === "shelf").every(i => i.members.length <= 3 && i.u === 2) && r.items.some(i => i.kind === "shelf" && i.members.some(m => /CBOX/.test(m))));
+    r.items.filter(i => i.kind === "shelf" && !i.kit).every(i => i.members.length <= 3 && i.u === 2) && r.items.some(i => i.kind === "shelf" && i.members.some(m => /CBOX/.test(m))));
   const tiers = r.items.map(i => i.tier);
   t("rack: build order — network above control above sources above amps, power last",
     tiers.every((x, i) => !i || x >= tiers[i - 1]) && r.items[r.items.length - 1].type === "power");
@@ -2301,6 +2301,31 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const hot = structuredClone(CAT); hot.devices["audiocontrol-m6800d"].powerTypicalW = 1600;
   { const a3 = advise(J, ix, hot);
     t("power: typical load over the circuit → power-circuit note naming the 20A option", a3.notes.some(n => n.code === "power-circuit" && /20A/.test(n.msg))); }
+}
+
+/* ---------- sizing profiles, rack kits, heat (2026-09-27) ---------- */
+{
+  const CAT = await (await fetch("./catalog.json")).json();
+  const N = await import("./network.js"), X = await import("./exports.js");
+  t("profiles: an unlinked 'Apple TV 2' sizes as the Apple TV 4K; 'Cable Box' as the provider planning figure; a rack amp never matches a source profile",
+    N.catalogFor({ type: "source", model: "Apple TV 2" }, CAT)?.model.startsWith("Apple TV 4K") &&
+    N.catalogFor({ type: "source", model: "Cable Box" }, CAT)?.provider === true &&
+    !N.catalogFor({ type: "amp", model: "Apple TV" }, CAT));
+  const raw = structuredClone(fixtures.estate);
+  const { job, ix } = loadJob(raw);
+  const a = advise(job, ix, CAT);
+  const pw = a.power[0];
+  t("profiles: Apple TVs and the cable box now carry watts (no '?')", !pw.noWatts.some(n => /Apple TV|Cable Box/.test(n)) && pw.loads.find(l => l.what === "Cable Box").typicalW === 17.5);
+  t("profiles: the quote still reads the job's own links — the cable box stays provider equipment, not a catalog product",
+    /\| Cable Provider \| Cable Box \| .*provider equipment/.test(X.planQueueFiles(raw, 0, CAT)[0].text));
+  const main = a.racks[0];
+  const kits = main.items.filter(i => i.kit);
+  t("rack kits: the rack's 4 MXNet 1G endpoints go in two 1U AC-MXNET-1G-R2 kits (fewest U), not a 6U R15",
+    kits.length === 2 && kits.every(k => k.kit === "AC-MXNET-1G-R2" && k.u === 1) && kits.reduce((n, k) => n + k.members.length, 0) === 4, kits.map(k => k.label).join(" / "));
+  t("heat: BTU/hr = typical watts × 3.412, and the fan advice fires past 500 W", pw.btu === Math.round(pw.heatW * 3.412) &&
+    (pw.heatW > 500) === !!pw.cooling && (pw.cooling ? a.notes.some(n => n.code === "rack-heat") : true));
+  const hot = structuredClone(CAT); hot.devices["anthem-mrx-540-8k"].powerTypicalW = 2000;
+  t("heat: past ~1,500 W the advisor asks for room cooling", advise(job, ix, hot).notes.some(n => n.code === "rack-heat" && /room/.test(n.msg)));
 }
 
 document.getElementById("summary").innerHTML =

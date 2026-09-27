@@ -28,6 +28,20 @@ export function companionRef(comp, tenG) {
   return null;
 }
 
+// sizing profile for gear the job names but doesn't link: a catalog entry may carry
+// `match` (a name pattern, e.g. "^apple ?tv") — used for watts, rack height and
+// jacks only; the quote exports still read catalogRef alone
+export function catalogFor(d, catalog) {
+  if (!d) return null;
+  const c = d.catalogRef ? catalog?.devices?.[d.catalogRef] : null;
+  if (c) return c;
+  const name = String(d.model || "").trim();
+  if (!name) return null;
+  for (const e of Object.values(catalog?.devices || {}))
+    if (e.match && e.type === d.type && new RegExp(e.match, "i").test(name)) return e;
+  return null;
+}
+
 const portsOf = c => {
   const o = c?.outputs || {};
   return { copper: (o.gbe || 0) + (o.gbe25 || 0) + (o.gbe10 || 0), sfp: (o.sfp || 0) + (o.sfpPlus || 0) };
@@ -41,7 +55,7 @@ export function networkPlan(job, ix, catalog) {
     const switches = Object.values(s.devices).filter(d => SWITCH_TYPES.has(d.type));
     const cat = ref => ref ? catalog?.devices?.[ref] : null;
     const tenG = Object.values(s.devices).some(d => cat(d.catalogRef)?.gen === "10g");
-    const catOf = id => s.devices[id] ? cat(s.devices[id].catalogRef) : s.locals[id] ? cat(s.locals[id].catalogRef)
+    const catOf = id => s.devices[id] ? catalogFor(s.devices[id], catalog) : s.locals[id] ? catalogFor(s.locals[id], catalog)
       : s.companions[id] ? cat(companionRef(s.companions[id], tenG)) : null;
     const flags = id => catOf(id)?.flags || [];
     const role = d => d.danteSwitch ? "dante" : d.type === "avbSwitch" || flags(d.id).includes("avb") ? "avb"

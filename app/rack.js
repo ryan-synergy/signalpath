@@ -9,7 +9,7 @@
    Pure: advise() attaches it (advise().racks), the Rack Elevation page draws it. */
 
 import { wireRuns } from "./pages.js";
-import { companionRef } from "./network.js";
+import { companionRef, catalogFor } from "./network.js";
 
 export const DEFAULT_RACK_U = 42;
 export const RACK_SIZES = [12, 16, 20, 24, 27, 32, 36, 38, 40, 42, 44, 45];
@@ -34,7 +34,7 @@ export function rackPlans(job, ix, catalog) {
       if (ri === 0 && cat6) for (let k = 0; k < Math.ceil(cat6 / PATCH_PORTS); k++)
         items.push({ kind: "patch", tier: 0, u: 1, label: `Cat6 patch panel ${PATCH_PORTS}-port${Math.ceil(cat6 / PATCH_PORTS) > 1 ? ` (${k + 1})` : ""}` });
       for (const d of r.devices || []) {
-        const c = cat(d.catalogRef);
+        const c = catalogFor(d, catalog);
         const name = `${d.model || d.id}${d.danteSwitch ? " (Dante)" : ""}`;
         if (c?.mount === "vertical") { rear.push(name); continue; }
         const u = typeof c?.rackUnits === "number" ? c.rackUnits : null;
@@ -44,11 +44,32 @@ export function rackPlans(job, ix, catalog) {
         items.push({ kind: "device", id: d.id, tier, u: u ?? 1, label: name, type: d.type, guess: u == null, half: !!c?.halfRack });
         if (d.type === "amp" || d.type === "avr") items.push({ kind: "vent", tier, u: 1, label: "Vent panel" });
       }
-      // rack-side adapters (MXNet encoders on the rack sources) sit on shelves too
+      // rack-side adapters (MXNet encoders/decoders on rack gear) go in AVPro's own rack
+      // kits for their platform (catalog `rackKit: {gen, holds}`), picked for the fewest
+      // rack units; with no kit in the catalog they ride shelves
+      const byGen = {};
       for (const comp of Object.values(s.companions)) {
         const host = (r.devices || []).find(d => d.id === comp.serves);
         if (!host) continue;
-        small.push(`${cat(companionRef(comp, tenG))?.model || "Encoder"} (${host.model || host.id})`);
+        const ce = cat(companionRef(comp, tenG));
+        const label = `${ce?.model || "Encoder"} (${host.model || host.id})`;
+        const g = ce?.gen?.startsWith("1g") ? "1g" : ce?.gen || null;
+        if (g) (byGen[g] ||= []).push({ label, model: ce?.model || "" }); else small.push(label);
+      }
+      const kits = Object.entries(catalog?.devices || {}).filter(([, c]) => c.rackKit && typeof c.rackUnits === "number");
+      for (const [g, members] of Object.entries(byGen)) {
+        const fit = kits.filter(([, c]) => c.rackKit.gen === g).sort((x, y) => x[1].rackKit.holds - y[1].rackKit.holds);
+        // an endpoint a kit won't take (AVPro: Dante encoders don't fit the 1G racks) rides a shelf
+        const fits = m => fit.length && !fit.every(([, c]) => c.rackKit.excludes && m.model.toUpperCase().includes(c.rackKit.excludes));
+        small.push(...members.filter(m => !fits(m)).map(m => m.label));
+        let rest = members.filter(fits).map(m => m.label);
+        while (rest.length) {
+          // the kit that houses what's left in the fewest rack units (4 endpoints: two 1U R2s beat a 6U R15)
+          const cost = ([, c]) => Math.ceil(rest.length / c.rackKit.holds) * c.rackUnits;
+          const [, k] = [...fit].sort((x, y) => cost(x) - cost(y) || y[1].rackKit.holds - x[1].rackKit.holds)[0];
+          const take = rest.splice(0, k.rackKit.holds);
+          items.push({ kind: "shelf", tier: 3, u: k.rackUnits, label: `${k.model} (${take.length}/${k.rackKit.holds}): ${take.join(", ")}`, members: take, kit: k.model });
+        }
       }
       for (let k = 0; k < small.length; k += PER_SHELF)
         items.push({ kind: "shelf", tier: 3, u: SHELF_U, label: `Shelf: ${small.slice(k, k + PER_SHELF).join(", ")}`, members: small.slice(k, k + PER_SHELF) });

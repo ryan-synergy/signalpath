@@ -703,6 +703,7 @@ function rackElevationPages(job, ix, adviseResult, opts, label) {
   const s = ix.solutions[opts.solution ?? 0];
   const racks = (adviseResult?.racks || []).filter(r => r.solution === s?.sol.id && (r.items.length || r.rear.length));
   if (!racks.length) return [];
+  const pw = (adviseResult?.power || []).find(p => p.solution === s?.sol.id);
   const bodies = [];
   racks.forEach((r, k) => {
     if (k % 2 === 0) bodies.push([]);
@@ -741,9 +742,11 @@ function rackElevationPages(job, ix, adviseResult, opts, label) {
     const sx = rx + rw + 26;
     const lines = [
       [`${r.used}U used · ${r.over ? `${r.over}U OVER` : `${r.spare}U spare`}`, r.over ? "#b32017" : "#222", true],
+      ...(k === 0 && pw ? [[`Load ~${pw.typicalW} W typ · heat ~${pw.btu.toLocaleString("en-US")} BTU/hr`, pw.cooling ? "#a45a12" : "#444", !!pw.cooling],
+        ...(pw.cooling ? [[pw.cooling === "room" ? "Plan room cooling + rack fans" : "Plan a top-exhaust rack fan", "#a45a12"]] : [])] : []),
       [`Cat6 home runs: ${r.cat6}${r.cat6 ? ` → ${Math.ceil(r.cat6 / 24)} patch panel${Math.ceil(r.cat6 / 24) > 1 ? "s" : ""}` : ""}`, "#444"],
       ...(r.rear.length ? [["Rear rails (no U):", "#444", true], ...r.rear.map(n => ["  " + n, "#444"])] : []),
-      ...r.items.filter(i => i.kind === "shelf").flatMap((i, n) => [[`Shelf ${n + 1}:`, "#444", true], ...i.members.map(m => ["  " + m, "#444"])]),
+      ...r.items.filter(i => i.kind === "shelf").flatMap((i, n) => [[`${i.kit || `Shelf ${n + 1}`}:`, "#444", true], ...i.members.map(m => ["  " + m, "#444"])]),
       ...(r.unknown.length ? [["Height unknown — drawn 1U:", "#a45a12", true], ...r.unknown.map(n => ["  " + n, "#a45a12"])] : []),
       ["Order: patch · network · control ·", "#888"], ["sources · amps (vent under each) · power", "#888"],
     ];
@@ -777,13 +780,14 @@ function networkPowerPages(job, ix, adviseResult, opts, label) {
   const block = (title, sub, cols, rows, after = [], lead = "Set up:") => {
     let rest = [...rows], first = true;
     for (let guard = 0; guard < 200; guard++) {
-      const head = 20 + (first && sub ? 18 : 0);
+      const subs = first && sub ? [].concat(sub) : [];
+      const head = 20 + subs.length * 18;
       const order = colY[0] <= colY[1] ? [0, 1] : [1, 0];
       let c = order.find(k => Math.floor((LIMIT - (colY[k] + head + 30)) / 28) >= Math.min(3, rest.length || 1));
       if (c == null) { if (bodies[bodies.length - 1].length) { newSheet(); continue; } c = 0; }
       const x = colX[c], y = colY[c];
       put(heading(x, y + 8, first ? title : `${title} (cont.)`));
-      if (first && sub) put(`<text x="${x}" y="${y + 28}" font-size="12" fill="#555">${esc(sub)}</text>`);
+      subs.forEach((line, i) => put(`<text x="${x}" y="${y + 28 + i * 18}" font-size="12" fill="#555">${esc(line)}</text>`));
       const t = tableFit(x, y + head, W2, cols, rest);
       put(t.svg);
       colY[c] = t.bottom; rest = t.rest; first = false;
@@ -821,7 +825,8 @@ function networkPowerPages(job, ix, adviseResult, opts, label) {
     const rows = power.loads.map(l => ({ cells: [clip(l.what, 50), String(l.outlets), w(l), l.why] }));
     for (const p of power.poe) rows.push({ gray: true, cells: [clip(p.what, 50), "0", "", "PoE from its switch"] });
     const load = `~${power.typicalW} W typical${power.maxW !== power.typicalW ? ` / ${power.maxW} W max` : ""} of ${power.circuitW} W (${power.circuits > 1 ? `${power.circuits} × ` : ""}${power.circuitA}A)`;
-    block("Rack power — outlets & load", `${units} · ${power.need} outlet${power.need === 1 ? "" : "s"} · ${verdict} · ${load}`,
+    const heat = `heat ~${power.btu.toLocaleString("en-US")} BTU/hr${power.cooling ? power.cooling === "room" ? " — ROOM COOLING" : " — FAN" : ""}`;
+    block("Rack power — outlets & load", [`${units} · ${power.need} outlet${power.need === 1 ? "" : "s"} · ${verdict}`, `${load} · ${heat}`],
       [{ label: "Device", dx: 12 }, { label: "Outlets", dx: 390 }, { label: "Watts (typ / max)", dx: 460 }, { label: "Note", dx: 610 }], rows,
       power.noWatts.length ? [`${power.noWatts.length} box${power.noWatts.length > 1 ? "es" : ""} with no wattage on file (?) — load is a floor, not a ceiling`] : [], "Note:");
   }

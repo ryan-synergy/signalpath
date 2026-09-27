@@ -1839,6 +1839,244 @@
       "notes": "300 Series compact, 5 controlled outlets, 15A — rack-mounts only with KIT-WB-300VB-RM. All rear outlets IP-switchable; one Ethernet port (no built-in switch); no battery — OvrC UPS link for a separate WattBox UPS pack. Source: Snap One product pages + WattBox comparison chart (WB-060420), checked 2026-09-27.",
       "partNo": "WB-300VB-IP-5",
       "rackNote": "VersaBox / rack kit KIT-WB-300VB-RM"
+    },
+    "apple-tv-4k-3gen": {
+      "inputs": {},
+      "outputs": {
+        "hdmi": 1
+      },
+      "flags": [],
+      "verified": true,
+      "brand": "Apple",
+      "model": "Apple TV 4K (3rd gen) Wi-Fi + Ethernet",
+      "type": "source",
+      "powerTypicalW": 2.4,
+      "powerIdleW": 0.5,
+      "desktop": true,
+      "lan": 1,
+      "match": "^apple ?tv( ?4k)?( ?\\d+)?$",
+      "partNo": "A2843",
+      "partNoUnsure": true,
+      "notes": "128GB Wi-Fi + Ethernet model (the rack one). HDMI only — no optical/analog. Internal PSU (figure-8 cord). 93×31×93 mm → shelf. Power: 2.35–2.46W streaming 4K HDR, 0.49W network standby (Apple Product Environmental Report Oct 2022, measured on Wi-Fi); no max published. Part no. A2843 unverified. Sizing profile for any rack box named 'Apple TV' / 'Apple TV 2'."
+    },
+    "roku-ultra-2024": {
+      "inputs": {},
+      "outputs": {
+        "hdmi": 1
+      },
+      "flags": [],
+      "verified": true,
+      "brand": "Roku",
+      "model": "Roku Ultra (2024)",
+      "type": "source",
+      "powerTypicalW": 4.5,
+      "desktop": true,
+      "lan": 1,
+      "match": "^roku",
+      "partNo": "4850R",
+      "notes": "~4.5W streaming 4K (roku.com); 12V 1.5A brick; 10/100 Ethernet; HDMI only. 124×25×127 mm → shelf."
+    },
+    "provider-cable-box": {
+      "inputs": {},
+      "outputs": {
+        "hdmi": 1
+      },
+      "flags": [],
+      "verified": true,
+      "brand": "Cable Provider",
+      "model": "Cable Box (planning figure)",
+      "type": "source",
+      "powerTypicalW": 17.5,
+      "powerIdleW": 16,
+      "desktop": true,
+      "lan": 1,
+      "provider": true,
+      "match": "^cable( ?box)?( ?\\d+)?$",
+      "partNo": "Cable Box",
+      "partNoUnsure": true,
+      "notes": "Sizing profile for an unnamed provider box: the highest published 'On' draw among current cable DVRs — Spectrum 210T 17.5W (energy.cablelabs.com/charter), Xfinity XG1v4 AX014ANC 17.4W / 16.0W sleep (xfinity.com set-top-box energy page). These boxes barely sleep. Provider equipment: never quoted as a product."
+    },
+    "directv-genie-hr54": {
+      "inputs": {},
+      "outputs": {
+        "hdmi": 1,
+        "optical": 1,
+        "coax": 1
+      },
+      "flags": [],
+      "verified": true,
+      "brand": "DIRECTV",
+      "model": "Genie HD DVR HR54",
+      "type": "source",
+      "powerTypicalW": 13.7,
+      "powerIdleW": 12.6,
+      "desktop": true,
+      "lan": 1,
+      "provider": true,
+      "match": "directv|genie",
+      "partNo": "HR54",
+      "notes": "ENERGY STAR disclosure (AT&T): HR54-500 On 13.66W / Off 12.64W (-200: 12.2/11.1). EPS44 12V 4A brick. Optical + coax digital out. Provider equipment."
+    },
+    "directv-genie2-hs17": {
+      "inputs": {},
+      "outputs": {},
+      "flags": [],
+      "verified": true,
+      "brand": "DIRECTV",
+      "model": "Genie 2 server HS17",
+      "type": "source",
+      "powerTypicalW": 20.2,
+      "powerIdleW": 18.9,
+      "desktop": true,
+      "lan": 1,
+      "provider": true,
+      "partNo": "HS17",
+      "notes": "Headless Genie server (no HDMI) — serves Genie clients. AT&T ENERGY STAR disclosure: HS17-100 On 20.2W / Off 18.92W. EPS17 brick. Must stand VERTICAL (tilt sensor) with airflow. Provider equipment."
+    },
+    "xfinity-xg1v4": {
+      "inputs": {},
+      "outputs": {
+        "hdmi": 1
+      },
+      "flags": [],
+      "verified": true,
+      "brand": "Comcast Xfinity",
+      "model": "X1 XG1v4 4K DVR",
+      "type": "source",
+      "powerTypicalW": 17.4,
+      "powerIdleW": 16,
+      "desktop": true,
+      "lan": 1,
+      "provider": true,
+      "match": "xfinity|comcast|\\bx1\\b",
+      "partNo": "AX014ANC",
+      "notes": "xfinity.com set-top-box energy page: AX014ANC On 17.4W / Sleep 16.0W. XG1v4 ↔ AX014 mapping from Xfinity community. Ports/dimensions unpublished. Provider equipment."
+    },
+    "spectrum-210": {
+      "inputs": {},
+      "outputs": {
+        "hdmi": 1
+      },
+      "flags": [],
+      "verified": true,
+      "brand": "Spectrum",
+      "model": "Spectrum 210 HD DVR",
+      "type": "source",
+      "powerTypicalW": 17.5,
+      "powerIdleW": 13.7,
+      "desktop": true,
+      "lan": 1,
+      "provider": true,
+      "match": "spectrum|charter",
+      "partNo": "210",
+      "notes": "energy.cablelabs.com/charter: 210T On 17.5 / Sleep 13.2W; 210H 17.0/13.7; 210A 17.2/13.3. Ports/dimensions unpublished. Provider equipment."
+    },
+    "kaleidescape-strato-c": {
+      "inputs": {},
+      "outputs": {
+        "hdmi": 2,
+        "optical": 1,
+        "coax": 1
+      },
+      "flags": [],
+      "verified": true,
+      "brand": "Kaleidescape",
+      "model": "Strato C Movie Player",
+      "type": "source",
+      "powerMaxW": 20,
+      "powerTypicalW": 17,
+      "powerIdleW": 12,
+      "rackUnits": 1,
+      "halfRack": true,
+      "lan": 1,
+      "match": "strato ?c",
+      "partNo": "Strato C",
+      "partNoUnsure": true,
+      "notes": "kaleidescape.com spec: 20W max / 17W typical / 12W high-power standby; 12V 5A brick. HDMI 2.0a video + HDMI audio-only + coax + Toslink. Kaleidescape rack shelf, 2 per 1U."
+    },
+    "kaleidescape-terra-prime-ssd": {
+      "inputs": {},
+      "outputs": {},
+      "flags": [],
+      "verified": true,
+      "brand": "Kaleidescape",
+      "model": "Compact Terra Prime SSD Movie Server",
+      "type": "source",
+      "powerMaxW": 42,
+      "powerTypicalW": 22,
+      "rackUnits": 1,
+      "halfRack": true,
+      "lan": 1,
+      "match": "terra",
+      "partNo": "Terra Prime SSD",
+      "partNoUnsure": true,
+      "notes": "kaleidescape.com spec: 42W max / 22W typical; headless; 2.5GbE recommended. Rack shelf, 2 per 1U."
+    },
+    "kaleidescape-terra-prime-hdd": {
+      "inputs": {},
+      "outputs": {},
+      "flags": [],
+      "verified": true,
+      "brand": "Kaleidescape",
+      "model": "Terra Prime HDD Movie Server",
+      "type": "source",
+      "powerMaxW": 48,
+      "powerTypicalW": 43,
+      "rackUnits": 2,
+      "lan": 1,
+      "partNo": "Terra Prime HDD",
+      "partNoUnsure": true,
+      "notes": "kaleidescape.com spec: 48W max / 43W typical; 150W brick; headless; rack shelf, 2U."
+    },
+    "avpro-mxnet-1g-r2": {
+      "inputs": {},
+      "outputs": {},
+      "flags": [],
+      "verified": true,
+      "brand": "AVPro Edge",
+      "model": "AC-MXNET-1G-R2",
+      "type": "accessory",
+      "rackUnits": 1,
+      "rackKit": {
+        "gen": "1g",
+        "holds": 2,
+        "excludes": "DANTE"
+      },
+      "partNo": "AC-MXNET-1G-R2",
+      "notes": "1U kit, 2 MXNet 1G/USP endpoints (or a CBOX-HA) side by side; passive — no PSU (AVPro). Not for AC-MXNET-1G-DANTE-E. avproglobal.com/products/ac-mxnet-1g-r2"
+    },
+    "avpro-mxnet-1g-r15": {
+      "inputs": {},
+      "outputs": {},
+      "flags": [],
+      "verified": true,
+      "brand": "AVPro Edge",
+      "model": "AC-MXNET-1G-R15",
+      "type": "accessory",
+      "rackUnits": 6,
+      "rackKit": {
+        "gen": "1g",
+        "holds": 15,
+        "excludes": "DANTE"
+      },
+      "partNo": "AC-MXNET-1G-R15",
+      "notes": "6U heavy-duty rack, 15 vertical numbered slots for MXNet 1G/USP endpoints + CBOX; 2 blanks included; passive (no PSU mentioned). AC-MXNET-1G-DANTE-E does NOT fit (AC-EZRACK-15). avproglobal.com/products/ac-mxnet-1g-r15"
+    },
+    "avpro-mxnet-10g-hdrack": {
+      "inputs": {},
+      "outputs": {},
+      "flags": [],
+      "verified": true,
+      "brand": "AVPro Edge",
+      "model": "AC-MXNET-10G-HDRACK",
+      "type": "accessory",
+      "rackUnits": 6,
+      "rackKit": {
+        "gen": "10g",
+        "holds": 12
+      },
+      "partNo": "AC-MXNET-10G-HDRACK",
+      "notes": "6U heavy-duty rack, 12 MXNet 10G transceivers + control box; passive (power not mentioned). avproglobal.com/products/ac-mxnet-10g-hdrack"
     }
   },
   "licensing": {

@@ -7,12 +7,14 @@
    Pure: advise() attaches it (advise().power), the Network & Power page
    prints it, the takeoff and exports read the WattBox like any rack gear. */
 
-import { companionRef } from "./network.js";
+import { companionRef, catalogFor } from "./network.js";
 
 // spare outlets to leave: 20%, never fewer than 2 (the ISP modem and a router always show up)
 export const spareTarget = need => Math.max(2, Math.ceil(need * 0.2));
 
 // catalog watts: powerTypicalW (1/8 power / typical), powerMaxW (rated / max); either may be missing
+// rules of thumb: past ~500 W an enclosed rack wants a fan; past ~1,500 W the closet needs real cooling
+export const HEAT_FAN_W = 500, HEAT_ROOM_W = 1500;
 const POE_CLASS0_W = 12.95;            // 802.3af ceiling at the device, for PoE gear with no published draw
 const watts = c => ({ typicalW: c?.powerTypicalW ?? null, maxW: c?.powerMaxW ?? null });
 
@@ -39,7 +41,7 @@ export function powerPlan(job, ix, catalog, netPlans = []) {
       return { typicalW: Math.round(c.powerNoPoeW + typ), maxW: Math.round(c.powerNoPoeW + max), poeLoad: powered.length };
     };
     for (const d of Object.values(s.devices)) {
-      const c = cat(d.catalogRef);
+      const c = catalogFor(d, catalog);
       if (d.type === "power") { units.push({ id: d.id, model: d.model || c?.model || d.id, outlets: c?.outlets ?? d.outlets ?? null, controlled: c?.controlledOutlets ?? null, amps: c?.amps ?? 15 }); continue; }
       if (poeRow(d.id)) { poe.push({ id: d.id, what: d.model || d.id }); continue; }
       const n = Math.max(1, Math.floor(+(d.outlets ?? c?.outlets) || 1));
@@ -72,7 +74,11 @@ export function powerPlan(job, ix, catalog, netPlans = []) {
     const typicalW = Math.round(loads.reduce((n, l) => n + (l.typicalW ?? l.maxW ?? 0), 0));
     const maxW = Math.round(loads.reduce((n, l) => n + (l.maxW ?? l.typicalW ?? 0), 0));
     const noWatts = loads.filter(l => l.typicalW == null && l.maxW == null).map(l => l.what);
-    plans.push({ solution: sol.id, loads, poe, units, need, supply, spare, pick, circuitW, circuitA: amps, circuits, typicalW, maxW, noWatts,
+    // heat: what the rack draws at typical load stays in the rack as heat (1 W = 3.412 BTU/hr);
+    // conservative for amps, whose speaker output leaves the room
+    const heatW = typicalW, btu = Math.round(heatW * 3.412);
+    const cooling = heatW > HEAT_ROOM_W ? "room" : heatW > HEAT_FAN_W ? "fan" : null;
+    plans.push({ solution: sol.id, loads, poe, units, need, supply, spare, pick, circuitW, circuitA: amps, circuits, typicalW, maxW, noWatts, heatW, btu, cooling,
       short: supply != null && units.length ? Math.max(0, need - supply) : null,
       tight: supply != null && units.length && supply >= need && supply < need + spare });
   }

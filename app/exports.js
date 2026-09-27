@@ -27,7 +27,7 @@ const clean = s => String(s ?? "").replace(/\s*\|\s*/g, " / ").replace(/\s+/g, "
 
 /* ---------- what a box is, for the quote ---------- */
 function fromCatalog(c) {
-  return { mfr: c.brand, model: c.partNo || c.model, unsure: !!c.partNoUnsure || !c.partNo };
+  return { mfr: c.brand, model: c.partNo || c.model, unsure: !!c.partNoUnsure || !c.partNo, provider: !!c.provider };
 }
 // brands spelled the way the manufacturer does, longest first so "AVPro Edge" beats "AVPro"
 const BRANDS = ["James Loudspeaker", "Bowers & Wilkins", "AVPro Edge", "AudioControl", "Kaleidescape", "Josh.ai", "Control4", "Crestron",

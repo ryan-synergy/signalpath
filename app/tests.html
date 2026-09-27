@@ -326,7 +326,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
 /* hop-count regression guards (polish round 2026-09-19: returns route last
    and pick the least-crossing lane) */
 {
-  const ceiling = { residence: 5, estate: 25, stress: 319 };  // 2026-09-27 audit: col-C escape no longer cuts through its own amp — estate 24→25, stress 309→319 (the old counts were subsidized by 8 body-piercing wires)  // re-baselined 2026-09-21: AVB/switching bottom-anchored in col A — residence 7→5 (trunk to output module is now a straight neighbor run)
+  const ceiling = { residence: 5, estate: 25, stress: 308 };  // 2026-09-27 tighter zone spacing (gap 20 / row 24) + span grid: stress 319→308  // 2026-09-27 audit: col-C escape no longer cuts through its own amp — estate 24→25, stress 309→319 (the old counts were subsidized by 8 body-piercing wires)  // re-baselined 2026-09-21: AVB/switching bottom-anchored in col A — residence 7→5 (trunk to output module is now a straight neighbor run)
   for (const [name, raw] of Object.entries(fixtures)) {
     const { job, ix } = loadJob(raw);
     const p = place(job, ix);
@@ -2180,8 +2180,13 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const job = C.planCommands(j0, 0, [{ op: "add_zones", text: "guest tv 43 matrix, kitchen stereo 55 matrix, family room 5.1 75 matrix, patio stereo 55 matrix, office stereo, pool landscape 8, theater 7.1 85 matrix" }], CAT).job;
   const topOrder = j => { const { job: jj, ix } = loadJob(j); const p = place(jj, ix); return p.zones.filter(z => z.band === "top").sort((a, b) => a.y - b.y || a.x - b.x).map(z => z.name); };
   const def = topOrder(job);
-  t("grouping (default): surround+TV rooms first, then TV + 2-ch, then TV only — added order kept inside each group",
-    def.join() === "Family Room,Theater,Kitchen,Patio,Guest Tv", def.join());
+  t("grouping (default): surround+TV rooms first, then TV + 2-ch across the top — added order kept inside each group",
+    def.join() === "Family Room,Theater,Kitchen,Patio", def.join());
+  { const { job: jj, ix } = loadJob(job); const p = place(jj, ix), rt = route(jj, ix, p);
+    const mid = p.zones.filter(z => z.band === "mid"), rack = p.racks[0], aud = p.zones.filter(z => z.band === "audio");
+    t("grouping (default): a TV-only room sits in the mid band — right of the rack, above the speaker-only rooms",
+      mid.map(z => z.name).join() === "Guest Tv" && mid.every(z => z.x >= rack.x + rack.w && aud.every(a => z.y + z.h < a.y)), mid.map(z => z.name).join());
+    t("grouping (default): the mid band routes clean", !rt.warnings.some(w => /unrouted|fallback/.test(w.code)), rt.warnings.map(w => w.msg).join(" | ")); }
   const ord = structuredClone(job); ord.job.zoneGrouping = "order";
   t("grouping 'order': zones stay in the order they were added", topOrder(ord).join() === "Guest Tv,Kitchen,Family Room,Patio,Theater", topOrder(ord).join());
   const od = structuredClone(job); od.job.zoneGrouping = "type-outdoor";

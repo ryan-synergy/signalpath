@@ -184,6 +184,9 @@
   #advisor .item { padding: 3px 0; }
   #advisor .e { color: var(--bad); } #advisor .w { color: var(--warn); } #advisor .i { color: #444; }
   #advisor .ok { color: var(--ok); }
+  #advisor details.ref { margin-top: 4px; }
+  #advisor details.ref summary { cursor: pointer; color: #666; padding: 3px 0; font-size: 12px; }
+  #advisor details.ref[open] summary { color: #333; }
 
   /* ---- import review overlay ---- */
   #review { position: fixed; inset: 0; background: rgba(10,12,16,.55); display: none; z-index: 50;
@@ -435,6 +438,10 @@ function syncShippedCatalog() {
   if (SHIPPED.asOf && SETTINGS.catalog.asOf !== SHIPPED.asOf) { SETTINGS.catalog.asOf = SHIPPED.asOf; changed = true; }
   return changed;
 }
+// advisor notes that ask for a fix (the rest are reference: setup checklists, budgets)
+const ACTION_NOTES = new Set(["earc-extender", "mxnet-no-cbox", "dante-no-controller", "mxnet-cbox-per-platform", "net-mismatch", "net-mixed",
+  "dante-multicast", "pcm-only", "switch-ports-full", "switch-no-poe", "lan-no-switch", "power-none", "power-short", "power-tight",
+  "power-circuit", "power-peak", "rack-full", "rack-unknown-u", "rack-heat"]);
 const saveSettings = () => dbPut({ id: "__settings", updated: Date.now(), settings: SETTINGS });
 if (CAT_SYNCED) await saveSettings();
 /* job snapshot wins over the live catalog (old jobs advise identically forever) —
@@ -506,7 +513,9 @@ function refresh(save = true) {
 
   const vsol = S.view?.job?.solutions[S.sol];
   const wname = t => S.view ? humanizeWireIds(S.view.job, vsol, t) : t;
-  const adv = [];
+  // two piles: what needs fixing (always shown) and reference — setup
+  // checklists, budgets, licensing — folded under one line until opened
+  const adv = [], ref = [];
   for (const e of errs) adv.push(`<div class="item e">✗ ${esc(e.msg)}</div>`);
   for (const w of warns) adv.push(`<div class="item w">⚠ ${esc(w.msg)}</div>`);
   // the router knows when a drawing is compromised — say so instead of leaving
@@ -517,19 +526,25 @@ function refresh(save = true) {
   for (const w of new Map(routeWarn.filter(w => w.code === "hint-unroutable").map(w => [w.msg, w])).values()) adv.push(`<div class="item w">⚠ The custom route for ${esc(wname(w.msg))} can't be drawn on this layout — routed automatically</div>`);
   for (const w of placeWarn) adv.push(`<div class="item w">⚠ ${esc(w.msg)}</div>`);
   const drift = catalogDrift(S.job, SETTINGS.catalog);
-  if (drift.length) adv.push(`<div class="item i">📦 The catalog has newer specs for ${drift.length} device${drift.length > 1 ? "s" : ""} on this job (${esc(drift.slice(0, 3).map(d => d.model).join(", "))}${drift.length > 3 ? "…" : ""}) — this job still uses the specs it was quoted with. JOB tab → Update catalog specs.</div>`);
+  if (drift.length) ref.push(`<div class="item i">📦 The catalog has newer specs for ${drift.length} device${drift.length > 1 ? "s" : ""} on this job (${esc(drift.slice(0, 3).map(d => d.model).join(", "))}${drift.length > 3 ? "…" : ""}) — this job still uses the specs it was quoted with. JOB tab → Update catalog specs.</div>`);
   for (const io of (a?.io || []).filter(mine)) {
     if (io.over) adv.push(`<div class="item e">✗ ${esc(io.msg)}</div>`);
-    else if (io.msg && (io.kind === "analog-in" || io.kind === "audio-out" || io.kind === "return-in")) adv.push(`<div class="item i">🔌 ${esc(io.msg)}</div>`);
+    else if (io.msg && (io.kind === "analog-in" || io.kind === "audio-out" || io.kind === "return-in")) ref.push(`<div class="item i">🔌 ${esc(io.msg)}</div>`);
   }
-  for (const amp of (a?.amps || []).filter(mine)) adv.push(`<div class="item i">🔊 ${esc(amp.model || amp.amp)}: ${amp.zonesTotal != null ? `${amp.zonesUsed}/${amp.zonesTotal} zones` : `${amp.zonesUsed} zone${amp.zonesUsed === 1 ? "" : "s"}`}${amp.reserved ? ` (${amp.reserved} reserved)` : ""}${amp.spare != null ? ` · ${amp.spare} spare` : ""}</div>`);
+  for (const amp of (a?.amps || []).filter(mine)) (amp.spare != null && amp.spare < 0 ? adv : ref).push(`<div class="item ${amp.spare != null && amp.spare < 0 ? "e" : "i"}">🔊 ${esc(amp.model || amp.amp)}: ${amp.zonesTotal != null ? `${amp.zonesUsed}/${amp.zonesTotal} zones` : `${amp.zonesUsed} zone${amp.zonesUsed === 1 ? "" : "s"}`}${amp.reserved ? ` (${amp.reserved} reserved)` : ""}${amp.spare != null ? ` · ${amp.spare} spare` : ""}</div>`);
   for (const lic of (a?.licensing || []).filter(mine)) {
-    adv.push(`<div class="item i">🎛 <b>${esc(PLATFORM_NAME[lic.platform] || lic.platform)}</b> → ${esc(lic.pick)} · ${lic.lines.map(esc).join(" · ")}</div>`);
+    ref.push(`<div class="item i">🎛 <b>${esc(PLATFORM_NAME[lic.platform] || lic.platform)}</b> → ${esc(lic.pick)} · ${lic.lines.map(esc).join(" · ")}</div>`);
     for (const w of lic.warns || []) adv.push(`<div class="item w">⚠ ${esc(PLATFORM_NAME[lic.platform] || lic.platform)}: ${esc(w)}</div>`);
   }
-  for (const n of (a?.notes || []).filter(mine)) adv.push(n.code === "earc-extender" ? `<div class="item w">⚠ ${esc(n.msg)}</div>`
-    : `<div class="item i">${n.code === "avb-switch" || n.code === "sonos-net" ? "🌐" : "🎛"} ${esc(n.msg)}</div>`);
-  $("#advisor").innerHTML = adv.join("") || `<div class="item ok">✓ No issues</div>`;
+  for (const n of (a?.notes || []).filter(mine)) {
+    if (ACTION_NOTES.has(n.code) || (n.code === "savant-host" && /exceeds/.test(n.msg))) adv.push(`<div class="item w">⚠ ${esc(n.msg)}</div>`);
+    else ref.push(`<div class="item i">${n.code === "avb-switch" || n.code === "sonos-net" ? "🌐" : "🎛"} ${esc(n.msg)}</div>`);
+  }
+  let refOpen = false; try { refOpen = localStorage.getItem("sp.refOpen") === "1"; } catch {}
+  $("#advisor").innerHTML = (adv.join("") || `<div class="item ok">✓ No issues</div>`) +
+    (ref.length ? `<details class="ref"${refOpen ? " open" : ""}><summary>Reference · ${ref.length} note${ref.length > 1 ? "s" : ""} — setup checklists, budgets, licensing</summary>${ref.join("")}</details>` : "");
+  const det = $("#advisor details.ref");
+  if (det) det.ontoggle = () => { try { localStorage.setItem("sp.refOpen", det.open ? "1" : "0"); } catch {} };
 
   S.findings = collectFindings(errs, warns, a, mine);
   // the advisor's port counts (a trunk can carry several channels) win over counting rows

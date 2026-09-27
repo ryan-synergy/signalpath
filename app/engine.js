@@ -360,7 +360,7 @@ export const SHEET = {
 
 const PL = {
   marginX: 50, topY: 60, areaHeaderY: 46,
-  cardTitleH: 36, cardPad: 25, cardGapX: 30, rowGapY: 30, cardBottomPad: 24,
+  cardTitleH: 36, cardPad: 25, cardGapX: 20, rowGapY: 24, cardBottomPad: 24,
   cardMinW: 130, cardMinH: 140, groupGapX: 30, captionH: 18,
   videoRowGapY: 88, // wrapped video rows: chip strip (38) + feed lanes below each card
   areaGapX: 80, secondaryClusterMaxW: 700,
@@ -373,6 +373,9 @@ const PL = {
   lanePitch: 14, corridorQuantum: 56, topCorridorMin: 120, rightCorridorMin: 90,
   legendRowW: 140, legendH: 56,
 };
+
+// column grid cell for a band: the 75th-percentile card width (wider cards span cells)
+const gridCell = ws => { const a = [...ws].sort((x, y) => x - y); return a.length ? a[Math.floor((a.length - 1) * 0.75)] : 0; };
 
 const SPK = 32, SPK_PITCH = 34; // speaker icon diameter / center pitch
 
@@ -517,9 +520,9 @@ export function place(job, ix = indexJob(job), opts = {}) {
     const c = clusterFor(z);
     (z.endpoints || []).some(e => e.type === "display") ? c.video.push(z) : c.audio.push(z);
   }
+  const tvRank = z => { const spk = (z.endpoints || []).find(e => e.type === "speakers")?.config || "";
+    return /^surround/.test(spk) ? 0 : spk ? 1 : 2; };
   if (grouping !== "order") {
-    const tvRank = z => { const spk = (z.endpoints || []).find(e => e.type === "speakers")?.config || "";
-      return /^surround/.test(spk) ? 0 : spk ? 1 : 2; };
     const spkRank = z => /^surround/.test((z.endpoints || []).find(e => e.type === "speakers")?.config || "") ? 0 : 1;
     const stable = (list, rank) => list.map((z, i) => [z, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]);
     for (const c of clusters) { c.video = stable(c.video, tvRank); c.audio = stable(c.audio, spkRank); }
@@ -548,8 +551,15 @@ export function place(job, ix = indexJob(job), opts = {}) {
     cardOf[z.id] = zoneCard(z, locals, notedZones.has(z.id));
   }
 
-  /* -- primary top band: video zones of cluster 0, rows wrapping at content right -- */
+  /* -- primary top band: video zones of cluster 0, rows wrapping at content right --
+     By type (default), TV-only rooms (no speakers of their own) leave the top band
+     for the MID band: right of the rack, between the TV rows above and the
+     speaker-only rooms at the bottom right — the space that used to sit empty.
+     Only when the job has a rack and the top band keeps TV rooms with speakers. */
   const primary = clusters[0];
+  const midZones = grouping !== "order" && (sol.racks || []).some(r => (r.devices || []).length) && primary.video.some(z => tvRank(z) < 2)
+    ? primary.video.filter(z => tvRank(z) === 2) : [];
+  if (midZones.length) primary.video = primary.video.filter(z => !midZones.includes(z));
   {
     let x = PL.marginX, y = PL.topY, rowH = 0, rowZones = [];
     for (const z of primary.video) {
@@ -603,7 +613,7 @@ export function place(job, ix = indexJob(job), opts = {}) {
     // short stub — the corridor crossing was already counted on the feed INTO the chip
     if (s.companions[c.from] && ix.endpointsById[s.companions[c.from].serves]) continue;
     const cl = clusters.find(cl => cl.video.some(z => z.id === zid) || cl.audio.some(z => z.id === zid));
-    const isVideoZone = cl?.video.some(z => z.id === zid);
+    const isVideoZone = cl?.video.some(z => z.id === zid);   // mid-band TVs aren't in video: they count as right/east
     if (cl === primary && isVideoZone) crossings.top++;
     else crossings.right++;
     if (cl && cl !== primary) clusterInbound[cl.areaId] = (clusterInbound[cl.areaId] || 0) + 1;
@@ -672,17 +682,42 @@ export function place(job, ix = indexJob(job), opts = {}) {
     // column grid: compact cards vary in width, but rows must advance on a
     // shared cell pitch or the inter-column gutters (return/dive escape
     // channels) get pierced by a lower row's card
-    const cellW = Math.max(0, ...primary.audio.map(z => cardOf[z.id].w));
+    // the cell is sized for the ordinary card (75th percentile), and a wide one
+    // (a landscape array) spans whole cells — so one big card no longer spreads
+    // every column apart, and the gutters still line up row to row
+    const cellW = gridCell(primary.audio.map(z => cardOf[z.id].w));
+    const spanOf = c => Math.max(1, Math.ceil((c.w + PL.cardGapX) / (cellW + PL.cardGapX)));
     const dry = [];                                   // dry layout first, then bottom-align the block
     let x = bandX, y = 0, rowH = 0, bandH = 0;
     for (const z of primary.audio) {
-      const c = cardOf[z.id];
-      if (x + cellW > bandX + bandMaxW && x > bandX) { y += rowH + PL.rowGapY; x = bandX; rowH = 0; }
+      const c = cardOf[z.id], span = spanOf(c) * (cellW + PL.cardGapX) - PL.cardGapX;
+      if (x + span > bandX + bandMaxW && x > bandX) { y += rowH + PL.rowGapY; x = bandX; rowH = 0; }
       dry.push({ z, c, x, y });
-      x += cellW + PL.cardGapX; rowH = Math.max(rowH, c.h); bandH = Math.max(bandH, y + c.h);
+      x += span + PL.cardGapX; rowH = Math.max(rowH, c.h); bandH = Math.max(bandH, y + c.h);
     }
     const bandTopMin = topBandBottom + topCorridorH + (out.racks.length ? 100 : 0);
-    const y0 = Math.max(bandTopMin, (out.racks.length ? rackBottom : bandTopMin + bandH) - bandH);
+    let y0 = Math.max(bandTopMin, (out.racks.length ? rackBottom : bandTopMin + bandH) - bandH);
+    // mid band (TV-only rooms): its own column grid from the same left edge,
+    // sitting on top of the audio band with room for each card's chip strip
+    // and feed lanes (rowGapFor) — the audio band moves down only if they don't fit
+    if (midZones.length) {
+      const midMaxW = Math.max(bandMaxW, SHEET.content.x + SHEET.content.w - PL.marginX - bandX);
+      const midCell = gridCell(midZones.map(z => cardOf[z.id].w));
+      const midSpan = c => Math.max(1, Math.ceil((c.w + PL.cardGapX) / (midCell + PL.cardGapX))) * (midCell + PL.cardGapX) - PL.cardGapX;
+      const mdry = [], rows = [[]];
+      let mx = bandX, my = 0, mRowH = 0, midH = 0;
+      for (const z of midZones) {
+        const c = cardOf[z.id];
+        if (mx + midSpan(c) > bandX + midMaxW && mx > bandX) { my += mRowH + rowGapFor(rows[rows.length - 1]); mx = bandX; mRowH = 0; rows.push([]); }
+        mdry.push({ z, c, x: mx, y: my }); rows[rows.length - 1].push(z);
+        mx += midSpan(c) + PL.cardGapX; mRowH = Math.max(mRowH, c.h); midH = Math.max(midH, my + c.h);
+      }
+      const gapBelow = rowGapFor(rows[rows.length - 1]);
+      const midBottom = (dry.length ? y0 : (out.racks.length ? rackBottom : bandTopMin + midH));
+      let midTop = midBottom - (dry.length ? gapBelow : 0) - midH;
+      if (midTop < bandTopMin) { y0 += bandTopMin - midTop; midTop = bandTopMin; }
+      for (const p of mdry) placeZone(out, p.z, p.c, p.x, midTop + p.y, "mid");
+    }
     for (const p of dry) placeZone(out, p.z, p.c, p.x, y0 + p.y, "audio");
   }
 
@@ -1112,7 +1147,7 @@ export function route(job, ix, placement, opts = {}) {
   // classify a zone-bound conn's approach region
   const regionOf = t => {
     if (t.pz.band === "top") return "top";
-    if (t.pz.band === "audio") return "audio";
+    if (t.pz.band === "audio" || t.pz.band === "mid") return "audio";   // both sit east of the rack
     return "cluster";
   };
   const plans = []; // per source device: ordered wires + port ys
@@ -1815,6 +1850,10 @@ export function route(job, ix, placement, opts = {}) {
     const scan = (band, rangesArr, budget, tag) => {
       let n = 0;
       scanLane(band[0], +1, band, gapABx[0], sx0, nWire, y => {
+        // a return leaves its card's BOTTOM — a lane above that would climb back
+        // through the card (a mid-band TV sits beside the rack, so a hint band
+        // between two rack devices can be higher than the card's bottom)
+        if (y < laneLo) { rdbg({ [tag]: y, fail: "above-source-card" }); return false; }
         for (const range of rangesArr) {
           const isGap = range === gapABx || range === gapBCx;
           const wx = alloc(usedV, isGap ? (range[0] + range[1]) / 2 : range[1],
@@ -1863,7 +1902,8 @@ export function route(job, ix, placement, opts = {}) {
         if (hintBand) scan(hintBand, hintRanges, 30, "y");
         else {
           scan([laneLo, laneHi], hintRanges, 30, "y");
-          if (!best) scan([rackBottom + 24, rackBottom + 560], hintRanges, 12, "band2");
+          // (never a lane above the source card's own bottom: a mid-band TV can sit lower than the rack)
+          if (!best) scan([Math.max(rackBottom + 24, laneLo), Math.max(rackBottom, laneLo) + 560], hintRanges, 12, "band2");
         }
         if (best) break;
       }
@@ -1878,7 +1918,7 @@ export function route(job, ix, placement, opts = {}) {
         // tall racks put the only clear crossing BELOW everything — the near-card
         // scan can exhaust its sample budget before ever reaching it; the first
         // 340px below the rack belong to the amp dive strips, duck BENEATH them
-        if (!best) scan([rackBottom + 24, rackBottom + 560], ranges, 12, "band2");
+        if (!best) scan([Math.max(rackBottom + 24, laneLo), Math.max(rackBottom, laneLo) + 560], ranges, 12, "band2");
         if (best) break;
       }
     }

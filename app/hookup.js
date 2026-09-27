@@ -7,7 +7,7 @@
    Pure functions over the raw job — no DOM. Everything writes plain
    connections/companions; the engine needs nothing new. */
 
-import { SPEAKER_SETUP } from "./names.js";
+import { SPEAKER_SETUP, AUDIO_BACK_NAME } from "./names.js";
 
 // what can do each job
 export const VIDEO_FROM = ["avr", "videoMatrix", "avSwitch", "splitter", "source"];
@@ -88,7 +88,7 @@ export function setVideo(job, sol, zone, from, run, earc) {
    "earc+optical"  — eARC plus an optical (Toslink) backup run to `to`
    "optical"       — an optical run to `to` only (receiver or audio input module)
    "none"                                                                        */
-export const AUDIO_BACK = { earc: "eARC over the HDMI", "earc+optical": "eARC + optical backup", optical: "Optical only", none: "None" };
+export const AUDIO_BACK = AUDIO_BACK_NAME;   // one vocabulary (names.js)
 export function setAudioBack(job, sol, zone, mode, to) {
   const h = readHookup(job, sol, zone);
   if (!h.tv) return;

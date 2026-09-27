@@ -189,6 +189,34 @@
   #review .ft button, #review .ft select { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 7px;
     border: 1px solid var(--line); background: #fff; cursor: pointer; }
   #review .ft .primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  /* ---- AI dialog, command preview, toast ---- */
+  #aiBox { position: fixed; inset: 0; background: rgba(10,12,16,.55); display: none; z-index: 55; align-items: center; justify-content: center; }
+  #aiBox.show { display: flex; }
+  #aiBox .card { background: #fff; border-radius: 12px; width: min(720px, 94vw); max-height: 90vh; overflow-y: auto; padding: 16px 18px;
+                 box-shadow: 0 12px 40px rgba(0,0,0,.35); display: flex; flex-direction: column; gap: 8px; }
+  #aiBox .aihd { display: flex; align-items: center; } #aiBox h2 { margin: 0; font-size: 17px; flex: 1; }
+  #aiClose { background: none; border: none; font-size: 16px; cursor: pointer; color: #666; padding: 4px 8px; }
+  #aiBox .ailbl { font-size: 12px; color: #555; }
+  #aiBox textarea { font: inherit; font-size: 13px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; resize: vertical; width: 100%; }
+  #aiBox .airow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #aiBox button { font: inherit; font-size: 13px; padding: 7px 13px; border-radius: 7px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
+  #aiBox button.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  #aiBox button:disabled { opacity: .45; cursor: not-allowed; }
+  #aiBox details summary { font-size: 12.5px; color: var(--accent); cursor: pointer; padding: 3px 0; }
+  #aiBox details textarea { margin: 6px 0; }
+  .plan { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fafbfc; }
+  .plan .sum { font-size: 13px; margin-bottom: 6px; }
+  .plan .q { font-size: 12.5px; color: #6b4a00; background: #fff6e0; border-radius: 6px; padding: 5px 8px; margin: 4px 0; }
+  .plan .ps { display: block; font-size: 12.5px; padding: 2px 0; }
+  .plan .ps.ok { color: #1f5c2a; } .plan .ps.bad { color: var(--bad); }
+  .plan .delta { font-size: 12px; color: #555; margin-top: 6px; }
+  .plan .acts { display: flex; gap: 8px; margin-top: 10px; }
+  #qaChips .plan { width: 100%; padding: 6px 8px; }
+  #qaChips .plan .ps { font-size: 12px; }
+  #toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: #16181c; color: #eee; font-size: 13px;
+           padding: 8px 14px; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.35); display: none; z-index: 60; gap: 10px; align-items: center; }
+  #toast.show { display: flex; }
+  #toast button { background: none; border: 1px solid #555; color: #fff; border-radius: 6px; padding: 3px 9px; font: inherit; font-size: 12px; cursor: pointer; }
   /* ---- new job: rack starting points ---- */
   #starter { position: fixed; inset: 0; background: rgba(10,12,16,.55); display: none; z-index: 50; align-items: center; justify-content: center; }
   #starter.show { display: flex; }
@@ -217,6 +245,8 @@
   <input id="jobName" title="Project name">
   <select id="solSel" title="Solution"></select>
   <select id="stageSel"><option value="proposal">PROPOSAL</option><option value="asBuilt">AS-BUILT</option></select>
+  <button id="undoBtn" title="Undo the last change made by a command or the AI" style="display:none">↶ Undo</button>
+  <button id="aiBtn" title="Describe a change — Claude proposes it, you preview and apply">✦ AI</button>
   <span class="spacer"></span>
   <span id="rulesChip" class="ok">✓</span>
   <label class="chk"><input type="checkbox" id="hideNet"> hide network</label>
@@ -248,6 +278,23 @@
   </div>
 </div>
 
+<div id="aiBox" role="dialog" aria-modal="true" aria-labelledby="aiTitle"><div class="card">
+  <div class="aihd"><h2 id="aiTitle">✦ Ask AI to change this job</h2><button id="aiClose" aria-label="Close">✕</button></div>
+  <label class="ailbl" for="aiReq">What should change?</label>
+  <textarea id="aiReq" rows="3" placeholder="e.g. Add a theater with a 7.1 system and an 85&quot; Sony on its own receiver, with an optical backup. Bump the patio TV to 75."></textarea>
+  <div class="airow">
+    <button id="aiAsk" class="primary">Ask Claude</button>
+    <button id="aiCopy" title="Copies a ready prompt (this job, its issues, and the command list) to paste into Claude">Copy prompt for Claude</button>
+    <span id="aiStatus" class="mini"></span>
+  </div>
+  <details id="aiPasteBox"><summary>Paste Claude's reply</summary>
+    <textarea id="aiReply" rows="4" placeholder="Paste the whole reply — the app finds the command list in it."></textarea>
+    <button id="aiPaste">Preview these changes</button>
+  </details>
+  <div id="aiPrev"></div>
+</div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
 <div id="starter" role="dialog" aria-modal="true" aria-labelledby="stTitle"><div class="card">
   <h2 id="stTitle">New job — start from a rack</h2>
   <div class="s">Pick the rack this job looks most like. Its gear and the patching inside the rack are filled in; then add zones with quick-add and they wire themselves to it.</div>
@@ -271,6 +318,8 @@ import { importAny, mergeHouse } from "./app/importers.js";
 import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
 import { STARTERS, applyStarter } from "./app/starters.js";
+import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/commands.js";
+import { askClaude, handoffPrompt, extractProposal, jobSummary, assess, loadConn, saveConn, connReady, MODELS } from "./app/ai.js";
 import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, nextFreeOutputs, outputsNeeded,
          VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS } from "./app/hookup.js";
 import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME,
@@ -327,7 +376,7 @@ function effectiveCatalog() {
 }
 
 /* ============ state ============ */
-const S = { job: null, id: null, sol: 0, tab: "zones", openRows: new Set(), editScope: "house" };
+const S = { job: null, id: null, sol: 0, tab: "zones", openRows: new Set(), editScope: "house", undo: [] };
 const uid = p => p + "-" + Math.random().toString(36).slice(2, 7);
 const $ = s => document.querySelector(s);
 
@@ -467,6 +516,7 @@ function renderTopbar() {
   const sel = $("#solSel");
   sel.innerHTML = S.job.solutions.map((s, i) => `<option value="${i}">${esc(s.name)}</option>`).join("") + `<option value="__add">＋ new solution…</option>`;
   sel.value = String(S.sol);
+  syncUndo();
 }
 async function renderJobsSel() {
   const jobs = (await dbAll()).sort((a, b) => b.updated - a.updated);
@@ -508,6 +558,117 @@ $("#newJob").onclick = () => {
   });
 };
 $("#stCancel").onclick = () => $("#starter").classList.remove("show");
+
+/* ============ commands: undo, apply, preview (quick-add box, AI, window.SignalPath) ============ */
+function pushUndo(label) {
+  S.undo.push({ job: structuredClone(S.job), id: S.id, sol: S.sol, label });
+  if (S.undo.length > 30) S.undo.shift();
+  syncUndo();
+}
+// undo belongs to the job it was recorded on — switching jobs hides it
+function syncUndo() {
+  const top = S.undo[S.undo.length - 1], b = $("#undoBtn");
+  b.style.display = top && top.id === S.id ? "" : "none";
+  if (top) b.title = `Undo: ${top.label}`;
+}
+function undo() {
+  const top = S.undo[S.undo.length - 1];
+  if (!top || top.id !== S.id) return;
+  S.undo.pop(); S.job = top.job; S.sol = top.sol;
+  refresh(); toast(`Undone: ${top.label}`);
+}
+$("#undoBtn").onclick = undo;
+addEventListener("keydown", e => {
+  if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "z" && !e.target.closest?.("input, textarea, select, [contenteditable]")) {
+    const top = S.undo[S.undo.length - 1];
+    if (top && top.id === S.id) { e.preventDefault(); undo(); }
+  }
+});
+let toastTimer = null;
+function toast(msg, withUndo = false) {
+  const t = $("#toast");
+  t.innerHTML = `<span>${esc(msg)}</span>${withUndo ? '<button type="button" id="toastUndo">Undo</button>' : ""}`;
+  t.classList.add("show");
+  if (withUndo) $("#toastUndo").onclick = () => { t.classList.remove("show"); undo(); };
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 6000);
+}
+function applyPlan(plan, label) {
+  if (!plan.steps.some(s => s.ok)) return false;
+  pushUndo(label);
+  S.job = plan.job;
+  refresh();
+  toast(`Done — ${label.length > 70 ? label.slice(0, 68) + "…" : label}`, true);
+  return true;
+}
+function planHTML(plan, { summary = "", questions = [], before = null, after = null, acts = true } = {}) {
+  const ok = plan.steps.filter(x => x.ok).length;
+  return `<div class="plan">${summary ? `<div class="sum">${esc(summary)}</div>` : ""}
+    ${questions.map(q => `<div class="q">? ${esc(q)}</div>`).join("")}
+    ${plan.steps.map(x => `<span class="ps ${x.ok ? "ok" : "bad"}">${x.ok ? "✓" : "✗"} ${esc(x.ok ? x.text : `${x.cmd?.op || "?"} — ${x.error}`)}</span>`).join("") || '<span class="ps bad">No changes proposed.</span>'}
+    ${before && after ? `<div class="delta">Problems ${before.errors.length} → ${after.errors.length} · warnings ${before.warnings.length} → ${after.warnings.length}</div>` : ""}
+    ${acts ? `<div class="acts"><button type="button" class="primary" data-plan="apply" ${ok ? "" : "disabled"}>Apply ${ok} change${ok === 1 ? "" : "s"}</button><button type="button" data-plan="discard">Discard</button></div>` : ""}</div>`;
+}
+
+/* ---- ✦ AI dialog ---- */
+let AIP = null;   // the pending proposal: its commands re-run on apply (the job may have moved on)
+const aiStatus = m => { $("#aiStatus").textContent = m || ""; };
+function openAI() {
+  const conn = loadConn(), ready = connReady(conn);
+  $("#aiAsk").disabled = !ready;
+  $("#aiAsk").title = ready ? `Uses ${MODELS.find(m => m[0] === conn.model)?.[1] || conn.model}` : "Set up the AI in ⚙ Settings → AI (or use Copy prompt for Claude)";
+  aiStatus(ready ? "" : "Built-in AI is off — use “Copy prompt for Claude”, or set it up in ⚙ Settings → AI.");
+  $("#aiPrev").innerHTML = ""; AIP = null;
+  $("#aiBox").classList.add("show");
+  setTimeout(() => $("#aiReq").focus(), 30);
+}
+const closeAI = () => $("#aiBox").classList.remove("show");
+$("#aiBtn").onclick = openAI;
+$("#aiClose").onclick = closeAI;
+$("#aiBox").onclick = e => { if (e.target.id === "aiBox") closeAI(); };
+function showProposal(pr) {
+  const cat = effectiveCatalog();
+  const plan = planCommands(S.job, S.sol, pr.commands, cat);
+  const before = assess(S.job, S.sol, cat), after = assess(plan.job, S.sol, cat);
+  AIP = { commands: pr.commands, label: pr.summary || "AI changes" };
+  $("#aiPrev").innerHTML = planHTML(plan, { summary: pr.summary, questions: pr.questions || [], before, after });
+  $("#aiPrev").querySelector('[data-plan="apply"]').onclick = () => {
+    const fresh = planCommands(S.job, S.sol, AIP.commands, effectiveCatalog());
+    if (applyPlan(fresh, "AI: " + AIP.label)) closeAI();
+  };
+  $("#aiPrev").querySelector('[data-plan="discard"]').onclick = () => { $("#aiPrev").innerHTML = ""; AIP = null; aiStatus("Discarded."); };
+}
+$("#aiCopy").onclick = async () => {
+  const txt = handoffPrompt(S.job, S.sol, effectiveCatalog(), $("#aiReq").value.trim());
+  try { await navigator.clipboard.writeText(txt); aiStatus("Copied — paste it into Claude, then paste Claude's reply below."); }
+  catch { $("#aiReply").value = txt; $("#aiReply").select(); aiStatus("Couldn't reach the clipboard — the prompt is in the box below: copy it from there."); }
+  $("#aiPasteBox").open = true;
+};
+$("#aiPaste").onclick = () => {
+  try { showProposal(extractProposal($("#aiReply").value)); aiStatus(""); }
+  catch (e) { aiStatus(e.message); }
+};
+$("#aiAsk").onclick = async () => {
+  const req = $("#aiReq").value.trim();
+  if (!req) { aiStatus("Say what should change first."); return; }
+  $("#aiAsk").disabled = true; $("#aiPrev").innerHTML = "";
+  try {
+    const r = await askClaude({ conn: loadConn(), job: S.job, solIndex: S.sol, catalog: effectiveCatalog(), request: req, onStatus: aiStatus });
+    showProposal(r);
+    aiStatus("Review the changes — nothing is applied until you press Apply.");
+  } catch (e) { aiStatus(e.message); }
+  finally { $("#aiAsk").disabled = !connReady(loadConn()); }
+};
+
+/* ---- for an outside driver (Claude in Chrome, Claude Code): the same commands, previewed or applied with undo ---- */
+window.SignalPath = Object.freeze({
+  summary: () => jobSummary(S.job, S.sol, effectiveCatalog()),
+  vocabulary: () => vocabularyText(),
+  issues: () => assess(S.job, S.sol, effectiveCatalog()),
+  preview: cmds => planCommands(S.job, S.sol, cmds, effectiveCatalog()).steps.map(({ ok, text, error }) => ({ ok, text, error })),
+  apply: (cmds, label = "commands") => { const plan = planCommands(S.job, S.sol, cmds, effectiveCatalog()); applyPlan(plan, String(label)); return plan.steps.map(({ ok, text, error }) => ({ ok, text, error })); },
+  undo: () => undo(),
+  prompt: req => handoffPrompt(S.job, S.sol, effectiveCatalog(), req),
+});
 $("#starter").onclick = e => { if (e.target.id === "starter") $("#starter").classList.remove("show"); };
 $("#delJob").onclick = async () => {
   if (!confirm(`Delete "${S.job.job.name}"?`)) return;
@@ -957,7 +1118,8 @@ function zonesHTML() {
     <div class="line"><input id="qaInput" placeholder="${esc(S.qaHint || "family room 5.1 75 sony matrix")}…" autocomplete="off">
       <button id="qaMic" title="Dictate">🎤</button><button id="qaGo">Add</button></div>
     <div id="qaChips"></div>
-    <div class="ex">shorthand: name + config (5.1, stereo, 2.1, soundbar, landscape 8) + TV size + brand · "matrix" / "avr" wires it · "ofe" "prewire" "no tv" · comma = next zone</div>
+    <div class="ex">new zones: name + setup (5.1, stereo, 2.1, soundbar, landscape 8) + TV size + brand · "matrix" / "avr" wires it · "ofe" "prewire" · comma = next zone<br>
+      changes: "connect cable box to mrx" · "kitchen, office to amp 2" · "family room from the receiver" · "patio 75 ofe" · "master optical backup" · "add an mrx 1140"</div>
   </div>`;
   const ovHas = (kind, id, f) => ov[kind]?.[id] != null && f in ov[kind][id];
   const fieldO = (label, inner, kind, id, f) => {
@@ -983,7 +1145,7 @@ function zonesHTML() {
     if (h.video?.from && h.video.from === h.speakers?.from) feed = `${short(h.video.from)} → TV + speakers`;
     else feed = [h.tv && h.video?.from && `TV ← ${short(h.video.from)}`,
                  h.spk && h.speakers?.from && `speakers ← ${short(h.speakers.from)}${h.speakers.channels ? " " + h.speakers.channels : ""}`].filter(Boolean).join(" · ");
-    if (h.earc) feed += " · eARC"; else if (h.ret) feed += " · optical back";
+    if (h.earc) feed += h.ret ? " · eARC + optical backup" : " · eARC"; else if (h.ret) feed += " · optical back";
     const issue = found.find(f => f.level === "e") || found[0];
     const head = `<div class="head zhead" data-toggle="${esc(z.id)}">${statusMark(found, wired)}
       <div class="zmain"><div class="zt"><span class="t">${esc(z.name)}</span>
@@ -1253,7 +1415,18 @@ function settingsHTML() {
         <div style="text-align:right"><button class="del catdel">delete entry</button></div>
       </div></div>`;
   }).join("");
-  return `
+  const conn = loadConn();
+  const ai = `
+    <div class="sect">AI <span class="mini">the ✦ AI button</span></div>
+    <div class="row open"><div class="fields" style="display:block;border-top:none">
+      ${field("Connect", chips("aimode", [["off", "Off"], ["key", "My API key"], ["proxy", "Proxy"]], conn.mode))}
+      ${conn.mode === "key" ? field("API key", `<input class="aikey" type="password" autocomplete="off" spellcheck="false" placeholder="${conn.key ? "saved — type a new one to replace it" : "sk-ant-…"}">`) + (conn.key ? `<div style="text-align:right"><button class="del" id="aiForget">forget the key</button></div>` : "") : ""}
+      ${conn.mode === "proxy" ? field("Proxy URL", `<input class="aiproxy" placeholder="https://…" value="${esc(conn.proxy || "")}">`) +
+        field("Access code", `<input class="aicode" type="password" autocomplete="off" placeholder="${conn.code ? "saved — type to replace" : "from whoever set up the proxy"}">`) : ""}
+      ${conn.mode !== "off" ? field("Model", sel("aimodel", MODELS.map(m => m[0]), conn.model, Object.fromEntries(MODELS))) : ""}
+      <div class="mini" style="line-height:1.45;margin-top:4px">Saved in this browser only — never in jobs, exports or backups. Claude sees this job (rooms, gear, client name) only when you press Ask Claude, and every proposal is previewed before anything changes. “Copy prompt for Claude” works without any setup.</div>
+    </div></div>`;
+  return ai + `
     <div class="sect">COMPANY (title block)</div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       ${field("Name", `<input class="coname" value="${esc(co.name)}">`)}
@@ -1275,6 +1448,14 @@ function settingsHTML() {
 }
 
 function wireSettings(body) {
+  // AI connection: localStorage only (loadConn/saveConn), re-render the section on change
+  const setConn = patch => { saveConn({ ...loadConn(), ...patch }); renderPanel(); };
+  body.querySelectorAll('.chip[data-act="aimode"]').forEach(b => b.onclick = () => setConn({ mode: b.dataset.v }));
+  const k = body.querySelector(".aikey"); if (k) k.onchange = () => { if (k.value.trim()) setConn({ key: k.value.trim() }); };
+  const px = body.querySelector(".aiproxy"); if (px) px.onchange = () => setConn({ proxy: px.value.trim() });
+  const cd = body.querySelector(".aicode"); if (cd) cd.onchange = () => { if (cd.value.trim()) setConn({ code: cd.value.trim() }); };
+  const md = body.querySelector(".aimodel"); if (md) md.onchange = () => setConn({ model: md.value });
+  const fg = body.querySelector("#aiForget"); if (fg) fg.onclick = () => { const c = loadConn(); delete c.key; saveConn(c); renderPanel(); };
   const save = () => { saveSettings(); refresh(false); };
   const on = (selctor, fn) => body.querySelectorAll(selctor).forEach(el => el.onchange = () => { fn(el); save(); });
   const num = v => v === "" ? null : +v;
@@ -1446,16 +1627,32 @@ function wirePanel(body) {
   const qaInput = body.querySelector("#qaInput");
   if (qaInput) {
     const chipsEl = body.querySelector("#qaChips");
+    // a command ("connect cable box to mrx", "kitchen to amp 2", "patio 75") previews
+    // exactly what it will do; anything else is new zones, as before
+    const asCommands = () => parseCommandText(qaInput.value, S.job, S.job.solutions[S.sol]);
     const drawChips = () => {
       if (!qaInput.value.trim()) { chipsEl.innerHTML = ""; return; }
+      const cmds = asCommands();
+      if (cmds) {
+        const plan = planCommands(S.job, S.sol, cmds, effectiveCatalog());
+        chipsEl.innerHTML = planHTML(plan, { acts: false }) + `<span class="mini">${plan.steps.some(x => x.ok) ? "Enter to apply" : "Nothing to apply"}</span>`;
+        return;
+      }
       chipsEl.innerHTML = parseQuick(qaInput.value)
         .flatMap((p, i) => [...(i ? ['<span class="mini" style="align-self:center">|</span>'] : []),
           ...p.chips.map(c => `<span class="qc ${c.kind}">${esc(c.label)}</span>`)]).join("");
     };
     qaInput.oninput = drawChips;
     const commit = () => {
+      const cmds = asCommands();
+      if (cmds) {
+        const label = qaInput.value.trim();
+        if (applyPlan(planCommands(S.job, S.sol, cmds, effectiveCatalog()), label)) qaInput.value = "";
+        return;
+      }
       const parses = parseQuick(qaInput.value).filter(p => !p.empty);
       if (!parses.length) return;
+      pushUndo(`add ${parses.map(p => p.zone.name).join(", ")}`);
       for (const p of parses) {
         const z = p.zone, hints = z._hints || {}; delete z._hints;
         const oldId = z.id;

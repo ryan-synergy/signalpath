@@ -1325,6 +1325,95 @@ for (const [name, raw] of Object.entries(fixtures)) {
     ["video", "audio", "audioReturn", "network"].every(k => SIGNAL_NAME[k].startsWith(legend.match(new RegExp(`>(${SIGNAL_NAME[k].split(" (")[0]})</text>`))?.[1] || "\u0000")));
 }
 
+/* ---------- commands + AI: typed phrases, command lists, Claude's proposals (2026-09-27) ---------- */
+{
+  const C = await import("./commands.js");
+  const A = await import("./ai.js");
+  const CATX = await (await fetch("./catalog.json")).json();
+  const res = structuredClone(fixtures.residence), sol = res.solutions[0];
+  const run = (phrase, job = res) => { const cmds = C.parseCommandText(phrase, job, job.solutions[0]); return cmds ? C.planCommands(job, 0, cmds, CATX) : null; };
+  // typed phrases
+  let r = run("kitchen, office and dining to amp");
+  t("commands: several zones to the amp", r.steps.length === 3 && r.steps.every(x => x.ok) &&
+    ["Kitchen", "Office", "Dining Room"].every(n => r.job.solutions[0].connections.some(c => c.from === "mdx16" && c.to === r.job.house.zones.find(z => z.name === n).endpoints.find(e => e.type === "speakers").id)));
+  r = run("family room from the receiver");
+  const fam = z => z.house.zones.find(x => x.name === "Family Room");
+  t("commands: a zone from the receiver = TV and speakers", r.steps[0].ok && /TV ← Anthem MRX-540.*speakers ← Anthem MRX-540/.test(r.steps[0].text));
+  r = run("master bed tv direct hdmi");
+  t("commands: change a zone's run", r.steps[0].ok && !r.job.solutions[0].companions.some(c => c.serves === "master-tv"));
+  r = run("patio 75 ofe");
+  t("commands: modifiers edit an existing zone (not a duplicate)", r.steps[0].ok && r.job.house.zones.length === res.house.zones.length &&
+    r.job.house.zones.find(z => z.name === "Patio").endpoints.find(e => e.type === "display").size === 75);
+  t("commands: setting a TV size clears its 'confirm size' flag", !r.job.house.zones.find(z => z.name === "Patio").endpoints.find(e => e.type === "display").confirm);
+  r = run("add an mrx 1140");
+  t("commands: add gear by catalog product, named by product", r.steps[0].ok && r.job.solutions[0].racks[0].devices.some(d => d.catalogRef === "anthem-mrx-1140-8k" && d.model === "Anthem MRX 1140 8K"));
+  r = run("add a second mdx-16");
+  t("commands: 'a second X' adds another", r.steps[0].ok && r.job.solutions[0].racks[0].devices.filter(d => d.catalogRef === "anthem-mdx-16").length === 2);
+  r = run("apple tv into the matrix");
+  t("commands: 'X into Y' without a verb, already connected = no change", r.steps[0].ok && /no change/.test(r.steps[0].text) &&
+    r.job.solutions[0].connections.length === sol.connections.length);
+  r = run("delete the turn table");
+  t("commands: delete a box and its connections", r.steps[0].ok && !r.job.solutions[0].racks[0].devices.some(d => d.id === "turntable") &&
+    !r.job.solutions[0].connections.some(c => c.from === "turntable" || c.to === "turntable"));
+  t("commands: new-zone shorthand is not a command", C.parseCommandText("den 5.1 65 sony matrix", res, sol) === null && C.parseCommandText("theater 7.1 85 sony avr", res, sol) === null);
+  r = run("master optical backup");
+  t("commands: eARC only where a receiver feeds the TV (says why)", !r.steps[0].ok && /receiver/.test(r.steps[0].error));
+  // a failed step changes nothing; later steps still run
+  const mix = C.planCommands(res, 0, [{ op: "set_zone", zone: "patio", tv_size: 75 }, { op: "hookup", zone: "patio", tv_from: "no such box" }, { op: "set_zone", zone: "kitchen", name: "Chef's Kitchen" }], CATX);
+  t("commands: a failing step is skipped whole, the rest apply", mix.steps.map(x => x.ok).join() === "true,false,true" &&
+    mix.job.house.zones.some(z => z.name === "Chef's Kitchen") && mix.job.house.zones.find(z => z.name === "Patio").endpoints.find(e => e.type === "display").size === 75 &&
+    JSON.stringify(mix.job.solutions[0].connections) === JSON.stringify(sol.connections));
+  t("commands: the original job is never touched", res.house.zones.find(z => z.name === "Patio").endpoints.find(e => e.type === "display").size === 55);
+  // names: ambiguity names the choices
+  const st = structuredClone(fixtures.stress);
+  const amb = C.findDevice(st, st.solutions[0], "apple tv");
+  t("commands: an ambiguous name lists the choices", !amb.device && /Apple TV 1/.test(amb.error) && /Apple TV 2/.test(amb.error));
+  t("commands: 'amp 2' picks the second amp", C.findDevice(st, st.solutions[0], "amp 2").device?.id === st.solutions[0].racks.flatMap(x => x.devices).filter(d => d.type === "amp")[1].id);
+  t("commands: unknown commands are reported, not thrown", C.planCommands(res, 0, [{ op: "format_disk" }], CATX).steps[0].error.includes("unknown command"));
+  // after any command list the job must still load and validate cleanly when the steps were sensible
+  const big = C.planCommands(res, 0, [
+    { op: "add_device", product: "Anthem MRX 1140 8K" }, { op: "add_zones", text: "theater 7.1 85 sony" },
+    { op: "hookup", zone: "theater", tv_from: "mrx 1140", speakers_from: "mrx 1140", audio_back: "earc+optical" }], CATX);
+  const Lb = loadJob(big.job), vb = validate(Lb.job, Lb.ix), pb = place(Lb.job, Lb.ix), rb = route(Lb.job, Lb.ix, pb);
+  t("commands: an AI-style build of a theater validates and routes clean", big.steps.every(x => x.ok) && !vb.errors.length && !rb.warnings.some(w => /unrouted|fallback/.test(w.code)),
+    [...big.steps.filter(x => !x.ok).map(x => x.error), ...vb.errors.map(e => e.msg)].join(" | "));
+  t("commands: every op has an example that parses as JSON", Object.values(C.OPS).every(o => { try { return !!JSON.parse(o.eg).op; } catch { return false; } }));
+
+  // AI: summary, handoff, reply parsing
+  const unfed = structuredClone(res); unfed.house.zones.push({ id: "z-den", name: "Den", scope: "included", endpoints: [{ id: "z-den-spk", type: "speakers", config: "stereo", count: 2, status: "new" }] });
+  const sum = A.jobSummary(unfed, 0, CATX);
+  t("ai: the job summary names zones, feeds, problems and the catalog", /Family Room: 5\.1 surround speakers/.test(sum) && /Den: .*speakers ← NOT FED/.test(sum) &&
+    /PROBLEM: Den speakers has nothing feeding it/.test(sum) && /Anthem MRX 1140 8K/.test(sum));
+  const hp = A.handoffPrompt(res, 0, CATX, "bump the patio to 75");
+  t("ai: the handoff prompt carries rules, vocabulary, job and request", /propose|commands/i.test(hp) && Object.keys(C.OPS).every(op => hp.includes(op)) && hp.includes("WHAT I WANT:\nbump the patio to 75"));
+  const p1 = A.extractProposal("Sure!\n```json\n{\"summary\":\"s\",\"commands\":[{\"op\":\"set_zone\",\"zone\":\"patio\",\"tv_size\":75}]}\n```\nDone.");
+  const p2 = A.extractProposal('[{"op":"set_zone","zone":"patio","tv_size":75}]');
+  t("ai: replies parse from a fenced block or a bare list", p1.commands.length === 1 && p1.summary === "s" && p2.commands.length === 1);
+  let threw = false; try { A.extractProposal("no json here"); } catch { threw = true; }
+  t("ai: a reply without commands says so", threw);
+
+  // built-in: a stand-in Claude that gets it wrong once, then right — the app feeds back the failure
+  const realFetch = window.fetch; const calls = [];
+  window.fetch = async (url, init) => {
+    const body = JSON.parse(init.body); calls.push({ url, headers: init.headers, body });
+    const bad = calls.length === 1;
+    const cmds = bad ? [{ op: "hookup", zone: "patio", tv_from: "the big receiver" }] : [{ op: "set_zone", zone: "patio", tv_size: 75 }];
+    return new Response(JSON.stringify({ content: [{ type: "tool_use", id: "tu" + calls.length, name: "propose_changes", input: { summary: "Patio TV to 75", commands: cmds } }] }), { status: 200 });
+  };
+  try {
+    const out = await A.askClaude({ conn: { mode: "key", key: "test-key", model: "claude-opus-5-5" }, job: res, solIndex: 0, catalog: CATX, request: "patio tv to 75" });
+    t("ai: a failed proposal is sent back with the reason, and the corrected one wins", calls.length === 2 && out.plan.steps.every(x => x.ok) &&
+      calls[1].body.messages.at(-1).content[0].type === "tool_result" && /the big receiver/.test(calls[1].body.messages.at(-1).content[0].content));
+    t("ai: direct calls carry the key and the browser-access header, and force the tool", calls[0].headers["x-api-key"] === "test-key" &&
+      calls[0].headers["anthropic-dangerous-direct-browser-access"] === "true" && calls[0].body.tool_choice.name === "propose_changes" && calls[0].body.model === "claude-opus-5-5");
+    calls.length = 0;
+    await A.askClaude({ conn: { mode: "proxy", proxy: "https://proxy.example/x", code: "abc", model: "claude-sonnet-5" }, job: res, solIndex: 0, catalog: CATX, request: "x" });
+    t("ai: proxy calls send the access code and never a key", calls[0].url === "https://proxy.example/x" && calls[0].headers["x-signalpath-code"] === "abc" && !calls[0].headers["x-api-key"]);
+  } finally { window.fetch = realFetch; }
+  t("ai: nothing is ready until a key or an https proxy is set", !A.connReady({ mode: "off" }) && !A.connReady({ mode: "key" }) && A.connReady({ mode: "key", key: "k" }) &&
+    !A.connReady({ mode: "proxy", proxy: "http://x" }) && A.connReady({ mode: "proxy", proxy: "https://x" }));
+}
+
 /* ---------- rack starting points: rack + quick-add zones → a clean job (2026-09-27) ---------- */
 {
   const { STARTERS, applyStarter } = await import("./starters.js");

@@ -25,7 +25,7 @@ export const adapterTag = t => ADAPTER[t]?.tag || String(t || "").toUpperCase();
 // what a connection carries (editor + tooltips); the sheet legend uses the short form
 export const SIGNAL_NAME = {
   video: "Video (HDMI)", audio: "Audio (line level)", speaker: "Speaker level",
-  network: "Network (Cat6)", audioReturn: "Audio return (TV → rack)",
+  network: "Network (Cat6)", audioReturn: "Audio return (optical, TV → rack)",
 };
 export const SIGNAL_SHORT = { video: "Video", audio: "Audio", speaker: "Speaker level", network: "Network", audioReturn: "Audio return", prewire: "Pre-wire" };
 export const signalName = s => SIGNAL_NAME[s] || String(s);

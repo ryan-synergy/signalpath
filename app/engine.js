@@ -2526,6 +2526,16 @@ export function advise(job, ix = indexJob(job), catalog = null) {
           msg: "TV audio encoded via Sonos line-in buffers ≥75ms when grouped — set Group Audio Delay per room (fw 10.6.2+); expect tuning, not plug-and-play" });
     }
 
+    /* -- eARC through an extender: HDBaseT / AV-over-IP gear often passes ARC at
+       best, not eARC — say so unless the zone already has the optical backup -- */
+    for (const c of sol.connections || []) {
+      const comp = c.earc && c.signal === "video" ? s.companions[c.to] : null;
+      if (!comp || !ix.endpointsById[comp.serves]) continue;
+      if ((sol.connections || []).some(r => r.from === comp.serves && r.signal === "audioReturn")) continue;
+      out.notes.push({ code: "earc-extender", solution: sol.id, ref: comp.serves,
+        msg: `${describeNode(job, sol, comp.serves).short}: eARC comes back through the ${adapterName(comp.type)} — confirm that model passes eARC (many only pass ARC), or add the optical backup` });
+    }
+
     /* -- licensing advisor per platform -- */
     const platforms = sol.platforms || [];
     const aux = sol.auxCounts || {};

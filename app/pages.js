@@ -205,11 +205,16 @@ function channelMapBlocks(job, ix, opts) {
     else if (d.type === "avr") {
       const vin = inbound.filter(c => c.signal === "video").map(c => s.devices[c.from] ? devName(s.devices[c.from]) : s.companions[c.from] ? adapterName(s.companions[c.from].type) : nameOf(job, s, c.from)).join(" · ") || "—";
       const spk = outbound.filter(c => c.signal === "speaker").map(c => { const ep = ix.endpointsById[c.to]; return `${zoneName(ix, c.to)}: ${spkDescr(ep)} (${statusLabel(ep?.status)})`; }).join(" · ") || "—";
-      const vout = outbound.filter(c => c.signal === "video").map(c => { const comp = s.companions[c.to]; return comp && servesEp(s, c.to) ? `${zoneName(ix, comp.serves)} TV via ${adapterName(comp.type)}` : s.devices[c.to] ? devName(s.devices[c.to]) : nameOf(job, s, c.to); }).join(" · ") || "—";
+      const vout = outbound.filter(c => c.signal === "video").map(c => { const comp = s.companions[c.to]; const back = c.earc ? " (eARC back)" : "";
+        return comp && servesEp(s, c.to) ? `${zoneName(ix, comp.serves)} TV via ${adapterName(comp.type)}${back}` : s.devices[c.to] ? devName(s.devices[c.to]) : `${nameOf(job, s, c.to)}${back}`; }).join(" · ") || "—";
+      // TV audio coming home to this receiver: eARC on its own HDMI outs, optical runs in
+      const aback = [...outbound.filter(c => c.signal === "video" && c.earc).map(c => { const comp = s.companions[c.to];
+          return `${comp && servesEp(s, c.to) ? zoneName(ix, comp.serves) : zoneName(ix, c.to)} TV (eARC)`; }),
+        ...inbound.filter(c => c.signal === "audioReturn").map(c => `${nameOf(job, s, c.from)} (optical${c.backup ? " backup" : ""})`)].join(" · ");
       const zname = outbound.filter(c => c.signal === "speaker").map(c => zoneOf(ix, c.to)?.name).filter(Boolean)[0];
       const platform = (sol.platforms || [])[0];
       blocks.push({ title: `${devName(d)}${zname ? ` — ${zname} Surround` : ""}`,
-        text: [`Video in: ${vin}`, `Speakers: ${spk}`, `Video out: ${vout}`, `Control: ${platform ? `IP (${PLATFORM_NAME[platform] || platform} driver)` : "IP / IR"}`] });
+        text: [`Video in: ${vin}`, `Speakers: ${spk}`, `Video out: ${vout}`, ...(aback ? [`TV audio back: ${aback}`] : []), `Control: ${platform ? `IP (${PLATFORM_NAME[platform] || platform} driver)` : "IP / IR"}`] });
     }
   }
   return blocks;
@@ -418,11 +423,11 @@ export function wireRuns(job, ix, opts = {}) {
     if (s.locals[c.from]) continue;                      // in-room link, not a pull
     if (c.signal === "video" && toComp) {                // rack video feed to a display chip
       runs.push({ prefix: "V", cable: "Cat6", from: rackName, to: `${zoneName(ix, toComp.serves)} — TV location`,
-        carries: toComp.type === "balun" ? "Video (HDBaseT)" : "Video (MXNet)", color: "#b32017",
+        carries: `${toComp.type === "balun" ? "Video (HDBaseT)" : "Video (MXNet)"}${c.earc ? " + eARC back" : ""}`, color: "#b32017",
         term: `${adapterName(toComp.type)} at TV`, count: 1, gray });
     } else if (c.signal === "video" && toEp && s.devices[c.from]) {   // direct rack → display (no extender chip drawn)
       runs.push({ prefix: "V", cable: "HDMI / extender", from: rackName, to: `${zoneName(ix, c.to)} — TV location`,
-        carries: "Video (direct)", color: "#b32017", term: "TV input — verify run length", count: 1, gray });
+        carries: `Video (direct)${c.earc ? " + eARC back" : ""}`, color: "#b32017", term: "TV input — verify run length", count: 1, gray });
     } else if (c.signal === "speaker" && toEp) {
       const ep = toEp;
       // "surround-7.1.4" = 7 bed + 4 heights; the ".1" sub rides its own RG6 run
@@ -448,7 +453,7 @@ export function wireRuns(job, ix, opts = {}) {
     } else if (c.signal === "audioReturn" && fromEp) {
       if (s.locals[c.to] || ix.endpointsById[c.to]) continue;   // handled at the TV (local encoder / soundbar) — no pull
       runs.push({ prefix: "R", cable: "Optical (Toslink)", from: `${zoneName(ix, c.from)} — TV location`, to: rackName,
-        carries: "Audio return", color: "#a45a12", term: s.devices[c.to]?.model || nameOf(job, s, c.to), count: 1, gray });
+        carries: c.backup ? "Audio return — optical backup to eARC" : "Audio return", color: "#a45a12", term: s.devices[c.to]?.model || nameOf(job, s, c.to), count: 1, gray });
     } else if (c.signal === "network" && (toEp || servesEp(s, c.to))) {
       runs.push({ prefix: "N", cable: "Cat6", from: rackName, to: zoneName(ix, toEp ? c.to : s.companions[c.to].serves), carries: "Network", color: "#2f9e44", term: "RJ45", count: 1, gray });
     }

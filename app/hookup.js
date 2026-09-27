@@ -36,11 +36,14 @@ export function readHookup(job, sol, zone) {
     const inTv = conns.find(c => c.to === tv.id && c.signal === "video");
     if (inTv) {
       const comp = (sol.companions || []).find(c => c.id === inTv.from);
-      if (comp) out.video = { from: conns.find(c => c.to === comp.id && c.signal === "video")?.from || null, run: comp.type, via: comp.id };
-      else out.video = { from: inTv.from, run: "direct" };
+      const src = comp ? conns.find(c => c.to === comp.id && c.signal === "video") : inTv;   // the edge leaving the source
+      out.video = comp ? { from: src?.from || null, run: comp.type, via: comp.id } : { from: inTv.from, run: "direct" };
+      out.earc = !!src?.earc;
     }
     const r = conns.find(c => c.from === tv.id && c.signal === "audioReturn");
-    if (r) out.ret = { to: r.to };
+    if (r) out.ret = { to: r.to, backup: !!r.backup };
+    // one word for the TV-audio choice: earc | earc+optical | optical | none
+    out.audioBack = out.earc ? (r ? "earc+optical" : "earc") : r ? "optical" : "none";
   }
   if (spk) {
     const c = conns.find(c => c.to === spk.id && c.signal === "speaker");
@@ -49,10 +52,17 @@ export function readHookup(job, sol, zone) {
   return out;
 }
 
-/* the TV's video: from a rack device (with a run type) or in-zone gear (direct) */
-export function setVideo(job, sol, zone, from, run) {
+/* the TV's video: from a rack device (with a run type) or in-zone gear (direct).
+   eARC rides the HDMI from a receiver: it's a flag on the edge leaving the
+   receiver (no wire of its own). It's on by default when a receiver feeds the
+   TV, carried over when only the run changes, and dropped for non-receivers. */
+const isReceiver = (sol, id) => rackDevices(sol).some(d => d.id === id && d.type === "avr");
+export function setVideo(job, sol, zone, from, run, earc) {
   const { tv } = endpointsOf(zone); if (!tv) return;
   sol.connections ||= []; sol.companions ||= [];
+  const prev = readHookup(job, sol, zone);
+  if (earc === undefined) earc = prev.video?.from === from ? prev.earc : !prev.ret;   // an existing optical-only choice stays optical-only
+  if (!isReceiver(sol, from)) earc = false;
   const isLocal = (sol.localDevices || []).some(d => d.id === from);
   if (isLocal || !from) run = "direct";
   run ||= rackDevices(sol).find(d => d.id === from)?.type === "avSwitch" ? "dec" : "balun";
@@ -66,10 +76,27 @@ export function setVideo(job, sol, zone, from, run) {
     !(c.to === tv.id && c.signal === "video") && !(keep && c.to === keep.id && c.signal === "video"));
   if (!from) return;
   const sc = scopeOf(zone);
-  if (run === "direct") { sol.connections.push({ from, to: tv.id, signal: "video", ...sc }); return; }
+  const ea = earc ? { earc: true } : {};
+  if (run === "direct") { sol.connections.push({ from, to: tv.id, signal: "video", ...ea, ...sc }); return; }
   const comp = keep || { id: freeId(job, sol, `${run}-${zone.id}`), type: run, serves: tv.id, auto: true };
   if (!keep) sol.companions.push(comp);
-  sol.connections.push({ from, to: comp.id, signal: "video", ...sc }, { from: comp.id, to: tv.id, signal: "video", ...sc });
+  sol.connections.push({ from, to: comp.id, signal: "video", ...ea, ...sc }, { from: comp.id, to: tv.id, signal: "video", ...sc });
+}
+
+/* the TV's audio back to the rack, as one choice:
+   "earc"          — over the HDMI from the receiver (default; no extra run)
+   "earc+optical"  — eARC plus an optical (Toslink) backup run to `to`
+   "optical"       — an optical run to `to` only (receiver or audio input module)
+   "none"                                                                        */
+export const AUDIO_BACK = { earc: "eARC over the HDMI", "earc+optical": "eARC + optical backup", optical: "Optical only", none: "None" };
+export function setAudioBack(job, sol, zone, mode, to) {
+  const h = readHookup(job, sol, zone);
+  if (!h.tv) return;
+  const viaReceiver = isReceiver(sol, h.video?.from);
+  const wantEarc = viaReceiver && (mode === "earc" || mode === "earc+optical");
+  if (!!h.earc !== wantEarc && h.video) setVideo(job, sol, zone, h.video.from, h.video.run, wantEarc);
+  const optical = mode === "optical" || mode === "earc+optical";
+  setReturn(job, sol, zone, optical ? (to || h.ret?.to || (viaReceiver ? h.video.from : null)) : null, mode === "earc+optical" && wantEarc);
 }
 
 // amp outputs a speaker set needs, and the next free block on that amp
@@ -107,10 +134,10 @@ export function setSpeakers(job, sol, zone, from, channels) {
 }
 
 /* the TV's audio back to the rack (eARC / optical into a receiver or input module) */
-export function setReturn(job, sol, zone, to) {
+export function setReturn(job, sol, zone, to, backup = false) {
   const { tv } = endpointsOf(zone); if (!tv) return;
   sol.connections = (sol.connections || []).filter(c => !(c.from === tv.id && c.signal === "audioReturn"));
-  if (to) sol.connections.push({ from: tv.id, to, signal: "audioReturn", ...scopeOf(zone) });
+  if (to) sol.connections.push({ from: tv.id, to, signal: "audioReturn", ...(backup ? { backup: true } : {}), ...scopeOf(zone) });
 }
 
 /* a new box in the first rack, named plainly; returns its id */
@@ -131,9 +158,8 @@ export function autoHookup(job, sol, zone, hints = {}) {
     const busy = new Set((sol.connections || []).filter(c => c.signal === "speaker").map(c => c.from));
     let avr = devs.find(d => d.type === "avr" && !busy.has(d.id))?.id;
     if (!avr) avr = addRackDevice(job, sol, "avr", `AV receiver — ${zone.name}`);
-    if (tv) setVideo(job, sol, zone, avr, "balun");
+    if (tv) setVideo(job, sol, zone, avr, "balun", true);   // eARC back over the HDMI — the default, no extra run
     if (spk) setSpeakers(job, sol, zone, avr);
-    if (tv) setReturn(job, sol, zone, null);   // HDMI to the TV carries eARC back — no separate run
     return;
   }
   if (hints.matrix && tv) {

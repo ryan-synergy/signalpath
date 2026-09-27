@@ -211,7 +211,7 @@ import { loadJob, validate, advise, place, route, render, effectiveJob, autoLink
 import { importAny, mergeHouse } from "./app/importers.js";
 import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
-import { readHookup, setVideo, setSpeakers, setReturn, addRackDevice, autoHookup, nextFreeOutputs, outputsNeeded,
+import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, nextFreeOutputs, outputsNeeded,
          VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS } from "./app/hookup.js";
 import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME,
          signalName, describeNode, humanizeWireIds } from "./app/names.js";
@@ -346,7 +346,8 @@ function refresh(save = true) {
     adv.push(`<div class="item i">🎛 <b>${esc(PLATFORM_NAME[lic.platform] || lic.platform)}</b> → ${esc(lic.pick)} · ${lic.lines.map(esc).join(" · ")}</div>`);
     for (const w of lic.warns || []) adv.push(`<div class="item w">⚠ ${esc(PLATFORM_NAME[lic.platform] || lic.platform)}: ${esc(w)}</div>`);
   }
-  for (const n of (a?.notes || []).filter(mine)) adv.push(`<div class="item i">${n.code === "avb-switch" || n.code === "sonos-net" ? "🌐" : "🎛"} ${esc(n.msg)}</div>`);
+  for (const n of (a?.notes || []).filter(mine)) adv.push(n.code === "earc-extender" ? `<div class="item w">⚠ ${esc(n.msg)}</div>`
+    : `<div class="item i">${n.code === "avb-switch" || n.code === "sonos-net" ? "🌐" : "🎛"} ${esc(n.msg)}</div>`);
   $("#advisor").innerHTML = adv.join("") || `<div class="item ok">✓ No issues</div>`;
 
   renderTopbar();
@@ -846,8 +847,17 @@ function hookupHTML(z, sol, multi) {
       rows.push(field("Amp outputs", `<input class="hsch" value="${esc(h.speakers.channels || "")}" placeholder="e.g. ${esc(nextFreeOutputs(sol, cur, outputsNeeded(h.spk) || 2, h.spk.id))}">`));
   }
   if (h.tv) {
-    const cur = h.ret?.to || "";
-    rows.push(field("TV audio back", `<select class="hret">${opt("", "— none —", cur)}${devOpts(RETURN_TO, cur)}</select>`));
+    // eARC rides the receiver's HDMI (default); optical is a pulled Toslink run,
+    // alone or as a backup — only offered where it can exist
+    const rcv = byDev(h.video?.from)?.type === "avr" ? byDev(h.video.from) : null;
+    const cur = h.audioBack === "optical" ? `optical:${h.ret.to}` : h.audioBack;
+    const optTargets = devs.filter(d => RETURN_TO.includes(d.type));
+    rows.push(field("TV audio back", `<select class="hret">
+      ${rcv ? opt("earc", `${AUDIO_BACK.earc} (to ${rcv.model || rcv.id})`, cur) + opt("earc+optical", `${AUDIO_BACK["earc+optical"]} (to ${rcv.model || rcv.id})`, cur) : ""}
+      ${optTargets.map(d => opt(`optical:${d.id}`, `Optical only → ${nm(d.id)}`, cur)).join("")}
+      ${opt("none", AUDIO_BACK.none, cur)}</select>`));
+    if (h.earc && !h.ret && (h.video.run === "balun" || h.video.run === "dec"))
+      rows.push(`<div class="mini" style="margin:-2px 0 6px 80px">Confirm the ${h.video.run === "balun" ? "HDBaseT balun" : "MXNet decoder"} passes eARC — many extenders don't. The optical backup covers it.</div>`);
   }
   // one receiver for the whole zone is the common case — offer to finish it
   const vDev = byDev(h.video?.from), sDev = byDev(h.speakers?.from);
@@ -892,13 +902,16 @@ function gearHTML() {
     <div class="mini" style="margin:-2px 0 8px">What plugs into what. Grouped by the box the signal comes out of — tap one to change it.</div>` +
     [...byFrom].map(([from, list]) => `<div class="cgrp">From <b>${esc(nodeInfo(from).label)}</b></div>` + list.map(([c, i]) => {
       const key = "conn:" + i, open = S.openRows.has(key);
-      const tail = [signalName(c.signal), c.channels && `outputs ${c.channels}`, c.scope && c.scope !== "included" && SCOPE_LABEL[c.scope]].filter(Boolean).join(" · ");
+      const tail = [signalName(c.signal), c.earc && "eARC back", c.backup && "backup to eARC", c.channels && `outputs ${c.channels}`, c.scope && c.scope !== "included" && SCOPE_LABEL[c.scope]].filter(Boolean).join(" · ");
+      const fromRcv = sol.racks.some(r => r.devices.some(d => d.id === c.from && d.type === "avr"));
       return `<div class="row ${open ? "open" : ""}" data-ci="${i}">
       <div class="head" data-toggle="${key}"><span class="t">→ ${esc(nodeInfo(c.to).label)}</span><span class="sub">${esc(tail)}</span></div>
       <div class="fields">
         ${field("From", nodeSel("cfrom", c.from))}
         ${field("To", nodeSel("cto", c.to))}
         ${field("Carries", sel("csig", SIGNALS, c.signal, SIGNAL_LABEL))}
+        ${c.signal === "video" && fromRcv ? field("eARC", `<input type="checkbox" class="cearc" ${c.earc ? "checked" : ""}> <span class="mini">the TV's audio comes back over this HDMI</span>`) : ""}
+        ${c.signal === "audioReturn" ? field("Backup", `<input type="checkbox" class="cbackup" ${c.backup ? "checked" : ""}> <span class="mini">optical backup to eARC</span>`) : ""}
         ${c.signal !== "network" ? field("Outputs", `<input class="cch" placeholder="optional, e.g. 3-4" title="Which outputs this uses — amp channels (3-4) or a matrix output (2). Shows on the channel strip." value="${esc(c.channels || "")}">`) : ""}
         ${field("Scope", sel("cscope", ["included", "prewire", "future"], c.scope || "included", SCOPE_LABEL))}
         <div style="text-align:right"><button class="del cdel">delete connection</button></div>
@@ -1146,7 +1159,10 @@ function wirePanel(body) {
   }));
   body.querySelectorAll(".hsch").forEach(el => el.onchange = () => hook(el, (z, sol) =>
     setSpeakers(S.job, sol, z, readHookup(S.job, sol, z).speakers?.from, el.value.trim())));
-  body.querySelectorAll(".hret").forEach(el => el.onchange = () => hook(el, (z, sol) => setReturn(S.job, sol, z, el.value || null)));
+  body.querySelectorAll(".hret").forEach(el => el.onchange = () => hook(el, (z, sol) => {
+    const [mode, to] = el.value.split(":");
+    setAudioBack(S.job, sol, z, mode, to);
+  }));
   body.querySelectorAll(".hsame").forEach(el => el.onclick = () => hook(el, (z, sol) =>
     el.dataset.what === "video" ? setVideo(S.job, sol, z, el.dataset.dev) : setSpeakers(S.job, sol, z, el.dataset.dev)));
 
@@ -1256,6 +1272,8 @@ function wirePanel(body) {
   on(".cfrom", el => { const c = connOf(el); if (c) { c.from = el.value; reguess(c); } });
   on(".cto", el => { const c = connOf(el); if (c) { c.to = el.value; reguess(c); } });
   on(".csig", el => { const c = connOf(el); if (c) c.signal = el.value; });
+  on(".cearc", el => { const c = connOf(el); if (c) { if (el.checked) c.earc = true; else delete c.earc; } });
+  on(".cbackup", el => { const c = connOf(el); if (c) { if (el.checked) c.backup = true; else delete c.backup; } });
   on(".cch", el => { const c = connOf(el); if (c) { if (el.value) c.channels = el.value; else delete c.channels; } });
   on(".cscope", el => { const c = connOf(el); if (c) { if (el.value !== "included") c.scope = el.value; else delete c.scope; } });
   body.querySelectorAll(".cdel").forEach(el => el.onclick = () => {

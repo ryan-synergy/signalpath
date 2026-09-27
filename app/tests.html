@@ -1232,6 +1232,40 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const pz = parseQuickZone("loft 5.1 65 avr prewire").zone; delete pz._hints; j3.house.zones.push(pz);
   H.autoHookup(j3, s3, pz, { avr: true });
   t("hookup: connections follow the zone's scope", !healthy(j3).warns.includes("scope-mismatch") && s3.connections.filter(c => c.to.startsWith(pz.id) || c.from.startsWith(pz.id)).every(c => c.scope === "prewire"));
+  // TV audio back: eARC over the receiver's HDMI is the default; optical is a
+  // pulled run — alone, or as a backup alongside eARC
+  const P2 = await import("./pages.js");
+  const hq = H.readHookup(j2, s2, z);
+  t("audio back: a receiver-fed zone defaults to eARC with no optical run", hq.earc && hq.audioBack === "earc" && !hq.ret);
+  let L3 = loadJob(j2), a3 = advise(L3.job, L3.ix);
+  t("audio back: eARC through a balun gets a confirm-the-model note", a3.notes.some(n => n.code === "earc-extender" && n.ref === z.endpoints.find(e => e.type === "display").id && /passes eARC/.test(n.msg)));
+  const runs0 = P2.wireRuns(L3.job, L3.ix);
+  t("audio back: eARC adds no pulled run — the video run says it carries eARC",
+    runs0.some(r => r.prefix === "V" && /\+ eARC back/.test(r.carries) && r.to.startsWith(z.name)) && !runs0.some(r => r.prefix === "R" && r.from.startsWith(z.name)));
+  const avrId = hq.video.from;
+  H.setAudioBack(j2, s2, z, "earc+optical");
+  const hb = H.readHookup(j2, s2, z);
+  t("audio back: eARC + optical backup keeps eARC and adds an optical run to the receiver", hb.earc && hb.ret?.to === avrId && hb.ret.backup && hb.audioBack === "earc+optical");
+  L3 = loadJob(j2); a3 = advise(L3.job, L3.ix);
+  const runs1 = P2.wireRuns(L3.job, L3.ix);
+  t("audio back: the backup is a real optical run on the wire schedule", runs1.some(r => r.prefix === "R" && r.carries === "Audio return — optical backup to eARC" && r.from.startsWith(z.name)));
+  t("audio back: with the backup in place the extender note goes quiet", !a3.notes.some(n => n.code === "earc-extender"));
+  const cm3 = P2.renderChannelMap(L3.job, L3.ix, {});
+  t("audio back: the channel map lists eARC and the optical backup on the receiver", cm3.includes("TV audio back:") && cm3.includes(`${z.name} TV (eARC)`) && cm3.includes("(optical backup)"));
+  H.setAudioBack(j2, s2, z, "optical", "sav-in");
+  const ho = H.readHookup(j2, s2, z);
+  t("audio back: optical only drops eARC and runs to the chosen box", !ho.earc && ho.ret?.to === "sav-in" && !ho.ret.backup && ho.audioBack === "optical");
+  H.setVideo(j2, s2, z, avrId, "direct");
+  t("audio back: changing the run keeps an optical-only choice", !H.readHookup(j2, s2, z).earc && H.readHookup(j2, s2, z).ret?.to === "sav-in");
+  H.setAudioBack(j2, s2, z, "earc");
+  const he = H.readHookup(j2, s2, z);
+  t("audio back: back to eARC removes the optical run", he.earc && !he.ret && he.video.run === "direct");
+  H.setVideo(j2, s2, z, "axion8");
+  t("audio back: a non-receiver source can't carry eARC", !H.readHookup(j2, s2, z).earc);
+  H.setVideo(j2, s2, z, avrId, "balun");
+  hl = healthy(j2);
+  t("audio back: every step leaves a valid, clean-routing job", !hl.errs.length && !hl.bad && !hl.through, JSON.stringify(hl));
+
   // placeholder names split sensibly on the rack tile
   const L2 = loadJob(j2), p2 = place(L2.job, L2.ix), svg2 = render(L2.job, L2.ix, p2, route(L2.job, L2.ix, p2));
   t("render: a placeholder receiver name keeps its type whole on the tile", svg2.includes(">AV receiver</text>") && svg2.includes(">Theater</text>"));

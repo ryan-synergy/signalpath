@@ -224,7 +224,7 @@ export function suggestLanSwitch(catalog, need) {
   const want = need + Math.max(2, Math.ceil(need * 0.2));
   const opts = Object.entries(catalog?.devices || {})
     .filter(([, c]) => c.type === "networkSwitch" && !(c.flags || []).some(f => f === "mxnet" || f === "legacy" || f === "avb"))
-    .map(([ref, c]) => ({ ref, model: `${c.brand ? c.brand + " " : ""}${c.model}`, ports: (c.outputs?.gbe || 0) + (c.outputs?.gbe25 || 0) + (c.outputs?.gbe10 || 0) }))
+    .map(([ref, c]) => ({ ref, model: `${c.brand ? c.brand + " " : ""}${c.model}${c.partNo && c.partNo !== c.model ? ` (${c.partNo})` : ""}`, ports: (c.outputs?.gbe || 0) + (c.outputs?.gbe25 || 0) + (c.outputs?.gbe10 || 0) }))
     .sort((a, b) => a.ports - b.ports);
   return opts.find(o => o.ports >= want) || opts[opts.length - 1] || null;
 }

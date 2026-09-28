@@ -130,9 +130,11 @@ export function findProduct(catalog, text) {
   const ct = compact(text);
   if (!ct || !catalog?.devices) return null;
   const all = Object.entries(catalog.devices);
-  const exact = all.filter(([id, c]) => compact(productName(c)) === ct || id === text);
+  // a product answers to its PlanQueue name, its SKU, and the names it had before (aliases: "Anthem MRX 1140 8K")
+  const names = c => [productName(c), c.partNo, ...(c.aliases || []).flatMap(n => [n, `${c.brand || ""} ${n}`])].filter(Boolean).map(compact);
+  const exact = all.filter(([id, c]) => names(c).includes(ct) || id === text);
   if (exact.length) return exact[0][0];
-  const hits = all.filter(([, c]) => compact(productName(c)).includes(ct) || compact(c.model).includes(ct));
+  const hits = all.filter(([, c]) => names(c).some(n => n.includes(ct)) || compact(c.model).includes(ct));
   if (!hits.length) return null;
   hits.sort((a, b) => productName(a[1]).length - productName(b[1]).length);   // "MDX-16" before "MDX-16 something"
   return hits[0][0];

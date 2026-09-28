@@ -153,8 +153,15 @@ export function autoLinkCatalog(job, catalog) {
   const norm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
   const keys = {};
   for (const [id, c] of Object.entries(devs)) {
-    const cand = [norm((c.brand || "") + c.model), norm(c.model)];
-    for (const k of cand.concat(cand.map(k => k.replace(/(8k|4k)$/, "")))) if (k) (keys[k] ||= new Set()).add(id);
+    // aliases: the names an entry had before it took PlanQueue's (older jobs still say "MRX 540 8K").
+    // A name alone links only when it's specific (has a model number): PlanQueue's short names —
+    // "Amp", "Ultra", "APPLE TV 4K" — must not grab a generic "Amp" or "Apple TV" (brand + name still does)
+    const specific = k => /\d/.test(k) && k.length >= 4;
+    for (const m of [c.model, ...(c.aliases || [])]) {
+      const full = norm((c.brand || "") + m), bare = norm(m), strip = k => k.replace(/(8k|4k)$/, "");
+      for (const k of new Set([full, strip(full)])) if (k) (keys[k] ||= new Set()).add(id);
+      for (const k of new Set([bare, strip(bare)])) if (specific(k)) (keys[k] ||= new Set()).add(id);
+    }
   }
   const ALIAS = { savantinputmodule: "savant-avb-input-module", savantavbinputmodule: "savant-avb-input-module",
                   savantoutputmodule: "savant-avb-output-module", savantavboutputmodule: "savant-avb-output-module" };

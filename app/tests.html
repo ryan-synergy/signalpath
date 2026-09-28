@@ -1417,7 +1417,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
     r.job.house.zones.find(z => z.name === "Patio").endpoints.find(e => e.type === "display").size === 75);
   t("commands: setting a TV size clears its 'confirm size' flag", !r.job.house.zones.find(z => z.name === "Patio").endpoints.find(e => e.type === "display").confirm);
   r = run("add an mrx 1140");
-  t("commands: add gear by catalog product, named by product", r.steps[0].ok && r.job.solutions[0].racks[0].devices.some(d => d.catalogRef === "anthem-mrx-1140-8k" && d.model === "Anthem MRX 1140 8K"));
+  t("commands: add gear by catalog product, named by product", r.steps[0].ok && r.job.solutions[0].racks[0].devices.some(d => d.catalogRef === "anthem-mrx-1140-8k" && d.model === "Anthem MRX 1140"));   // PlanQueue's name (2026-09-28)
   r = run("add a second mdx-16");
   t("commands: 'a second X' adds another", r.steps[0].ok && r.job.solutions[0].racks[0].devices.filter(d => d.catalogRef === "anthem-mdx-16").length === 2);
   r = run("apple tv into the matrix");
@@ -1454,7 +1454,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const unfed = structuredClone(res); unfed.house.zones.push({ id: "z-den", name: "Den", scope: "included", endpoints: [{ id: "z-den-spk", type: "speakers", config: "stereo", count: 2, status: "new" }] });
   const sum = A.jobSummary(unfed, 0, CATX);
   t("ai: the job summary names zones, feeds, problems and the catalog", /Family Room: 5\.1 surround speakers/.test(sum) && /Den: .*speakers ← NOT FED/.test(sum) &&
-    /PROBLEM: Den speakers has nothing feeding it/.test(sum) && /Anthem MRX 1140 8K/.test(sum));
+    /PROBLEM: Den speakers has nothing feeding it/.test(sum) && /Anthem MRX 1140\b/.test(sum));
   const hp = A.handoffPrompt(res, 0, CATX, "bump the patio to 75");
   t("ai: the handoff prompt carries rules, vocabulary, job and request", /propose|commands/i.test(hp) && Object.keys(C.OPS).every(op => hp.includes(op)) && hp.includes("WHAT I WANT:\nbump the patio to 75"));
   const p1 = A.extractProposal("Sure!\n```json\n{\"summary\":\"s\",\"commands\":[{\"op\":\"set_zone\",\"zone\":\"patio\",\"tv_size\":75}]}\n```\nDone.");
@@ -1528,9 +1528,9 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const C = await (await fetch("./catalog.json")).json();
   t("product name: part-number lists move out of the name", productName(C.devices["savant-avb-input-module"]) === "Savant Analog Audio Input Module" &&
     productSku(C.devices["savant-avb-input-module"]) === "AIM-0A16-05 / AIM-BAL16-01");
-  t("product name: descriptive parentheticals stay", productName(C.devices["sonos-beam-gen2"]) === "Sonos Beam (Gen 2)" && productName(C.devices["sonos-connect"]) === "Sonos Connect (legacy)");
-  t("product name: no doubled brand", productName(C.devices["savant-pav-sms2001"]) === "Savant Music Server 2");
-  t("product name: plain models are brand + model", productName(C.devices["anthem-mrx-540-8k"]) === "Anthem MRX 540 8K");
+  t("product name: descriptive parentheticals stay", productName(C.devices["sonos-beam-gen2"]) === "Sonos Beam (Gen2) - Black");   // names follow PlanQueue since 2026-09-28
+  t("product name: no doubled brand", productName(C.devices["savant-pav-sms2001"]) === "Savant PAV-SMS2001-10" && productName(C.devices["apple-tv-4k-3gen"]) === "APPLE TV 4K");
+  t("product name: plain models are brand + model", productName(C.devices["anthem-mrx-540-8k"]) === "Anthem MRX 540");
   t("product name: every catalog product has a clean name", Object.values(C.devices).every(c => { const n = productName(c); return n && !/\(\s*\)|\s{2}/.test(n); }));
   // tiles: a long product name is squeezed inside its tile, a short one is untouched
   const j = structuredClone(fixtures.residence);
@@ -2315,7 +2315,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const CAT = await (await fetch("./catalog.json")).json();
   const N = await import("./network.js"), X = await import("./exports.js");
   t("profiles: an unlinked 'Apple TV 2' sizes as the Apple TV 4K; 'Cable Box' as the provider planning figure; a rack amp never matches a source profile",
-    N.catalogFor({ type: "source", model: "Apple TV 2" }, CAT)?.model.startsWith("Apple TV 4K") &&
+    /^apple tv 4k/i.test(N.catalogFor({ type: "source", model: "Apple TV 2" }, CAT)?.model || "") &&
     N.catalogFor({ type: "source", model: "Cable Box" }, CAT)?.provider === true &&
     !N.catalogFor({ type: "amp", model: "Apple TV" }, CAT));
   const raw = structuredClone(fixtures.estate);
@@ -2497,6 +2497,23 @@ for (const [name, raw] of Object.entries(fixtures)) {
   j.solutions[0].racks[0].devices.push({ id: "pzc", type: "amp", model: "Blaze PowerZone Connect 1008D", catalogRef: "sonance-blaze-pzc-1008d", status: "new" });
   const res = planQueueFiles(j, 0, CAT).map(f => typeof f === "string" ? f : f.text ?? f.content ?? "").join("\n");
   t("planqueue SKUs: gear PlanQueue doesn't carry says so (imports as a needs-SKU line)", /PZC 1008D \|[^\n]*not in PlanQueue catalog — needs SKU/.test(res));
+}
+
+/* ---------- PlanQueue is the master for names (Ryan 2026-09-28) ---------- */
+{
+  const CAT = await (await fetch("./catalog.json")).json();
+  t("planqueue names: AXIS2 is filed under AudioControl, the MRX 540 is named as PlanQueue names it",
+    CAT.devices["avpro-acp-axis2"].brand === "AudioControl" && CAT.devices["anthem-mrx-540-8k"].model === "MRX 540");
+  // an older job's device still named the old way links to the renamed entry
+  const j = structuredClone(fixtures.residence);
+  j.solutions[0].racks[0].devices.push({ id: "old-avr", type: "avr", model: "Anthem MRX 540 8K" }, { id: "old-sw", type: "avSwitch", model: "MXNET SW12" });
+  autoLinkCatalog(j, CAT);
+  const dv = id => j.solutions[0].racks[0].devices.find(d => d.id === id);
+  t("planqueue names: older jobs' names (\"MRX 540 8K\", \"MXNET SW12\") still link through aliases",
+    dv("old-avr").catalogRef === "anthem-mrx-540-8k" && dv("old-sw").catalogRef === "avpro-mxnet-sw12");
+  t("planqueue names: Kaleidescape is PlanQueue's current lineup, with published watts (\"?\" where Kaleidescape publishes none)",
+    CAT.devices["kaleidescape-strato-v"].partNo === "K0701-0000" && CAT.devices["kaleidescape-strato-v"].powerMaxW === 13 &&
+    CAT.devices["kaleidescape-compact-terra-prime-24"].powerMaxW === undefined && CAT.devices["kaleidescape-strato-c"].flags.includes("legacy"));
 }
 
 /* ---------- input order (user redline 2026-09-28) ----------

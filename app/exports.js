@@ -45,7 +45,7 @@ function guessProduct(d) {
   if (/directv/i.test(m)) return { mfr: "DirecTV", model: "Receiver", provider: true };
   if (/dish/i.test(m)) return { mfr: "Dish", model: "Receiver", provider: true };
   if (/roku/i.test(m)) return { mfr: "Roku", model: "Ultra", unsure: true };
-  if (/kaleidescape/i.test(m)) return { mfr: "Kaleidescape", model: "Strato", unsure: true };
+  if (/kaleidescape/i.test(m)) return { mfr: "Kaleidescape", model: "K0701-0000", unsure: true };   // Strato V, the current player
   if (/xbox|playstation|ps5|nintendo|game/i.test(m)) return { mfr: "Unspecified", model: m || "Game Console", unsure: true };
   if (d.type === "avr" || /receiver/i.test(m)) return { mfr: "Unspecified", model: "AV Receiver", unsure: true };
   if (d.type === "amp") return { mfr: "Unspecified", model: "Amplifier", unsure: true };

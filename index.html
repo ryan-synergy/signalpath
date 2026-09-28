@@ -46,6 +46,14 @@
   #rulesChip.bad { background: #33150f; color: #ff9d8e; border-color: #b32017; cursor: pointer; }
   #jobName { background: transparent; border: none; color: #fff; font-size: 14px; font-weight: 600; min-width: 130px; }
   #jobName:focus { outline: 1px solid var(--accent); border-radius: 4px; }
+  /* narrower screens (iPad): nothing squeezes or wraps inside a button; the
+     project name gives way first, then the wordmark, then the bar takes two rows */
+  #topbar > * { flex-shrink: 0; }
+  #topbar button, #topbar .mbtn, #topbar #rulesChip { white-space: nowrap; }
+  #topbar #jobName { flex: 0 1 200px; min-width: 90px; width: 0; }
+  #topbar #jobsSel, #topbar #solSel { max-width: 170px; }
+  @media (max-width: 1200px) { #topbar .logo { display: none; } #topbar { gap: 6px; padding: 8px 10px; } }
+  @media (max-width: 1000px) { #topbar { flex-wrap: wrap; row-gap: 6px; } #topbar .spacer { display: none; } }
   label.chk { display: flex; align-items: center; gap: 5px; cursor: pointer; }
 
   /* ---- main split ---- */
@@ -155,6 +163,16 @@
 
   /* ---- canvas + advisor ---- */
   #right { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  /* portrait tablet / narrow window: the drawing on top at full width, the
+     editor panel underneath (side by side left the sheet at ~25% scale) */
+  @media (max-width: 900px) and (orientation: portrait) {
+    #main { flex-direction: column; }
+    #right { flex: 0 0 62%; min-height: 0; }
+    #right #advisor { max-height: 96px; }
+    #grip { display: none; }
+    #panel { order: 1; width: auto !important; flex: 1 1 auto; min-height: 0; border-top: 1px solid var(--line); }
+    #panel.collapsed { flex: 0 0 42px; }
+  }
   #canvas { flex: 1; overflow: auto; padding: 16px; min-height: 0; }
   #canvas svg { width: 100%; height: auto; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.18); border-radius: 3px; }
 

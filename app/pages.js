@@ -57,17 +57,17 @@ ${infoLines.slice(0, 3).map((l, i) => `<text x="1400" y="${28 + i * 16}" font-si
 const openPage = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" font-family="'Avenir Next', Avenir, Futura, 'Helvetica Neue', sans-serif">`;
 
 /* ---------- generic table ---------- */
-function table(x, y, w, cols, rows) {
-  const out = [`<g font-size="12.5">`, `<rect x="${x}" y="${y}" width="${w}" height="30" fill="#16181c"/>`,
+function table(x, y, w, cols, rows, pitch = 28) {
+  const out = [`<g font-size="${pitch < 28 ? 12 : 12.5}">`, `<rect x="${x}" y="${y}" width="${w}" height="30" fill="#16181c"/>`,
     `<g fill="#fff" font-weight="600">${cols.map(c => `<text x="${x + c.dx}" y="${y + 20}">${esc(c.label)}</text>`).join("")}</g>`];
   let ry = y + 30;
   rows.forEach((r, i) => {
     const fill = r.gray ? "#f0f0f2" : r.tint ? "#fff9ec" : i % 2 ? "#fff" : "#fbfbfc";
-    out.push(`<rect x="${x}" y="${ry}" width="${w}" height="28" fill="${fill}"/>`);
+    out.push(`<rect x="${x}" y="${ry}" width="${w}" height="${pitch}" fill="${fill}"/>`);
     const color = r.gray ? "#8a8a8a" : r.spare ? "#9aa" : "#222";
     out.push(`<g fill="${color}">${r.cells.map((cell, ci) =>
-      `<text x="${x + cols[ci].dx}" y="${ry + 19}"${cell?.color ? ` fill="${cell.color}"` : ""}${r.gray && cell?.bold ? ` font-weight="600"` : ""}>${esc(cell?.text ?? cell)}</text>`).join("")}</g>`);
-    ry += 28;
+      `<text x="${x + cols[ci].dx}" y="${ry + Math.round(pitch * 0.68)}"${cell?.color ? ` fill="${cell.color}"` : ""}${r.gray && cell?.bold ? ` font-weight="600"` : ""}>${esc(cell?.text ?? cell)}</text>`).join("")}</g>`);
+    ry += pitch;
   });
   out.push(`<rect x="${x}" y="${y}" width="${w}" height="${ry - y}" fill="none" stroke="#c8ccd4"/></g>`);
   return { svg: out.join("\n"), bottom: ry };
@@ -82,7 +82,7 @@ const LIMIT = 900, TOP = 120;
 // place as many rows as fit above LIMIT; returns the drawn part + leftovers
 function tableFit(x, y, w, cols, rows, pitch = 28) {
   const fit = Math.max(0, Math.floor((LIMIT - (y + 30)) / pitch));
-  const t = table(x, y, w, cols, rows.slice(0, fit));
+  const t = table(x, y, w, cols, rows.slice(0, fit), pitch);
   return { ...t, rest: rows.slice(fit), placed: Math.min(fit, rows.length) };
 }
 // wrap a page body in frame + footnote + footer; labels are per physical sheet
@@ -766,11 +766,11 @@ function rackPages(job, ix, adviseResult, opts, label) {
     const table = (title, sub, cols, rows) => {
       let rest = [...rows], first = true;
       while (rest.length) {
-        if (y + 60 + Math.min(3, rest.length) * 28 > LIMIT) more();
+        if (y + 60 + Math.min(3, rest.length) * 22 > LIMIT) more();
         body.push(heading(RX, y + 8, first ? title : `${title} (cont.)`));
         if (first && sub) body.push(`<text x="${RX}" y="${y + 28}" font-size="12" fill="#555">${esc(sub)}</text>`);
-        const t = tableFit(RX, y + (first && sub ? 38 : 20), RW, cols, rest);
-        body.push(t.svg); rest = t.rest; y = t.bottom + 30; first = false;
+        const t = tableFit(RX, y + (first && sub ? 38 : 20), RW, cols, rest, 22);   // compact rows: a typical rack fits one sheet
+        body.push(t.svg); rest = t.rest; y = t.bottom + 26; first = false;
         if (rest.length) more();
       }
     };

@@ -18,6 +18,7 @@ import { wireRuns } from "./pages.js";
 import { readHookup } from "./hookup.js";
 import { vocabularyText } from "./commands.js";
 import { NET_ROLE_NAME } from "./network.js";
+import { isAsBuilt, asBuiltChanges } from "./asbuilt.js";
 import { describeNode, adapterName, isOutdoorZone, SPEAKER_SETUP, STATUS_NAME, SCOPE_NAME, PLATFORM_NAME, AUDIO_NET_NAME, signalName } from "./names.js";
 
 // speaker sets as package names (PlanQueue maps them to its real packages)
@@ -230,6 +231,11 @@ export function aiReviewMarkdown(job, solIndex, catalog, { today = new Date().to
 
   // open items first — what a reviewer should chase
   const confirms = zones.flatMap(z => (z.endpoints || []).filter(e => e.confirm?.length).map(e => `${z.name} ${e.type === "display" ? "TV" : "speakers"}: confirm ${e.confirm.join(", ")}`));
+  if (isAsBuilt(job)) {
+    const ab = job.job.asBuilt, ch = asBuiltChanges(job);
+    o.push("## As-built changes", "", `As-built of "${clean(ab.fromName)}" (${clean(ab.fromSolution)}), started ${ab.started}. Numbers match the revision clouds on the drawing.`, "",
+      ...(ch.length ? ch.map(c => `- △${c.n} (${c.action}) ${clean(c.text)}`) : ["- Built as proposed — no changes."]), "");
+  }
   o.push("## Open items", "");
   if (!v.errors.length && !v.warnings.length && !confirms.length) o.push("_Nothing flagged._");
   for (const e of v.errors) o.push(`- **Error:** ${e.msg}`);

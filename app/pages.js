@@ -6,6 +6,7 @@
 import { expandChannels, effectiveJob, indexJob } from "./engine.js";
 import { TYPE_NAME, PLATFORM_NAME, adapterName, describeNode } from "./names.js";
 import { NET_ROLE_NAME, switchSetup } from "./network.js";
+import { isAsBuilt, asBuiltChanges } from "./asbuilt.js";
 
 const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const W = 1632, H = 1056;
@@ -867,9 +868,42 @@ function networkPowerPages(job, ix, adviseResult, opts, label) {
    Two passes: count every page group's physical sheets, then render with the
    true "Sheet k of N" — a long wire schedule adds sheets, and every label
    (including the main drawing's "1 of N") must agree. */
+/* ---------- As-Built Changes ----------
+   The numbered list the △ deltas on sheet 1 point to. Removed items have no
+   cloud (they aren't drawn any more) — this page is where they're recorded. */
+function asBuiltPages(job, ix, opts, label) {
+  const raw = opts.rawJob || job;
+  const changes = asBuiltChanges(raw);
+  const ab = raw.job?.asBuilt || {};
+  const ACTION = { added: "Added", removed: "Removed", changed: "Changed" };
+  const KIND = { zone: "Room", device: "Gear", chip: "Adapter", wire: "Wire" };
+  const rows = changes.length ? changes.map(c => ({ tint: c.action === "removed", cells: [
+      { text: `△${c.n}`, color: "#c2410c" }, ACTION[c.action], KIND[c.kind] || c.kind, clipText(c.text, 150)] }))
+    : [{ gray: true, cells: ["", "", "", "Built as proposed — no changes from the proposal."] }];
+  const cols = [{ label: "△", dx: 14 }, { label: "Change", dx: 80 }, { label: "What", dx: 190 }, { label: "Detail", dx: 290 }];
+  const bodies = [];
+  let rest = rows;
+  do {
+    const t = tableFit(40, TOP + 10, 1552, cols, rest, 26);
+    bodies.push([t.svg]); rest = t.rest;
+  } while (rest.length);
+  return assemble(job, opts, "As-Built Changes",
+    `Differences from the proposal "${ab.fromName || ""}" (${ab.fromSolution || ""}) · as-built started ${ab.started || ""}`, bodies, label,
+    () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">△ numbers match the revision clouds on sheet 1. Removed items are listed here only (shaded) — they are no longer on the drawing.</text>`);
+}
+const clipText = (t, n) => String(t).length > n ? String(t).slice(0, n - 1) + "…" : String(t);
+
 function pageGroups(job, ix, adviseResult, opts) {
   const flags = pageFlags(job);
   const g = [];
+  // the CLIENT packet is a clean handover: the schematic, the equipment list and the rack — no
+  // change list, ports, wire schedule or labels (Ryan 2026-09-28: two packets, service + client)
+  if (opts.packet === "client") {
+    if (flags.equipment) g.push(["Equipment & Takeoff", lbl => takeoffPages(job, ix, adviseResult, opts, lbl)]);
+    if (flags.elevation) g.push(["Rack", lbl => rackPages(job, ix, adviseResult, opts, lbl)]);
+    return g;
+  }
+  if (isAsBuilt(opts.rawJob || job)) g.push(["As-Built Changes", lbl => asBuiltPages(job, ix, opts, lbl)]);
   if (flags.channelMap) g.push(["Channel Map", lbl => channelMapPages(job, ix, opts, lbl)]);
   if (flags.equipment) g.push(["Equipment & Takeoff", lbl => takeoffPages(job, ix, adviseResult, opts, lbl)]);
   if (flags.wireSchedule) g.push(["Wire Schedule", lbl => wireSchedulePages(job, ix, opts, lbl)]);

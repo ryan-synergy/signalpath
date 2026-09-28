@@ -2739,6 +2739,9 @@ export function render(job, ix, P, rt, opts = {}) {
   for (const w of rt.wires)
     push(`<path class="wirehit" data-wire="${esc(w.id)}" data-from="${esc(w.from)}" data-to="${esc(w.to)}" data-signal="${esc(w.signal)}" d="${wireD(w)}" pointer-events="stroke"/>`);
   push(`</g>`);
+  // as-built revision clouds + numbered deltas (asbuilt.js changeMarks, drawn by the
+  // caller from this sheet's own placement + routes): drawing-space coordinates, on top
+  if (opts.marks) push(opts.marks);
   push(`</g>`); // end drawing space
 
   /* dynamic legend */

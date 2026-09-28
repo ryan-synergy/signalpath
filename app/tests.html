@@ -2521,6 +2521,55 @@ for (const [name, raw] of Object.entries(fixtures)) {
     catalogFor({ type: "source", model: "Kaleidescape Mini Terra Prime" }, CAT)?.partNo === "K0115-0008-SSD");
 }
 
+/* ---------- as-built mode (Ryan 2026-09-28: copy + keep proposal, clouds + △, changes vs proposal, service + client packets) ---------- */
+{
+  const AB = await import("./asbuilt.js");
+  const { aiReviewMarkdown } = await import("./exports.js");
+  const CAT = await (await fetch("./catalog.json")).json();
+  const prop = structuredClone(fixtures.residence), before = JSON.stringify(prop);
+  const ab = AB.startAsBuilt(prop, 0, "2026-09-28");
+  t("as-built: starting one leaves the proposal untouched and makes an AS-BUILT copy with the proposal frozen inside",
+    JSON.stringify(prop) === before && ab.job.stage === "asBuilt" && ab.job.name.endsWith("— As-Built") && AB.isAsBuilt(ab) && ab.solutions.length === 1 &&
+    ab.job.revisions.at(-1).description === "As-built started");
+  t("as-built: a fresh copy has no changes", AB.asBuiltChanges(ab).length === 0);
+
+  // what the install crew changed: a bigger TV, a different receiver, one new run, one box left out
+  const z0 = ab.house.zones[0], tv = z0.endpoints.find(e => e.type === "display");
+  tv.size = (+tv.size || 65) + 10;
+  const rack = ab.solutions[0].racks[0];
+  const avr = rack.devices.find(d => d.type === "avr" || d.type === "amp"); avr.model = "Anthem MRX 740";
+  const gone = rack.devices.find(d => d.type === "source" && d !== avr);
+  rack.devices = rack.devices.filter(d => d !== gone);
+  ab.solutions[0].connections = ab.solutions[0].connections.filter(c => c.from !== gone.id && c.to !== gone.id);
+  // a run the proposal didn't have: the receiver to speakers it wasn't driving
+  const conns = ab.solutions[0].connections;
+  const newSpk = ab.house.zones.flatMap(z => z.endpoints).find(e => e.type === "speakers" && !conns.some(c => c.from === avr.id && c.to === e.id));
+  conns.push({ from: avr.id, to: newSpk.id, signal: "speaker", channels: "7-8" });
+  const ch = AB.asBuiltChanges(ab);
+  const has = (kind, action, re) => ch.some(c => c.kind === kind && c.action === action && (!re || re.test(c.text)));
+  t("as-built: changes are found against the proposal — room (TV size), gear (model), removed box, new run — numbered in order",
+    has("zone", "changed", /TV .*→/) && has("device", "changed", /MRX 740/) && has("device", "removed") && has("wire", "added") && ch.every((c, i) => c.n === i + 1),
+    ch.map(c => `${c.n} ${c.kind} ${c.action}: ${c.text}`).join(" | "));
+
+  const { job, ix } = loadJob(ab); const p = place(job, ix), rt = route(job, ix, p);
+  const marks = AB.changeMarks(ch, p, rt);
+  const svg = render(job, ix, p, rt, { marks });
+  const drawn = ch.filter(c => c.action !== "removed").length;
+  t("as-built: each change still on the drawing gets a revision cloud + numbered △; removed items are list-only",
+    (svg.match(/class="abcloud"/g) || []).length === drawn && svg.includes('pointer-events="none"') && /AS-BUILT/.test(svg));
+
+  const a = advise(job, ix, CAT);
+  const svc = renderExtraPages(job, ix, a, { rawJob: ab, packet: "service" }).map(x => x.title);
+  const cli = renderExtraPages(job, ix, a, { rawJob: ab, packet: "client" }).map(x => x.title);
+  t("as-built: the service packet leads with As-Built Changes and keeps every page; the client packet is just equipment + rack",
+    svc[0] === "As-Built Changes" && svc.includes("Network") && svc.includes("Channel Map") &&
+    cli.every(tl => /^(Equipment & Takeoff|Rack)/.test(tl)) && cli.some(tl => tl.startsWith("Equipment")), `service: ${svc.join(", ")} · client: ${cli.join(", ")}`);
+  const pg = renderExtraPages(job, ix, a, { rawJob: ab, packet: "service" })[0].svg;
+  t("as-built: the changes page lists every change, removed ones included", ch.every(c => pg.includes(`△${c.n}`)) && pg.includes("Removed"));
+  t("as-built: the AI review carries the change list", /## As-built changes/.test(aiReviewMarkdown(ab, 0, CAT)));
+  t("as-built: a proposal (not an as-built) prints no changes page", !renderExtraPages(loadJob(prop).job, loadJob(prop).ix, advise(loadJob(prop).job, loadJob(prop).ix, CAT), { rawJob: prop }).some(x => x.title === "As-Built Changes"));
+}
+
 /* ---------- input order (user redline 2026-09-28) ----------
    Feeds into a device's left edge land in the order their sources stack —
    ATV 1, ATV 2, cable box into the MXNet switch — so they nest without a hop. */

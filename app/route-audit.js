@@ -134,6 +134,40 @@ export function auditRoutes(p, rt, opts = {}) {
   return results;
 }
 
+// pairs of wires that cross each other more than once (a twist: re-lane one
+// of them and both hops disappear)
+export function doubleCrossings(rt) {
+  const ws = (rt.wires || []).filter(w => w.pts?.length > 1);
+  const out = [];
+  for (let i = 0; i < ws.length; i++) for (let j = i + 1; j < ws.length; j++) {
+    const a = ws[i], b = ws[j];
+    if (a.net === b.net) continue;
+    let n = 0;
+    for (const s of segsOf(simplify(a.pts))) for (const t of segsOf(simplify(b.pts))) if (crosses(s, t)) n++;
+    if (n > 1) out.push({ a: a.id, b: b.id, n });
+  }
+  return out;
+}
+
+// hops that sit on a corner: a crossing within `near` px of a bend of either
+// wire — the bridge arc runs into the other wire's turn and reads as a tangle
+export function cornerHops(rt, near = 8) {
+  const ws = (rt.wires || []).filter(w => w.pts?.length > 1).map(w => ({ w, p: simplify(w.pts) }));
+  const out = [];
+  for (let i = 0; i < ws.length; i++) for (let j = i + 1; j < ws.length; j++) {
+    const A = ws[i], B = ws[j];
+    if (A.w.net === B.w.net) continue;
+    for (const s of segsOf(A.p)) for (const t of segsOf(B.p)) {
+      if (!crosses(s, t)) continue;
+      const hS = Math.abs(s[0][1] - s[1][1]) < EPS;
+      const x = hS ? t[0][0] : s[0][0], y = hS ? s[0][1] : t[0][1];
+      const bends = [...A.p.slice(1, -1), ...B.p.slice(1, -1)];
+      if (bends.some(q => Math.abs(q[0] - x) + Math.abs(q[1] - y) < near)) out.push({ a: A.w.id, b: B.w.id, x, y });
+    }
+  }
+  return out;
+}
+
 export function summarize(results) {
   const byCls = {};
   for (const r of results) {

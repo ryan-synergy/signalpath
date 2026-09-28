@@ -854,7 +854,7 @@ function placeZone(out, zone, card, x, y, band) {
    (no co-linear overlaps; 12px pitch). Nesting comes from port ordering
    (farthest destination → top exit port), hops from a crossing post-pass. */
 
-const RT = { lane: 12, pad: 2, clear: 9, portPitch: 12, portInset: 8, hopR: 6, hopMerge: 20 };
+const RT = { lane: 12, pad: 2, clear: 9, portPitch: 12, portInset: 8, hopR: 4, hopMerge: 20 };   // hop radius 4: an 8px bump leaves a gap between hops on 12px lanes
 
 export function route(job, ix, placement, opts = {}) {
   const s = ix.solutions[opts.solution ?? 0];
@@ -1254,14 +1254,14 @@ export function route(job, ix, placement, opts = {}) {
   };
   const westNetsByDev = {};
   const allWest = plans.flatMap(plan => plan.west.map(o => ({ plan, o }))); // plan order (farthest-first within device) — measured better than global river order
-  for (const { plan, o } of allWest) {
+  const routeWestOne = (plan, o) => {
     const d = plan.dev;
     const sx = d.x + d.w;
     const westNets = westNetsByDev[d.id] ||= [];
     {
       const { tx, landY, cardBot } = o.t;
       const land = landY ?? cardBot;                 // chip bottom or card bottom border
-      if (wantsBundle(plan, o) && bundleOnto({ o, d, sx, tx, land, cls: "zone-west" }, true)) { done.add(o.i); continue; }
+      if (wantsBundle(plan, o) && bundleOnto({ o, d, sx, tx, land, cls: "zone-west" }, true)) { done.add(o.i); return; }
       const zh = hintOf(o.c);
       const skip = new Set([d.id, o.t.chipId].filter(Boolean));
       // riser channel by source column: colA rises in the A|B gap beside it,
@@ -1281,9 +1281,12 @@ export function route(job, ix, placement, opts = {}) {
       // A "gutter" hint (guided rerouting) tries the band-end gutter first.
       const topBandRightX = Math.max(...P.zones.filter(z => z.band === "top").map(z => z.x + z.w), rackRight);
       const gutter = { ch: "gutter", r: [topBandRightX + 8, topBandRightX + 90] };
-      // one channel's best route: the first lane (nearest the rack) with a legal riser
+      // one channel's best route: the first few lanes (nearest the rack first) that
+      // take a legal riser, and of those the one with the fewest crossings — the
+      // first-fit lane alone could cross a neighbor feed TWICE (its riser, then its
+      // lane) where the next lane down crossed nothing
       const tryChannel = (rrTry, relax) => {
-        let got = null;
+        let got = null, gotCost = Infinity, seen = 0;
         scanLane(laneHi, -1, [laneLo, laneHi], Math.min(tx, rrTry[0]), Math.max(tx, rrTry[1]), nWire, y => {
           const riserX = alloc(usedV, rrTry[0], Math.min(y, o.portY), Math.max(y, o.portY), nWire, +1,
             x => segBlocked(x, Math.min(y, o.portY), x, Math.max(y, o.portY), skip), rrTry);
@@ -1293,8 +1296,9 @@ export function route(job, ix, placement, opts = {}) {
           if (bl) { dbg(o, { y, riserX, fail: "blocked:" + bl }); return false; }
           if (!pathRegisterable(cand, nWire)) { dbg(o, { y, riserX, fail: "registry" }); return false; }
           if (!relax) { const sib = crossesSiblings(cand, westNets); if (sib) { dbg(o, { y, riserX, fail: "sibling", sib }); return false; } }
-          got = cand;
-          return true;
+          const c = routeCost(cand);
+          if (c < gotCost) { got = cand; gotCost = c; }
+          return ++seen >= 6 || c < 1;               // a crossing-free lane can't be beaten by a longer one
         });
         return got;
       };
@@ -1336,6 +1340,50 @@ export function route(job, ix, placement, opts = {}) {
       else if (pts) { commit(o.c, "zone-west", pts, { group: d.id + "-west", relaxed: true }); out.warnings.push({ code: "route-relaxed", msg: wireId(o.c) }); }
       else harnessQueue.push({ o, d, sx, tx, land, cls: "zone-west" });
       done.add(o.i);
+    }
+  };
+  for (const { plan, o } of allWest) routeWestOne(plan, o);
+
+  /* untwist: two top-band feeds that cross each other twice are wound round
+     each other — the first-routed one took the lane the other needed (the
+     lowest lane, nearest the rack), so every lane left to the second crosses it
+     on its riser AND its lane. Rip both up and route them in the opposite order;
+     keep the result only if the pair crosses fewer wires in total and both still
+     route cleanly, otherwise restore exactly what was there. */
+  {
+    const westEntry = new Map(allWest.map(e => [wireId(e.o.c), e]));
+    const pairCross = (a, b) => { let n = 0;
+      for (const s of ptsSegs(a.pts)) for (const t of ptsSegs(b.pts)) {
+        if (s.vert === t.vert) continue;
+        const v = s.vert ? s : t, h = s.vert ? t : s;
+        if (v.x1 > Math.min(h.x1, h.x2) + 1 && v.x1 < Math.max(h.x1, h.x2) - 1 && h.y1 > Math.min(v.y1, v.y2) + 1 && h.y1 < Math.max(v.y1, v.y2) - 1) n++;
+      } return n; };
+    const ok = w => w.cls === "zone-west" && !w.bundleOf && westEntry.has(w.id);   // relaxed wires too: they're the usual culprits
+    for (let pass = 0; pass < 2; pass++) {
+      let changed = false;
+      const ws = out.wires.filter(ok);
+      for (let i = 0; i < ws.length; i++) for (let j = i + 1; j < ws.length; j++) {
+        const A = out.wires.find(w => w.id === ws[i].id), B = out.wires.find(w => w.id === ws[j].id);
+        if (!A || !B || !ok(A) || !ok(B) || pairCross(A, B) < 2) continue;
+        const before = countCrossings(A.pts) + countCrossings(B.pts);
+        const snap = { H: usedH.slice(), V: usedV.slice(), W: out.wires.slice(), warn: out.warnings.length, hq: harnessQueue.length,
+          nets: Object.fromEntries(Object.entries(westNetsByDev).map(([k, v]) => [k, v.slice()])) };
+        const drop = new Set([A.net, B.net]);
+        const keep = arr => { const k = arr.filter(u => !drop.has(u.net)); arr.length = 0; arr.push(...k); };
+        keep(usedH); keep(usedV);
+        const rest = out.wires.filter(w => !drop.has(w.net)); out.wires.length = 0; out.wires.push(...rest);
+        for (const v of Object.values(westNetsByDev)) { const k = v.filter(n => !drop.has(n)); v.length = 0; v.push(...k); }
+        const eA = westEntry.get(A.id), eB = westEntry.get(B.id);
+        routeWestOne(eB.plan, eB.o); routeWestOne(eA.plan, eA.o);
+        const A2 = out.wires.find(w => w.id === A.id), B2 = out.wires.find(w => w.id === B.id);
+        const good = A2 && B2 && ok(A2) && ok(B2) && harnessQueue.length === snap.hq &&
+          countCrossings(A2.pts) + countCrossings(B2.pts) < before;
+        if (good) { changed = true; continue; }
+        usedH.length = 0; usedH.push(...snap.H); usedV.length = 0; usedV.push(...snap.V);
+        out.wires.length = 0; out.wires.push(...snap.W); out.warnings.length = snap.warn; harnessQueue.length = snap.hq;
+        for (const [k, v] of Object.entries(snap.nets)) { westNetsByDev[k].length = 0; westNetsByDev[k].push(...v); }
+      }
+      if (!changed) break;
     }
   }
 
@@ -2021,6 +2069,84 @@ export function route(job, ix, placement, opts = {}) {
     out.warnings.push({ code: "unrouted", msg: `no route class for ${wireId(conn)}` });
   });
 
+  /* ============ pass 4d: untwist by lane swap ============
+     Two feeds that cross each other twice are wound round each other: each has
+     a riser, a lane, a drop, and the one routed first took the lane the other
+     needed. Swapping the two LANE heights (risers and drops stay put) unwinds
+     them. Kept only when both new paths are legal (no body, no lane overlap)
+     and the pair crosses fewer wires in total; otherwise nothing changes. */
+  {
+    const FEEDS = new Set(["zone-west", "zone-east", "return"]);
+    const segs2 = pts => ptsSegs(pts);
+    const pairCross = (a, b) => { let n = 0;
+      for (const s of segs2(a)) for (const t of segs2(b)) {
+        if (s.vert === t.vert) continue;
+        const v = s.vert ? s : t, h = s.vert ? t : s;
+        if (v.x1 > Math.min(h.x1, h.x2) + 1 && v.x1 < Math.max(h.x1, h.x2) - 1 && h.y1 > Math.min(v.y1, v.y2) + 1 && h.y1 < Math.max(v.y1, v.y2) - 1) n++;
+      } return n; };
+    // the lane: the longest horizontal run strictly inside the path
+    const laneOf = pts => { let bi = -1, bl = 0;
+      for (let i = 1; i + 2 < pts.length; i++) if (pts[i][1] === pts[i + 1][1]) { const l = Math.abs(pts[i + 1][0] - pts[i][0]); if (l > bl) { bl = l; bi = i; } }
+      return bi; };
+    const withLane = (pts, i, y) => pts.map((q, k) => k === i || k === i + 1 ? [q[0], y] : [q[0], q[1]]);
+    // a moved lane must not flip the legs beside it (that would draw a spike)
+    const sane = (old, nu, i) =>
+      Math.sign(nu[i][1] - nu[i - 1][1]) === Math.sign(old[i][1] - old[i - 1][1]) && Math.sign(nu[i + 2][1] - nu[i + 1][1]) === Math.sign(old[i + 2][1] - old[i + 1][1]);
+    const unreg = net => { for (const arr of [usedH, usedV]) { const k = arr.filter(u => u.net !== net); arr.length = 0; arr.push(...k); } };
+    const skipOf = w => new Set([w.from, w.to, s.companions[w.to]?.id].filter(Boolean));
+    // a fan-out's wires never cross each other (out.groups: the non-relaxed siblings per device side)
+    const sibHit = w => {
+      const grp = out.groups.find(g => g.nets.includes(w.net));
+      if (!grp) return false;
+      return out.wires.some(o => o !== w && grp.nets.includes(o.net) && pairCross(w.pts, o.pts) > 0);
+    };
+    for (let pass = 0; pass < 3; pass++) {
+      let changed = false;
+      const ws = out.wires.filter(w => FEEDS.has(w.cls) && !w.bundleOf);
+      for (let i = 0; i < ws.length; i++) for (let j = i + 1; j < ws.length; j++) {
+        const A = ws[i], B = ws[j];
+        if (pairCross(A.pts, B.pts) < 1) continue;   // any crossing pair: a swap can remove single crossings too
+        // candidate moves: swap the lane heights, swap the riser columns (the first
+        // vertical after the port stub — stacked sibling ports whose risers are in
+        // the wrong order cross each other's stubs), or both; the move that cuts
+        // the most crossings wins
+        const before = countCrossings(A.pts) + countCrossings(B.pts);
+        const oldA = A.pts, oldB = B.pts;
+        const moves = [];
+        const ia = laneOf(A.pts), ib = laneOf(B.pts);
+        const lane = (pa, pb) => { if (ia < 0 || ib < 0 || pa[ia][1] === pb[ib][1]) return null;
+          const nA = withLane(pa, ia, pb[ib][1]), nB = withLane(pb, ib, pa[ia][1]);
+          return sane(pa, nA, ia) && sane(pb, nB, ib) ? [nA, nB] : null; };
+        const riserOk = p => p.length >= 4 && p[0][1] === p[1][1] && p[1][0] === p[2][0] && p[1][0] > p[0][0];
+        const riser = (pa, pb) => { if (!riserOk(pa) || !riserOk(pb) || pa[1][0] === pb[1][0]) return null;
+          const xa = pa[1][0], xb = pb[1][0];
+          const nA = pa.map((q, k) => k === 1 || k === 2 ? [xb, q[1]] : [q[0], q[1]]), nB = pb.map((q, k) => k === 1 || k === 2 ? [xa, q[1]] : [q[0], q[1]]);
+          // the stub still runs right, and the lane still leaves the riser the same way
+          const dirOk = (o, n) => n[1][0] > n[0][0] && Math.sign(n[3][0] - n[2][0]) === Math.sign(o[3][0] - o[2][0]) && n[3][0] !== n[2][0];
+          return dirOk(pa, nA) && dirOk(pb, nB) ? [nA, nB] : null; };
+        const l = lane(oldA, oldB); if (l) moves.push(l);
+        const r = riser(oldA, oldB); if (r) moves.push(r);
+        if (l && r) { const both = lane(r[0], r[1]); if (both) moves.push(both); }
+        if (!moves.length) continue;
+        unreg(A.net); unreg(B.net);
+        let best = null, bestN = before;
+        for (const [nA, nB] of moves) {
+          let good = !pathBlocked(nA, skipOf(A)) && !pathBlocked(nB, skipOf(B)) && pathRegisterable(nA, A.net);
+          if (good) { registerPath(nA, A.net); good = pathRegisterable(nB, B.net); unreg(A.net); }
+          if (!good) continue;
+          A.pts = nA; B.pts = nB;
+          const n = countCrossings(nA) + countCrossings(nB);
+          const sibOk = !sibHit(A) && !sibHit(B);     // sibling nesting stays inviolable
+          A.pts = oldA; B.pts = oldB;
+          if (sibOk && n < bestN) { bestN = n; best = [nA, nB]; }
+        }
+        if (best) { A.pts = best[0]; B.pts = best[1]; registerPath(best[0], A.net); registerPath(best[1], B.net); changed = true; continue; }
+        registerPath(oldA, A.net); registerPath(oldB, B.net);
+      }
+      if (!changed) break;
+    }
+  }
+
   /* ============ pass 5: crossings → hops ============ */
   computeHops(out);
   if (opts.debug) out.channels = { h: usedH, v: usedV };  // registered segments, for the congestion overlay
@@ -2061,11 +2187,14 @@ function computeHops(out) {
     return groups;
   };
   const assigned = new Set();
-  // wide bridges: a horizontal crossing ≥2 clustered same-signal verticals
+  // a wire crossing a bundle (≥2 clustered same-signal wires) takes the hops —
+  // one small bump per wire crossed, the bundle stays straight. (It used to
+  // take ONE wide arc over the whole bundle: a half-circle 40–60px across that
+  // read as a mistake on real sheets.)
   for (const [h, list] of byH) {
     for (const g of clusterKeyed(list, "x")) {
       if (g.length >= 2 && g.every(c => c.v.w.signal === g[0].v.w.signal)) {
-        h.w.hops.push({ si: h.si, x: (g[0].x + g[g.length - 1].x) / 2, y: g[0].y, w: g[g.length - 1].x - g[0].x + 2 * RT.hopR, orient: "h" });
+        for (const c of g) h.w.hops.push({ si: h.si, x: c.x, y: c.y, w: 2 * RT.hopR, orient: "h" });
         g.forEach(c => assigned.add(c));
       }
     }
@@ -2074,11 +2203,7 @@ function computeHops(out) {
     for (const g of clusterKeyed(list, "y")) {
       const rest = g.filter(c => !assigned.has(c));
       if (!rest.length) continue;
-      if (rest.length >= 2 && rest.every(c => c.h.w.signal === rest[0].h.w.signal)) {
-        v.w.hops.push({ si: v.si, x: rest[0].x, y: (rest[0].y + rest[rest.length - 1].y) / 2, w: rest[rest.length - 1].y - rest[0].y + 2 * RT.hopR, orient: "v" });
-      } else {
-        rest.forEach(c => v.w.hops.push({ si: v.si, x: c.x, y: c.y, w: 2 * RT.hopR, orient: "v" }));
-      }
+      rest.forEach(c => v.w.hops.push({ si: v.si, x: c.x, y: c.y, w: 2 * RT.hopR, orient: "v" }));
       rest.forEach(c => assigned.add(c));
     }
   }
@@ -2185,6 +2310,7 @@ export function routeAlternates(job, ix, placed, opts, wid) {
   return alts;
 }
 
+const HOP_R = 4;   // = RT.hopR (render is module-level)
 export function wireD(w) {
   let d = `M${w.pts[0][0]} ${w.pts[0][1]}`;
   for (let i = 1; i < w.pts.length; i++) {
@@ -2192,13 +2318,18 @@ export function wireD(w) {
     const hops = (w.hops || []).filter(h => h.si === i - 1)
       .sort((a, b) => x1 === x2 ? (y2 > y1 ? a.y - b.y : b.y - a.y) : (x2 > x1 ? a.x - b.x : b.x - a.x));
     for (const h of hops) {
-      const r = h.w / 2;
+      // a single hop is a half-circle; hops that had to merge (lanes closer than
+      // a hop) draw as a LOW flat bridge — quarter-arc up, flat top, quarter-arc
+      // down — never a half-circle as tall as it is wide
+      const half = h.w / 2, r = Math.min(half, HOP_R);
       if (x1 === x2) {
         const dir = y2 > y1 ? 1 : -1, sweep = y2 > y1 ? 1 : 0;
-        d += `L${x1} ${h.y - dir * r}A${r} ${r} 0 0 ${sweep} ${x1} ${h.y + dir * r}`;
+        if (half <= HOP_R + 0.5) d += `L${x1} ${h.y - dir * half}A${half} ${half} 0 0 ${sweep} ${x1} ${h.y + dir * half}`;
+        else d += `L${x1} ${h.y - dir * half}A${r} ${r} 0 0 ${sweep} ${x1 + r} ${h.y - dir * (half - r)}L${x1 + r} ${h.y + dir * (half - r)}A${r} ${r} 0 0 ${sweep} ${x1} ${h.y + dir * half}`;
       } else {
         const dir = x2 > x1 ? 1 : -1, sweep = x2 > x1 ? 1 : 0;
-        d += `L${h.x - dir * r} ${y1}A${r} ${r} 0 0 ${sweep} ${h.x + dir * r} ${y1}`;
+        if (half <= HOP_R + 0.5) d += `L${h.x - dir * half} ${y1}A${half} ${half} 0 0 ${sweep} ${h.x + dir * half} ${y1}`;
+        else d += `L${h.x - dir * half} ${y1}A${r} ${r} 0 0 ${sweep} ${h.x - dir * (half - r)} ${y1 - r}L${h.x + dir * (half - r)} ${y1 - r}A${r} ${r} 0 0 ${sweep} ${h.x + dir * half} ${y1}`;
       }
     }
     d += `L${x2} ${y2}`;

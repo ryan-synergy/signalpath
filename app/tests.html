@@ -2155,7 +2155,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("planqueue: owner-supplied gear is listed, noted 'customer supplied' (cable box too)",
     /Cable Box \| customer supplied/.test(sys) && /Master Bed[\s\S]*65" TV \| customer supplied/.test(sys));
   t("planqueue: speakers are Packages PlanQueue picks; guessed part numbers say unsure",
-    /- 1 \| Package \| Stereo Pair Speakers \| PlanQueue picks the package/.test(sys) && /Apple TV 4K \| unsure/.test(sys));
+    /- 1 \| Package \| Stereo Pair Speakers \| PlanQueue picks the package/.test(sys) && /APPLE TV 4K 128 \| unsure/.test(sys));
   t("planqueue: outdoor rooms land under ## Exterior, after the indoor floors", /## Exterior\n### Patio/.test(sys) && sys.indexOf("## Exterior") > sys.indexOf("## Floor 1"));
   t("planqueue: the TV's own Dante adapter goes in its room (DANTE-DV2 in the kitchen, AXIS16 in the family room)",
     /### Kitchen[^#]*AC-MXNET-1G-DANTE-DV2/.test(sys) && /### Family Room[^#]*ACP-AXIS16/.test(sys));
@@ -2478,6 +2478,25 @@ for (const [name, raw] of Object.entries(fixtures)) {
 
   const pq = planQueueFiles(fixtures.estate, 0, CAT).map(f => typeof f === "string" ? f : f.text ?? f.content ?? JSON.stringify(f)).join("\n");
   t("hardening: the PlanQueue export carries no rack hardware (rack, patch panels, vents, shelves, kits)", !/Vent panel|patch panel|Rack shelf|rack kit|Equipment rack,/i.test(pq));
+}
+
+/* ---------- PlanQueue SKUs (catalog synced to Ryan's PlanQueue export, 2026-09-28) ----------
+   Every shipped device either carries its exact PlanQueue SKU (no "unsure") or is
+   flagged notInPlanQueue and exports with a "needs SKU" note. SKUs only — the
+   export's dealer prices never enter this public app. */
+{
+  const CAT = await (await fetch("./catalog.json")).json();
+  const { planQueueFiles } = await import("./exports.js");
+  const provider = id => /provider|directv|xfinity|spectrum/.test(id);
+  const loose = Object.entries(CAT.devices).filter(([id, d]) => !provider(id) && !d.notInPlanQueue && (!d.partNo || d.partNoUnsure)).map(([id]) => id);
+  t("planqueue SKUs: every catalog device has a PlanQueue SKU or says it isn't in PlanQueue", !loose.length, loose.join(", "));
+  t("planqueue SKUs: no price fields came in with the SKUs", !Object.values(CAT.devices).some(d => "price" in d || "sellPrice" in d || "msrp" in d));
+  const est = planQueueFiles(fixtures.estate, 0, CAT).map(f => typeof f === "string" ? f : f.text ?? f.content ?? "").join("\n");
+  t("planqueue SKUs: known gear exports as its PlanQueue SKU with no unsure note (Anthem MDX-16)", /\| Anthem \| MDX-16$/m.test(est));
+  const j = structuredClone(fixtures.residence);
+  j.solutions[0].racks[0].devices.push({ id: "pzc", type: "amp", model: "Blaze PowerZone Connect 1008D", catalogRef: "sonance-blaze-pzc-1008d", status: "new" });
+  const res = planQueueFiles(j, 0, CAT).map(f => typeof f === "string" ? f : f.text ?? f.content ?? "").join("\n");
+  t("planqueue SKUs: gear PlanQueue doesn't carry says so (imports as a needs-SKU line)", /PZC 1008D \|[^\n]*not in PlanQueue catalog — needs SKU/.test(res));
 }
 
 /* ---------- input order (user redline 2026-09-28) ----------

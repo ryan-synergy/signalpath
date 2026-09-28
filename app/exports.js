@@ -27,7 +27,9 @@ const clean = s => String(s ?? "").replace(/\s*\|\s*/g, " / ").replace(/\s+/g, "
 
 /* ---------- what a box is, for the quote ---------- */
 function fromCatalog(c) {
-  return { mfr: c.brand, model: c.partNo || c.model, unsure: !!c.partNoUnsure || !c.partNo, provider: !!c.provider };
+  // partNo is the PlanQueue SKU where PlanQueue carries the product (catalog synced to its 2026-09-28 export);
+  // notInPlanQueue = the manufacturer's part number, which imports as a "needs SKU" line
+  return { mfr: c.brand, model: c.partNo || c.model, unsure: !!c.partNoUnsure || !c.partNo, provider: !!c.provider, pqMissing: !!c.notInPlanQueue };
 }
 // brands spelled the way the manufacturer does, longest first so "AVPro Edge" beats "AVPro"
 const BRANDS = ["James Loudspeaker", "Bowers & Wilkins", "AVPro Edge", "AudioControl", "Kaleidescape", "Josh.ai", "Control4", "Crestron",
@@ -38,7 +40,7 @@ const brandOf = m => BRANDS.find(b => new RegExp(`^${b.replace(/[.+&]/g, "\\$&")
 function guessProduct(d) {
   const raw = String(d.model || "").trim();
   const m = d.type === "source" ? raw.replace(/\s+\d+$/, "") : raw;   // numbered copies ("Apple TV 2") are one product; "Axion 8" is a model
-  if (/apple\s*tv/i.test(m)) return { mfr: "Apple", model: "Apple TV 4K", unsure: true };
+  if (/apple\s*tv/i.test(m)) return { mfr: "Apple", model: "APPLE TV 4K 128", unsure: true };
   if (/cable/i.test(m)) return { mfr: "Cable Provider", model: "Cable Box", provider: true };
   if (/directv/i.test(m)) return { mfr: "DirecTV", model: "Receiver", provider: true };
   if (/dish/i.test(m)) return { mfr: "Dish", model: "Receiver", provider: true };
@@ -66,6 +68,7 @@ function quoteRooms(job, sol, catalog, adv) {
     const notes = [...extraNotes];
     if (p.provider) notes.push("provider equipment");
     if (p.unsure) notes.push("unsure");
+    if (p.pqMissing) notes.push("not in PlanQueue catalog — needs SKU");
     const line = { mfr: clean(p.mfr), model: clean(p.model), note: clean([...new Set(notes)].join("; ")) };
     const key = [line.mfr, line.model, line.note].join("|");
     const L = rooms.get(k).lines;
@@ -263,7 +266,7 @@ export function aiReviewMarkdown(job, solIndex, catalog, { today = new Date().to
     const c = cat(d.catalogRef);
     const use = [...ioOf(d.id).map(x => `${x.kind} ${x.used}/${x.capacity}${x.over ? " OVER" : ""}`),
       ...(adv.amps || []).filter(a => a.amp === d.id && mine(a)).map(a => `zones ${a.zonesUsed}/${a.zonesTotal ?? "?"}`)].join("; ");
-    return [d.model || d.id, c ? `${c.brand} ${c.partNo || c.model}${c.partNoUnsure ? " (part no. unsure)" : ""}` : "not in catalog",
+    return [d.model || d.id, c ? `${c.brand} ${c.partNo || c.model}${c.partNoUnsure ? " (part no. unsure)" : ""}${c.notInPlanQueue ? " (not in PlanQueue)" : ""}` : "not in catalog",
       STATUS_NAME[d.status || "new"] || d.status, c ? ioText(c.inputs) : "—", c ? ioText(c.outputs) : "—", use || "—"];
   })), "");
   const comps = sol.companions || [];

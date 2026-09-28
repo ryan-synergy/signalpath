@@ -2369,7 +2369,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
    A pair of wires crossing each other twice is wound round itself (the red video
    feed and blue speaker feed on random job #65); a hop on another wire's corner
    reads as a tangle. The untwist pass (lane / riser swaps) removes most; these
-   hold the level. Hops are one small bump per crossing — never one wide arc. */
+   hold the level. A bundle is bridged by one arc (Ryan's convention). */
 {
   const A = await import("./route-audit.js"), F = await import("./fuzz-jobs.js");
   const lim = { residence: 0, estate: 1, stress: 17 };
@@ -2377,7 +2377,11 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const { job, ix } = loadJob(raw); const p = place(job, ix), rt = route(job, ix, p);
     const d = A.doubleCrossings(rt), c = A.cornerHops(rt);
     t(`twists — ${name}: pairs crossing twice ≤ ${lim[name]} (${d.length}), no hop on a corner (${c.length})`, d.length <= lim[name] && !c.length);
-    t(`hops — ${name}: every hop is one small bump (no bridge wider than two hops)`, rt.wires.every(w => (w.hops || []).every(h => h.w <= 16)));
+    // a bundle is bridged by ONE arc (Ryan's convention): never several touching bumps side by side
+    t(`hops — ${name}: a bundle gets one arc — no two hops on a segment touch`, rt.wires.every(w => { const by = {};
+      for (const h of w.hops || []) (by[h.si] ||= []).push(h);
+      return Object.values(by).every(hs => { const iv = hs.map(h => { const c = w.pts[h.si][0] === w.pts[h.si + 1][0] ? h.y : h.x; return [c - h.w / 2, c + h.w / 2]; }).sort((a, b) => a[0] - b[0]);
+        return iv.every((q, k) => !k || q[0] > iv[k - 1][1] + 0.5); }); }));
   }
   const g = F.jobGenerator(1);
   let dbl = 0, cor = 0, j65 = null;

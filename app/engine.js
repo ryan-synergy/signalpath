@@ -854,7 +854,7 @@ function placeZone(out, zone, card, x, y, band) {
    (no co-linear overlaps; 12px pitch). Nesting comes from port ordering
    (farthest destination → top exit port), hops from a crossing post-pass. */
 
-const RT = { lane: 12, pad: 2, clear: 9, portPitch: 12, portInset: 8, hopR: 4, hopMerge: 20 };   // hop radius 4: an 8px bump leaves a gap between hops on 12px lanes
+const RT = { lane: 12, pad: 2, clear: 9, portPitch: 12, portInset: 8, hopR: 6, hopMerge: 20 };
 
 export function route(job, ix, placement, opts = {}) {
   const s = ix.solutions[opts.solution ?? 0];
@@ -2187,14 +2187,13 @@ function computeHops(out) {
     return groups;
   };
   const assigned = new Set();
-  // a wire crossing a bundle (≥2 clustered same-signal wires) takes the hops —
-  // one small bump per wire crossed, the bundle stays straight. (It used to
-  // take ONE wide arc over the whole bundle: a half-circle 40–60px across that
-  // read as a mistake on real sheets.)
+  // a wire crossing a bundle (≥2 clustered same-signal wires) bridges the whole
+  // bundle with ONE arc — the drafting convention Ryan wants (2026-09-27: tried
+  // one small bump per wire; he preferred the single big arc)
   for (const [h, list] of byH) {
     for (const g of clusterKeyed(list, "x")) {
       if (g.length >= 2 && g.every(c => c.v.w.signal === g[0].v.w.signal)) {
-        for (const c of g) h.w.hops.push({ si: h.si, x: c.x, y: c.y, w: 2 * RT.hopR, orient: "h" });
+        h.w.hops.push({ si: h.si, x: (g[0].x + g[g.length - 1].x) / 2, y: g[0].y, w: g[g.length - 1].x - g[0].x + 2 * RT.hopR, orient: "h" });
         g.forEach(c => assigned.add(c));
       }
     }
@@ -2203,7 +2202,11 @@ function computeHops(out) {
     for (const g of clusterKeyed(list, "y")) {
       const rest = g.filter(c => !assigned.has(c));
       if (!rest.length) continue;
-      rest.forEach(c => v.w.hops.push({ si: v.si, x: c.x, y: c.y, w: 2 * RT.hopR, orient: "v" }));
+      if (rest.length >= 2 && rest.every(c => c.h.w.signal === rest[0].h.w.signal)) {
+        v.w.hops.push({ si: v.si, x: rest[0].x, y: (rest[0].y + rest[rest.length - 1].y) / 2, w: rest[rest.length - 1].y - rest[0].y + 2 * RT.hopR, orient: "v" });
+      } else {
+        rest.forEach(c => v.w.hops.push({ si: v.si, x: c.x, y: c.y, w: 2 * RT.hopR, orient: "v" }));
+      }
       rest.forEach(c => assigned.add(c));
     }
   }
@@ -2310,7 +2313,6 @@ export function routeAlternates(job, ix, placed, opts, wid) {
   return alts;
 }
 
-const HOP_R = 4;   // = RT.hopR (render is module-level)
 export function wireD(w) {
   let d = `M${w.pts[0][0]} ${w.pts[0][1]}`;
   for (let i = 1; i < w.pts.length; i++) {
@@ -2318,18 +2320,13 @@ export function wireD(w) {
     const hops = (w.hops || []).filter(h => h.si === i - 1)
       .sort((a, b) => x1 === x2 ? (y2 > y1 ? a.y - b.y : b.y - a.y) : (x2 > x1 ? a.x - b.x : b.x - a.x));
     for (const h of hops) {
-      // a single hop is a half-circle; hops that had to merge (lanes closer than
-      // a hop) draw as a LOW flat bridge — quarter-arc up, flat top, quarter-arc
-      // down — never a half-circle as tall as it is wide
-      const half = h.w / 2, r = Math.min(half, HOP_R);
+      const r = h.w / 2;   // one arc per hop — a bundle bridge is one big half-circle
       if (x1 === x2) {
         const dir = y2 > y1 ? 1 : -1, sweep = y2 > y1 ? 1 : 0;
-        if (half <= HOP_R + 0.5) d += `L${x1} ${h.y - dir * half}A${half} ${half} 0 0 ${sweep} ${x1} ${h.y + dir * half}`;
-        else d += `L${x1} ${h.y - dir * half}A${r} ${r} 0 0 ${sweep} ${x1 + r} ${h.y - dir * (half - r)}L${x1 + r} ${h.y + dir * (half - r)}A${r} ${r} 0 0 ${sweep} ${x1} ${h.y + dir * half}`;
+        d += `L${x1} ${h.y - dir * r}A${r} ${r} 0 0 ${sweep} ${x1} ${h.y + dir * r}`;
       } else {
         const dir = x2 > x1 ? 1 : -1, sweep = x2 > x1 ? 1 : 0;
-        if (half <= HOP_R + 0.5) d += `L${h.x - dir * half} ${y1}A${half} ${half} 0 0 ${sweep} ${h.x + dir * half} ${y1}`;
-        else d += `L${h.x - dir * half} ${y1}A${r} ${r} 0 0 ${sweep} ${h.x - dir * (half - r)} ${y1 - r}L${h.x + dir * (half - r)} ${y1 - r}A${r} ${r} 0 0 ${sweep} ${h.x + dir * half} ${y1}`;
+        d += `L${h.x - dir * r} ${y1}A${r} ${r} 0 0 ${sweep} ${h.x + dir * r} ${y1}`;
       }
     }
     d += `L${x2} ${y2}`;

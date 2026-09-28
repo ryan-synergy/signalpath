@@ -1036,6 +1036,8 @@ export function route(job, ix, placement, opts = {}) {
     return n;
   };
   // score a candidate by how many existing wires it would cross (hops it costs)
+  // route choice between shapes: hops dominate, then drawn length
+  const routeCost = c => countCrossings(c) * 100 + c.slice(1).reduce((n, q, i) => n + Math.abs(q[0] - c[i][0]) + Math.abs(q[1] - c[i][1]), 0) / 10;
   const countCrossings = cand => {
     let n = 0;
     const mine = ptsSegs(cand);
@@ -1065,8 +1067,32 @@ export function route(job, ix, placement, opts = {}) {
     }
     return false;
   };
+  // tidy a path before it is drawn: repeated points, straight-through vertices,
+  // retraced spikes, and a hairline jog (<4px) next to either end — that one is
+  // removed by sliding the end point along its port edge (≤3px; a 1px kink where
+  // two ports sit a pixel apart used to draw as a visible notch)
+  const tidy = pts => {
+    let p = pts.filter((q, i) => i === 0 || q[0] !== pts[i - 1][0] || q[1] !== pts[i - 1][1]).map(q => [q[0], q[1]]);
+    const dropStraight = () => { for (let i = 1; i < p.length - 1; i++) {
+      const [a, b, c] = [p[i - 1], p[i], p[i + 1]];
+      if ((a[0] === b[0] && b[0] === c[0]) || (a[1] === b[1] && b[1] === c[1])) { p.splice(i, 1); i--; } } };
+    dropStraight();
+    if (p.length >= 4) {
+      const n = p.length, [a, b] = [p[n - 3], p[n - 2]];          // jog before the last leg
+      const d = Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
+      if (d > 0 && d < 4) { if (a[1] === b[1]) { p[n - 2][0] = a[0]; p[n - 1][0] = a[0]; } else { p[n - 2][1] = a[1]; p[n - 1][1] = a[1]; } }
+    }
+    if (p.length >= 4) {
+      const [b, c] = [p[1], p[2]];                                 // jog after the first leg
+      const d = Math.abs(b[0] - c[0]) + Math.abs(b[1] - c[1]);
+      if (d > 0 && d < 4) { if (b[1] === c[1]) { p[0][0] = c[0]; p[1][0] = c[0]; } else { p[0][1] = c[1]; p[1][1] = c[1]; } }
+    }
+    p = p.filter((q, i) => i === 0 || q[0] !== p[i - 1][0] || q[1] !== p[i - 1][1]);
+    dropStraight();
+    return p;
+  };
   const commit = (conn, cls, pts, extra = {}) => {
-    const clean = pts.filter((p, i) => i === 0 || p[0] !== pts[i - 1][0] || p[1] !== pts[i - 1][1]);
+    const clean = tidy(pts);
     const w = { id: wireId(conn), net: nWire++, cls, signal: conn.signal, scope: conn.scope || "included", from: conn.from, to: conn.to, pts: clean, hops: [], ...(conn.dante ? { dante: true } : {}), ...extra };
     // a fallback is known-bad geometry: draw it, but never let it poison the
     // registry and starve later (valid) wires
@@ -1254,23 +1280,53 @@ export function route(job, ix, placement, opts = {}) {
       // a bridged sibling crossing beats unroutable geometry (last resort).
       // A "gutter" hint (guided rerouting) tries the band-end gutter first.
       const topBandRightX = Math.max(...P.zones.filter(z => z.band === "top").map(z => z.x + z.w), rackRight);
-      const chans = [{ ch: "col", r: rr }, { ch: "gutter", r: [topBandRightX + 8, topBandRightX + 90] }];
-      if (zh?.ch === "gutter") chans.reverse();
+      const gutter = { ch: "gutter", r: [topBandRightX + 8, topBandRightX + 90] };
+      // one channel's best route: the first lane (nearest the rack) with a legal riser
+      const tryChannel = (rrTry, relax) => {
+        let got = null;
+        scanLane(laneHi, -1, [laneLo, laneHi], Math.min(tx, rrTry[0]), Math.max(tx, rrTry[1]), nWire, y => {
+          const riserX = alloc(usedV, rrTry[0], Math.min(y, o.portY), Math.max(y, o.portY), nWire, +1,
+            x => segBlocked(x, Math.min(y, o.portY), x, Math.max(y, o.portY), skip), rrTry);
+          if (riserX == null) { dbg(o, { y, fail: "riser", rrTry }); return false; }
+          const cand = [[sx, o.portY], [riserX, o.portY], [riserX, y], [tx, y], [tx, land]];
+          const bl = pathBlocked(cand, skip);
+          if (bl) { dbg(o, { y, riserX, fail: "blocked:" + bl }); return false; }
+          if (!pathRegisterable(cand, nWire)) { dbg(o, { y, riserX, fail: "registry" }); return false; }
+          if (!relax) { const sib = crossesSiblings(cand, westNets); if (sib) { dbg(o, { y, riserX, fail: "sibling", sib }); return false; } }
+          got = cand;
+          return true;
+        });
+        return got;
+      };
+      // the direct L: out at port height, up at the drop — for a room east of the
+      // rack's right edge it is the shortest orthogonal route there is (one bend)
+      const tryL = relax => {
+        if (tx <= rackRight + 6) return null;
+        const cand = [[sx, o.portY], [tx, o.portY], [tx, land]];
+        if (pathBlocked(cand, skip) || !pathRegisterable(cand, nWire)) return null;
+        if (!relax && crossesSiblings(cand, westNets)) return null;
+        return cand;
+      };
+      const plen = c => c.slice(1).reduce((n, q, i) => n + Math.abs(q[0] - c[i][0]) + Math.abs(q[1] - c[i][1]), 0);
+      const cost = c => countCrossings(c) * 100 + plen(c) / 10;   // hops dominate, then length
       for (const relax of [false, true]) {
-        for (const { ch, r: rrTry } of chans) {
-          scanLane(laneHi, -1, [laneLo, laneHi], Math.min(tx, rrTry[0]), Math.max(tx, rrTry[1]), nWire, y => {
-            const riserX = alloc(usedV, rrTry[0], Math.min(y, o.portY), Math.max(y, o.portY), nWire, +1,
-              x => segBlocked(x, Math.min(y, o.portY), x, Math.max(y, o.portY), skip), rrTry);
-            if (riserX == null) { dbg(o, { y, fail: "riser", rrTry }); return false; }
-            const cand = [[sx, o.portY], [riserX, o.portY], [riserX, y], [tx, y], [tx, land]];
-            const bl = pathBlocked(cand, skip);
-            if (bl) { dbg(o, { y, riserX, fail: "blocked:" + bl }); return false; }
-            if (!pathRegisterable(cand, nWire)) { dbg(o, { y, riserX, fail: "registry" }); return false; }
-            if (!relax) { const sib = crossesSiblings(cand, westNets); if (sib) { dbg(o, { y, riserX, fail: "sibling", sib }); return false; } }
-            pts = cand;
-            return true;
-          });
-          if (pts) { usedCh = ch; break; }
+        if (zh?.ch === "col" || zh?.ch === "gutter") {
+          // a pinned channel keeps its exact behavior: that channel first, the other as fallback
+          for (const { ch, r } of zh.ch === "gutter" ? [gutter, { ch: "col", r: rr }] : [{ ch: "col", r: rr }, gutter]) {
+            pts = tryChannel(r, relax);
+            if (pts) { usedCh = ch; break; }
+          }
+        } else {
+          // every sensible shape, then the cheapest: the column/corridor channel,
+          // the right corridor (for A/B-column sources), the direct L; the gutter
+          // past the whole top band only when none of those exists (it used to be
+          // the only fallback — wires ran to the sheet's east edge and doubled back)
+          const opts2 = [];
+          const colPts = tryChannel(rr, relax); if (colPts) opts2.push({ ch: "col", pts: colPts });
+          if (rr !== riserRange) { const rp = tryChannel(riserRange, relax); if (rp) opts2.push({ ch: "col", pts: rp }); }
+          const lp = tryL(relax); if (lp) opts2.push({ ch: "col", pts: lp });
+          if (!opts2.length) { const gp = tryChannel(gutter.r, relax); if (gp) opts2.push({ ch: "gutter", pts: gp }); }
+          if (opts2.length) { const best = opts2.reduce((a, b) => cost(b.pts) < cost(a.pts) ? b : a); pts = best.pts; usedCh = best.ch; }
         }
         if (pts) { usedRelax = relax; break; }
       }
@@ -1313,8 +1369,12 @@ export function route(job, ix, placement, opts = {}) {
       const blockedHere = pts => pathBlocked(pts, skip) || (piercesChip(pts) ? "target chip" : null);
       const finishFrom = (px, py, prefix, inverted = false, relax = false) => {
         const sibNets = relax ? [] : eastNets;
-        const above = side ? side === "top" : py < cardTop;
+        // a chip under the card has one entry, its bottom: approach from BELOW no
+        // matter where the source sits (a mid-band TV's chip is often below the
+        // source port — deciding by the card top sent every lane through the card)
+        const above = landY != null ? false : side ? side === "top" : py < cardTop;
         const land = landY ?? (above ? cardTop : cardBot);
+        const below0 = Math.max(cardBot + 14, landY != null ? landY + 10 : 0);   // first lane under the card (and its chip)
         let pts = [...prefix, [px, py], [tx, py], [tx, land]];
         if (!blockedHere(pts) && pathRegisterable(pts, nWire) && !crossesSiblings(pts, sibNets)) return pts;
         const gutter = gutterFor(tx);
@@ -1330,7 +1390,11 @@ export function route(job, ix, placement, opts = {}) {
             ? Math.min(gutter[1] - 6, prev != null ? prev - 12 : gutter[1] - 6)
             : Math.max(gutter[0] + 6, prev != null ? prev + 12 : gutter[0] + 6);
           const rRange = inverted ? [gutter[0], rDesired] : [rDesired, gutter[1]];
-          scanLane(desired, inverted ? -dir : dir, rng, Math.min(gutter[0], tx), Math.max(gutter[1], tx), nWire, y => {
+          // (measured 2026-09-27: also scanning from the lane next to the card and
+          // keeping the cheaper route helped each wire but starved later ones —
+          // residence hops 5→13 — so the customary start stays)
+          const runFrom = start => { let got = null, gotR = null;
+          scanLane(start, inverted ? -dir : dir, rng, Math.min(gutter[0], tx), Math.max(gutter[1], tx), nWire, y => {
             const riserX = alloc(usedV, rDesired, Math.min(py, y), Math.max(py, y), nWire, inverted ? -1 : +1,
               x => segBlocked(x, Math.min(py, y), x, Math.max(py, y), skip), rRange);
             if (riserX == null) { dbg(o, { y, fail: "riser" }); return false; }
@@ -1350,10 +1414,12 @@ export function route(job, ix, placement, opts = {}) {
               return false;
             }
             const sib = crossesSiblings(cand, sibNets); if (sib) { dbg(o, { y, riserX, fail: "sibling", sib }); return false; }
-            found = cand;
-            riserTrack[rk] = riserX;
+            got = cand; gotR = riserX;
             return true;
           });
+          return { got, gotR }; };
+          const pick = runFrom(desired);
+          if (pick.got) { found = pick.got; riserTrack[rk] = pick.gotR; }
           return found;
         };
         // level-with-the-band sources (bottom-anchored amps) dive below the band
@@ -1386,8 +1452,23 @@ export function route(job, ix, placement, opts = {}) {
         };
         if (above) tryStaged(land, [Math.max(20, cardTop - 320), cardTop - 14], cardTop - 26, -1);
         else {
-          tryDive(land, [cardBot + 14, cardBot + 340], cardBot + 40, +1);
-          if (!found) tryStaged(land, [cardBot + 14, cardBot + 340], cardBot + 40, +1);
+          // both shapes, then the cheaper (fewest crossings, then shortest): the dive
+          // alone used to win whenever it existed, even when it ran the wire under the
+          // whole band while a riser beside the target reached it at card level
+          const before = { ...riserTrack };
+          const dv = tryDive(land, [below0, below0 + 326], Math.max(cardBot + 40, below0), +1);
+          const dvTrack = { ...riserTrack };
+          for (const k of Object.keys(riserTrack)) if (!(k in before)) delete riserTrack[k];
+          Object.assign(riserTrack, before);
+          found = null;
+          const st = tryStaged(land, [below0, below0 + 326], Math.max(cardBot + 40, below0), +1);
+          const plen = c => c.slice(1).reduce((n, q, i) => n + Math.abs(q[0] - c[i][0]) + Math.abs(q[1] - c[i][1]), 0);
+          const cost = c => countCrossings(c) * 100 + plen(c) / 10;
+          if (dv && (!st || cost(dv) <= cost(st))) {
+            found = dv;
+            for (const k of Object.keys(riserTrack)) delete riserTrack[k];
+            Object.assign(riserTrack, dvTrack);
+          } else found = st;
         }
         // starved strip: a plain border target may land on the OPPOSITE border
         // (feeds over the top of the band) — chips can't flip, their stub is fixed

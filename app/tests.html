@@ -326,7 +326,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
 /* hop-count regression guards (polish round 2026-09-19: returns route last
    and pick the least-crossing lane) */
 {
-  const ceiling = { residence: 5, estate: 25, stress: 308 };  // 2026-09-27 tighter zone spacing (gap 20 / row 24) + span grid: stress 319→308  // 2026-09-27 audit: col-C escape no longer cuts through its own amp — estate 24→25, stress 309→319 (the old counts were subsidized by 8 body-piercing wires)  // re-baselined 2026-09-21: AVB/switching bottom-anchored in col A — residence 7→5 (trunk to output module is now a straight neighbor run)
+  const ceiling = { residence: 5, estate: 25, stress: 272 };  // 2026-09-27 route audit: cheapest-of shapes for top-band + east feeds, chips approached from below — stress 308→272  // 2026-09-27 tighter zone spacing (gap 20 / row 24) + span grid: stress 319→308  // 2026-09-27 audit: col-C escape no longer cuts through its own amp — estate 24→25, stress 309→319 (the old counts were subsidized by 8 body-piercing wires)  // re-baselined 2026-09-21: AVB/switching bottom-anchored in col A — residence 7→5 (trunk to output module is now a straight neighbor run)
   for (const [name, raw] of Object.entries(fixtures)) {
     const { job, ix } = loadJob(raw);
     const p = place(job, ix);
@@ -2361,6 +2361,33 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("print: the Rack sheet carries elevation + hardware + power & heat; the Network sheet is ports only",
     !!rp && rp.svg.includes("Rack hardware") && rp.svg.includes("Power &amp; heat") && rp.svg.includes(">?<") && !!np && !np.svg.includes("outlets"));
   t("rack tab: the front view renders on its own", /^<svg[\s\S]*Vent panel[\s\S]*<\/svg>$/.test(P.rackFrontSVG(after.racks[0])));
+}
+
+/* ---------- route efficiency (2026-09-27 audit): an independent oracle ----------
+   route-audit.js measures every wire against the Manhattan minimum and searches
+   for a simpler legal route with the same exit/entry sides and no extra hops.
+   Ceilings, like the hop ceilings: a routing change may not make wires longer. */
+{
+  const A = await import("./route-audit.js"), F = await import("./fuzz-jobs.js");
+  for (const [name, raw] of Object.entries(fixtures)) {
+    const { job, ix } = loadJob(raw); const p = place(job, ix), rt = route(job, ix, p);
+    const r = A.auditRoutes(p, rt);
+    const big = r.filter(x => x.better && x.len - x.better.len > 200), smells = r.flatMap(x => x.issues);
+    t(`route audit — ${name}: no wire with a >200px shorter legal route, no kinks or spikes`, !big.length && !smells.length,
+      big.map(x => x.id).concat(smells).join(", "));
+  }
+  const g = F.jobGenerator(1);
+  let big = 0, len = 0, manh = 0, smells = 0, fb = 0;
+  for (let k = 0; k < 60; k++) {
+    let job, ix; try { ({ job, ix } = loadJob(g(k))); } catch { continue; }
+    const p = place(job, ix), rt = route(job, ix, p);
+    fb += rt.wires.filter(w => /fallback/.test(w.cls)).length;
+    for (const x of A.auditRoutes(p, rt)) { len += x.len; manh += x.manh; smells += x.issues.length; if (x.better && x.len - x.better.len > 200) big++; }
+  }
+  // 2026-09-27 baseline before the audit fixes: big 30, ratio 1.189, smells 27, fallbacks 7
+  t(`route audit — 60 random jobs: wires with a much shorter legal route ≤ 17 (${big})`, big <= 17);
+  t(`route audit — 60 random jobs: drawn length ≤ 1.175× the Manhattan minimum (${(len / manh).toFixed(3)})`, len / manh <= 1.175);
+  t(`route audit — 60 random jobs: kinks/spikes ≤ 2 (${smells}), best-effort fallbacks ≤ 5 (${fb})`, smells <= 2 && fb <= 5);
 }
 
 document.getElementById("summary").innerHTML =

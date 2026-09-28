@@ -326,7 +326,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
 /* hop-count regression guards (polish round 2026-09-19: returns route last
    and pick the least-crossing lane) */
 {
-  const ceiling = { residence: 5, estate: 18, stress: 192 };  // 2026-09-27 untwist pass (lane / riser swaps): estate 25→18, stress 272→191  // 2026-09-27 route audit: cheapest-of shapes for top-band + east feeds, chips approached from below — stress 308→272  // 2026-09-27 tighter zone spacing (gap 20 / row 24) + span grid: stress 319→308  // 2026-09-27 audit: col-C escape no longer cuts through its own amp — estate 24→25, stress 309→319 (the old counts were subsidized by 8 body-piercing wires)  // re-baselined 2026-09-21: AVB/switching bottom-anchored in col A — residence 7→5 (trunk to output module is now a straight neighbor run)
+  const ceiling = { residence: 5, estate: 17, stress: 188 };  // 2026-09-28 input order (ports in source order, ranked risers): estate 18→17, stress 192→188  // 2026-09-27 untwist pass (lane / riser swaps): estate 25→18, stress 272→191  // 2026-09-27 route audit: cheapest-of shapes for top-band + east feeds, chips approached from below — stress 308→272  // 2026-09-27 tighter zone spacing (gap 20 / row 24) + span grid: stress 319→308  // 2026-09-27 audit: col-C escape no longer cuts through its own amp — estate 24→25, stress 309→319 (the old counts were subsidized by 8 body-piercing wires)  // re-baselined 2026-09-21: AVB/switching bottom-anchored in col A — residence 7→5 (trunk to output module is now a straight neighbor run)
   for (const [name, raw] of Object.entries(fixtures)) {
     const { job, ix } = loadJob(raw);
     const p = place(job, ix);
@@ -2391,7 +2391,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
     if (k < 60) { dbl += A.doubleCrossings(rt).length; cor += A.cornerHops(rt).length; }
     if (k === 65) j65 = A.doubleCrossings(rt);
   }
-  t(`twists — 60 random jobs: pairs crossing twice ≤ 101 (${dbl}; about 300 in 60 jobs before the untwist pass), corner hops ≤ 8 (${cor})`, dbl <= 101 && cor <= 8);
+  t(`twists — 60 random jobs: pairs crossing twice ≤ 97 (${dbl}; about 300 in 60 jobs before the untwist pass, 101 before input order), corner hops ≤ 8 (${cor})`, dbl <= 97 && cor <= 8);
   t("twists — job #65: the red video feed and blue speaker feed no longer wind round each other", !j65.some(d => [d.a, d.b].includes("mx→z0-tv") && [d.a, d.b].includes("amp0→z5-spk")));
 }
 
@@ -2478,6 +2478,28 @@ for (const [name, raw] of Object.entries(fixtures)) {
 
   const pq = planQueueFiles(fixtures.estate, 0, CAT).map(f => typeof f === "string" ? f : f.text ?? f.content ?? JSON.stringify(f)).join("\n");
   t("hardening: the PlanQueue export carries no rack hardware (rack, patch panels, vents, shelves, kits)", !/Vent panel|patch panel|Rack shelf|rack kit|Equipment rack,/i.test(pq));
+}
+
+/* ---------- input order (user redline 2026-09-28) ----------
+   Feeds into a device's left edge land in the order their sources stack —
+   ATV 1, ATV 2, cable box into the MXNet switch — so they nest without a hop. */
+{
+  const { STARTERS, applyStarter } = await import("./starters.js");
+  const CAT = await (await fetch("./catalog.json")).json();
+  const blank = { generator: "SignalPath", schemaVersion: 1, job: { name: "x" }, house: { zones: [] }, solutions: [{ id: "s", name: "S" }] };
+  for (const st of STARTERS) {
+    const j = applyStarter(structuredClone(blank), st, CAT); j.house.zones = structuredClone(fixtures.residence.house.zones);
+    const { job, ix } = loadJob(j); const p = place(job, ix), rt = route(job, ix, p);
+    const dev = {}; for (const r of p.racks) for (const d of r.devices) dev[d.id] = d;
+    const byT = {};
+    for (const w of rt.wires) { const b = dev[w.to], e = w.pts.at(-1); if (b && Math.abs(e[0] - b.x) <= 1 && w.pts[0][0] < b.x) (byT[b.id] ||= []).push(w); }
+    const flipped = [], hopped = [];
+    for (const l of Object.values(byT)) {
+      for (const a of l) for (const b of l) if (a.pts[0][1] < b.pts[0][1] - 1 && a.pts.at(-1)[1] > b.pts.at(-1)[1] + 1) flipped.push(`${a.id} / ${b.id}`);
+      for (const w of l) if (w.hops.length) hopped.push(w.id);
+    }
+    t(`input order — ${st.id} starter: rack feeds land in source order, no hops on them`, !flipped.length && !hopped.length, flipped.concat(hopped).join(", "));
+  }
 }
 
 document.getElementById("summary").innerHTML =

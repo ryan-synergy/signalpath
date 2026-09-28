@@ -1263,6 +1263,78 @@ export function route(job, ix, placement, opts = {}) {
       eastBandMinX: east.length ? Math.min(...east.map(o => o.t.pz.x)) : null });
   }
 
+  /* --- input side: arrivals on a device's LEFT edge land in the order their
+     sources stack (user redline 2026-09-28: ATV 1, ATV 2, cable box into an
+     MXNet switch — first-come ports let the cable box take ATV 2's spot and
+     forced a hop). Each target's feeds from the west are sorted by source
+     height and given ports top-down, as close to straight across as spacing
+     allows. Risers are ordered too: of the wires that rise onto their port, the
+     lowest source rides nearest the target; of those that drop, the highest
+     does — the two ways a pair can nest without crossing. --- */
+  const leftPlan = {}, riserPlan = {};
+  {
+    const byTarget = {};
+    visConns.forEach((c, i) => {
+      if (done.has(i)) return;
+      const compTo = s.companions[c.to];
+      if (ix.endpointsById[c.to] || (compTo && ix.endpointsById[compTo.serves])) return;
+      const b = devById[c.to]; if (!b) return;
+      const a = devById[c.from], chip = chipById[c.from];
+      let sy, sxR;
+      if (a && b.x >= a.x + a.w) { sy = portPlan[wireId(c)] ?? a.y + a.h / 2; sxR = a.x + a.w; }
+      else if (chip && !ix.endpointsById[s.companions[c.from]?.serves] && chip.x + chip.w <= b.x) { sy = chip.y + chip.h / 2; sxR = chip.x + chip.w; }
+      else return;
+      (byTarget[b.id] ||= []).push({ id: wireId(c), sy, sxR });
+    });
+    for (const [bid, list] of Object.entries(byTarget)) {
+      const [min, max] = portSpan(devById[bid]);
+      list.sort((p, q) => p.sy - q.sy || p.sxR - q.sxR);
+      const n = list.length;
+      const pitch = n > 1 ? Math.min(RT.lane, Math.max(10, (max - min) / (n - 1))) : RT.lane;
+      const ys = list.map(p => Math.max(min, Math.min(max, p.sy)));
+      for (let k = 1; k < n; k++) ys[k] = Math.max(ys[k], ys[k - 1] + pitch);
+      if (ys[n - 1] > max) { ys[n - 1] = max; for (let k = n - 2; k >= 0; k--) ys[k] = Math.min(ys[k], ys[k + 1] - pitch); }
+      if (ys[0] < min) for (let k = 0; k < n; k++) ys[k] = min + k * pitch;
+      list.forEach((p, k) => { leftPlan[p.id] = ys[k]; p.ty = ys[k]; p.col = Math.round(devById[bid].x); });
+    }
+    // risers share the channel west of a column across ALL its devices (the AVB
+    // switch feeding both Savant modules), so rank them per column by landing:
+    // rising wires lowest-landing nearest the column, dropping ones highest-landing
+    const byCol = {};
+    for (const l of Object.values(byTarget)) for (const p of l) (byCol[p.col] ||= []).push(p);
+    for (const [col, l] of Object.entries(byCol)) {
+      const up = l.filter(p => p.ty < p.sy - 0.5).sort((p, q) => q.ty - p.ty);
+      const dn = l.filter(p => p.ty > p.sy + 0.5).sort((p, q) => p.ty - q.ty);
+      up.forEach((p, r) => { riserPlan[p.id] = { key: col + "u", r, n: up.length }; });
+      dn.forEach((p, r) => { riserPlan[p.id] = { key: col + "d", r, n: dn.length }; });
+    }
+  }
+  // rank 0 rides easternmost. A riser is centred in its channel like any other
+  // (pushing them all against the target crowded busy gaps), and may only take
+  // an x that keeps it in rank order with the ones already placed — the lane
+  // allocator's slide past a taken x must never flip two of them
+  const riserTaken = {};
+  const riserRangeFor = (id, range) => {
+    const rp = riserPlan[id]; if (!rp) return range;
+    // bounded by the nearest placed rank each side, less a lane for every rank
+    // between still to come (a riser routed early leaves room for them)
+    const taken = riserTaken[rp.key] || new Map();
+    let e = -1, w = rp.n;
+    for (const r of taken.keys()) { if (r < rp.r && r > e) e = r; if (r > rp.r && r < w) w = r; }
+    const hi = (e >= 0 ? taken.get(e) - RT.lane : range[1]) - RT.lane * (rp.r - e - 1);
+    const lo = (w < rp.n ? taken.get(w) + RT.lane : range[0]) + RT.lane * (w - rp.r - 1);
+    return [Math.max(range[0], lo), Math.min(range[1], hi)];
+  };
+  const riserWant = (id, range) => {
+    const rp = riserPlan[id], c = (range[0] + range[1]) / 2;
+    return rp ? Math.max(range[0], Math.min(range[1], c + ((rp.n - 1) / 2 - rp.r) * RT.lane)) : c;
+  };
+  const riserClaim = (id, w) => {
+    const rp = riserPlan[id];
+    const p = w?.pts, n = p?.length;   // the riser is the last vertical before the landing leg
+    if (rp && n >= 4 && p[n - 3][0] === p[n - 2][0]) (riserTaken[rp.key] ||= new Map()).set(rp.r, p[n - 3][0]);
+  };
+
   /* ============ pass 3: rigid non-zone wires FIRST (short structural runs
      claim their channels; zone feeds are flexible and relaxable) ============ */
   visConns.forEach((conn, i) => {
@@ -1751,22 +1823,27 @@ export function route(job, ix, placement, opts = {}) {
       // target's left edge until the whole path checks out
       const gap = b.col === "C" ? gapBCx : gapABx;
       const [tmin, tmax] = portSpan(b);
-      const tyDesired = Math.max(tmin, Math.min(tmax, sy));
+      const tyDesired = leftPlan[wireId(conn)] ?? Math.max(tmin, Math.min(tmax, sy));
+      let gapR = riserRangeFor(wireId(conn), gap);
       let committed = null, sywCache = null, westTaken = false;   // west-wrap exit port: taken at most once per connection
+      // in rank order if at all possible; a ranked riser with no legal x retries unranked (order never beats routable)
+      for (const ranked of gapR === gap ? [false] : [true, false]) {
+      if (committed) break;
+      if (!ranked) gapR = gap;
       for (let k = 0; k <= Math.ceil((tmax - tmin) / RT.lane) + 1 && !committed; k++) {
         for (const sgn of k ? [1, -1] : [1]) {
           const ty = tyDesired + sgn * k * RT.lane;
           if (ty < tmin || ty > tmax || (leftPorts[b.id] || []).some(u => Math.abs(u - ty) < 10)) continue;
           const cands = [];
           if (sy === ty) cands.push([[sx, sy], [b.x, ty]]);
-          const zx = alloc(usedV, (gap[0] + gap[1]) / 2, Math.min(sy, ty), Math.max(sy, ty), nWire, 0,
-            x => segBlocked(x, Math.min(sy, ty), x, Math.max(sy, ty), skip), gap);
+          const zx = gapR[0] > gapR[1] ? null : alloc(usedV, riserWant(wireId(conn), gapR), Math.min(sy, ty), Math.max(sy, ty), nWire, 0,
+            x => segBlocked(x, Math.min(sy, ty), x, Math.max(sy, ty), skip), gapR);
           if (zx != null) cands.push([[sx, sy], [zx, sy], [zx, ty], [b.x, ty]]);
           // starved center: the gap's edge channels may still be free (deep B→C
           // descents to bottom-anchored amps travel the whole crowded gap)
-          for (const [des, bias] of [[gap[1] - 6, -1], [gap[0] + 6, +1]]) {
-            const ze = alloc(usedV, des, Math.min(sy, ty), Math.max(sy, ty), nWire, bias,
-              x => segBlocked(x, Math.min(sy, ty), x, Math.max(sy, ty), skip), gap);
+          for (const [des, bias] of [[gapR[1] - 6, -1], [gapR[0] + 6, +1]]) {
+            const ze = gapR[0] > gapR[1] ? null : alloc(usedV, Math.max(gapR[0], Math.min(gapR[1], des)), Math.min(sy, ty), Math.max(sy, ty), nWire, bias,
+              x => segBlocked(x, Math.min(sy, ty), x, Math.max(sy, ty), skip), gapR);
             if (ze != null && ze !== zx) cands.push([[sx, sy], [ze, sy], [ze, ty], [b.x, ty]]);
           }
           // double-jog (col A → C, or when the single Z is starved)
@@ -1775,8 +1852,8 @@ export function route(job, ix, placement, opts = {}) {
           const gap1 = a.col === "A" ? gapABx : gapBCx;
           const abx = my != null ? alloc(usedV, (gap1[0] + gap1[1]) / 2, Math.min(sy, my), Math.max(sy, my), nWire, 0,
             x => segBlocked(x, Math.min(sy, my), x, Math.max(sy, my), skip), gap1) : null;
-          const bcx = my != null ? alloc(usedV, gap[1] - 6, Math.min(my, ty), Math.max(my, ty), nWire, -1,
-            x => segBlocked(x, Math.min(my, ty), x, Math.max(my, ty), skip), gap) : null;
+          const bcx = my != null && gapR[0] <= gapR[1] ? alloc(usedV, gapR[1] - 6, Math.min(my, ty), Math.max(my, ty), nWire, -1,
+            x => segBlocked(x, Math.min(my, ty), x, Math.max(my, ty), skip), gapR) : null;
           if (my != null && abx != null && bcx != null && Math.abs(abx - bcx) > 6)
             cands.push([[sx, sy], [abx, sy], [abx, my], [bcx, my], [bcx, ty], [b.x, ty]]);
           const base = cands.find(c => c && !pathBlocked(c, skip) && pathRegisterable(c, nWire));
@@ -1812,9 +1889,11 @@ export function route(job, ix, placement, opts = {}) {
           if (chosen) {
             (leftPorts[b.id] ||= []).push(ty);
             committed = commit(conn, "intra", chosen);
+            if (!westTaken) riserClaim(wireId(conn), committed);
           }
           if (committed) break;
         }
+      }
       }
       // judged once, on the final outcome — not per entry-port attempt
       if ((rHint?.ch === "west" && !westTaken) || rHint?.ch === "staple" || rHint?.ch === "wrap")
@@ -1939,13 +2018,14 @@ export function route(job, ix, placement, opts = {}) {
     // chip badge output exits toward the device it feeds (badge exemption)
     const ccy = chip.y + chip.h / 2, skip = new Set([chip.id, b.id]);
     const chipR = chip.x + chip.w;
-    const ty = takeLeftPort(b, ccy);
+    const ty = takeLeftPort(b, leftPlan[wireId(conn)] ?? ccy);
     const cands = [];
     if (chipR <= b.x) {
       if (Math.abs(ty - ccy) < 1) cands.push([[chipR, ccy], [b.x, ty]]);
       if (b.x - chipR >= 20) {
-        const mx = alloc(usedV, (chipR + b.x) / 2, Math.min(ccy, ty), Math.max(ccy, ty), nWire, 0,
-          x => segBlocked(x, Math.min(ccy, ty), x, Math.max(ccy, ty), skip), [chipR + 4, b.x - 4]);
+        const rr = riserRangeFor(wireId(conn), [chipR + 4, b.x - 4]);
+        const mx = rr[0] > rr[1] ? null : alloc(usedV, riserWant(wireId(conn), rr), Math.min(ccy, ty), Math.max(ccy, ty), nWire, 0,
+          x => segBlocked(x, Math.min(ccy, ty), x, Math.max(ccy, ty), skip), rr);
         if (mx != null) cands.push([[chipR, ccy], [mx, ccy], [mx, ty], [b.x, ty]]);
       }
       // tight squeeze (chip parked right beside the hub): exit the chip's LEFT
@@ -1960,7 +2040,13 @@ export function route(job, ix, placement, opts = {}) {
         x => segBlocked(x, Math.min(ccy, ty), x, Math.max(ccy, ty), skip), gap);
       if (wx != null) cands.push([[chip.x, ccy], [wx, ccy], [wx, ty], [b.x, ty]]);
     }
-    tryCommit(conn, "chip-out", cands, skip);
+    // order never beats routable: the unranked riser is the last resort before a fallback
+    if (riserPlan[wireId(conn)] && chipR <= b.x && b.x - chipR >= 20) {
+      const mx = alloc(usedV, (chipR + b.x) / 2, Math.min(ccy, ty), Math.max(ccy, ty), nWire, 0,
+        x => segBlocked(x, Math.min(ccy, ty), x, Math.max(ccy, ty), skip), [chipR + 4, b.x - 4]);
+      if (mx != null) cands.push([[chipR, ccy], [mx, ccy], [mx, ty], [b.x, ty]]);
+    }
+    riserClaim(wireId(conn), tryCommit(conn, "chip-out", cands, skip));
   }
 
   function routeReturn(conn, b, origin = conn.from) {

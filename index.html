@@ -281,21 +281,21 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20260928023110",
-    "./app/commands.js": "./app/commands.js?v=20260928023110",
-    "./app/engine.js": "./app/engine.js?v=20260928023110",
-    "./app/exports.js": "./app/exports.js?v=20260928023110",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260928023110",
-    "./app/hookup.js": "./app/hookup.js?v=20260928023110",
-    "./app/importers.js": "./app/importers.js?v=20260928023110",
-    "./app/names.js": "./app/names.js?v=20260928023110",
-    "./app/network.js": "./app/network.js?v=20260928023110",
-    "./app/pages.js": "./app/pages.js?v=20260928023110",
-    "./app/power.js": "./app/power.js?v=20260928023110",
-    "./app/quickadd.js": "./app/quickadd.js?v=20260928023110",
-    "./app/rack.js": "./app/rack.js?v=20260928023110",
-    "./app/route-audit.js": "./app/route-audit.js?v=20260928023110",
-    "./app/starters.js": "./app/starters.js?v=20260928023110"
+    "./app/ai.js": "./app/ai.js?v=20260928110914",
+    "./app/commands.js": "./app/commands.js?v=20260928110914",
+    "./app/engine.js": "./app/engine.js?v=20260928110914",
+    "./app/exports.js": "./app/exports.js?v=20260928110914",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260928110914",
+    "./app/hookup.js": "./app/hookup.js?v=20260928110914",
+    "./app/importers.js": "./app/importers.js?v=20260928110914",
+    "./app/names.js": "./app/names.js?v=20260928110914",
+    "./app/network.js": "./app/network.js?v=20260928110914",
+    "./app/pages.js": "./app/pages.js?v=20260928110914",
+    "./app/power.js": "./app/power.js?v=20260928110914",
+    "./app/quickadd.js": "./app/quickadd.js?v=20260928110914",
+    "./app/rack.js": "./app/rack.js?v=20260928110914",
+    "./app/route-audit.js": "./app/route-audit.js?v=20260928110914",
+    "./app/starters.js": "./app/starters.js?v=20260928110914"
 } }
 </script>
 <script>
@@ -463,7 +463,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20260928023110").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20260928110914").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {

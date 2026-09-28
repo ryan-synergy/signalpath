@@ -2514,6 +2514,11 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("planqueue names: Kaleidescape is PlanQueue's current lineup, with published watts (\"?\" where Kaleidescape publishes none)",
     CAT.devices["kaleidescape-strato-v"].partNo === "K0701-0000" && CAT.devices["kaleidescape-strato-v"].powerMaxW === 13 &&
     CAT.devices["kaleidescape-compact-terra-prime-24"].powerMaxW === undefined && CAT.devices["kaleidescape-strato-c"].flags.includes("legacy"));
+  // a walkthrough's plain "Kaleidescape" is a player — sized as PlanQueue's current one (Ryan 2026-09-28)
+  const { catalogFor } = await import("./network.js");
+  t("planqueue names: a walkthrough's plain \"Kaleidescape\" sizes as a Strato V; a named server doesn't",
+    catalogFor({ type: "source", model: "Kaleidescape" }, CAT)?.partNo === "K0701-0000" && catalogFor({ type: "source", model: "Kaleidescape 2" }, CAT)?.partNo === "K0701-0000" &&
+    catalogFor({ type: "source", model: "Kaleidescape Mini Terra Prime" }, CAT)?.partNo === "K0115-0008-SSD");
 }
 
 /* ---------- input order (user redline 2026-09-28) ----------

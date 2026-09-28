@@ -2177,7 +2177,7 @@
       "model": "Strato V 4K Movie Player (Dolby Vision)",
       "type": "source",
       "lan": 1,
-      "match": "strato ?v",
+      "match": "strato ?v|^kaleidescape( movie player| player)?( \\d+)?$",
       "partNo": "K0701-0000",
       "notes": "kaleidescape.com spec page + Terra/Mini Terra Prime install guides (2026-09-28): 13W max / 4.9W typ / 3.8W high-power standby; 1× HDMI 2.1 (video+audio), coax + Toslink; 1× GbE; external 12V 60W brick; 1–2 per 1U on KMOUNT-RACKSHELF. PlanQueue SKU K0701-0000.",
       "aliases": [

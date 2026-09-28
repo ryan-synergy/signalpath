@@ -45,9 +45,17 @@ export function catalogFor(d, catalog) {
 // what the rack math reads for a box: its catalog/profile spec with the job's own
 // filled-in values on top (RACK tab: a "?" someone typed in) — the job wins
 export const SPEC_FIELDS = ["rackUnits", "powerTypicalW", "powerMaxW", "outlets"];
+// what a typed-in figure may be; anything else ("?", "12U", a typo'd 5000U) stays unknown
+// rather than drawing a NaN-tall box or a rack the page can't finish
+export const SPEC_LIMITS = { rackUnits: [0, 20], powerTypicalW: [0, 20000], powerMaxW: [0, 20000], outlets: [0, 48] };
+export const specNum = (k, v) => {
+  if (v == null || v === "" || typeof v === "object") return null;
+  const n = +v, [lo, hi] = SPEC_LIMITS[k] || [0, Infinity];
+  return Number.isFinite(n) && n >= lo && n <= hi ? n : null;
+};
 export function specFor(d, catalog) {
   const c = catalogFor(d, catalog);
-  const own = Object.fromEntries(SPEC_FIELDS.filter(k => d?.[k] != null && d[k] !== "").map(k => [k, +d[k]]));
+  const own = Object.fromEntries(SPEC_FIELDS.map(k => [k, specNum(k, d?.[k])]).filter(([, v]) => v != null));
   return c || Object.keys(own).length ? { ...(c || {}), ...own } : null;
 }
 

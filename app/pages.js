@@ -791,7 +791,7 @@ function rackPages(job, ix, adviseResult, opts, label) {
       const W = v => v == null ? Q : String(v);
       const rows = power.loads.map(l => ({ cells: [clip(l.what, 60), String(l.outlets), W(l.typicalW), W(l.maxW), l.why] }));
       if (power.poe.length) rows.push({ gray: true, cells: [clip(`PoE-powered (no outlet): ${power.poe.map(p => p.what).join(", ")}`, 72), "0", "", "", "from its switch"] });
-      table("Power & heat", `${units} · ${power.need} outlets · ${verdict} · ~${power.typicalW} W typ / ${power.maxW} W max of ${power.circuitW} W (${power.circuits > 1 ? `${power.circuits} × ` : ""}${power.circuitA}A) · ~${power.btu.toLocaleString("en-US")} BTU/hr`,
+      table("Power & heat", `${units} · ${power.need} outlets · ${verdict} · ~${power.typicalW}${power.noWatts.length ? "+" : ""} W typ / ${power.maxW}${power.noWatts.length ? "+" : ""} W max of ${power.circuitW} W (${power.circuits > 1 ? `${power.circuits} × ` : ""}${power.circuitA}A) · ~${power.btu.toLocaleString("en-US")} BTU/hr`,
         [{ label: "Device", dx: 14 }, { label: "Outlets", dx: 520 }, { label: "Typ W", dx: 610 }, { label: "Max W", dx: 700 }, { label: "Note", dx: 790 }], rows);
       const notes = [];
       if (power.noWatts.length) notes.push([`? = no wattage on file for ${power.noWatts.length} box${power.noWatts.length > 1 ? "es" : ""} — totals are a floor until filled in (RACK tab)`, "#a45a12"]);

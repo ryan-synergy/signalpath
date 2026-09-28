@@ -42,9 +42,9 @@ export function powerPlan(job, ix, catalog, netPlans = []) {
     };
     for (const d of Object.values(s.devices)) {
       const c = specFor(d, catalog);
-      if (d.type === "power") { units.push({ id: d.id, model: d.model || c?.model || d.id, outlets: c?.outlets ?? d.outlets ?? null, controlled: c?.controlledOutlets ?? null, amps: c?.amps ?? 15 }); continue; }
+      if (d.type === "power") { units.push({ id: d.id, model: d.model || c?.model || d.id, outlets: c?.outlets ?? null, controlled: c?.controlledOutlets ?? null, amps: c?.amps ?? 15 }); continue; }
       if (poeRow(d.id)) { poe.push({ id: d.id, what: d.model || d.id }); continue; }
-      const n = Math.max(1, Math.floor(+(d.outlets ?? c?.outlets) || 1));
+      const n = Math.min(48, Math.max(1, Math.floor(+c?.outlets || 1)));   // specFor vetted a typed-in count
       loads.push({ id: d.id, what: d.model || d.id, outlets: n, why: n > 1 ? `${n} power cords` : "", ...switchWatts(d, c) });
     }
     // adapters that live in the rack: MXNet encoders on the rack sources

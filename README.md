@@ -56,7 +56,7 @@ No build step, no dependencies, no server. Pure static HTML + ES modules.
 
 ## Running it
 
-**Easiest:** open the live URL above. It works offline-ish after first load and runs fine on an iPad.
+**Easiest:** open the live URL above. It works offline-ish after first load and runs fine on an iPad. Right after an update, a browser still holding old files shows *"SignalPath was just updated — Reload"* instead of a blank page; your jobs are kept either way.
 
 **Locally:** the app uses ES module imports, so it needs to be served over HTTP (double-clicking `index.html` will hit CORS restrictions in most browsers). Any static server works:
 
@@ -84,6 +84,7 @@ app/hookup.js          Zone hookup: read/set a zone's TV video, run type, speake
 app/commands.js        The command vocabulary: name resolution, run-on-a-copy planning with per-step results, typed-phrase parser
 app/ai.js              Job summary + handoff prompt for Claude, reply parsing, the built-in Claude call with self-correction, connection settings
 proxy/worker.js        Optional Cloudflare Worker that holds the Anthropic key for ✦ AI (not served by the app)
+deploy.sh              Copies the app into the GitHub Pages repo, stamps the build (?v=dev → ?v=<UTC time>), commits, pushes
 app/starters.js        Rack starting points (gear + in-rack patching) for new jobs; applyStarter()
 app/names.js           The one vocabulary: display names for gear types, adapters, signals, statuses, scopes, speaker setups; describeNode() for any connection end
 app/test-fixtures/      Test-only jobs (dense-harness.json: one source → 9 TVs, exercises bundling)
@@ -91,7 +92,7 @@ app/test-fixtures/      Test-only jobs (dense-harness.json: one source → 9 TVs
 
 ## Tests
 
-Open `app/tests.html` in a served browser tab. 573 assertions run on load and report pass/fail with a summary line. The suite covers the data model, validation, advisor budgets, placement geometry, router hop ceilings per fixture (regression guards), render output, importers, quick-add parsing, catalog integrity, and print pages. **All tests green is the bar for every change.** `app/fuzz.html` complements it: hand-built edge cases plus hundreds of seeded random jobs pushed through the whole pipeline, checking for crashes, malformed SVG, `undefined`/`NaN` on paper, wires crossing any device or card body, overlapping hop arcs, vanished wires, and whether a picked reroute (returns, rack runs and zone feeds) reproduces its preview and keeps the whole sheet legal. Every job is also routed in harness style and with outdoor zones as their own cluster, held to the same geometry checks. Router fallbacks on overloaded layouts are reported as a capacity metric, not a failure.
+Open `app/tests.html` in a served browser tab. 583 assertions run on load and report pass/fail with a summary line. The suite covers the data model, validation, advisor budgets, placement geometry, router hop ceilings per fixture (regression guards), render output, importers, quick-add parsing, catalog integrity, and print pages. **All tests green is the bar for every change.** `app/fuzz.html` complements it: hand-built edge cases plus hundreds of seeded random jobs pushed through the whole pipeline, checking for crashes, malformed SVG, `undefined`/`NaN` on paper, wires crossing any device or card body, overlapping hop arcs, vanished wires, and whether a picked reroute (returns, rack runs and zone feeds) reproduces its preview and keeps the whole sheet legal. Every job is also routed in harness style and with outdoor zones as their own cluster, held to the same geometry checks. Router fallbacks on overloaded layouts are reported as a capacity metric, not a failure.
 
 ## Architecture in one paragraph
 

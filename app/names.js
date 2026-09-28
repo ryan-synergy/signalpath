@@ -80,7 +80,8 @@ export function describeNode(job, sol, id) {
       const setup = SPEAKER_SETUP[e.config || "stereo"] || e.config;
       return { group: "In the zones", kind: "speakers", short: `${z.name} speakers`, label: `${z.name} speakers (${setup})` };
     }
-    return { group: "In the zones", kind: e.type, short: `${z.name} ${e.type}`, label: `${z.name} ${e.type}` };
+    const t = e.type || "endpoint (no type)";
+    return { group: "In the zones", kind: e.type, short: `${z.name} ${t}`, label: `${z.name} ${t}` };
   }
   for (const c of sol?.companions || []) if (c.id === id) {
     const at = describeNode(job, sol, c.serves);

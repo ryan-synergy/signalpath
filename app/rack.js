@@ -29,7 +29,8 @@ export function rackPlans(job, ix, catalog) {
     let cat6 = 0;
     try { cat6 = wireRuns(job, ix, { solution: si }).filter(r => /^Cat6/.test(r.cable)).reduce((n, r) => n + r.count, 0); } catch { cat6 = 0; }
     (sol.racks || []).forEach((r, ri) => {
-      const size = Math.max(1, Math.floor(+r.units || +job.job?.rackUnits || DEFAULT_RACK_U));
+      // 1–60U: a typo'd 4200 would draw 4,200 rows and stall the page
+      const size = Math.min(60, Math.max(1, Math.floor(+r.units || +job.job?.rackUnits || DEFAULT_RACK_U) || DEFAULT_RACK_U));
       const items = [], unknown = [], rear = [], small = [];
       if (ri === 0 && cat6) for (let k = 0; k < Math.ceil(cat6 / PATCH_PORTS); k++)
         items.push({ kind: "patch", tier: 0, u: 1, label: `Cat6 patch panel ${PATCH_PORTS}-port${Math.ceil(cat6 / PATCH_PORTS) > 1 ? ` (${k + 1})` : ""}` });

@@ -75,6 +75,8 @@ export function sniff(raw) {
 
 /* ---------- shared skeleton ---------- */
 function skeletonJob(name, clientName, address) {
+  const txt = v => typeof v === "string" || typeof v === "number" ? String(v) : "";   // a list/object here printed "[object Object]"
+  name = txt(name); clientName = txt(clientName); address = txt(address);
   return {
     generator: "SignalPath", schemaVersion: 1,
     job: { name: name || "Imported Job", client: { name: clientName || "Customer Name", address: address || "" },
@@ -101,7 +103,7 @@ const swStatus = s => {
 
 export function importSiteWalk(raw) {
   const notes = [], warnings = [], unmapped = [], walk = {};
-  const job = skeletonJob(raw.client ? `${raw.client} Residence` : "Site Walk Import", raw.client, raw.address);
+  const job = skeletonJob(typeof raw.client === "string" && raw.client ? `${raw.client} Residence` : "Site Walk Import", raw.client, raw.address);
   const sol = job.solutions[0];
 
   // areas from floors (only when the walk recorded more than one)
@@ -114,8 +116,9 @@ export function importSiteWalk(raw) {
   for (const r of rooms) {
     // the room is the zone; a walk's shared audio-zone label ("Main Level" over
     // Kitchen + Dining) means those rooms play together off one amp zone
-    const zname = String(r.name || r.zoneName || "Zone").trim() || "Zone";
-    const audioZone = String(r.zoneName || "").trim();
+    const str = v => typeof v === "string" || typeof v === "number" ? String(v).trim() : "";
+    const zname = str(r.name) || str(r.zoneName) || "Zone";
+    const audioZone = str(r.zoneName);
     const zid = newId("z-" + slug(zname));
     const zone = { id: zid, name: zname, scope: "included", endpoints: [] };
     if (floors.length > 1 && floorOf(r)) zone.area = "area-" + slug(floorOf(r));
@@ -169,8 +172,12 @@ export function importSiteWalk(raw) {
   }
 
   // rack sources → starter devices
-  for (const [name, count] of Object.entries(raw.rack?.sources || {})) {
-    for (let i = 0; i < (count || 0); i++) {
+  const srcList = raw.rack?.sources && typeof raw.rack.sources === "object" && !Array.isArray(raw.rack.sources) ? raw.rack.sources : {};
+  for (const [name, n] of Object.entries(srcList)) {
+    // a count is 0–16 per kind; anything else is a typo, not ten million Apple TVs
+    const count = Math.min(16, Math.max(0, Math.floor(+n) || 0));
+    if (+n > 16) warnings.push(`Rack sources: "${name}" count ${n} capped at 16 — check the walk`);
+    for (let i = 0; i < count; i++) {
       sol.racks[0].devices.push({ id: uid("src"), type: "source",
         sourceType: name.toLowerCase().includes("apple") ? "appletv" : "generic",
         model: count > 1 ? `${name} ${i + 1}` : name, status: "new" });
@@ -322,19 +329,21 @@ const BP_CATEGORY = {
 };
 const BP_SIGNAL = { hdmi: "video", video: "video", audio: "audio", ethernet: "network", network: "network" };
 
+// a Blueprinted list field that isn't a list (hand-edited, or a future format) reads as empty
+const arr = v => Array.isArray(v) ? v : [];
 export function importBlueprinted(raw) {
   const notes = [], warnings = [], unmapped = [];
-  const job = skeletonJob(raw.client ? `${raw.client} — Upgrade` : "Blueprinted Import", raw.client, "");
+  const job = skeletonJob(typeof raw.client === "string" && raw.client ? `${raw.client} — Upgrade` : "Blueprinted Import", raw.client, "");
   const sol = job.solutions[0];
   sol.platforms = ["savant"]; // it came off a Savant host
   notes.push(`Old system: ${raw.system?.hostModel || "unknown host"} · Blueprint ${raw.system?.blueprintVersion || "?"} · config saved ${raw.configSaved || "?"}`);
-  for (const a of raw.system?.advisories || []) warnings.push(a);
+  for (const a of arr(raw.system?.advisories)) warnings.push(String(a));
   notes.push(raw.note || "Everything below is the OLD system as programmed — verify on the walk");
 
   const newId = idMaker();
   for (const r of (Array.isArray(raw.rooms) ? raw.rooms : []).filter(r => r && typeof r === "object")) {
-    if (r.zoneType === "No AV endpoints") { unmapped.push(`${r.name}: no AV — skipped`); continue; }
-    const zname = String(r.name || "Zone").trim() || "Zone";
+    const zname = String(typeof r.name === "string" ? r.name : "Zone").trim() || "Zone";
+    if (r.zoneType === "No AV endpoints") { unmapped.push(`${zname}: no AV — skipped`); continue; }
     const zid = newId("z-" + slug(zname));
     const zone = { id: zid, name: zname, scope: "included", endpoints: [] };
     const znotes = [];
@@ -346,26 +355,26 @@ export function importBlueprinted(raw) {
       if (r.zoneType.includes("local")) znotes.push(r.zoneType.includes("Theater") ? "theater — local AVR" : "local amp/AVR in room");
     }
     if (r.tv) {
-      const old = (r.oldTv || [])[0];
+      const old = arr(r.oldTv).find(o => o && typeof o === "object");
       const ep = { id: zid + "-tv", type: "display", displayType: "tv",
-        brand: old?.make || "", size: old?.size || 65, status: "ofe" };
+        brand: typeof old?.make === "string" ? old.make : "", size: +old?.size > 0 ? +old.size : 65, status: "ofe" };
       if (!old?.size) ep.confirm = ["size"];
       zone.endpoints.push(ep);
       if (old) znotes.push(`old TV: ${[old.make, old.model].filter(Boolean).join(" ")}`);
       if (r.videoFeed === "matrix") znotes.push("was on video distribution");
     }
-    for (const f of r.flags || []) warnings.push(`${r.name}: ${f}`);
-    for (const a of r.avrs || []) znotes.push(`old AVR: ${a}`);
-    for (const s of r.inRoomSources || []) znotes.push(`in-room source: ${s}`);
-    if ((r.otherSystems || []).length) unmapped.push(`${r.name}: non-AV systems — ${r.otherSystems.join(", ")}`);
+    for (const f of arr(r.flags)) warnings.push(`${zname}: ${f}`);
+    for (const a of arr(r.avrs)) znotes.push(`old AVR: ${a}`);
+    for (const s of arr(r.inRoomSources)) znotes.push(`in-room source: ${s}`);
+    if (arr(r.otherSystems).length) unmapped.push(`${zname}: non-AV systems — ${arr(r.otherSystems).join(", ")}`);
     if (znotes.length) zone.note = znotes.join(" · ");
-    if (!zone.endpoints.length) { unmapped.push(`${r.name} (${r.zoneType}): nothing mappable — skipped`); continue; }
+    if (!zone.endpoints.length) { unmapped.push(`${zname} (${r.zoneType}): nothing mappable — skipped`); continue; }
     job.house.zones.push(zone);
   }
 
   // rack components → devices (old gear = OFE until replaced)
   const nameToId = {};
-  for (const c of raw.rack || []) {
+  for (const c of arr(raw.rack).filter(c => c && typeof c === "object")) {
     const type = BP_CATEGORY[c.category];
     if (type === null || type === undefined) {
       if (c.category && !["Lighting", "Display"].includes(c.category)) unmapped.push(`rack: ${c.component} (${c.category}) — unmapped category`);
@@ -379,7 +388,7 @@ export function importBlueprinted(raw) {
 
   // programmed wiring graph → starter connections (rack-to-rack only; room ends need the walk)
   let mapped = 0, skipped = 0;
-  for (const c of raw.connections || []) {
+  for (const c of arr(raw.connections).filter(c => c && typeof c === "object")) {
     const from = nameToId[c.source], to = nameToId[c.sink];
     const signal = BP_SIGNAL[String(c.signal || "").toLowerCase()];
     if (from && to && signal) { sol.connections.push({ from, to, signal }); mapped++; }
@@ -419,12 +428,35 @@ export async function decodeHandoff(hash) {
 }
 
 /* ---------- the one door ---------- */
+/* A foreign survey is read field by field, and a field holding the wrong kind
+   of value (a list where a room name goes, a number where a list goes) used to
+   crash the adapter or print "[object Object]" on the drawing. This pass makes
+   every field the adapters read the kind they expect — wrong kinds are dropped,
+   the way a missing field is. */
+const TEXT_KEYS = new Set(["name", "floor", "zoneName", "equipLoc", "audStatus", "tvStatus", "audio", "audioFeed", "videoFeed", "wiring", "barType",
+  "thDisplay", "thScreen", "zoneType", "notes", "note", "make", "model", "manufacturer", "component", "category", "signal", "source", "sink",
+  "client", "address", "controlSystem", "jobType", "location", "configSaved", "hostModel", "blueprintVersion", "tvSize"]);
+const TEXT_LIST_KEYS = new Set(["avrs", "flags", "inRoomSources", "localSources", "otherSystems", "advisories", "habits"]);
+const OBJ_LIST_KEYS = new Set(["rooms", "oldTv", "rack", "connections", "cameras"]);
+export function tidySurvey(v, depth = 0) {
+  if (!v || typeof v !== "object" || depth > 40) return v;
+  if (Array.isArray(v)) { v.forEach(x => tidySurvey(x, depth + 1)); return v; }
+  for (const [k, x] of Object.entries(v)) {
+    if (TEXT_KEYS.has(k) && x != null && typeof x !== "string") { if (typeof x === "number" && Number.isFinite(x)) v[k] = String(x); else delete v[k]; }
+    else if (TEXT_LIST_KEYS.has(k)) v[k] = Array.isArray(x) ? x.filter(e => typeof e === "string" || typeof e === "number") : [];
+    else if (OBJ_LIST_KEYS.has(k) && x != null && !Array.isArray(x) && !(k === "rack" && typeof x === "object")) delete v[k];
+    else if (OBJ_LIST_KEYS.has(k) && Array.isArray(x)) { v[k] = x.filter(e => e && typeof e === "object"); tidySurvey(v[k], depth + 1); }
+    else tidySurvey(x, depth + 1);
+  }
+  return v;
+}
+
 export function importAny(raw) {
   stripUnsafe(raw);
   const kind = sniff(raw);
   if (kind === "signalpath") return { kind, job: assertJobShape(raw), notes: [], warnings: [], unmapped: [] };
-  if (kind === "sitewalk") return importSiteWalk(raw);
-  if (kind === "blueprinted") return importBlueprinted(raw);
+  if (kind === "sitewalk") return importSiteWalk(tidySurvey(raw));
+  if (kind === "blueprinted") return importBlueprinted(tidySurvey(raw));
   throw new Error("Unrecognized file — expected SignalPath, SiteWalk/AVWalk, or Blueprinted JSON");
 }
 

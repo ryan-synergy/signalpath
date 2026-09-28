@@ -275,6 +275,55 @@
 .rtab td { padding: 3px 4px; border-bottom: 1px solid rgba(128,128,128,.12); }
 .rtab input { font-size: 12px; padding: 2px 4px; }
 </style>
+<!-- Every app file carries the build stamp (deploy replaces "v=dev"): GitHub
+     Pages lets a browser keep a file 10 minutes, and a new page mixed with
+     cached old modules fails on a missing export — a blank app. Module-to-module
+     imports resolve through this map too. -->
+<script type="importmap">
+{ "imports": {
+    "./app/ai.js": "./app/ai.js?v=20260928023110",
+    "./app/commands.js": "./app/commands.js?v=20260928023110",
+    "./app/engine.js": "./app/engine.js?v=20260928023110",
+    "./app/exports.js": "./app/exports.js?v=20260928023110",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260928023110",
+    "./app/hookup.js": "./app/hookup.js?v=20260928023110",
+    "./app/importers.js": "./app/importers.js?v=20260928023110",
+    "./app/names.js": "./app/names.js?v=20260928023110",
+    "./app/network.js": "./app/network.js?v=20260928023110",
+    "./app/pages.js": "./app/pages.js?v=20260928023110",
+    "./app/power.js": "./app/power.js?v=20260928023110",
+    "./app/quickadd.js": "./app/quickadd.js?v=20260928023110",
+    "./app/rack.js": "./app/rack.js?v=20260928023110",
+    "./app/route-audit.js": "./app/route-audit.js?v=20260928023110",
+    "./app/starters.js": "./app/starters.js?v=20260928023110"
+} }
+</script>
+<script>
+/* If the app never finishes starting, say so instead of showing a blank page.
+   A load error right after a deploy is almost always old + new files mixed. */
+(() => {
+  const shown = { v: false };
+  const show = err => {
+    if (window.__spBooted || shown.v) return; shown.v = true;
+    const msg = String(err?.message || err || "");
+    const stale = /export named|does not provide|doesn't provide|binding name|indirect export|Importing a module script failed|Failed to fetch dynamically|error loading dynamically|module script/i.test(msg);
+    const box = document.createElement("div");
+    box.style.cssText = "position:fixed;inset:auto 16px 16px 16px;z-index:99999;background:#fff4e5;color:#4a2a00;border:1px solid #e0a040;border-radius:8px;padding:12px 14px;font:14px/1.4 -apple-system,system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.18)";
+    box.innerHTML = (stale ? "<b>SignalPath was just updated.</b> Reload to get the new version — your jobs are saved in this browser."
+                           : "<b>SignalPath didn't start.</b> Reload to try again — your jobs are saved in this browser.<br><small style=\"opacity:.7\"></small>")
+      + ' <button style="margin-left:8px;font:inherit;padding:3px 10px">Reload</button>';
+    if (!stale) box.querySelector("small").textContent = msg.slice(0, 200);
+    box.querySelector("button").onclick = () => { const u = new URL(location.href); u.searchParams.set("r", Date.now()); location.replace(u); };
+    (document.body || document.documentElement).appendChild(box);
+  };
+  addEventListener("error", e => {                 // script errors, and a module file that failed to load — not a missing image
+    if (e instanceof ErrorEvent) show(e.error || e.message);
+    else if (e.target?.tagName === "SCRIPT") show("Importing a module script failed");
+  }, true);
+  addEventListener("unhandledrejection", e => show(e.reason));
+  addEventListener("load", () => setTimeout(() => { if (!window.__spBooted) show("the app took too long to start"); }, 15000));
+})();
+</script>
 </head>
 <body>
 
@@ -371,11 +420,11 @@
 </div></div>
 
 <script type="module">
-import { loadJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock } from "./app/engine.js";
+import { loadJob, normalizeJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock } from "./app/engine.js";
 import { importAny, mergeHouse, drawFromWalk, decodeHandoff } from "./app/importers.js";
 import { planQueueFiles, aiReviewMarkdown } from "./app/exports.js";
 import { RACK_SIZES, DEFAULT_RACK_U } from "./app/rack.js";
-import { specFor } from "./app/network.js";
+import { specFor, specNum } from "./app/network.js";
 import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV, labelsCSV, rackFrontSVG, rackData } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
 import { STARTERS, applyStarter } from "./app/starters.js";
@@ -398,7 +447,14 @@ const tx = mode => DB.transaction("jobs", mode).objectStore("jobs");
 const dbAllRaw = () => DB
   ? new Promise((r, j) => { const q = tx("readonly").getAll(); q.onsuccess = () => r(q.result); q.onerror = () => j(q.error); })
   : Promise.resolve([...MEM.values()]);
-const dbAll = async () => (await dbAllRaw()).filter(r => r.id !== "__settings");
+// a saved job from an older version is normalized as it's read (missing lists,
+// unnamed zones); a record that isn't a job at all is left in storage untouched
+// but skipped — one damaged record must not stop the app from starting
+const dbAll = async () => (await dbAllRaw()).filter(r => {
+  if (r.id === "__settings") return false;
+  if (r.data?.generator !== "SignalPath" || r.data.schemaVersion !== 1) { console.warn("skipping unreadable saved job", r.id); return false; }
+  try { normalizeJob(r.data); return true; } catch (e) { console.warn("skipping unreadable saved job", r.id, e); return false; }
+});
 const dbPut = rec => DB
   ? new Promise((r, j) => { const q = tx("readwrite").put(rec); q.onsuccess = () => r(); q.onerror = () => j(q.error); })
   : (MEM.set(rec.id, rec), Promise.resolve());
@@ -407,7 +463,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20260928023110").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -885,6 +941,7 @@ $("#printBtn").onclick = () => {
 $("#importBtn").onclick = () => $("#importFile").click();
 $("#importFile").onchange = async e => {
   const file = e.target.files[0]; if (!file) return;
+  if (file.size > 25e6) { alert(`Import failed: ${file.name} is ${Math.round(file.size / 1e6)} MB — job files are well under 1 MB. Wrong file?`); e.target.value = ""; return; }
   const text = await file.text();
   try {
     // plain JSON first; only a Markdown file (or a non-JSON body) falls back to
@@ -894,13 +951,14 @@ $("#importFile").onchange = async e => {
     catch (parseErr) {
       // the LAST json fence: an AI review file has other fences (and prose) before its source-data block
       const fences = [...text.matchAll(/```json[ \t]*\n([\s\S]*?)```/g)];
-      if (!fences.length) throw parseErr;
-      data = JSON.parse(fences[fences.length - 1][1]);
+      if (!fences.length) throw new Error(`${file.name} isn't a file SignalPath can read. It takes a SignalPath job (.json), an AVWalk survey, a Blueprinted export, or an AI review (.md).`);
+      try { data = JSON.parse(fences[fences.length - 1][1]); }
+      catch { throw new Error(`The job data inside ${file.name} is damaged (it may have been edited by hand) — export a fresh copy.`); }
     }
     const res = importAny(data);
     if (res.kind === "signalpath") { await flushSave(); S.job = res.job; S.id = uid("job"); S.sol = 0; await persist(); refresh(false); }
     else await showReview(res);
-  } catch (err) { alert("Import failed: " + err.message); }
+  } catch (err) { console.error(err); alert("Import failed: " + err.message); }
   e.target.value = "";
 };
 
@@ -955,7 +1013,9 @@ async function showReview(res) {
 }
 function download(name, text, type) {
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click();
+  a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();               // attached: older Firefox ignores a detached click
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);              // long enough for iPad Safari's download sheet
 }
 
 /* ============ interactive sheet: tap a wire to trace it, tap a card to edit it ============ */
@@ -1532,7 +1592,7 @@ function rackHTML() {
   const pw = power ? `<div class="sect">POWER & HEAT</div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       <div class="mini">${power.units.length ? esc(power.units.map(u => `${u.model} (${u.outlets ?? "?"} outlets)`).join(" + ")) : "No power conditioner yet"} · ${power.need} outlets needed${power.supply != null ? ` · ${power.supply - power.need} spare` : ""}</div>
-      <div class="mini">Load ~${power.typicalW} W typical / ${power.maxW} W max · circuit ${power.circuitW} W (${power.circuits > 1 ? `${power.circuits} × ` : ""}${power.circuitA}A)</div>
+      <div class="mini">Load ~${power.typicalW}${power.noWatts.length ? "+" : ""} W typical / ${power.maxW}${power.noWatts.length ? "+" : ""} W max${power.noWatts.length ? ` (${power.noWatts.length} without watts — "?" below)` : ""} · circuit ${power.circuitW} W (${power.circuits > 1 ? `${power.circuits} × ` : ""}${power.circuitA}A)</div>
       <div class="mini">Heat ~${power.btu.toLocaleString("en-US")} BTU/hr${power.noWatts.length ? ` · <span style="color:#a45a12">${power.noWatts.length} box${power.noWatts.length > 1 ? "es" : ""} with ? watts — totals are a floor</span>` : ""}</div>
       ${notes.map(n => `<div class="mini" style="margin-top:6px;color:#a45a12">⚠ ${esc(n.msg)}</div>`).join("")}
     </div></div>` : "";
@@ -1771,7 +1831,8 @@ function wirePanel(body) {
     else z.endpoints.push({ id: uid(z.id + "-tv"), type: "display", displayType: el.value, brand: "", size: 65, status: "new" });
   });
   on(".tvbrand", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "brand", el.value); });
-  zon(".tvsize", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "size", +el.value); });
+  zon(".tvsize", el => { const n = Math.round(+el.value); if (!(n > 0)) return;       // blank / junk: keep the old size
+    setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "size", Math.min(220, Math.max(24, n))); });
   zon(".tvstatus", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "status", el.value); });
   on(".tvconfirm", el => { const t = zoneOf(el)?.endpoints.find(e => e.type === "display"); if (t) { if (el.checked) t.confirm = ["size"]; else delete t.confirm; } });
   body.querySelectorAll(".zdel").forEach(el => el.onclick = () => {
@@ -2036,7 +2097,7 @@ function wirePanel(body) {
   on(".jdrawn", el => { S.job.job.drawnBy = el.value; });
   /* rack tab */
   const rackOf = id => (S.job.solutions[S.sol].racks || []).find(r => r.id === id);
-  on(".rsize", el => { const r = rackOf(el.dataset.rack); if (r) r.units = +el.value; });
+  on(".rsize", el => { const r = rackOf(el.dataset.rack), n = Math.floor(+el.value); if (r && n >= 1 && n <= 60) r.units = n; });
   on(".rpart", el => {
     const r = rackOf(el.dataset.rack), v = el.value.trim();
     if (el.dataset.key === "rack" && r) { if (v) r.partNo = v; else delete r.partNo; return; }
@@ -2048,7 +2109,7 @@ function wirePanel(body) {
     if (!d) return;
     const k = el.dataset.k, v = el.value.trim();
     const base = specFor({ ...d, [k]: null }, effectiveCatalog())?.[k];
-    if (v === "" || (base != null && +v === +base) || !isFinite(+v)) delete d[k]; else d[k] = +v;
+    if (v === "" || (base != null && +v === +base) || specNum(k, v) == null) delete d[k]; else d[k] = +v;
   });
   on(".jgroup", el => { if (el.value === "type") delete S.job.job.zoneGrouping; else S.job.job.zoneGrouping = el.value; });
   on(".solname", el => { S.job.solutions[S.sol].name = el.value; });
@@ -2096,6 +2157,7 @@ async function takeHandoff() {
   catch (err) { alert("Couldn't open the AVWalk survey: " + err.message); }
 }
 addEventListener("hashchange", takeHandoff);
+window.__spBooted = true;                    // the head's start-up guard stands down
 await takeHandoff();
 </script>
 </body>

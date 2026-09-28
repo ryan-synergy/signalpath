@@ -505,7 +505,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
 
 /* ---------- importers: the one content-sniffed door ---------- */
 {
-  const miniWalk = {
+  var miniWalk = {     // var: the hardening tests reuse it
     schema: 2, client: "Smith", address: "1 Main St", jobType: "Remodel", controlSystem: "Savant",
     network: { waps: 4, drops: 10 }, cameras: [{}, {}, {}],
     rack: { location: "Garage closet", sourcesTBD: true, sources: { "Apple TV": 2, "Cable box": 0 } },
@@ -516,7 +516,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
       { name: "Hallway", floor: "Main", tv: false, audio: "tv", exw: {} },
     ],
   };
-  const miniBp = {
+  var miniBp = {       // var: the hardening tests reuse it
     generator: "Blueprinted", client: "Adams, Mike",
     system: { hostModel: "Savant Pro Host", blueprintVersion: "10.6.1", advisories: ["Legacy host"] },
     rooms: [
@@ -2420,6 +2420,64 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t(`route audit — 60 random jobs: wires with a much shorter legal route ≤ 10 (${big})`, big <= 10);
   t(`route audit — 60 random jobs: drawn length ≤ 1.170× the Manhattan minimum (${(len / manh).toFixed(3)})`, len / manh <= 1.170);
   t(`route audit — 60 random jobs: kinks/spikes ≤ 2 (${smells}), best-effort fallbacks ≤ 5 (${fb})`, smells <= 2 && fb <= 5);
+}
+
+/* ---------- hardening (2026-09-27): typos, "?" values, old and hand-edited files ----------
+   Each of these once crashed the app, hung the tab, or printed NaN/undefined/[object Object]. */
+{
+  const CAT = await (await fetch("./catalog.json")).json();
+  const { specFor } = await import("./network.js");
+  const { aiReviewMarkdown, planQueueFiles } = await import("./exports.js");
+  const bad = /\bNaN\b|\bundefined\b|\[object Object\]/;
+  const pipeline = raw => {
+    const { job, ix } = loadJob(effectiveJob(raw, 0)); const a = advise(job, ix, CAT); const o = { solution: 0, rawJob: raw };
+    const p = place(job, ix, o), rt = route(job, ix, p, o);
+    return { job, ix, a, p, rt, text: render(job, ix, p, rt, o) + renderExtraPages(job, ix, a, o).map(x => x.svg).join("") + aiReviewMarkdown(raw, 0, CAT) };
+  };
+
+  const huge = structuredClone(fixtures.residence);
+  huge.house.zones[0].endpoints.find(e => e.type === "display").size = 6500;
+  let r; try { r = pipeline(huge); } catch (e) { r = null; }
+  t("hardening: a 6500\" TV-size typo draws a normal-size card (it used to run the tab out of memory)", r && Math.max(...r.p.zones.map(z => z.w)) < 1200);
+
+  const q = structuredClone(fixtures.residence);
+  for (const d of q.solutions[0].racks[0].devices) Object.assign(d, { rackUnits: "?", powerTypicalW: "?", powerMaxW: "abc", outlets: "?" });
+  q.solutions[0].racks[0].units = 4200;
+  r = pipeline(q);
+  t("hardening: typed-in \"?\" rack/power figures read as unknown — no NaN on the Rack page or in the AI review", !/\bNaN\b/.test(r.text) && specFor({ rackUnits: "?" }, CAT) === null);
+  t("hardening: a 4200U rack-size typo is capped at 60U", r.a.racks[0].size === 60);
+  t("hardening: AI review lists an unmeasured box as ?U, and a load with missing watts as \"at least\"",
+    /- \?U \(drawn as 1U\)/.test(r.text) && /Load: ~at least/.test(r.text));
+
+  const odd = structuredClone(fixtures.residence);
+  odd.house.zones[0].endpoints.push({ id: "odd-thing", type: "hologram", status: "new" });
+  odd.solutions[0].connections.push({ from: odd.solutions[0].racks[0].devices[0].id, to: "odd-thing", signal: "video" });
+  try { r = pipeline(odd); } catch (e) { r = null; }
+  t("hardening: a wire to an endpoint type this version can't draw is reported, not a blank sheet", r && r.rt.warnings.some(w => w.code === "unrouted" && w.msg.includes("odd-thing")));
+
+  const holes = structuredClone(fixtures.residence);
+  delete holes.house.areas; holes.house.zones[1].name = ""; holes.house.zones[1].endpoints[0].size = {};
+  for (const sol of holes.solutions) { delete sol.localDevices; delete sol.annotations; sol.racks.push(null); }
+  holes.job.client = { name: ["x"] };
+  try { r = pipeline(holes); } catch (e) { r = null; }
+  t("hardening: an old or hand-edited job (missing lists, an unnamed zone, a list where a size goes) draws with no undefined/[object Object]",
+    r && !bad.test(r.text) && r.job.house.zones[1].name === "Zone 2");
+
+  t("hardening: a typo'd channel range \"1-10000000\" is ignored, not expanded", expandChannels("1-10000000").length === 0 && expandChannels("1-4").length === 4);
+
+  const walk = structuredClone(miniWalk);
+  walk.rooms[0].name = { oops: 1 }; walk.rooms[1].equipLoc = 7; walk.rooms[2].localSources = -1; walk.rack.sources["Apple TV"] = 1e7;
+  let w; try { w = importAny(walk); } catch (e) { w = e; }
+  t("hardening: an AVWalk file with odd field types imports, and a 10-million source count is capped at 16",
+    w?.job && w.job.solutions[0].racks[0].devices.filter(d => /Apple TV/.test(d.model)).length === 16 && !bad.test(JSON.stringify(w.job)));
+
+  const bp = structuredClone(miniBp);
+  bp.rack.push(null); bp.connections.push(null); bp.rooms[0].avrs = -1; bp.rooms[0].oldTv = [null, { make: {}, size: "big" }];
+  let b; try { b = importAny(bp); } catch (e) { b = e; }
+  t("hardening: a Blueprinted file with empty entries and wrong-type fields imports", b?.job && !bad.test(JSON.stringify(b.job)));
+
+  const pq = planQueueFiles(fixtures.estate, 0, CAT).map(f => typeof f === "string" ? f : f.text ?? f.content ?? JSON.stringify(f)).join("\n");
+  t("hardening: the PlanQueue export carries no rack hardware (rack, patch panels, vents, shelves, kits)", !/Vent panel|patch panel|Rack shelf|rack kit|Equipment rack,/i.test(pq));
 }
 
 document.getElementById("summary").innerHTML =

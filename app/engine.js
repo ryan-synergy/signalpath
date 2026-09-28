@@ -44,8 +44,41 @@ export function loadJob(raw) {
   const job = typeof raw === "string" ? JSON.parse(raw) : raw;
   if (job.generator !== "SignalPath") throw new Error("not a SignalPath file (generator)");
   if (job.schemaVersion !== 1) throw new Error("unsupported schemaVersion " + job.schemaVersion);
+  normalizeJob(job);
   const ix = indexJob(job);
   return { job, ix };
+}
+
+/* Fill the gaps an older, partial or hand-edited job can have, so every page
+   draws instead of throwing or printing "undefined": missing lists become
+   empty, list holes drop out, an unnamed zone or rack gets a plain name.
+   Only fills — never changes a value that's there. */
+export function normalizeJob(job) {
+  const list = (o, k) => { o[k] = Array.isArray(o[k]) ? o[k].filter(x => x && typeof x === "object") : []; return o[k]; };
+  if (!job.job || typeof job.job !== "object") job.job = {};
+  if (typeof job.job.name !== "string") job.job.name = job.job.name == null || typeof job.job.name === "object" ? "Untitled job" : String(job.job.name);
+  if (job.job.client != null && typeof job.job.client !== "object") job.job.client = { name: String(job.job.client) };
+  for (const k of ["name", "address"]) if (job.job.client && job.job.client[k] != null && typeof job.job.client[k] === "object") delete job.job.client[k];
+  if (!job.house || typeof job.house !== "object") job.house = {};
+  list(job.house, "areas");
+  // plain-value fields that arrive as a list or object print "[object Object]" everywhere — drop them
+  const SCALAR = ["name", "type", "size", "count", "satCount", "channels", "brand", "model", "config", "status", "scope", "displayType", "signal", "units", "partNo",
+                  "rackUnits", "powerTypicalW", "powerMaxW", "outlets"];
+  const scalars = o => { for (const k of SCALAR) if (o[k] != null && typeof o[k] === "object") delete o[k]; };
+  list(job.house, "zones").forEach((z, i) => {
+    scalars(z);
+    if (typeof z.name !== "string" || !z.name.trim()) z.name = `Zone ${i + 1}`;
+    list(z, "endpoints").forEach(scalars);
+  });
+  list(job, "solutions");
+  if (!job.solutions.length) job.solutions.push({ id: "sol-1", name: "Solution 1" });
+  for (const sol of job.solutions) {
+    for (const k of ["racks", "localDevices", "companions", "connections", "annotations"]) list(sol, k);
+    sol.racks.forEach((r, i) => { scalars(r); if (typeof r.name !== "string" || !r.name.trim()) r.name = i ? `Rack ${i + 1}` : "Equipment Rack"; list(r, "devices").forEach(scalars); });
+    for (const k of ["localDevices", "companions", "connections"]) sol[k].forEach(scalars);
+    sol.connections = sol.connections.filter(c => c.from != null && c.to != null);
+  }
+  return job;
 }
 
 export function indexJob(job) {
@@ -263,7 +296,7 @@ export function validate(job, ix = indexJob(job)) {
     for (const c of sol.connections || []) {
       if (!nodeInSolution(s, ix, c.from)) E("bad-conn", `A connection to ${nm(c.to)} starts at gear that no longer exists`, c.from);
       if (!nodeInSolution(s, ix, c.to)) E("bad-conn", `A connection from ${nm(c.from)} goes to gear that no longer exists`, c.to);
-      if (!SIGNAL_COLORS[c.signal]) E("bad-signal", `${nm(c.from)} → ${nm(c.to)}: unknown signal "${c.signal}"`, `${c.from}→${c.to}`);
+      if (!SIGNAL_COLORS[c.signal]) E("bad-signal", `${nm(c.from)} → ${nm(c.to)}: ${c.signal ? `unknown signal "${c.signal}"` : "no signal type set"}`, `${c.from}→${c.to}`);
       // a custom-route hint that names vanished devices is stale, not fatal
       if (c.routeHint?.between && !(Array.isArray(c.routeHint.between) && c.routeHint.between.every(id => s.devices[id])))
         W("route-hint-stale", `${nm(c.from)} → ${nm(c.to)}: the custom route named gear that was removed — routing it automatically`, `${c.from}→${c.to}`);
@@ -338,6 +371,7 @@ export function expandChannels(spec) {
     const m = part.trim().match(/^(\d+)(?:\s*[-–]\s*(\d+))?$/);
     if (!m) continue;
     const a = +m[1], b = m[2] ? +m[2] : a;
+    if (b - a > 256) continue;                 // a typo'd "1-10000000" must not build a ten-million list
     for (let i = a; i <= b; i++) out.push(i);
   }
   return out;
@@ -399,8 +433,11 @@ const spkCount = ep => Math.min(24, Math.max(1, Math.floor(+ep?.count) || 2));
 const satCount = ep => Math.min(24, Math.max(1, Math.floor(+ep?.satCount) || 4));
 
 function displaySize(ep) {
-  const inches = ep.size || 55;
-  const w = Math.round(inches * 1.6), h = Math.round(w * 0.567);
+  // the card draws a sane size whatever was typed or imported: a "6500" typo
+  // once drew a 10,000-unit card and the router ran the tab out of memory
+  const typed = +ep.size, inches = Number.isFinite(typed) && typed > 0 ? typed : 55;
+  const drawn = Math.min(220, Math.max(24, inches));
+  const w = Math.round(drawn * 1.6), h = Math.round(w * 0.567);
   const brand = [ep.status === "ofe" ? "OFE" : "New", ep.brand].filter(Boolean).join(" ");
   return { w, h, caption: ep.displayType === "projector" ? "Projector" : "TV", brand, sizeText: `${inches}"` };
 }
@@ -861,8 +898,19 @@ export function route(job, ix, placement, opts = {}) {
   const sol = s.sol;
   const P = placement;
   const hiddenSignals = new Set(opts.hideSignals || []);
-  const visConns = (sol.connections || []).filter(c => !hiddenSignals.has(c.signal));
   const out = { wires: [], groups: [], warnings: [] };
+  // a wire to an endpoint the placer drew no slot for (a speaker/display type
+  // this version doesn't know — a newer or hand-edited file) is reported, not
+  // routed: one such wire used to throw and blank the whole sheet
+  const placedEp = new Set(P.zones.flatMap(z => (z.groups || []).map(g => g.epId)));
+  const epOf = id => ix.endpointsById[id] ? id : ix.endpointsById[s.companions[id]?.serves] ? s.companions[id].serves : null;
+  const drawable = c => [c.from, c.to].every(id => { const ep = epOf(id); return !ep || placedEp.has(ep); });
+  const visConns = (sol.connections || []).filter(c => {
+    if (hiddenSignals.has(c.signal)) return false;
+    if (drawable(c)) return true;
+    out.warnings.push({ code: "unrouted", msg: `no route class for ${c.from}→${c.to}` });
+    return false;
+  });
   const rackDevById = {};
   for (const rk of P.racks) for (const dd of rk.devices) rackDevById[dd.id] = dd;
   const dbg = (o, entry) => {

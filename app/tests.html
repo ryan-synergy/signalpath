@@ -2496,7 +2496,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const j = structuredClone(fixtures.residence);
   j.solutions[0].racks[0].devices.push({ id: "pzc", type: "amp", model: "Blaze PowerZone Connect 1008D", catalogRef: "sonance-blaze-pzc-1008d", status: "new" });
   const res = planQueueFiles(j, 0, CAT).map(f => typeof f === "string" ? f : f.text ?? f.content ?? "").join("\n");
-  t("planqueue SKUs: gear PlanQueue doesn't carry says so (imports as a needs-SKU line)", /PZC 1008D \|[^\n]*not in PlanQueue catalog — needs SKU/.test(res));
+  t("planqueue SKUs: gear PlanQueue doesn't carry says so (imports as a needs-SKU line)", /UBX-888-031 \|[^\n]*not in PlanQueue catalog — needs SKU/.test(res));   // UBX-888-031 = Sonance's order code for the PZC 1008D
 }
 
 /* ---------- PlanQueue is the master for names (Ryan 2026-09-28) ---------- */

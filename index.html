@@ -174,7 +174,14 @@
     #panel.collapsed { flex: 0 0 42px; }
   }
   #canvas { flex: 1; overflow: auto; padding: 16px; min-height: 0; }
-  #canvas svg { width: 100%; height: auto; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.18); border-radius: 3px; }
+  #canvas { touch-action: pan-x pan-y; }           /* a pinch in the drawing zooms the drawing, not the page */
+  #right { position: relative; }
+  #zoomBar { position: absolute; top: 10px; right: 26px; z-index: 5; display: flex; gap: 2px; padding: 2px; background: rgba(255,255,255,.94);
+    border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,.12); }
+  #zoomBar button { font: inherit; font-size: 14px; min-width: 34px; height: 30px; border: 0; background: transparent; border-radius: 6px; cursor: pointer; color: #222; }
+  #zoomBar button:hover { background: #eef0f3; }
+  #zoomBar #zFit { min-width: 54px; font-size: 12px; font-variant-numeric: tabular-nums; }
+  #canvas svg { width: calc(100% * var(--zoom, 1)); max-width: none; height: auto; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.18); border-radius: 3px; }
 
   /* ---- interactive sheet: wire tracing + card jump ---- */
   #canvas svg .wirehit, #canvas svg .zcard .hit, #canvas svg .devtile { cursor: pointer; }
@@ -281,21 +288,21 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20260928151601",
-    "./app/commands.js": "./app/commands.js?v=20260928151601",
-    "./app/engine.js": "./app/engine.js?v=20260928151601",
-    "./app/exports.js": "./app/exports.js?v=20260928151601",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260928151601",
-    "./app/hookup.js": "./app/hookup.js?v=20260928151601",
-    "./app/importers.js": "./app/importers.js?v=20260928151601",
-    "./app/names.js": "./app/names.js?v=20260928151601",
-    "./app/network.js": "./app/network.js?v=20260928151601",
-    "./app/pages.js": "./app/pages.js?v=20260928151601",
-    "./app/power.js": "./app/power.js?v=20260928151601",
-    "./app/quickadd.js": "./app/quickadd.js?v=20260928151601",
-    "./app/rack.js": "./app/rack.js?v=20260928151601",
-    "./app/route-audit.js": "./app/route-audit.js?v=20260928151601",
-    "./app/starters.js": "./app/starters.js?v=20260928151601"
+    "./app/ai.js": "./app/ai.js?v=20260928164840",
+    "./app/commands.js": "./app/commands.js?v=20260928164840",
+    "./app/engine.js": "./app/engine.js?v=20260928164840",
+    "./app/exports.js": "./app/exports.js?v=20260928164840",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260928164840",
+    "./app/hookup.js": "./app/hookup.js?v=20260928164840",
+    "./app/importers.js": "./app/importers.js?v=20260928164840",
+    "./app/names.js": "./app/names.js?v=20260928164840",
+    "./app/network.js": "./app/network.js?v=20260928164840",
+    "./app/pages.js": "./app/pages.js?v=20260928164840",
+    "./app/power.js": "./app/power.js?v=20260928164840",
+    "./app/quickadd.js": "./app/quickadd.js?v=20260928164840",
+    "./app/rack.js": "./app/rack.js?v=20260928164840",
+    "./app/route-audit.js": "./app/route-audit.js?v=20260928164840",
+    "./app/starters.js": "./app/starters.js?v=20260928164840"
 } }
 </script>
 <script>
@@ -380,6 +387,7 @@
   <div id="grip" title="Drag to resize the panel"></div>
   <div id="right">
     <div id="canvas"></div>
+    <div id="zoomBar" role="group" aria-label="Zoom"><button id="zOut" title="Zoom out" aria-label="Zoom out">−</button><button id="zFit" title="Fit the sheet to the window">Fit</button><button id="zIn" title="Zoom in" aria-label="Zoom in">+</button></div>
     <div id="advisor"></div>
   </div>
 </div>
@@ -463,7 +471,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20260928151601").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20260928164840").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1166,8 +1174,53 @@ function openHookup(zid) {
 }
 function openGear(did) { focusRows(did); switchTab("gear"); renderPanel(); flashRow(`[data-did="${CSS.escape(did)}"]`); syncGlow(); }
 
+/* ---- zoom: pinch on the iPad, trackpad pinch or ⌘/Ctrl-scroll on a Mac, − Fit + buttons.
+   1 = the sheet fits the window width; the canvas scrolls to pan. Every zoom keeps
+   the point under the fingers / pointer where it was. It's a view setting: it
+   survives redraws (a CSS variable on #canvas, which refresh() never replaces). ---- */
+let zoom = 1, pinch = null, pinchEnded = 0;
+const ZMIN = 1, ZMAX = 6, ZPAD = 16;   // ZPAD = #canvas padding
+const canvasEl = $("#canvas");
+function zoomAt(z, clientX, clientY, anchor) {
+  const r = canvasEl.getBoundingClientRect();
+  const mx = (clientX ?? r.left + r.width / 2) - r.left, my = (clientY ?? r.top + r.height / 2) - r.top;
+  // the sheet point under (mx, my), in fit-width units
+  const a = anchor || { x: (canvasEl.scrollLeft + mx - ZPAD) / zoom, y: (canvasEl.scrollTop + my - ZPAD) / zoom };
+  zoom = Math.min(ZMAX, Math.max(ZMIN, z));
+  canvasEl.style.setProperty("--zoom", zoom);
+  canvasEl.scrollLeft = a.x * zoom + ZPAD - mx;
+  canvasEl.scrollTop = a.y * zoom + ZPAD - my;
+  $("#zFit").textContent = zoom === 1 ? "Fit" : Math.round(zoom * 100) + "%";
+  return a;
+}
+$("#zIn").onclick = () => zoomAt(zoom * 1.25);
+$("#zOut").onclick = () => zoomAt(zoom / 1.25);
+$("#zFit").onclick = () => { zoomAt(1); canvasEl.scrollLeft = canvasEl.scrollTop = 0; };
+canvasEl.addEventListener("wheel", e => {             // Mac trackpad pinch arrives as ctrl+wheel
+  if (!(e.ctrlKey || e.metaKey)) return;
+  e.preventDefault();
+  zoomAt(zoom * Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY);
+}, { passive: false });
+const mid = (a, b) => [(a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2];
+const gap = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+canvasEl.addEventListener("touchstart", e => {
+  if (e.touches.length !== 2) return;
+  const [a, b] = e.touches, [mx, my] = mid(a, b);
+  pinch = { d: gap(a, b) || 1, z: zoom, anchor: zoomAt(zoom, mx, my) };   // two fingers: zoom AND pan with the midpoint
+}, { passive: true });
+canvasEl.addEventListener("touchmove", e => {
+  if (!pinch || e.touches.length !== 2) return;
+  e.preventDefault();
+  const [a, b] = e.touches, [mx, my] = mid(a, b);
+  zoomAt(pinch.z * gap(a, b) / pinch.d, mx, my, pinch.anchor);
+}, { passive: false });
+canvasEl.addEventListener("touchend", e => { if (pinch && e.touches.length < 2) { pinch = null; pinchEnded = Date.now(); } });
+// Safari's own page zoom must not start inside the drawing
+for (const ev of ["gesturestart", "gesturechange"]) canvasEl.addEventListener(ev, e => e.preventDefault());
+
 $("#canvas").addEventListener("click", e => {
   if (!$("#canvas svg")) return;
+  if (Date.now() - pinchEnded < 400) return;          // lifting two fingers after a pinch isn't a tap on a wire
   // ghost alternates (reroute picker) swallow the tap
   const alt = e.target.closest(".altpath, .altbub, .altnum");
   if (alt) { applyAlt(+alt.dataset.alt); return; }

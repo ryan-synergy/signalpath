@@ -436,9 +436,8 @@
         "controlLanOnly"
       ],
       "verified": true,
-      "notes": "LAN is control/DSP ONLY — never give it a Dante edge. AUDIT 2026-09-27: added 1 stereo Bus-B loop out (manual rear panel; AVPro's web page claims 4 local + 1 bus loop outs — conflicts, verify on a unit). Bus A is one source selectable as RCA/coax/optical. POWER/RU 2026-09-27: 1800W full / 186W 1/8 / 41W idle, 1U — D2800 manual",
-      "partNo": "ACP-DMZ-D2800",
-      "partNoUnsure": true,
+      "notes": "LAN is control/DSP ONLY — never give it a Dante edge. AUDIT 2026-09-27: added 1 stereo Bus-B loop out (manual rear panel; AVPro's web page claims 4 local + 1 bus loop outs — conflicts, verify on a unit). Bus A is one source selectable as RCA/coax/optical. POWER/RU 2026-09-27: 1800W full / 186W 1/8 / 41W idle, 1U — D2800 manual Part no. corrected ACP-DMZ-D2800 → ACP-DZ-D2800 (manufacturer order code, verified 2026-09-28 (sonance.com / avproglobal.com / B&H / SnapOne)).",
+      "partNo": "ACP-DZ-D2800",
       "powerMaxW": 1800,
       "powerTypicalW": 186,
       "powerIdleW": 41,
@@ -461,9 +460,8 @@
         "controlLanOnly"
       ],
       "verified": true,
-      "notes": "AUDIT 2026-09-27: added 9 stereo RCA loop outs (8 local hard-wired + 1 Bus A). POWER/RU 2026-09-27: 2400W full / 330W 1/8 / 53W idle, 2U — D4600 manual",
-      "partNo": "ACP-DMZ-D4600",
-      "partNoUnsure": true,
+      "notes": "AUDIT 2026-09-27: added 9 stereo RCA loop outs (8 local hard-wired + 1 Bus A). POWER/RU 2026-09-27: 2400W full / 330W 1/8 / 53W idle, 2U — D4600 manual Part no. corrected ACP-DMZ-D4600 → ACP-DZ-D4600 (manufacturer order code, verified 2026-09-28 (sonance.com / avproglobal.com / B&H / SnapOne)).",
+      "partNo": "ACP-DZ-D4600",
       "powerMaxW": 2400,
       "powerTypicalW": 330,
       "powerIdleW": 53,
@@ -490,8 +488,8 @@
         "seventyVolt"
       ],
       "verified": true,
-      "notes": "750W/ch @70V — the landscape workhorse. AUDIT 2026-09-27: inputs 16 → 2 stereo (4 mono channels, each on RCA or Phoenix; the web page's '8 balanced, 8 unbalanced' is copied from the CM4). Added 2 coax outs. Zones = 1 stereo (2 mono zones in CM firmware). Per channel: 70V 750W or Lo-Z 625W; 100V is BRIDGED only (1500W). POWER/RU 2026-09-27: 2250W full / 274W 1/8 / 37W idle, 2U — CM Series manual (CM2-750 column)",
-      "partNo": "CM2-750D",
+      "notes": "750W/ch @70V — the landscape workhorse. AUDIT 2026-09-27: inputs 16 → 2 stereo (4 mono channels, each on RCA or Phoenix; the web page's '8 balanced, 8 unbalanced' is copied from the CM4). Added 2 coax outs. Zones = 1 stereo (2 mono zones in CM firmware). Per channel: 70V 750W or Lo-Z 625W; 100V is BRIDGED only (1500W). POWER/RU 2026-09-27: 2250W full / 274W 1/8 / 37W idle, 2U — CM Series manual (CM2-750 column) Part no. per distributor listings 2026-09-28 (ACP-CM2-750D-DANTE) — not confirmed letter-for-letter by AudioControl; stays unsure.",
+      "partNo": "ACP-CM2-750D-DANTE",
       "partNoUnsure": true,
       "powerMaxW": 2250,
       "powerTypicalW": 274,
@@ -602,9 +600,8 @@
         "anyInputAnyZone"
       ],
       "verified": true,
-      "notes": "1U, 60W/ch @4/8Ω Lo-Z (500W total) or 125W/ch Hi-Z (70V/100V). 8 balanced Euroblock + 8 unbalanced RCA analog inputs (paired 1:1 with channels), full-matrix DSP via PowerZone Control web app. No Dante — use 1008D for that. AUDIT 2026-09-27: zones counted as STEREO zones: 4 (8/4 channels). Analog = 4 stereo sources (8/4 RCA mono + 8/4 Euroblock mono — whether RCA and Euroblock are independent sources is unconfirmed; counted conservatively). Added S/PDIF in + out (connector type unconfirmed, logged as coax). AUDIT 2026-09-27: Hi-Z is 4 x 125W (channels pair up); the 1U line has NO Lo-Z bridge mode. POWER/RU 2026-09-27: 'Power Consumption' 150W (unlabeled), 97W at 1/8 (4Ω), 1U — Blaze 1U data sheet",
-      "partNo": "PZC 508",
-      "partNoUnsure": true,
+      "notes": "1U, 60W/ch @4/8Ω Lo-Z (500W total) or 125W/ch Hi-Z (70V/100V). 8 balanced Euroblock + 8 unbalanced RCA analog inputs (paired 1:1 with channels), full-matrix DSP via PowerZone Control web app. No Dante — use 1008D for that. AUDIT 2026-09-27: zones counted as STEREO zones: 4 (8/4 channels). Analog = 4 stereo sources (8/4 RCA mono + 8/4 Euroblock mono — whether RCA and Euroblock are independent sources is unconfirmed; counted conservatively). Added S/PDIF in + out (connector type unconfirmed, logged as coax). AUDIT 2026-09-27: Hi-Z is 4 x 125W (channels pair up); the 1U line has NO Lo-Z bridge mode. POWER/RU 2026-09-27: 'Power Consumption' 150W (unlabeled), 97W at 1/8 (4Ω), 1U — Blaze 1U data sheet Part no. corrected PZC 508 → UBX-888-024 (manufacturer order code, verified 2026-09-28 (sonance.com / avproglobal.com / B&H / SnapOne)).",
+      "partNo": "UBX-888-024",
       "powerMaxW": 150,
       "powerTypicalW": 97,
       "rackUnits": 1,
@@ -631,9 +628,8 @@
         "anyInputAnyZone"
       ],
       "verified": true,
-      "notes": "1U, 125W/ch Lo-Z (1000W total) or 250W/ch Hi-Z 70V/100V. 8 balanced Euroblock + 8 unbalanced RCA analog inputs. GOTCHA: Dante is a fixed Ultimo 4x4 chip regardless of amp channel count — an 8-channel amp only gets 4 Dante channels in/out, not 8. Full-matrix DSP via PowerZone Control web app. AUDIT 2026-09-27: zones counted as STEREO zones: 4 (8/4 channels). Analog = 4 stereo sources (8/4 RCA mono + 8/4 Euroblock mono — whether RCA and Euroblock are independent sources is unconfirmed; counted conservatively). Added S/PDIF in + out (connector type unconfirmed, logged as coax). AUDIT 2026-09-27: Hi-Z is 4 x 250W (4 outputs), not per channel. POWER/RU 2026-09-27: 'Power Consumption' 300W, 200W at 1/8 (4Ω), 1U — Blaze 1U data sheet",
-      "partNo": "PZC 1008D",
-      "partNoUnsure": true,
+      "notes": "1U, 125W/ch Lo-Z (1000W total) or 250W/ch Hi-Z 70V/100V. 8 balanced Euroblock + 8 unbalanced RCA analog inputs. GOTCHA: Dante is a fixed Ultimo 4x4 chip regardless of amp channel count — an 8-channel amp only gets 4 Dante channels in/out, not 8. Full-matrix DSP via PowerZone Control web app. AUDIT 2026-09-27: zones counted as STEREO zones: 4 (8/4 channels). Analog = 4 stereo sources (8/4 RCA mono + 8/4 Euroblock mono — whether RCA and Euroblock are independent sources is unconfirmed; counted conservatively). Added S/PDIF in + out (connector type unconfirmed, logged as coax). AUDIT 2026-09-27: Hi-Z is 4 x 250W (4 outputs), not per channel. POWER/RU 2026-09-27: 'Power Consumption' 300W, 200W at 1/8 (4Ω), 1U — Blaze 1U data sheet Part no. corrected PZC 1008D → UBX-888-031 (manufacturer order code, verified 2026-09-28 (sonance.com / avproglobal.com / B&H / SnapOne)).",
+      "partNo": "UBX-888-031",
       "powerMaxW": 300,
       "powerTypicalW": 200,
       "rackUnits": 1,
@@ -660,9 +656,8 @@
         "anyInputAnyZone"
       ],
       "verified": true,
-      "notes": "2U full-rack, 500W/ch SE or 1000W/ch bridged (BTL), 1000W @70V/100V. Dante Ultimo 4x4 chip — matches the 4 amp channels exactly here (unlike the 1008D). AUDIT 2026-09-27: zones counted as STEREO zones: 2 (8/4 channels). Analog = 2 stereo sources (8/4 RCA mono + 8/4 Euroblock mono — whether RCA and Euroblock are independent sources is unconfirmed; counted conservatively). Added S/PDIF in + out (connector type unconfirmed, logged as coax). AUDIT 2026-09-27: 500W/ch is @4Ω (250W @8Ω); 70V/100V is 2 x 1000W BRIDGED, not per channel. POWER/RU 2026-09-27: 'Power Consumption' 700W, 346W at 1/8 (4Ω), 2U — Blaze 2U data sheet rev K",
-      "partNo": "PZC 2004D",
-      "partNoUnsure": true,
+      "notes": "2U full-rack, 500W/ch SE or 1000W/ch bridged (BTL), 1000W @70V/100V. Dante Ultimo 4x4 chip — matches the 4 amp channels exactly here (unlike the 1008D). AUDIT 2026-09-27: zones counted as STEREO zones: 2 (8/4 channels). Analog = 2 stereo sources (8/4 RCA mono + 8/4 Euroblock mono — whether RCA and Euroblock are independent sources is unconfirmed; counted conservatively). Added S/PDIF in + out (connector type unconfirmed, logged as coax). AUDIT 2026-09-27: 500W/ch is @4Ω (250W @8Ω); 70V/100V is 2 x 1000W BRIDGED, not per channel. POWER/RU 2026-09-27: 'Power Consumption' 700W, 346W at 1/8 (4Ω), 2U — Blaze 2U data sheet rev K Part no. corrected PZC 2004D → LBX-888-007 (manufacturer order code, verified 2026-09-28 (sonance.com / avproglobal.com / B&H / SnapOne)).",
+      "partNo": "LBX-888-007",
       "powerMaxW": 700,
       "powerTypicalW": 346,
       "rackUnits": 2,
@@ -689,9 +684,8 @@
         "anyInputAnyZone"
       ],
       "verified": true,
-      "notes": "2U full-rack flagship, 750W/ch SE or 1500W/ch bridged (BTL), 1200W @70V/100V. Same Dante-4x4-on-8-channel gotcha as the 1008D. 6000W total system power — verify house electrical service before spec'ing multiples. AUDIT 2026-09-27: zones counted as STEREO zones: 4 (8/4 channels). Analog = 4 stereo sources (8/4 RCA mono + 8/4 Euroblock mono — whether RCA and Euroblock are independent sources is unconfirmed; counted conservatively). Added S/PDIF in + out (connector type unconfirmed, logged as coax). AUDIT 2026-09-27: 750W is @4Ω (400W @8Ω); Hi-Z is 4 x 1200W @70V / 4 x 1500W @100V. POWER/RU 2026-09-27: 'Power Consumption' 1400W, 999W at 1/8 (4Ω), 2U — Blaze 2U data sheet rev K",
-      "partNo": "PZC 6008D",
-      "partNoUnsure": true,
+      "notes": "2U full-rack flagship, 750W/ch SE or 1500W/ch bridged (BTL), 1200W @70V/100V. Same Dante-4x4-on-8-channel gotcha as the 1008D. 6000W total system power — verify house electrical service before spec'ing multiples. AUDIT 2026-09-27: zones counted as STEREO zones: 4 (8/4 channels). Analog = 4 stereo sources (8/4 RCA mono + 8/4 Euroblock mono — whether RCA and Euroblock are independent sources is unconfirmed; counted conservatively). Added S/PDIF in + out (connector type unconfirmed, logged as coax). AUDIT 2026-09-27: 750W is @4Ω (400W @8Ω); Hi-Z is 4 x 1200W @70V / 4 x 1500W @100V. POWER/RU 2026-09-27: 'Power Consumption' 1400W, 999W at 1/8 (4Ω), 2U — Blaze 2U data sheet rev K Part no. corrected PZC 6008D → LBX-888-011 (manufacturer order code, verified 2026-09-28 (sonance.com / avproglobal.com / B&H / SnapOne)).",
+      "partNo": "LBX-888-011",
       "powerMaxW": 1400,
       "powerTypicalW": 999,
       "rackUnits": 2,
@@ -742,9 +736,8 @@
         "anyInputAnyZone"
       ],
       "verified": true,
-      "notes": "MANUAL-CONFIRMED (2023 DSP 8-130 MKIII manual): rear panel carries 4 stereo RCA analog input pairs STANDARD (1L-4L/1R-4R — all 8 channels fed as 4 stereo sources) + non-buffered loop outs. CORRECTS the distributor claim of shipping half-populated. Manual prose references coax/optical digital inputs but the rear-panel figure shows analog only — digital arrives via optional DIM/HIM modules, count unpublished. 130W/ch Class-D, stable to 2Ω, bridgeable. 1RU. AUDIT 2026-09-27: zones = 4 stereo (manual: channels as stereo pairs); added 4 unbuffered stereo RCA loop outs. POWER/RU 2026-09-27: 1650W full / 254W 1/8 / 80W idle (4Ω), 1U — DSP 8-130 MKIII manual",
-      "partNo": "DSP 8-130 MKIII",
-      "partNoUnsure": true,
+      "notes": "MANUAL-CONFIRMED (2023 DSP 8-130 MKIII manual): rear panel carries 4 stereo RCA analog input pairs STANDARD (1L-4L/1R-4R — all 8 channels fed as 4 stereo sources) + non-buffered loop outs. CORRECTS the distributor claim of shipping half-populated. Manual prose references coax/optical digital inputs but the rear-panel figure shows analog only — digital arrives via optional DIM/HIM modules, count unpublished. 130W/ch Class-D, stable to 2Ω, bridgeable. 1RU. AUDIT 2026-09-27: zones = 4 stereo (manual: channels as stereo pairs); added 4 unbuffered stereo RCA loop outs. POWER/RU 2026-09-27: 1650W full / 254W 1/8 / 80W idle (4Ω), 1U — DSP 8-130 MKIII manual Part no. corrected DSP 8-130 MKIII → 93538 (manufacturer order code, verified 2026-09-28 (sonance.com / avproglobal.com / B&H / SnapOne)).",
+      "partNo": "93538",
       "powerMaxW": 1650,
       "powerTypicalW": 254,
       "powerIdleW": 80,
@@ -1025,7 +1018,8 @@
       "partNo": "PAV-SIPA50SMV2-00",
       "powerMaxW": 225,
       "rackUnits": 2,
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "partNoUnsure": true
     },
     "savant-pav-sms2001": {
       "brand": "Savant",
@@ -1172,10 +1166,10 @@
         "speakerEndpoint"
       ],
       "verified": true,
-      "notes": "Budget/entry soundbar. NO HDMI at all — optical (Toslink) digital input only, ships with the optical cable in box. No eARC/ARC means no Dolby Atmos support — format ceiling is Stereo PCM, Dolby Digital 5.1, DTS Digital Surround. Has a built-in IR receiver so the TV's own remote still controls volume/power despite no HDMI-CEC link. Has its own Ethernet port. Good fit for a secondary/bedroom TV zone where the budget doesn't support eARC gear; wrong choice anywhere Atmos or multi-source HDMI switching matters.",
-      "partNo": "Ray",
-      "partNoUnsure": true,
-      "notInPlanQueue": true
+      "notes": "Budget/entry soundbar. NO HDMI at all — optical (Toslink) digital input only, ships with the optical cable in box. No eARC/ARC means no Dolby Atmos support — format ceiling is Stereo PCM, Dolby Digital 5.1, DTS Digital Surround. Has a built-in IR receiver so the TV's own remote still controls volume/power despite no HDMI-CEC link. Has its own Ethernet port. Good fit for a secondary/bedroom TV zone where the budget doesn't support eARC gear; wrong choice anywhere Atmos or multi-source HDMI switching matters. Part no. corrected Ray → RAYG1US1BLK (manufacturer order code, verified 2026-09-28 (sonance.com / avproglobal.com / B&H / SnapOne)).",
+      "partNo": "RAYG1US1BLK",
+      "notInPlanQueue": true,
+      "skuWhite": "RAYG1US1"
     },
     "sonos-sub4": {
       "brand": "Sonos",
@@ -1214,10 +1208,10 @@
         "surroundCapable"
       ],
       "verified": true,
-      "notes": "Line-in requires a separately-sold USB-C adapter (Sonos Line-In Adapter: 3.5mm-to-USB-C, or the Combo Adapter which adds an Ethernet port) — there is no line-in jack on the speaker itself. GOTCHA: line-in is automatically DISABLED whenever the Era 300 is bonded as a home-theater surround speaker (paired behind an Arc/Arc Ultra/Beam) — you cannot use a surround-paired Era 300 as a line-in zone at the same time; it's one role or the other. Two Era 300s pair as rear surrounds for Atmos height content.",
-      "partNo": "Era 300",
-      "partNoUnsure": true,
-      "notInPlanQueue": true
+      "notes": "Line-in requires a separately-sold USB-C adapter (Sonos Line-In Adapter: 3.5mm-to-USB-C, or the Combo Adapter which adds an Ethernet port) — there is no line-in jack on the speaker itself. GOTCHA: line-in is automatically DISABLED whenever the Era 300 is bonded as a home-theater surround speaker (paired behind an Arc/Arc Ultra/Beam) — you cannot use a surround-paired Era 300 as a line-in zone at the same time; it's one role or the other. Two Era 300s pair as rear surrounds for Atmos height content. Part no. corrected Era 300 → E30G1US1BLK (manufacturer order code, verified 2026-09-28 (sonance.com / avproglobal.com / B&H / SnapOne)).",
+      "partNo": "E30G1US1BLK",
+      "notInPlanQueue": true,
+      "skuWhite": "E30G1US1"
     },
     "sonos-era-100-surround": {
       "brand": "Sonos",
@@ -1315,10 +1309,10 @@
         "speakerEndpoint"
       ],
       "verified": true,
-      "notes": "Verified 2026-09-27 against sonos.com Tech Specs + Sonos newsroom. Ships 2026-09-29; Beam (Gen 2) stays on sale. 7.1.2 Dolby Atmos, 9 drivers / 9 Class-D amps (5 tweeters incl. 2 up-firing, 4 woofers). ONE HDMI eARC port (ARC fallback), no HDMI input/passthrough. GOTCHAS vs Beam Gen 2: (1) NO ethernet jack — wired network needs the Sonos Combo Adapter on USB-C (sold separately; same port takes the Line-In Adapter); (2) optical adapter NOT in the box (sold separately) and TrueHD/Atmos/multichannel PCM all need eARC — optical drops Atmos; (3) DTS Digital Surround only, no DTS:X; (4) 29.5in wide (750 mm) vs Gen 2's 25.6in — check the space under the TV; wall mount is its own part. Wi-Fi 6, BT 5.3, AirPlay 2, Sonos Voice Control (no Alexa/Google listed), far-field mics w/ hardware switch, works with the TV remote. Pairs with Sub Mini/Sub, Era 100 surrounds (Sonos Immersive Set), Ace/Ace Ultra TV audio swap. Needs the current Sonos app (Sonos 27). Control-system drivers (Savant/C4/Crestron) not yet stated for this model — confirm before quoting into an integrated job. AUDIT 2026-09-27: line-in counted (USB-C Line-In Adapter); Sonos also lists Play / Move 2 as surround options.",
-      "partNo": "Beam Ultra",
-      "partNoUnsure": true,
-      "notInPlanQueue": true
+      "notes": "Verified 2026-09-27 against sonos.com Tech Specs + Sonos newsroom. Ships 2026-09-29; Beam (Gen 2) stays on sale. 7.1.2 Dolby Atmos, 9 drivers / 9 Class-D amps (5 tweeters incl. 2 up-firing, 4 woofers). ONE HDMI eARC port (ARC fallback), no HDMI input/passthrough. GOTCHAS vs Beam Gen 2: (1) NO ethernet jack — wired network needs the Sonos Combo Adapter on USB-C (sold separately; same port takes the Line-In Adapter); (2) optical adapter NOT in the box (sold separately) and TrueHD/Atmos/multichannel PCM all need eARC — optical drops Atmos; (3) DTS Digital Surround only, no DTS:X; (4) 29.5in wide (750 mm) vs Gen 2's 25.6in — check the space under the TV; wall mount is its own part. Wi-Fi 6, BT 5.3, AirPlay 2, Sonos Voice Control (no Alexa/Google listed), far-field mics w/ hardware switch, works with the TV remote. Pairs with Sub Mini/Sub, Era 100 surrounds (Sonos Immersive Set), Ace/Ace Ultra TV audio swap. Needs the current Sonos app (Sonos 27). Control-system drivers (Savant/C4/Crestron) not yet stated for this model — confirm before quoting into an integrated job. AUDIT 2026-09-27: line-in counted (USB-C Line-In Adapter); Sonos also lists Play / Move 2 as surround options. Part no. corrected Beam Ultra → BMULTUS1BLK (manufacturer order code, verified 2026-09-28 (sonance.com / avproglobal.com / B&H / SnapOne)).",
+      "partNo": "BMULTUS1BLK",
+      "notInPlanQueue": true,
+      "skuWhite": "BMULTUS1"
     },
     "avpro-mxnet-sw24p": {
       "brand": "AVPro Edge",
@@ -2285,6 +2279,115 @@
       "powerTypicalW": 15,
       "rackUnits": 1,
       "halfRack": true
+    },
+    "sonance-blaze-pzc-504": {
+      "brand": "Sonance",
+      "model": "POWERZONE CONNECT 504",
+      "aliases": [
+        "Blaze PowerZone Connect 504",
+        "PowerZone Connect 504"
+      ],
+      "type": "amp",
+      "zones": 2,
+      "ampCh": 4,
+      "inputs": {
+        "analog": 2,
+        "coax": 1
+      },
+      "outputs": {
+        "coax": 1
+      },
+      "flags": [
+        "seventyVolt",
+        "anyInputAnyZone"
+      ],
+      "verified": true,
+      "partNo": "UBX-888-011",
+      "powerMaxW": 150,
+      "powerTypicalW": 107,
+      "powerIdleW": 14.5,
+      "rackUnits": 1,
+      "halfRack": true,
+      "lan": 1,
+      "notes": "Blaze PowerZone Connect 1U Data Sheet + Manual (sonance.com, fetched 2026-09-28): 4 x 125W @4/8Ω Lo-Z or 2 x 250W @70/100V; power share 250W across ch 1/2 and 3/4. 4 unbalanced RCA + 4 balanced inputs (paired with channels; counted as 2 stereo sources, conservatively, like the 508), S/PDIF in + out (logged as coax), RJ45 + built-in Wi-Fi AP, full-matrix DSP (PowerZone Control). Power consumption 150W; 107W in at 1/8 power (4Ω); idle 14.5W @120V; standby <0.5W. Half-width 1U (8.7in), rack plates included. No Dante (504D is the Dante model). In Synergy's PlanQueue as UBX-888-011 \"POWERZONE CONNECT 504\"."
+    },
+    "sonance-blaze-pzc-1008": {
+      "brand": "Sonance",
+      "model": "PowerZone Connect 1008",
+      "aliases": [
+        "Blaze PowerZone Connect 1008",
+        "UBX-888-025"
+      ],
+      "type": "amp",
+      "zones": 4,
+      "ampCh": 8,
+      "inputs": {
+        "analog": 4,
+        "coax": 1
+      },
+      "outputs": {
+        "coax": 1
+      },
+      "flags": [
+        "seventyVolt",
+        "anyInputAnyZone"
+      ],
+      "verified": true,
+      "partNo": "PowerZone Connect 1008",
+      "powerMaxW": 300,
+      "powerTypicalW": 200,
+      "powerIdleW": 27.7,
+      "rackUnits": 1,
+      "lan": 1,
+      "notes": "Blaze PowerZone Connect 1U Data Sheet + Manual (sonance.com, fetched 2026-09-28): 8 x 125W @4/8Ω Lo-Z or 4 x 250W @70/100V; power share 250W per channel pair. 8 unbalanced RCA + 8 balanced inputs (counted as 4 stereo sources, like the 508), S/PDIF in + out (logged as coax), RJ45 + Wi-Fi AP, full-matrix DSP. Power consumption 300W; 200W in at 1/8 power (4Ω); idle 27.7W @120V; standby <0.5W. Full-width 1U. No Dante (1008D is the Dante model). Sonance order code UBX-888-025; Synergy's PlanQueue files it under SKU \"PowerZone Connect 1008\"."
+    },
+    "sonance-sonamp-8-50": {
+      "brand": "Sonance",
+      "model": "Sonamp 8-50",
+      "aliases": [
+        "93544"
+      ],
+      "type": "amp",
+      "zones": 4,
+      "ampCh": 8,
+      "inputs": {
+        "analog": 6
+      },
+      "outputs": {
+        "sub": 1
+      },
+      "flags": [],
+      "verified": true,
+      "partNo": "Sonamp 8-50",
+      "powerMaxW": 600,
+      "powerTypicalW": 200,
+      "powerIdleW": 30,
+      "rackUnits": 1,
+      "notes": "Sonamp 8-50/16-50 manual 12/13/2022 (sonance.com, fetched 2026-09-28): 8 ch = 4 stereo zones, 50W/ch @8Ω, 100W/ch @4Ω, 200W bridged @8Ω; no 70V. Inputs: a local stereo input per zone + Bus A + Bus B (with thru) = 6 stereo sources; each zone picks local / Bus A / Bus B by DIP switch (NOT a matrix). Bus A sub out with 80/120Hz crossover. Audio sense or 3-30V trigger. Power: 600W max, <200W at 1/8 power (200 used), 30W idle, <0.5W standby; 3 per 15A / 4 per 20A circuit. 1U full width, rack ears 93559. Sonance order code 93544 (US); Synergy's PlanQueue SKU \"Sonamp 8-50\"."
+    },
+    "sonance-sonamp-16-50": {
+      "brand": "Sonance",
+      "model": "Sonamp 16-50",
+      "aliases": [
+        "93546"
+      ],
+      "type": "amp",
+      "zones": 8,
+      "ampCh": 16,
+      "inputs": {
+        "analog": 10
+      },
+      "outputs": {
+        "sub": 1
+      },
+      "flags": [],
+      "verified": true,
+      "partNo": "Sonamp 16-50",
+      "powerMaxW": 600,
+      "powerTypicalW": 200,
+      "powerIdleW": 50,
+      "rackUnits": 1,
+      "notes": "Sonamp 8-50/16-50 manual 12/13/2022 (sonance.com, fetched 2026-09-28): 16 ch = 8 stereo zones, 50W/ch @8Ω, 100W/ch @4Ω, 200W bridged @8Ω; no 70V. Inputs: a local stereo input per zone + Bus A + Bus B = 10 stereo sources; zone input by DIP switch (not a matrix). Bus A sub out with crossover. Audio sense or 3-30V trigger. Power: 600W max, <200W at 1/8 power (200 used), 50W idle, <0.5W standby. 1U full width (17.2 x 1.75 x 12.3in). Sonance order code 93546 (US); Synergy's PlanQueue SKU \"Sonamp 16-50\"."
     }
   },
   "licensing": {

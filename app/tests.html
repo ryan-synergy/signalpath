@@ -2127,39 +2127,55 @@ for (const [name, raw] of Object.entries(fixtures)) {
   j0.solutions[0].racks[0].devices.find(d => d.id === "cablebox").status = "ofe";
   const job = C.planCommands(j0, 0, [{ op: "add_zones", text: "kitchen stereo 55 sony matrix, family room 5.1 75 matrix, patio landscape 8, guest bed stereo 50 prewire, master bed stereo 65 ofe matrix, bonus room stereo future" }], CAT).job;
   const files = X.planQueueFiles(job, 0, CAT);
-  const TYPES = ["technology-prewire", "technology-systems", "lighting-prewire", "lighting-systems", "recessed-fixtures", "linear-fixtures", "shades-prewire", "shades", "surveillance", "networking", "service", "other"];
+  // Ryan's PlanQ format sheet (2026-09-28): front matter holding ONLY the planqueue key, "# title",
+  // "## Room" headers, "- qty | Manufacturer | Model" lines — no notes, tables, floors, bold, prose
   const wellFormed = txt => {
     const L = txt.split("\n");
-    if (L[0] !== "---" || L[1] !== "planqueue: proposal-import/1") return "front matter must open with planqueue: proposal-import/1";
-    const end = L.indexOf("---", 1); if (end < 0) return "front matter not closed";
-    const type = L.slice(1, end).find(l => l.startsWith("type: "))?.slice(6);
-    if (!TYPES.includes(type)) return "bad type " + type;
+    if (L[0] !== "---" || L[1] !== "planqueue: proposal-import/1" || L[2] !== "---") return "front matter must be exactly the planqueue key";
+    const titleAt = L.findIndex((l, k) => k > 2 && l.trim());
+    if (!/^# \S/.test(L[titleAt])) return "no # title after the front matter";
     let room = false;
-    for (const l of L.slice(end + 1)) {
+    for (const l of L.slice(titleAt + 1)) {
       if (!l.trim()) continue;
-      if (/^## \S/.test(l)) { room = false; continue; }
-      if (/^### \S/.test(l)) { room = true; continue; }
-      if (!/^- \d+ \| [^|]+ \| [^|]+( \| [^|]+)?$/.test(l)) return "bad line: " + l;
+      if (/^## \S/.test(l)) { room = true; continue; }
+      if (/^#/.test(l)) return "only ## room headers after the title: " + l;
+      if (!/^- \d+ \| [^|*]+ \| [^|*]+$/.test(l)) return "bad line (must be - qty | Manufacturer | Model): " + l;
       if (!room) return "product outside a room: " + l;
     }
     return "";
   };
-  t("planqueue: a job with pre-wire rooms gives two files (systems + prewire); future rooms are left out",
+  t("planqueue: a job with pre-wire rooms gives two files (systems + pre-wire); future rooms are left out",
     files.map(f => f.type).join() === "technology-systems,technology-prewire" && !files.some(f => /Bonus Room/.test(f.text)));
-  t("planqueue: both files follow proposal-import/1 exactly (front matter, ## floor, ### room, 3–4 field lines, nothing else)",
+  t("planqueue: both files follow the PlanQ format sheet exactly (planqueue-only front matter, # title, ## rooms, 3-field lines, nothing else)",
     files.every(f => !wellFormed(f.text)), files.map(f => wellFormed(f.text)).join(" / "));
   const sys = files[0].text, pre = files[1].text;
-  t("planqueue: client as 'Last, First', proposal name, site", /^client: Smith, John$/m.test(sys) && /^name: Smith — Technology Systems$/m.test(sys) && /^site: 123 Main St$/m.test(sys));
-  t("planqueue: rack gear by part number; the Dante CBOX is a CBOX-HA noted 'Dante mode'; encoders counted",
-    /- 1 \| AudioControl \| ACP-DMZ-M6800D$/m.test(sys) && /- 1 \| AVPro Edge \| AC-MXNET-CBOX-HA \| Dante mode$/m.test(sys) && /- 3 \| AVPro Edge \| AC-MXNET-1G-DANTE-EV2$/m.test(sys));
-  t("planqueue: owner-supplied gear is listed, noted 'customer supplied' (cable box too)",
-    /Cable Box \| customer supplied/.test(sys) && /Master Bed[\s\S]*65" TV \| customer supplied/.test(sys));
-  t("planqueue: speakers are Packages PlanQueue picks; guessed part numbers say unsure",
-    /- 1 \| Package \| Stereo Pair Speakers \| PlanQueue picks the package/.test(sys) && /APPLE TV 4K 128 \| unsure/.test(sys));
-  t("planqueue: outdoor rooms land under ## Exterior, after the indoor floors", /## Exterior\n### Patio/.test(sys) && sys.indexOf("## Exterior") > sys.indexOf("## Floor 1"));
+  t("planqueue: the title is client — address; the pre-wire file says so", /^# John Smith — 123 Main St$/m.test(sys) && /^# John Smith — 123 Main St — Pre-Wire$/m.test(pre));
+  t("planqueue: rack gear by part number (the video CBOX and the Dante-mode one are both CBOX-HAs → qty 2); encoders counted",
+    /- 1 \| AudioControl \| ACP-DMZ-M6800D$/m.test(sys) && /- 2 \| AVPro Edge \| AC-MXNET-CBOX-HA$/m.test(sys) && /- 3 \| AVPro Edge \| AC-MXNET-1G-DANTE-EV2$/m.test(sys));
+  t("planqueue: owner-supplied gear becomes PlanQueue's Customer-Supplied items (the cable box, the master bed TV and speakers)",
+    /## Equipment Rack[^#]*- 1 \| Customer-Supplied \| Equipment/.test(sys) && /## Master Bed[^#]*- 1 \| Customer-Supplied \| TV/.test(sys) &&
+    /## Master Bed[^#]*- 2 \| Customer-Supplied \| Speakers/.test(sys));
+  t("planqueue: unpicked speakers are Unspecified Speakers × count, the sub on its own line; a TV with no model is Unspecified TV",
+    /## Family Room\n\n- 5 \| Synergy \| Unspecified Speakers\n- 1 \| Synergy \| Unspecified Speakers\n/.test(sys) && /## Kitchen[^#]*- 1 \| Synergy \| Unspecified TV/.test(sys));
+  t("planqueue: no notes, floors or mandatory lines in the file", !/unsure|customer supplied|PlanQueue picks|## Floor|## Exterior|EWR|Project Management|Materials/.test(sys + pre));
+  t("planqueue: outdoor rooms come after the indoor ones", sys.indexOf("## Patio") > sys.indexOf("## Kitchen"));
   t("planqueue: the TV's own Dante adapter goes in its room (DANTE-DV2 in the kitchen, AXIS16 in the family room)",
-    /### Kitchen[^#]*AC-MXNET-1G-DANTE-DV2/.test(sys) && /### Family Room[^#]*ACP-AXIS16/.test(sys));
-  t("planqueue: the pre-wire file is packages only", /### Guest Bed\n- 1 \| Package \| Stereo Pair Pre-Wire/.test(pre) && /TV Location Pre-Wire/.test(pre) && !/AVPro|AudioControl/.test(pre));
+    /## Kitchen[^#]*AC-MXNET-1G-DANTE-DV2/.test(sys) && /## Family Room[^#]*ACP-AXIS16/.test(sys));
+  t("planqueue: the pre-wire file is Synergy's pre-wire items only", /## Guest Bed[^#]*- 1 \| Synergy \| Prewire - TV \(Standard\)/.test(pre) && /## Guest Bed[^#]*- 1 \| Synergy \| Prewire - Speaker Pair/.test(pre) && !/AVPro|AudioControl|Unspecified/.test(pre));
+  {
+    const { speakerCounts, prewireItems } = X;
+    const items = ["surround-5.1", "surround-7.1", "surround-7.1.4", "stereo", "mono", "2.1", "landscape", "soundbar-sub"]
+      .flatMap(config => prewireItems({ config, count: 2, satCount: 6, buriedSub: true }, true).map(([it]) => it));
+    const SYN_PREWIRE = ["Prewire - 5.1 Surround Sound", "Prewire - 7.1 Surround Sound", "Prewire - 7.2.4 Surround Sound (Atmos)", "Prewire - Speaker Pair",
+      "Prewire - Speaker Single", "Prewire - Landscape Speakers", "Prewire - Landscape Subwoofer", "Prewire - Passive Soundbar (LCR)", "Prewire - TV (Standard)"];
+    t("planqueue: every pre-wire item is one of Synergy's PlanQueue items; speaker counts per set", items.every(it => SYN_PREWIRE.includes(it)) &&
+      speakerCounts({ config: "surround-7.1.4" }).join() === "11,1" && speakerCounts({ config: "landscape", satCount: 6, buriedSub: true }).join() === "6,1");
+  }
+  // same room name on two floors stays unique
+  const two = structuredClone(job); two.house.areas = [{ id: "a1", name: "Main" }, { id: "a2", name: "Upper" }];
+  two.house.zones.push({ id: "z-kit2", name: "Kitchen", area: "a2", scope: "included", endpoints: [{ id: "k2-spk", type: "speakers", config: "stereo", count: 2, status: "new" }] });
+  const t2 = X.planQueueFiles(two, 0, CAT)[0].text;
+  t("planqueue: a room name repeated on another floor carries the floor", /^## Kitchen \(Upper\)$/m.test(t2));
   const md = X.aiReviewMarkdown(job, 0, CAT);
   t("ai review: front matter + every section an agent needs",
     md.startsWith("---\ngenerator: SignalPath\nexport: ai-review/1") && ["## Open items", "## Rooms", "## Rack", "## Licensing", "## Connections", "## Wire list", "## Quote lines", "## SignalPath command vocabulary", "## Source data"].every(h => md.includes(h)));
@@ -2323,8 +2339,8 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const a = advise(job, ix, CAT);
   const pw = a.power[0];
   t("profiles: Apple TVs and the cable box now carry watts (no '?')", !pw.noWatts.some(n => /Apple TV|Cable Box/.test(n)) && pw.loads.find(l => l.what === "Cable Box").typicalW === 17.5);
-  t("profiles: the quote still reads the job's own links — the cable box stays provider equipment, not a catalog product",
-    /\| Cable Provider \| Cable Box \| .*provider equipment/.test(X.planQueueFiles(raw, 0, CAT)[0].text));
+  t("profiles: the quote still reads the job's own links — the cable box stays provider (Customer-Supplied) equipment, not a catalog product",
+    /- \d+ \| Customer-Supplied \| Equipment$/m.test(X.planQueueFiles(raw, 0, CAT)[0].text) && !/Cable Box/.test(X.planQueueFiles(raw, 0, CAT)[0].text));
   const main = a.racks[0];
   const kits = main.items.filter(i => i.kit);
   t("rack kits: the rack's 4 MXNet 1G endpoints go in two 1U AC-MXNET-1G-R2 kits (fewest U), not a 6U R15",
@@ -2496,7 +2512,8 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const j = structuredClone(fixtures.residence);
   j.solutions[0].racks[0].devices.push({ id: "pzc", type: "amp", model: "Blaze PowerZone Connect 1008D", catalogRef: "sonance-blaze-pzc-1008d", status: "new" });
   const res = planQueueFiles(j, 0, CAT).map(f => typeof f === "string" ? f : f.text ?? f.content ?? "").join("\n");
-  t("planqueue SKUs: gear PlanQueue doesn't carry says so (imports as a needs-SKU line)", /UBX-888-031 \|[^\n]*not in PlanQueue catalog — needs SKU/.test(res));   // UBX-888-031 = Sonance's order code for the PZC 1008D
+  t("planqueue SKUs: gear PlanQueue doesn't carry goes out as a plain line under its manufacturer order code (PlanQueue flags it needs-SKU on import)",
+    /^- 1 \| Sonance \| UBX-888-031$/m.test(res));   // UBX-888-031 = Sonance's order code for the PZC 1008D
 }
 
 /* ---------- PlanQueue is the master for names (Ryan 2026-09-28) ---------- */

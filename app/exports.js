@@ -1,12 +1,16 @@
 /* ---------- exports.js — Markdown out ----------
    Two Markdown files from one job:
-   1. planQueueFiles(): the PlanQueue proposal import (format
-      `planqueue: proposal-import/1` — front matter, `## Floor`, `### Room`,
-      `- qty | Manufacturer | Model | note`, nothing else). A job with
-      pre-wire-only rooms gives TWO files: technology-systems + technology-prewire.
-      The goal is "as close as possible": owner-supplied gear is listed (note
-      "customer supplied"), speakers are Packages PlanQueue picks, guessed part
-      numbers say "unsure".
+   1. planQueueFiles(): the PlanQueue proposal import, to Ryan's format sheet of
+      2026-09-28 (planq-import-format.md): a front matter block holding ONLY
+      `planqueue: proposal-import/1`, `# Project Title`, `## Room` headers, and
+      `- qty | Manufacturer | Model` lines — no notes, tables, floors or prose,
+      and no mandatory lines (EWR, PM fee, materials: added in PlanQueue).
+      Everything a note used to say is said with PlanQueue's own items instead:
+      owner/provider gear → Customer-Supplied (TV / Speakers / Soundbar /
+      Subwoofer / Equipment); unpicked speakers → Synergy "Unspecified Speakers"
+      with the count as qty (sub on its own line); a TV with no model → Synergy
+      "Unspecified TV"; pre-wire rooms → Synergy's "Prewire - …" items. A job with
+      pre-wire-only rooms still gives two files (systems + "— Pre-Wire").
    2. aiReviewMarkdown(): everything an agent needs to review the design —
       rooms and how each is fed, rack gear with specs and usage, open items,
       licensing, connections, wire list, the quote lines — and the full job as
@@ -21,9 +25,33 @@ import { NET_ROLE_NAME } from "./network.js";
 import { isAsBuilt, asBuiltChanges } from "./asbuilt.js";
 import { describeNode, adapterName, isOutdoorZone, SPEAKER_SETUP, STATUS_NAME, SCOPE_NAME, PLATFORM_NAME, AUDIO_NET_NAME, signalName } from "./names.js";
 
-// speaker sets as package names (PlanQueue maps them to its real packages)
-const PACKAGE_NAME = { mono: "Mono", stereo: "Stereo Pair", "2.1": "2.1 (Pair + Sub)", "surround-5.1": "5.1 Surround",
-  "surround-7.1": "7.1 Surround", "surround-7.1.4": "7.1.4 Surround", soundbar: "Soundbar", "soundbar-sub": "Soundbar + Sub", landscape: "Landscape" };
+// Synergy's own PlanQueue items (manufacturer "Synergy") — placeholders and pre-wire
+const SYN = model => ({ mfr: "Synergy", model });
+// [speakers, subs] a speaker set stands for
+export function speakerCounts(ep) {
+  const c = ep?.config || "stereo";
+  if (c === "mono") return [1, 0];
+  if (c === "stereo") return [Math.max(1, Math.floor(+ep.count) || 2), 0];
+  if (c === "2.1") return [2, 1];
+  const m = c.match(/^surround-(\d+)\.(\d+)(?:\.(\d+))?$/);
+  if (m) return [+m[1] + (+m[3] || 0), +m[2]];
+  if (c === "soundbar") return [1, 0];
+  if (c === "soundbar-sub") return [1, 1];
+  if (c === "landscape") return [Math.max(1, Math.floor(+ep.satCount) || 8), ep.buriedSub ? 1 : 0];
+  return [Math.max(1, Math.floor(+ep.count) || 2), 0];
+}
+// a pre-wire room's speakers as Synergy's pre-wire items: [item, qty]
+export function prewireItems(ep, passiveBar = false) {
+  const c = ep?.config || "stereo", [n, sub] = speakerCounts(ep);
+  const pairs = (k, extraSingles = 0) => [...(Math.floor(k / 2) ? [["Prewire - Speaker Pair", Math.floor(k / 2)]] : []),
+    ...(k % 2 + extraSingles ? [["Prewire - Speaker Single", k % 2 + extraSingles]] : [])];
+  if (c === "surround-5.1") return [["Prewire - 5.1 Surround Sound", 1]];
+  if (c === "surround-7.1") return [["Prewire - 7.1 Surround Sound", 1]];
+  if (c === "surround-7.1.4") return [["Prewire - 7.2.4 Surround Sound (Atmos)", 1]];   // Synergy's Atmos pre-wire item
+  if (c === "landscape") return [["Prewire - Landscape Speakers", n], ...(sub ? [["Prewire - Landscape Subwoofer", sub]] : [])];
+  if (c.startsWith("soundbar")) return [...(passiveBar ? [["Prewire - Passive Soundbar (LCR)", 1]] : []), ...(sub ? [["Prewire - Speaker Single", sub]] : [])];   // a powered bar rides the TV pre-wire
+  return pairs(n, sub);   // mono, stereo, 2.1 (pair + a single for the sub), anything else
+}
 const clean = s => String(s ?? "").replace(/\s*\|\s*/g, " / ").replace(/\s+/g, " ").trim();   // a "|" would split the line
 
 /* ---------- what a box is, for the quote ---------- */
@@ -46,6 +74,8 @@ function guessProduct(d) {
   if (/directv/i.test(m)) return { mfr: "DirecTV", model: "Receiver", provider: true };
   if (/dish/i.test(m)) return { mfr: "Dish", model: "Receiver", provider: true };
   if (/roku/i.test(m)) return { mfr: "Roku", model: "Ultra", unsure: true };
+  const ax = m.match(/\baxion[\s-]*(4|8)\b/i);                  // AVPro's Axion matrix, as PlanQueue carries it
+  if (ax) return { mfr: "AVPro Edge", model: `AC-AXION-${ax[1]}` };
   if (/kaleidescape/i.test(m)) return { mfr: "Kaleidescape", model: "K0701-0000", unsure: true };   // Strato V, the current player
   if (/xbox|playstation|ps5|nintendo|game/i.test(m)) return { mfr: "Unspecified", model: m || "Game Console", unsure: true };
   if (d.type === "avr" || /receiver/i.test(m)) return { mfr: "Unspecified", model: "AV Receiver", unsure: true };
@@ -63,19 +93,17 @@ function quoteRooms(job, sol, catalog, adv) {
   const rooms = new Map();   // "floor\u0000room" → {floor, room, scope, lines: Map}
   const areaName = id => job.house.areas?.find(a => a.id === id)?.name;
   const floorOf = z => areaName(z.area) || (isOutdoorZone(z) ? "Exterior" : "Floor 1");
-  const add = (floor, room, scope, p, extraNotes = []) => {
+  // one line per product per room. The file carries no notes, so owner-supplied and
+  // provider gear become PlanQueue's own Customer-Supplied items; `part` keeps a sub
+  // on its own line even when it prints like the speakers
+  const add = (floor, room, scope, p, { qty = 1, part = "", ofe = false } = {}) => {
     const k = floor + "\u0000" + room;
     if (!rooms.has(k)) rooms.set(k, { floor, room, scope, lines: new Map() });
-    const notes = [...extraNotes];
-    if (p.provider) notes.push("provider equipment");
-    if (p.unsure) notes.push("unsure");
-    if (p.pqMissing) notes.push("not in PlanQueue catalog — needs SKU");
-    const line = { mfr: clean(p.mfr), model: clean(p.model), note: clean([...new Set(notes)].join("; ")) };
-    const key = [line.mfr, line.model, line.note].join("|");
+    const line = ofe || p.provider ? { mfr: "Customer-Supplied", model: p.customer || "Equipment" } : { mfr: clean(p.mfr), model: clean(p.model) };
+    const key = [line.mfr, line.model, part].join("|");
     const L = rooms.get(k).lines;
-    if (L.has(key)) L.get(key).qty++; else L.set(key, { qty: 1, ...line });
+    if (L.has(key)) L.get(key).qty += qty; else L.set(key, { qty, ...line });
   };
-  const ofe = s => s === "ofe" ? ["customer supplied"] : [];
   const tenG = (sol.racks || []).flatMap(r => r.devices || []).some(d => cat(d.catalogRef)?.gen === "10g");
 
   // the rack(s)
@@ -83,15 +111,12 @@ function quoteRooms(job, sol, catalog, adv) {
     const room = r.name || "Equipment Rack", floor = areaName(r.area) || "Floor 1";
     for (const d of r.devices || []) {
       const c = cat(d.catalogRef);
-      const extra = [...ofe(d.status)];
-      if (d.danteSwitch) extra.push("dedicated Dante switch");
-      if (c && d.type === "controlBox" && c.flags?.includes("danteController")) extra.push("Dante mode");
-      add(floor, room, "included", c ? fromCatalog(c) : guessProduct(d), extra);
+      add(floor, room, "included", c ? fromCatalog(c) : guessProduct(d), { ofe: d.status === "ofe" });
     }
     // encoders ride with their sources in the rack
     for (const e of (sol.companions || []).filter(e => e.type === "enc" && (r.devices || []).some(d => d.id === e.serves))) {
       const c = cat(tenG ? "avpro-mxnet-10g-tcvr" : e.dante ? "avpro-mxnet-1g-dante-ev2" : "avpro-mxnet-1g-ev2");
-      add(floor, room, "included", fromCatalog(c), tenG ? ["set as encoder"] : []);
+      add(floor, room, "included", fromCatalog(c));
     }
   }
   // the control platform's host/controller, as the licensing advisor picked it
@@ -99,8 +124,7 @@ function quoteRooms(job, sol, catalog, adv) {
     if (!lic.pick || lic.solution !== sol.id) continue;
     const mfr = { savant: "Savant", josh: "Josh.ai", control4: "Control4" }[lic.platform] || PLATFORM_NAME[lic.platform] || lic.platform;
     add(areaName(sol.racks?.[0]?.area) || "Floor 1", sol.racks?.[0]?.name || "Equipment Rack", "included",
-      { mfr, model: (String(lic.pick).match(/\b[A-Z]{2,}-?\d{2,}[A-Z0-9-]*\b/) || [String(lic.pick).replace(/^\d+×\s*/, "")])[0], unsure: true },
-      [`${lic.pick} — from the licensing advisor`]);
+      { mfr, model: (String(lic.pick).match(/\b[A-Z]{2,}-?\d{2,}[A-Z0-9-]*\b/) || [String(lic.pick).replace(/^\d+×\s*/, "")])[0] });
   }
   // the rooms
   for (const z of job.house.zones) {
@@ -110,17 +134,24 @@ function quoteRooms(job, sol, catalog, adv) {
     const prewire = scope === "prewire";
     for (const ep of z.endpoints || []) {
       if (ep.type === "display") {
-        const what = ep.displayType === "projector" ? "Projector" : "TV";
-        if (prewire) { add(floor, z.name, scope, { mfr: "Package", model: `${what} Location Pre-Wire` }, ["PlanQueue picks the package"]); continue; }
-        const model = ep.model || `${ep.size ? `${ep.size}" ` : ""}${what}`;
-        add(floor, z.name, scope, { mfr: ep.brand || "Unspecified", model, unsure: !ep.model }, [...ofe(ep.status), ...(ep.confirm?.length ? ["size to confirm"] : [])]);
+        if (prewire) { add(floor, z.name, scope, SYN("Prewire - TV (Standard)")); continue; }
+        const ofe = ep.status === "ofe", tv = ep.displayType !== "projector";
+        const p = ofe ? { customer: tv ? "TV" : "Equipment" }
+          : ep.model ? { mfr: ep.brand || "Unspecified", model: ep.model }
+          : tv ? SYN("Unspecified TV") : { mfr: ep.brand || "Unspecified", model: "Projector" };
+        add(floor, z.name, scope, p, { ofe });
       } else if (ep.type === "speakers") {
-        const cfg = ep.config || "stereo";
-        let desc = PACKAGE_NAME[cfg] || SPEAKER_SETUP[cfg] || cfg;
-        if (cfg === "landscape") desc = `Landscape (${ep.satCount || 8} Satellites${ep.buriedSub ? " + Buried Sub" : ""})`;
-        else if (cfg === "stereo" && (ep.count || 2) > 2) desc = `Stereo (${ep.count} Speakers)`;
-        add(floor, z.name, scope, { mfr: "Package", model: `${desc}${prewire ? " Pre-Wire" : " Speakers"}` },
-          ["PlanQueue picks the package", ...ofe(ep.status)]);
+        const [n, sub] = speakerCounts(ep), bar = String(ep.config || "").startsWith("soundbar");
+        if (prewire) {
+          const passive = (sol.connections || []).some(c => c.to === ep.id && c.signal === "speaker");   // an amp/AVR drives it
+          for (const [item, q] of prewireItems(ep, passive)) add(floor, z.name, scope, SYN(item), { qty: q, part: item });
+        } else if (ep.status === "ofe") {
+          if (n) add(floor, z.name, scope, { customer: bar ? "Soundbar" : "Speakers" }, { ofe: true, qty: n });
+          if (sub) add(floor, z.name, scope, { customer: "Subwoofer" }, { ofe: true, qty: sub });
+        } else {
+          if (n) add(floor, z.name, scope, SYN("Unspecified Speakers"), { qty: n });
+          if (sub) add(floor, z.name, scope, SYN("Unspecified Speakers"), { qty: sub, part: "sub" });   // the sub on its own line
+        }
       }
     }
     if (prewire) continue;
@@ -130,11 +161,11 @@ function quoteRooms(job, sol, catalog, adv) {
         : comp.type === "dec" ? (tenG ? "avpro-mxnet-10g-tcvr" : comp.dante ? "avpro-mxnet-1g-dante-dv2" : "avpro-mxnet-1g-dv2") : null;
       const p = ref && cat(ref) ? fromCatalog(cat(ref))
         : { mfr: "Unspecified", model: comp.type === "balun" ? "HDBaseT Extender Set" : `${adapterName(comp)} Set`, unsure: true };
-      add(floor, z.name, scope, p, comp.type === "dec" && tenG ? ["set as decoder"] : []);
+      add(floor, z.name, scope, p);
     }
     for (const d of (sol.localDevices || []).filter(d => d.zone === z.id)) {
       const c = cat(d.catalogRef);
-      add(floor, z.name, scope, c ? fromCatalog(c) : guessProduct(d), ofe(d.status));
+      add(floor, z.name, scope, c ? fromCatalog(c) : guessProduct(d), { ofe: d.status === "ofe" });
     }
     // billable room remotes
     if (z.remote === "savant") add(floor, z.name, scope, { mfr: "Savant", model: "Pro Remote", unsure: true });
@@ -143,34 +174,22 @@ function quoteRooms(job, sol, catalog, adv) {
   return [...rooms.values()];
 }
 
-const lastFirst = name => {
-  const n = String(name || "").trim();
-  if (!n || n === "Customer Name") return "";
-  if (n.includes(",")) return n;
-  const parts = n.split(/\s+/);
-  return parts.length > 1 ? `${parts[parts.length - 1]}, ${parts.slice(0, -1).join(" ")}` : n;
-};
-
-function planQueueText(job, type, label, rooms) {
+/* the file: front matter (planqueue key only) → # title → ## rooms → product lines. Nothing else. */
+function planQueueText(job, rooms, suffix = "") {
   const J = job.job || {};
-  const client = lastFirst(J.client?.name);
-  const who = client ? client.split(",")[0] : (J.name || "Proposal").replace(/\s+(residence|home|house)$/i, "");
-  const fm = ["---", "planqueue: proposal-import/1", `type: ${type}`, `name: ${clean(`${who} — ${label}`)}`];
-  if (client) fm.push(`client: ${clean(client)}`);
-  if (J.client?.address) fm.push(`site: ${clean(J.client.address)}`);
-  fm.push("---", "");
-  // floors in first-seen order, Exterior last; rooms in order under each
+  const client = String(J.client?.name || "").trim(), known = client && client !== "Customer Name";
+  const addr = String(J.client?.address || "").trim();
+  const title = (known ? [client, addr].filter(Boolean).join(" — ") : (J.name || "Proposal")) + suffix;
+  const out = ["---", "planqueue: proposal-import/1", "---", "", `# ${clean(title)}`, ""];
+  // rooms in floor order (first seen, Exterior last); floors aren't in the file, so a
+  // room name that repeats on two floors carries its floor to stay unique
   const floors = [...new Set(rooms.map(r => r.floor))].sort((a, b) => (a === "Exterior") - (b === "Exterior"));
-  const out = [...fm];
-  for (const f of floors) {
-    const rs = rooms.filter(r => r.floor === f && r.lines.size);
-    if (!rs.length) continue;
-    out.push(`## ${clean(f)}`);
-    for (const r of rs) {
-      out.push(`### ${clean(r.room)}`);
-      for (const l of r.lines.values()) out.push(`- ${l.qty} | ${l.mfr} | ${l.model}${l.note ? ` | ${l.note}` : ""}`);
-      out.push("");
-    }
+  const ordered = floors.flatMap(f => rooms.filter(r => r.floor === f && r.lines.size));
+  const seen = name => ordered.filter(r => r.room === name).length;
+  for (const r of ordered) {
+    out.push(`## ${clean(seen(r.room) > 1 ? `${r.room} (${r.floor})` : r.room)}`, "");
+    for (const l of r.lines.values()) out.push(`- ${l.qty} | ${l.mfr} | ${l.model}`);
+    out.push("");
   }
   return out.join("\n").replace(/\n+$/, "\n");
 }
@@ -184,8 +203,8 @@ export function planQueueFiles(job, solIndex, catalog) {
   const rooms = quoteRooms(J, sol, catalog, adv);
   const sys = rooms.filter(r => r.scope !== "prewire"), pre = rooms.filter(r => r.scope === "prewire");
   const files = [];
-  if (sys.some(r => r.lines.size)) files.push({ type: "technology-systems", text: planQueueText(J, "technology-systems", "Technology Systems", sys) });
-  if (pre.some(r => r.lines.size)) files.push({ type: "technology-prewire", text: planQueueText(J, "technology-prewire", "Technology Pre-Wire", pre) });
+  if (sys.some(r => r.lines.size)) files.push({ type: "technology-systems", text: planQueueText(J, sys) });
+  if (pre.some(r => r.lines.size)) files.push({ type: "technology-prewire", text: planQueueText(J, pre, " — Pre-Wire") });
   return files;
 }
 

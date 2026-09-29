@@ -290,22 +290,23 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20260929223953",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20260929223953",
-    "./app/commands.js": "./app/commands.js?v=20260929223953",
-    "./app/engine.js": "./app/engine.js?v=20260929223953",
-    "./app/exports.js": "./app/exports.js?v=20260929223953",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260929223953",
-    "./app/hookup.js": "./app/hookup.js?v=20260929223953",
-    "./app/importers.js": "./app/importers.js?v=20260929223953",
-    "./app/names.js": "./app/names.js?v=20260929223953",
-    "./app/network.js": "./app/network.js?v=20260929223953",
-    "./app/pages.js": "./app/pages.js?v=20260929223953",
-    "./app/power.js": "./app/power.js?v=20260929223953",
-    "./app/quickadd.js": "./app/quickadd.js?v=20260929223953",
-    "./app/rack.js": "./app/rack.js?v=20260929223953",
-    "./app/route-audit.js": "./app/route-audit.js?v=20260929223953",
-    "./app/starters.js": "./app/starters.js?v=20260929223953"
+    "./app/ai.js": "./app/ai.js?v=20260929235918",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20260929235918",
+    "./app/audiochain.js": "./app/audiochain.js?v=20260929235918",
+    "./app/commands.js": "./app/commands.js?v=20260929235918",
+    "./app/engine.js": "./app/engine.js?v=20260929235918",
+    "./app/exports.js": "./app/exports.js?v=20260929235918",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260929235918",
+    "./app/hookup.js": "./app/hookup.js?v=20260929235918",
+    "./app/importers.js": "./app/importers.js?v=20260929235918",
+    "./app/names.js": "./app/names.js?v=20260929235918",
+    "./app/network.js": "./app/network.js?v=20260929235918",
+    "./app/pages.js": "./app/pages.js?v=20260929235918",
+    "./app/power.js": "./app/power.js?v=20260929235918",
+    "./app/quickadd.js": "./app/quickadd.js?v=20260929235918",
+    "./app/rack.js": "./app/rack.js?v=20260929235918",
+    "./app/route-audit.js": "./app/route-audit.js?v=20260929235918",
+    "./app/starters.js": "./app/starters.js?v=20260929235918"
 } }
 </script>
 <script>
@@ -482,7 +483,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20260929223953").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20260929235918").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -532,7 +533,7 @@ function syncShippedCatalog() {
   return changed;
 }
 // advisor notes that ask for a fix (the rest are reference: setup checklists, budgets)
-const ACTION_NOTES = new Set(["amp-sub-outs", "earc-extender", "mxnet-no-cbox", "dante-no-controller", "mxnet-cbox-per-platform", "net-mismatch", "net-mixed",
+const ACTION_NOTES = new Set(["downres-surround", "amp-sub-outs", "earc-extender", "mxnet-no-cbox", "dante-no-controller", "mxnet-cbox-per-platform", "net-mismatch", "net-mixed",
   "dante-multicast", "pcm-only", "switch-ports-full", "switch-no-poe", "lan-no-switch", "power-none", "power-short", "power-tight",
   "power-circuit", "power-peak", "rack-full", "rack-unknown-u", "rack-heat"]);
 const saveSettings = () => dbPut({ id: "__settings", updated: Date.now(), settings: SETTINGS });
@@ -1758,7 +1759,7 @@ function jobHTML() {
     <button class="addbtn" id="addConn">＋ Add connection</button>
     <div class="sect">PACKET PAGES <span class="mini">sheet 1 always prints</span></div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
-      ${["channelMap:Channel Map", "equipment:Equipment & Takeoff", "wireSchedule:Wire Schedule", "elevation:Rack (elevation, hardware, power)", "network:Network (switch ports)", "labels:Cable Labels",
+      ${["channelMap:Channel Map", "audioSetup:Audio Setup (source & TV settings)", "equipment:Equipment & Takeoff", "wireSchedule:Wire Schedule", "elevation:Rack (elevation, hardware, power)", "network:Network (switch ports)", "labels:Cable Labels",
          ...(S.job.solutions.length > 1 ? ["bomCompare:Solution Comparison"] : [])].map(kv => {
         const [k, label] = kv.split(":");
         return `<div class="f"><input type="checkbox" class="pgflag" data-pg="${k}" ${pageFlags(S.job)[k] ? "checked" : ""}> <span>${label}</span></div>`;

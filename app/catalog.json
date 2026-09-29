@@ -1925,7 +1925,8 @@
       "notes": "128GB Wi-Fi + Ethernet model (the rack one). HDMI only — no optical/analog. Internal PSU (figure-8 cord). 93×31×93 mm → shelf. Power: 2.35–2.46W streaming 4K HDR, 0.49W network standby (Apple Product Environmental Report Oct 2022, measured on Wi-Fi); no max published. Part no. A2843 unverified. Sizing profile for any rack box named 'Apple TV' / 'Apple TV 2'.",
       "aliases": [
         "Apple TV 4K (3rd gen) Wi-Fi + Ethernet"
-      ]
+      ],
+      "stereoSetup": "Settings › Video and Audio › Audio Format › Change Format (on) › Stereo"
     },
     "roku-ultra-2024": {
       "inputs": {},
@@ -1945,7 +1946,8 @@
       "notes": "~4.5W streaming 4K (roku.com); 12V 1.5A brick; 10/100 Ethernet; HDMI only. 124×25×127 mm → shelf.",
       "aliases": [
         "Roku Ultra (2024)"
-      ]
+      ],
+      "stereoSetup": "Settings › Audio › Digital output format › Stereo (older Roku OS: HDMI = PCM-Stereo)"
     },
     "provider-cable-box": {
       "inputs": {},
@@ -1965,7 +1967,8 @@
       "match": "^cable( ?box)?( ?\\d+)?$",
       "partNo": "Cable Box",
       "partNoUnsure": true,
-      "notes": "Sizing profile for an unnamed provider box: the highest published 'On' draw among current cable DVRs — Spectrum 210T 17.5W (energy.cablelabs.com/charter), Xfinity XG1v4 AX014ANC 17.4W / 16.0W sleep (xfinity.com set-top-box energy page). These boxes barely sleep. Provider equipment: never quoted as a product."
+      "notes": "Sizing profile for an unnamed provider box: the highest published 'On' draw among current cable DVRs — Spectrum 210T 17.5W (energy.cablelabs.com/charter), Xfinity XG1v4 AX014ANC 17.4W / 16.0W sleep (xfinity.com set-top-box energy page). These boxes barely sleep. Provider equipment: never quoted as a product.",
+      "stereoSetup": "Audio settings › HDMI audio output = Stereo (Xfinity X1: Device Settings › Audio; also set Optical = Stereo)"
     },
     "directv-genie-hr54": {
       "inputs": {},
@@ -1986,7 +1989,8 @@
       "provider": true,
       "match": "directv|genie",
       "partNo": "HR54",
-      "notes": "ENERGY STAR disclosure (AT&T): HR54-500 On 13.66W / Off 12.64W (-200: 12.2/11.1). EPS44 12V 4A brick. Optical + coax digital out. Provider equipment."
+      "notes": "ENERGY STAR disclosure (AT&T): HR54-500 On 13.66W / Off 12.64W (-200: 12.2/11.1). EPS44 12V 4A brick. Optical + coax digital out. Provider equipment.",
+      "stereoSetup": "MENU › Settings & Help › Settings › Audio › Dolby Digital › Off"
     },
     "directv-genie2-hs17": {
       "inputs": {},
@@ -2021,7 +2025,8 @@
       "provider": true,
       "match": "xfinity|comcast|\\bx1\\b",
       "partNo": "AX014ANC",
-      "notes": "xfinity.com set-top-box energy page: AX014ANC On 17.4W / Sleep 16.0W. XG1v4 ↔ AX014 mapping from Xfinity community. Ports/dimensions unpublished. Provider equipment."
+      "notes": "xfinity.com set-top-box energy page: AX014ANC On 17.4W / Sleep 16.0W. XG1v4 ↔ AX014 mapping from Xfinity community. Ports/dimensions unpublished. Provider equipment.",
+      "stereoSetup": "Xfinity button › Settings › Device Settings › Audio › HDMI Audio Output = Stereo, Digital Audio Output = Stereo"
     },
     "spectrum-210": {
       "inputs": {},
@@ -2040,7 +2045,8 @@
       "provider": true,
       "match": "spectrum|charter",
       "partNo": "210",
-      "notes": "energy.cablelabs.com/charter: 210T On 17.5 / Sleep 13.2W; 210H 17.0/13.7; 210A 17.2/13.3. Ports/dimensions unpublished. Provider equipment."
+      "notes": "energy.cablelabs.com/charter: 210T On 17.5 / Sleep 13.2W; 210H 17.0/13.7; 210A 17.2/13.3. Ports/dimensions unpublished. Provider equipment.",
+      "stereoSetup": "Settings › Audio › Dolby Digital off (HDMI = Stereo / PCM)"
     },
     "kaleidescape-strato-c": {
       "inputs": {},
@@ -2405,6 +2411,56 @@
       "verified": true,
       "desktop": true,
       "notes": "The default HDBaseT balun (Ryan 2026-09-29: 'just use a AV Pro'). TX + RX pair: 18Gbps HDMI 2.0 (AVPro ICT compression above 10.2G), 4K60 4:4:4 with HDR10 / HDR10+ / Dolby Vision / HLG; 4K to 70m on Cat6A (the page's table says 100m — conflicting), 1080p 100–150m. One 48V PSU (12W max) powers either end over the cable (PoH). NO audio return: no ARC or eARC — it only breaks out analog L/R from 2ch PCM, so a receiver-fed TV's own apps need the optical run back. AC-EX70-UHD-KIT (also in PlanQueue) is 10.2G / 4K60 4:2:0 only — not for HDR sources. avproglobal.com/products/ac-ex70-444-kit, 2026-09-29"
+    },
+    "avpro-ac-axion-4": {
+      "brand": "AVPro Edge",
+      "model": "AC-AXION-4",
+      "partNo": "AC-AXION-4",
+      "type": "videoMatrix",
+      "aliases": [
+        "Axion 4",
+        "AVPro Edge Axion 4",
+        "AXION-4"
+      ],
+      "inputs": {
+        "hdmi": 4
+      },
+      "outputs": {
+        "hdmi": 4,
+        "analog": 4,
+        "optical": 4
+      },
+      "flags": [
+        "audioMatrix",
+        "downmix2ch"
+      ],
+      "verified": true,
+      "notes": "4x4 18G matrix, each output mirrored HDMI + HDBaseT (PoH, ICT above 10.2G; audio unimpeded — Atmos/DTS:X pass). AUDIO 1–4: each block = Toslink + balanced 5-pin, ALWAYS downmixed to 2ch (automatic, incl. Atmos/DTS:X; 7 presets per input) — the matrix to put in front of 2-channel amp zones. No ARC. Ports verified 2026-09-29 from the rear panel / manual — avproglobal.com/products/ac-axion-4"
+    },
+    "avpro-ac-axion-8": {
+      "brand": "AVPro Edge",
+      "model": "AC-AXION-8",
+      "partNo": "AC-AXION-8",
+      "type": "videoMatrix",
+      "aliases": [
+        "Axion 8",
+        "AVPro Edge Axion 8",
+        "AXION-8"
+      ],
+      "inputs": {
+        "hdmi": 8
+      },
+      "outputs": {
+        "hdmi": 8,
+        "analog": 8,
+        "optical": 8
+      },
+      "flags": [
+        "audioMatrix",
+        "downmix2ch"
+      ],
+      "verified": true,
+      "notes": "8x8 18G matrix, each output mirrored HDMI + HDBaseT (PoH, ICT above 10.2G; audio unimpeded — Atmos/DTS:X pass). AUDIO 1–8: each block = Toslink + balanced 5-pin, ALWAYS downmixed to 2ch (automatic, incl. Atmos/DTS:X; 7 presets per input) — the matrix to put in front of 2-channel amp zones. No ARC. Ports verified 2026-09-29 from the rear panel / manual — avproglobal.com/products/ac-axion-8"
     }
   },
   "licensing": {

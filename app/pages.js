@@ -15,11 +15,12 @@ const W = 1632, H = 1056;
 export function pageFlags(job) {
   const p = job.job?.pages || {};
   return { channelMap: p.channelMap !== false, equipment: p.equipment !== false,
-           wireSchedule: p.wireSchedule === true, bomCompare: p.bomCompare === true, network: p.network !== false, labels: p.labels === true, elevation: p.elevation !== false };
+           wireSchedule: p.wireSchedule === true, bomCompare: p.bomCompare === true, network: p.network !== false, labels: p.labels === true, elevation: p.elevation !== false,
+           audioSetup: p.audioSetup !== false };
 }
 export function sheetCount(job) {
   const f = pageFlags(job);
-  return 1 + (f.channelMap ? 1 : 0) + (f.equipment ? 1 : 0) + (f.wireSchedule ? 1 : 0) + (f.network ? 1 : 0) + (f.labels ? 1 : 0) + (f.elevation ? 1 : 0) +
+  return 1 + (f.channelMap ? 1 : 0) + (f.equipment ? 1 : 0) + (f.wireSchedule ? 1 : 0) + (f.network ? 1 : 0) + (f.labels ? 1 : 0) + (f.elevation ? 1 : 0) + (f.audioSetup ? 1 : 0) +
          (f.bomCompare && (job.solutions || []).length > 1 ? 1 : 0);
 }
 
@@ -915,6 +916,30 @@ function installPages(job, ix, opts, label) {
   return assemble(job, opts, "Install Record", `Serial numbers and network addresses as installed · ${recs.filter(r => r.filled).length} of ${recs.length} boxes recorded`, bodies, label,
     () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Recorded on site in SignalPath (JOB → Install record). Blank rows can be filled in by hand. Shaded rows have an address to check.</text>`);
 }
+/* ---------- Audio Setup ----------
+   How each source and TV is set so every room plays: surround rooms decode
+   bitstream; 2-channel boxes get 2ch PCM — downres the source where nothing
+   downmixes on the way (Ryan 2026-09-29, audiochain.js). */
+function audioSetupPages(job, ix, adviseResult, opts, label) {
+  const solId = ix.solutions[opts.solution ?? 0]?.sol.id;
+  const st = (adviseResult?.setup || []).find(x => x.solution === solId);
+  if (!st || (!st.sources.length && !st.tvs.length)) return [];
+  const cols = [{ label: "Box", dx: 14 }, { label: "Audio out", dx: 280 }, { label: "Where to set it", dx: 480 }, { label: "Why", dx: 1030 }];
+  const rows = [
+    ...st.sources.map(r => ({ tint: r.downres, cells: [clipText(r.name, 34), { text: r.setting, color: r.downres ? "#a45a12" : null }, clipText(r.how || "—", 78), clipText(r.reason, 72)] })),
+    ...st.tvs.map(r => ({ cells: [clipText(r.name, 34), r.setting, clipText(r.how, 78), clipText(r.reason, 72)] })),
+  ];
+  const bodies = [];
+  let rest = rows, first = true;
+  do {
+    const top = TOP + 10 + (first ? st.notes.length * 20 : 0);
+    const t = tableFit(40, top, 1552, cols, rest, 30);
+    bodies.push([...(first ? st.notes.map((n, i) => `<text x="40" y="${TOP + 4 + i * 20}" font-size="12.5" fill="#a45a12">⚠ ${esc(clipText(n.msg, 190))}</text>`) : []), t.svg]);
+    rest = t.rest; first = false;
+  } while (rest.length);
+  return assemble(job, opts, "Audio Setup", "Source and TV audio settings — surround rooms decode bitstream; 2-channel boxes need 2ch PCM", bodies, label,
+    () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Shaded = downres'd: nothing between the source and a 2-channel box can downmix, so the source itself is set to stereo. A TV into a receiver stays on Auto; into anything else it's set to PCM / Stereo.</text>`);
+}
 const clipText = (t, n) => String(t).length > n ? String(t).slice(0, n - 1) + "…" : String(t);
 
 function pageGroups(job, ix, adviseResult, opts) {
@@ -929,6 +954,7 @@ function pageGroups(job, ix, adviseResult, opts) {
   }
   if (isAsBuilt(opts.rawJob || job)) g.push(["As-Built Changes", lbl => asBuiltPages(job, ix, opts, lbl)], ["Install Record", lbl => installPages(job, ix, opts, lbl)]);
   if (flags.channelMap) g.push(["Channel Map", lbl => channelMapPages(job, ix, opts, lbl)]);
+  if (flags.audioSetup) g.push(["Audio Setup", lbl => audioSetupPages(job, ix, adviseResult, opts, lbl)]);
   if (flags.equipment) g.push(["Equipment & Takeoff", lbl => takeoffPages(job, ix, adviseResult, opts, lbl)]);
   if (flags.wireSchedule) g.push(["Wire Schedule", lbl => wireSchedulePages(job, ix, opts, lbl)]);
   if (flags.elevation) g.push(["Rack", lbl => rackPages(job, ix, adviseResult, opts, lbl)]);

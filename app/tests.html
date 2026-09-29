@@ -452,9 +452,9 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
   const a = advise(job, ix, CATP);
   const parseOk = svg => !new DOMParser().parseFromString(svg, "image/svg+xml").querySelector("parsererror");
 
-  t("pages: default flags = channel map + equipment + network on, wire schedule + comparison opt-in",
-    JSON.stringify(pageFlags(fixtures.residence)) === JSON.stringify({ channelMap: true, equipment: true, wireSchedule: false, bomCompare: false, network: true, labels: false, elevation: true }) &&
-    sheetCount(fixtures.residence) === 5);
+  t("pages: default flags = channel map + equipment + network + audio setup on, wire schedule + comparison opt-in",
+    JSON.stringify(pageFlags(fixtures.residence)) === JSON.stringify({ channelMap: true, equipment: true, wireSchedule: false, bomCompare: false, network: true, labels: false, elevation: true, audioSetup: true }) &&
+    sheetCount(fixtures.residence) === 6);
 
   const cm = renderChannelMap(job, ix, { sheetLabel: "Sheet 2 of 4" });
   t("channel map: valid SVG, no leaks", parseOk(cm) && !/NaN|undefined/.test(cm));
@@ -496,9 +496,9 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
   withWs.job.pages = { wireSchedule: true };
   const pages = renderExtraPages(loadJob(withWs).job, loadJob(withWs).ix, a, {});
   t("packet: flags drive page list + sheet numbering",
-    pages.length === 5 && pages[2].title === "Wire Schedule" && pages[4].svg.includes("Sheet 6 of 6") && sheetCount(withWs) === 6);
+    pages.length === 6 && pages[1].title === "Audio Setup" && pages[3].title === "Wire Schedule" && pages[5].svg.includes("Sheet 7 of 7") && sheetCount(withWs) === 7);
   const noPages = structuredClone(fixtures.residence);
-  noPages.job.pages = { channelMap: false, equipment: false, network: false, elevation: false };
+  noPages.job.pages = { channelMap: false, equipment: false, network: false, elevation: false, audioSetup: false };
   t("packet: all pages off → schematic only, sheet 1 of 1",
     renderExtraPages(loadJob(noPages).job, loadJob(noPages).ix, a, {}).length === 0 && sheetCount(noPages) === 1);
 }
@@ -1128,7 +1128,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
     raw.job.pages = { bomCompare: true };
     const n2 = sheetCount(raw);
     const single = structuredClone(raw); single.solutions = [single.solutions[0]];
-    return !f1.bomCompare && n2 === 6 && sheetCount(single) === 5;
+    return !f1.bomCompare && n2 === 7 && sheetCount(single) === 6;   // + the Audio Setup sheet (on by default)
   })());
 
   const { job, ix } = loadJob(raw);
@@ -1149,7 +1149,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
 
   const pages = renderExtraPages(raw, ix, a, { rawJob: raw });
   t("bom: renderExtraPages includes the comparison sheet when flagged",
-    pages.some(p => p.title === "Solution Comparison") && pages.length === 5);
+    pages.some(p => p.title === "Solution Comparison") && pages.length === 5 + (pages.some(p => p.title === "Audio Setup") ? 1 : 0));
 }
 
 /* ---------- catalog auto-link: saved jobs self-heal their catalogRefs ---------- */
@@ -1164,7 +1164,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("autolink: exact match (Anthem MDX-16)", ref("mdx16") === "anthem-mdx-16");
   t("autolink: 8K-suffix tolerance (Anthem MRX-540 → MRX 540 8K)", ref("mrx540") === "anthem-mrx-540-8k");
   t("autolink: Savant module aliases", ref("sav-in") === "savant-avb-input-module" && ref("sav-out") === "savant-avb-output-module");
-  t("autolink: no fuzzy links — Axion 8 stays unlinked (not an AC-MX-88)", ref("axion8") == null);
+  t("autolink: no fuzzy links — Axion 8 links to the AC-AXION-8, never the AC-MX-88", ref("axion8") === "avpro-ac-axion-8");
   t("autolink: generic sources stay unlinked", ref("cablebox") == null && ref("atv-rack") == null);
   t("autolink: idempotent", autoLinkCatalog(raw, catalog) === 0);
 
@@ -2759,6 +2759,34 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const j4 = starter("theater-receiver"); const th = addQ(j4, "theater 7.1 85 sony avr");
   th.endpoints.find(e => e.type === "display").model = "K-85XR90";
   t("walkthrough: a TV model typed in the zone is quoted (not Unspecified TV)", planQueueFiles(j4, 0, CAT)[0].text.includes("- 1 | Sony | K-85XR90"));
+}
+
+/* ---------- audio chain: downres the source (Ryan 2026-09-29) ----------
+   Surround rooms decode bitstream; 2-channel boxes get 2ch PCM — downmixed
+   on the way (AXION / AVDM audio outs) or the source is set to stereo. */
+{
+  const { audioSetup } = await import("./audiochain.js");
+  const CAT = await (await fetch("./catalog.json")).json();
+  const run = j => { const L = loadJob(structuredClone(j)); return audioSetup(L.job, L.ix, CAT, 0); };
+  const r1 = run(fixtures.residence);
+  t("audio chain: sources into a receiver stay on Auto; a TV into the Savant input module is set to PCM",
+    r1.sources.every(x => x.setting.startsWith("Auto")) && r1.tvs.some(x => /Master Bed TV/.test(x.name) && x.setting.startsWith("PCM")));
+  const r2 = run(fixtures.estate);
+  t("audio chain: an MXNet decoder into a PCM-only amp downres'es every source it can reach, with the menu path, and warns the surround room",
+    ["Apple TV 1", "Apple TV 2", "Cable Box"].every(n => r2.sources.some(x => x.name === n && x.downres)) &&
+    r2.sources.find(x => x.name === "Apple TV 1").how.includes("Audio Format") && r2.notes.some(n => /MRX-540 also gets stereo/.test(n.msg)), JSON.stringify(r2));
+  const mk = matrixRef => ({ generator: "SignalPath", schemaVersion: 1, job: { name: "a" }, house: { zones: [{ id: "k", name: "Kitchen", endpoints: [{ id: "k-spk", type: "speakers", config: "stereo" }] }] },
+    solutions: [{ id: "s", name: "S", racks: [{ id: "r", name: "Rack", devices: [
+      { id: "atv", type: "source", model: "Apple TV", catalogRef: "apple-tv-4k-3gen" }, { id: "cb", type: "source", model: "Cable Box" },
+      { id: "mx", type: "videoMatrix", model: "Matrix", catalogRef: matrixRef }, { id: "amp", type: "amp", model: "MDX-16", catalogRef: "anthem-mdx-16", zones: 8 }] }],
+      connections: [{ from: "atv", to: "mx", signal: "video" }, { from: "mx", to: "amp", signal: "audio" }, { from: "cb", to: "amp", signal: "audio" }, { from: "amp", to: "k-spk", signal: "speaker", channels: "1-2" }] }] });
+  const rx = run(mk("avpro-ac-mx-88")), ra = run(mk("avpro-ac-axion-8"));
+  t("audio chain: an Apple TV through an MX-88 (no downmix) into an MDX-16 is set to Stereo", rx.sources.some(x => x.name === "Apple TV" && x.downres), JSON.stringify(rx.sources));
+  t("audio chain: through an AXION (audio outs always downmix) it stays on Auto", !ra.sources.some(x => x.downres), JSON.stringify(ra.sources));
+  t("audio chain: a cable box's analog out straight into the amp is already stereo — no setting", !rx.sources.some(x => x.name === "Cable Box" && x.downres));
+  const L = loadJob(structuredClone(fixtures.estate)), a = advise(L.job, L.ix, CAT);
+  const pg = renderExtraPages(L.job, L.ix, a, {}).find(p => p.title === "Audio Setup");
+  t("audio chain: the Audio Setup sheet prints each setting with where to set it", pg && pg.svg.includes("Stereo (2ch PCM)") && pg.svg.includes("Audio Format") && pg.svg.includes("also gets stereo"));
 }
 
 /* ---------- input order (user redline 2026-09-28) ----------

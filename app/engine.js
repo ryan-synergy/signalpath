@@ -6,6 +6,7 @@ import { describeNode, adapterName, adapterTag, isOutdoorZone, SIGNAL_SHORT, SCO
 import { networkPlan, suggestLanSwitch } from "./network.js";
 import { powerPlan } from "./power.js";
 import { rackPlans } from "./rack.js";
+import { audioSetup } from "./audiochain.js";
 
 export const SIGNAL_COLORS = {
   video: "#d22b1f",
@@ -3175,5 +3176,8 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       out.notes.push({ code: "power-peak", solution: p.solution,
         msg: `Rack power: ~${p.typicalW} W typical, up to ${p.maxW} W at full output — over ${p.circuits > 1 ? `${p.circuits} × ${p.circuitA}A circuits'` : `the ${p.circuitA}A circuit's`} ${p.circuitW} W continuous at peak; give the amps a dedicated 20A circuit` });
   }
+  // source / TV audio settings (downres-the-source rule, audiochain.js)
+  out.setup = ix.solutions.map((s, i) => ({ solution: s.sol.id, ...audioSetup(job, ix, catalog, i) }));
+  for (const st of out.setup) for (const n of st.notes) out.notes.push({ ...n, solution: st.solution });
   return out;
 }

@@ -847,6 +847,7 @@ function networkPowerPages(job, ix, adviseResult, opts, label) {
       colY[c] = LIMIT;                                   // this column is full
     }
   };
+  const ab = isAsBuilt(opts.rawJob || job);           // as-built: recorded ports black, suggested ones gray
   const short = w => String(w).replace(/ — TV location$/, " TV");
   const cols = [{ label: "Port", dx: 12 }, { label: "Device", dx: 92 }, { label: "Location", dx: 350 }, { label: "Network", dx: 500 }, { label: "Power", dx: 676 }];
   const clip = (v, n) => String(v).length > n ? String(v).slice(0, n - 1) + "…" : String(v);
@@ -854,14 +855,17 @@ function networkPowerPages(job, ix, adviseResult, opts, label) {
     const cap = p.virtual ? `${p.used} Ethernet port${p.used === 1 ? "" : "s"} needed — add a LAN switch (see advisor)`
       : p.known ? `${p.copper ? `${p.copper} RJ45` : ""}${p.copper && p.sfp ? " + " : ""}${p.sfp ? `${p.sfp} SFP` : ""} · ${p.used} used · ${p.over ? `${p.over} SHORT` : `${p.spare} spare`}${p.poeBudgetW ? ` · PoE budget ${p.poeBudgetW} W (${p.poeCount} powered)` : ""}`
       : `${p.used} connection${p.used === 1 ? "" : "s"} · port count not in the catalog`;
-    const rows = p.rows.map(r => ({ cells: [r.port == null ? { text: "NONE", color: "#b32017" } : clip(String(r.port).replace(" (RJ45 module)", "*"), 9),
+    const portCell = r => r.port == null ? { text: "NONE", color: "#b32017" } : r.clash ? { text: clip(r.port, 7) + " ×2", color: "#b32017" }
+      : { text: clip(String(r.port).replace(" (RJ45 module)", "*"), 9), color: ab && !r.recorded ? "#9a9a9a" : null };
+    const rows = p.rows.map(r => ({ cells: [portCell(r),
       clip(r.what, 34), clip(short(r.where), 20), clip(r.net.replace("MXNet + Dante (VLAN 99)", "MXNet + VLAN 99"), 24),
-      r.power === "PoE" ? "PoE" : r.power ? { text: "PSU", color: "#a45a12" } : ""], tint: r.port == null }));
+      r.power === "PoE" ? "PoE" : r.power ? { text: "PSU", color: "#a45a12" } : ""], tint: r.port == null || r.clash }));
     block(p.virtual ? "House network (LAN)" : clip(`${p.model} — ${NET_ROLE_NAME[p.role]}`, 60), cap, cols, rows, switchSetup(p));
   }
   if (!bodies[bodies.length - 1].length) bodies.pop();
   return assemble(job, opts, "Network", "Switch ports and networks — every TV and networked box, derived from the schematic", bodies, label,
-    () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Every TV and networked box takes an Ethernet port. Suggested assignment: rack gear low, TVs by zone, uplinks on the SFP cages (* = RJ45 SFP module). PoE gear draws from its switch; PSU = PoE device on a non-PoE switch.</text>`);
+    () => ab ? `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">As built: black ports were recorded on site; gray ports are the suggestion, not yet recorded. ×2 = two boxes recorded on one port. * = RJ45 SFP module. PSU = PoE device on a non-PoE switch.</text>`
+    : `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Every TV and networked box takes an Ethernet port. Suggested assignment: rack gear low, TVs by zone, uplinks on the SFP cages (* = RJ45 SFP module). PoE gear draws from its switch; PSU = PoE device on a non-PoE switch.</text>`);
 }
 
 /* ---------- packet assembly (pages 2..N; page 1 comes from engine render) ----------

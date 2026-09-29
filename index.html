@@ -289,22 +289,22 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20260929211426",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20260929211426",
-    "./app/commands.js": "./app/commands.js?v=20260929211426",
-    "./app/engine.js": "./app/engine.js?v=20260929211426",
-    "./app/exports.js": "./app/exports.js?v=20260929211426",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260929211426",
-    "./app/hookup.js": "./app/hookup.js?v=20260929211426",
-    "./app/importers.js": "./app/importers.js?v=20260929211426",
-    "./app/names.js": "./app/names.js?v=20260929211426",
-    "./app/network.js": "./app/network.js?v=20260929211426",
-    "./app/pages.js": "./app/pages.js?v=20260929211426",
-    "./app/power.js": "./app/power.js?v=20260929211426",
-    "./app/quickadd.js": "./app/quickadd.js?v=20260929211426",
-    "./app/rack.js": "./app/rack.js?v=20260929211426",
-    "./app/route-audit.js": "./app/route-audit.js?v=20260929211426",
-    "./app/starters.js": "./app/starters.js?v=20260929211426"
+    "./app/ai.js": "./app/ai.js?v=20260929211945",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20260929211945",
+    "./app/commands.js": "./app/commands.js?v=20260929211945",
+    "./app/engine.js": "./app/engine.js?v=20260929211945",
+    "./app/exports.js": "./app/exports.js?v=20260929211945",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260929211945",
+    "./app/hookup.js": "./app/hookup.js?v=20260929211945",
+    "./app/importers.js": "./app/importers.js?v=20260929211945",
+    "./app/names.js": "./app/names.js?v=20260929211945",
+    "./app/network.js": "./app/network.js?v=20260929211945",
+    "./app/pages.js": "./app/pages.js?v=20260929211945",
+    "./app/power.js": "./app/power.js?v=20260929211945",
+    "./app/quickadd.js": "./app/quickadd.js?v=20260929211945",
+    "./app/rack.js": "./app/rack.js?v=20260929211945",
+    "./app/route-audit.js": "./app/route-audit.js?v=20260929211945",
+    "./app/starters.js": "./app/starters.js?v=20260929211945"
 } }
 </script>
 <script>
@@ -441,7 +441,7 @@ import { loadJob, normalizeJob, validate, advise, place, route, render, effectiv
 import { importAny, mergeHouse, drawFromWalk, decodeHandoff } from "./app/importers.js";
 import { planQueueFiles, aiReviewMarkdown } from "./app/exports.js";
 import { RACK_SIZES, DEFAULT_RACK_U } from "./app/rack.js";
-import { specFor, specNum } from "./app/network.js";
+import { specFor, specNum, tidyPort, NET_ROLE_NAME } from "./app/network.js";
 import { startAsBuilt, asBuiltChanges, changeMarks, isAsBuilt, installRows, installCSV, tidyMac } from "./app/asbuilt.js";
 import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV, labelsCSV, rackFrontSVG, rackData } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
@@ -481,7 +481,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20260929211426").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20260929211945").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1704,6 +1704,25 @@ function installHTML() {
       </div></div>`; }).join("") : `<div class="mini" style="padding:8px 2px">No gear on this job yet.</div>`}`;
 }
 
+/* as-built switch ports: the port each box was actually patched into (sol.portMap[switch][box]).
+   A blank shows the suggested port as its placeholder; the Network page prints recorded ports black, suggestions gray. */
+function portsHTML() {
+  const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
+  const solId = ix.solutions[S.sol]?.sol.id;
+  const plans = (advise(job, ix, effectiveCatalog()).network || []).filter(p => p.solution === solId && !p.virtual);
+  if (!plans.length) return "";
+  const recAll = plans.reduce((n, p) => n + p.rows.filter(r => r.recorded).length, 0), all = plans.reduce((n, p) => n + p.rows.length, 0);
+  return `<div class="sect">SWITCH PORTS <span class="badge">${recAll} of ${all}</span> <span class="mini">blank = suggested port</span></div>
+    ${plans.map(p => { const key = "ports:" + p.switch, open = S.openRows.has(key), n = p.rows.filter(r => r.recorded).length, clash = p.rows.filter(r => r.clash).length;
+      return `<div class="row ${open ? "open" : ""}" data-sw="${esc(p.switch)}">
+      <div class="head zhead" data-toggle="${esc(key)}"><div class="zmain"><div class="zt"><span class="t">${esc(p.model)}</span></div>
+        <div class="zsum">${esc(NET_ROLE_NAME[p.role] || p.role)} · ${n} of ${p.rows.length} recorded</div>
+        ${clash ? `<div class="ziss e">${clash} boxes recorded on the same port</div>` : ""}</div></div>
+      <div class="fields">${[...p.rows].sort((a, b) => a.isSwitch - b.isSwitch || a.rank - b.rank || a.zi - b.zi || a.order - b.order).map(r => `<div class="f"><label title="${esc(r.where)}">${esc(r.what)}</label><input class="swport" data-node="${esc(r.id)}" value="${r.recorded ? esc(r.port) : ""}"
+        placeholder="${esc(r.port == null ? "none free" : String(r.port).replace(" (RJ45 module)", "*"))}" style="width:90px${r.clash ? ";border-color:var(--bad)" : ""}" autocapitalize="characters" autocorrect="off" spellcheck="false">
+        <span class="mini">${esc(String(r.where).replace(/ — TV location$/, " TV"))}</span></div>`).join("")}</div></div>`; }).join("")}`;
+}
+
 function jobHTML() {
   const J = S.job.job;
   return `
@@ -1714,7 +1733,7 @@ function jobHTML() {
       ${ch.length ? ch.map(c => `<div class="mini" style="margin-top:4px"><b style="color:#c2410c">△${c.n}</b> ${esc(c.text)}${c.action === "removed" ? ` <span style="color:#888">(listed only — not on the drawing)</span>` : ""}</div>`).join("")
         : `<div class="mini" style="margin-top:6px">No changes yet — built as proposed.</div>`}
     </div></div>`; })() : ""}
-    ${isAsBuilt(S.job) ? installHTML() : ""}
+    ${isAsBuilt(S.job) ? installHTML() + portsHTML() : ""}
     <div class="sect">CLIENT</div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       ${field("Name", `<input class="jclient" value="${esc(J.client?.name || "")}">`)}
@@ -2212,6 +2231,15 @@ function wirePanel(body) {
     d.install = { ...(d.install || {}), [k]: v };
     if (!v) delete d.install[k];
     if (!Object.keys(d.install).length) delete d.install;
+  });
+  on(".swport", el => {
+    const sw = el.closest("[data-sw]")?.dataset.sw, id = el.dataset.node, sol = S.job.solutions[S.sol];
+    if (!sw || !id) return;
+    const v = tidyPort(el.value);
+    const m = ((sol.portMap ||= {})[sw] ||= {});
+    if (v) m[id] = v; else delete m[id];
+    if (!Object.keys(m).length) delete sol.portMap[sw];
+    if (!Object.keys(sol.portMap).length) delete sol.portMap;
   });
   on(".jclient", el => { S.job.job.client.name = el.value; });
   on(".jaddr", el => { S.job.job.client.address = el.value; });

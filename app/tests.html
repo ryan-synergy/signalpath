@@ -2610,6 +2610,33 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("install record: the CSV has a header and one row per box, formulas defused",
     csv[0] === "Box,Where,Serial,MAC,IP,Notes,Check" && csv.length === recs.length + 1 && csv.some(l => l.includes('"SN123"')) &&
     (() => { d1.install.notes = "=HYPERLINK(1)"; return AB.installCSV(ab).includes(`"'=HYPERLINK(1)"`); })());
+
+  // switch ports as patched on site (sol.portMap[switch][box])
+  const NW = await import("./network.js");
+  t("switch ports: typed ports tidy — 12, sfp1, SFP-2, port 7",
+    NW.tidyPort(" 12 ") === "12" && NW.tidyPort("sfp1") === "SFP 1" && NW.tidyPort("SFP-2") === "SFP 2" && NW.tidyPort("port 7") === "7" && NW.tidyPort("") === "" && NW.tidyPort("Trunk A") === "Trunk A");
+  const planOf = j => { const L = loadJob(j); return NW.networkPlan(L.job, L.ix, CAT).find(p => !p.virtual && p.rows.length >= 3); };
+  const p0 = planOf(ab);
+  if (!p0) t("switch ports: the sample has a switch with 3+ boxes", false);
+  else {
+    const [ra, rb, rc] = p0.rows;                          // residence: the AVB switch — two Savant boxes + its LAN uplink
+    ab.solutions[0].portMap = { [p0.switch]: { [ra.id]: "5", [rb.id]: "1" } };
+    const p1 = planOf(ab), got = id => p1.rows.find(r => r.id === id);
+    t("switch ports: recorded ports are kept, suggestions route around them, and the table reads in port order",
+      got(ra.id).port === "5" && got(ra.id).recorded && got(rb.id).port === "1" && got(rb.id).recorded && !got(rc.id).recorded &&
+      p1.rows.filter(r => !r.recorded).every(r => r.port !== "5" && r.port !== "1") &&
+      p1.rows.length === p0.rows.length && p1.rows[0].id === rb.id, p1.rows.map(r => `${r.port}:${r.recorded ? "rec" : "sug"}`).join(" "));
+    ab.solutions[0].portMap[p0.switch][rc.id] = "5";
+    const p2 = planOf(ab);
+    t("switch ports: two boxes recorded on one port are both flagged", p2.rows.filter(r => r.clash).length === 2);
+    t("switch ports: recording a port isn't a change from the proposal", AB.asBuiltChanges(ab).length === ch.length);
+    const L2 = loadJob(ab), a2 = advise(L2.job, L2.ix, CAT);
+    const npg = renderExtraPages(L2.job, L2.ix, a2, { rawJob: ab, packet: "service" }).find(x => x.title === "Network").svg;
+    t("switch ports: the as-built Network page says which ports were recorded and flags the clash",
+      npg.includes("recorded on site") && npg.includes("×2") && npg.includes('fill="#9a9a9a"'));
+    delete ab.solutions[0].portMap;
+    t("switch ports: with nothing recorded the plan is exactly the suggestion", JSON.stringify(planOf(ab).rows.map(r => r.port)) === JSON.stringify(p0.rows.map(r => r.port)));
+  }
 }
 
 /* ---------- input order (user redline 2026-09-28) ----------

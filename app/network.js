@@ -59,6 +59,14 @@ export function specFor(d, catalog) {
   return c || Object.keys(own).length ? { ...(c || {}), ...own } : null;
 }
 
+/* a port as typed on site: "12", " sfp1 ", "SFP-2", "port 7" → "12", "SFP 1", "SFP 2", "7" */
+export function tidyPort(v) {
+  const t = v == null || typeof v === "object" ? "" : String(v).trim();
+  const m = t.match(/^(?:port\s*)?(sfp\+?)?\s*[-#]?\s*(\d+)$/i);
+  return m ? (m[1] ? `SFP ${+m[2]}` : String(+m[2])) : t;
+}
+const portBase = p => String(p).replace(" (RJ45 module)", "");
+
 const portsOf = c => {
   const o = c?.outputs || {};
   return { copper: (o.gbe || 0) + (o.gbe25 || 0) + (o.gbe10 || 0), sfp: (o.sfp || 0) + (o.sfpPlus || 0) };
@@ -184,16 +192,33 @@ export function networkPlan(job, ix, catalog) {
 
       // uplinks take the SFP cages first (SFP 1 up); everything else fills
       // copper from port 1, then any SFP cages left (with an RJ45 module)
-      const copper = Array.from({ length: cap.copper }, (_, i) => String(i + 1));
-      const sfp = Array.from({ length: cap.sfp }, (_, i) => `SFP ${i + 1}`);
-      const ups = info.filter(n => n.isSwitch), devs = info.filter(n => !n.isSwitch);
+      // ports recorded on site (as-built: sol.portMap[switch][box]) are kept as
+      // patched; everything else is suggested around them, never on a taken port
+      const rec = sol.portMap?.[sw.id] || {};
+      const recorded = new Map(info.filter(n => tidyPort(rec[n.id])).map(n => [n.id, tidyPort(rec[n.id])]));
+      const taken = new Set([...recorded.values()].map(p => p.toUpperCase()));
+      const free = p => !taken.has(portBase(p).toUpperCase());
+      const copper = Array.from({ length: cap.copper }, (_, i) => String(i + 1)).filter(free);
+      const sfp = Array.from({ length: cap.sfp }, (_, i) => `SFP ${i + 1}`).filter(free);
+      const ups = info.filter(n => n.isSwitch && !recorded.has(n.id)), devs = info.filter(n => !n.isSwitch && !recorded.has(n.id));
       const upPorts = sfp.splice(0, Math.min(ups.length, sfp.length));
       while (upPorts.length < ups.length && copper.length) upPorts.push(copper.pop());
       const devPorts = [...copper, ...sfp.map(p => `${p} (RJ45 module)`)];
       const rows = [];
-      const seq = i => sw.virtual ? "—" : String(i + 1);   // no catalog port count: number in order
+      const seqFree = (() => { const out = []; for (let i = 1; out.length < info.length; i++) if (free(String(i))) out.push(String(i)); return out; })();
+      const seq = i => sw.virtual ? "—" : seqFree[i];   // no catalog port count: number in order
+      const count = new Map(); for (const p of taken) count.set(p, 0);
+      for (const p of recorded.values()) count.set(p.toUpperCase(), count.get(p.toUpperCase()) + 1);
+      for (const n of info) if (recorded.has(n.id)) {
+        const p = recorded.get(n.id);
+        rows.push({ ...n, port: p, recorded: true, clash: count.get(p.toUpperCase()) > 1 });
+      }
       devs.forEach((n, i) => rows.push({ ...n, port: known ? devPorts[i] ?? null : seq(i) }));
       ups.forEach((n, i) => rows.push({ ...n, port: known ? upPorts[i] ?? devPorts[devs.length + i] ?? null : seq(devs.length + i) }));
+      if (recorded.size) {                                  // print in port order once anything is patched
+        const key = p => p == null ? [3, 0] : /^SFP/.test(p) ? [1, parseInt(p.slice(4))] : /^\d+$/.test(p) ? [0, +p] : [2, 0];
+        rows.sort((a, b) => { const x = key(a.port), y = key(b.port); return x[0] - y[0] || x[1] - y[1]; });
+      }
       const total = cap.copper + cap.sfp;
       plans.push({
         solution: sol.id, switch: sw.id, model: sw.model || sw.id, role: r, known, virtual: !!sw.virtual,

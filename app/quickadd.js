@@ -124,6 +124,8 @@ export function parseQuickZone(text) {
   if (avr) chips.push({ kind: "hint", label: tv && spk ? "AV receiver feeds the TV + speakers" : tv ? "AV receiver feeds the TV" : "AV receiver feeds the speakers" });
   if (dante) chips.push({ kind: "hint", label: director ? "Dante → Director amp" : "sound over Dante" });
   zone._hints = { local, matrix, avr, dante, director };
+  // a room with no speakers and no TV has nothing to draw — say so before Add skips it
+  if (!zone.endpoints.length) chips.push({ kind: "warn", label: "nothing to add — give it a setup or a TV size" });
   return { zone, chips, empty: !zone.endpoints.length };
 }
 

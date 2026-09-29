@@ -22,13 +22,15 @@ export function startAsBuilt(job, solIndex = 0, today = new Date().toISOString()
   const eff = effectiveJob(job, solIndex);                 // the proposal exactly as it draws
   const sol = clone(eff.solutions[solIndex] || eff.solutions[0]);
   delete sol.overrides;                                    // folded into the house by effectiveJob
+  const fromSolution = sol.name || sol.id;
+  sol.name = "As-Built";                                   // the title block reads "AV Schematic — As-Built", not the proposal's option name
   const J = clone(job.job || {});
   const revs = J.revisions || [];
   const out = {
     ...clone(eff), solutions: [sol],
     job: { ...J, name: `${J.name || "Job"} — As-Built`, stage: "asBuilt",
       revisions: [...revs, { rev: revs.length + 1, date: today, description: "As-built started", by: String(J.drawnBy || "SP").slice(0, 2).toUpperCase() }],
-      asBuilt: { fromName: J.name || "", fromSolution: sol.name || sol.id, started: today,
+      asBuilt: { fromName: J.name || "", fromSolution, started: today,
                  baseline: { house: clone(eff.house), solution: clone(sol) } } },
   };
   return out;

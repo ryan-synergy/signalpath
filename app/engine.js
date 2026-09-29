@@ -325,6 +325,14 @@ export function validate(job, ix = indexJob(job)) {
     for (const d of Object.values(s.devices)) {
       if (d.type === "source" && !used.has(d.id)) W("unused-source", `${d.model || d.id} isn't connected to anything`, d.id);
     }
+    // an amp, receiver or matrix that drives speakers/TVs with nothing plugged
+    // into it plays silence (Cat6 control links don't count; Dante does)
+    const fedIn = new Set((sol.connections || []).filter(c => c.signal !== "network").map(c => c.to));
+    for (const d of Object.values(s.devices)) {
+      if (!["amp", "avr", "videoMatrix", "splitter"].includes(d.type) || fedIn.has(d.id)) continue;
+      const drives = (sol.connections || []).filter(c => c.from === d.id && c.signal !== "network");
+      if (drives.length) W("no-input", `${d.model || d.id} drives ${drives.length === 1 ? nm(drives[0].to) : `${drives.length} things`} but nothing is plugged into it — connect a source${d.type === "amp" ? " (or a Savant/Dante audio feed)" : ""}`, d.id);
+    }
 
     // amp channel collisions + zone capacity
     const byAmp = {};
@@ -360,6 +368,8 @@ export function validate(job, ix = indexJob(job)) {
       const cScope = c.scope || "included";
       if (zScope !== "included" && cScope === "included")
         W("scope-mismatch", `${zName(zid)} is ${SCOPE_NAME[zScope] || zScope}, but the feed to ${nm(c.to)} is marked Included`, c.to);
+      else if (zScope === "included" && cScope !== "included" && !(c.count > 1))   // (a counted spare run may be pre-wire on purpose)
+        W("scope-mismatch", `${zName(zid)} is Included, but the feed to ${nm(c.to)} is still marked ${SCOPE_NAME[cScope] || cScope} — it won't be quoted or scheduled as a live run`, c.to);
     }
   }
 
@@ -510,10 +520,19 @@ function zoneCard(zone, localsInZone, hasNote = false) {
   return { w, h, groups, compact };
 }
 
-function deviceTileSpec(d, inCount = 0) {
+function deviceTileSpec(d, inCount = 0, rackOuts = 0) {
   // avbSwitch rides col A (mock-sheet draws Savant AVB with the sources) so its
   // module feeds enter col B left edges cleanly
-  if (d.type === "source" || d.type === "avbSwitch" || d.type === "power") return { col: "A", ...PL.smallTile, kind: "small", pitch: PL.smallTile.pitch };
+  if (d.type === "source" || d.type === "avbSwitch" || d.type === "power") {
+    // a small box seats two exits on its 22px edge; a third (a cable box feeding
+    // a receiver, a far TV and an amp) needs a taller tile or the exits land
+    // closer than the router's lane clearance and one wire has no legal path.
+    // Only when some exit stays IN the rack: feeds out to zones share trunks
+    // (a one-source job fanning to nine TVs stays 22px — a tall source there
+    // crowds the column gap the TV returns climb through). Capped at four.
+    const h = inCount >= 3 && rackOuts >= 1 ? (Math.min(inCount, 4) - 1) * RT.portPitch + 16 : PL.smallTile.h;
+    return { col: "A", ...PL.smallTile, h, kind: "small", pitch: PL.smallTile.pitch + h - PL.smallTile.h };
+  }
   const base = d.type === "amp" ? { col: "C", ...PL.ampTile, kind: "amp" } : { col: "B", ...PL.chassisTile, kind: "chassis" };
   // uniform chassis height — except a hub whose left edge must seat all its
   // input ports at legible pitch (an SW12 draws big; it IS the hub);
@@ -630,6 +649,7 @@ export function place(job, ix = indexJob(job), opts = {}) {
     const fCol = devColOf[c.from], tCol = devColOf[c.to];
     if (devColOf[c.to] != null) inCount[c.to] = (inCount[c.to] || 0) + 1;
     if (fCol != null) inCount["out:" + c.from] = (inCount["out:" + c.from] || 0) + 1;
+    if (fCol != null && tCol != null) inCount["rack:" + c.from] = (inCount["rack:" + c.from] || 0) + 1;
     const toZoneSide = ix.endpointsById[c.to] || (s.companions[c.to] && !devColOf[s.companions[c.to]?.serves]);
     if (fCol === "B" && (toZoneSide || s.companions[c.to])) bcDemand++;
     if (fCol === "B" && tCol === "B") { bcDemand++; abDemand++; }
@@ -680,7 +700,7 @@ export function place(job, ix = indexJob(job), opts = {}) {
     const placed = [], cTiles = [], aBottom = [];
     let maxTileBottom = rackY + PL.rackPadTop;
     for (const d of r.devices || []) {
-      const t = deviceTileSpec(d, Math.max(inCount[d.id] || 0, inCount["out:" + d.id] || 0));
+      const t = deviceTileSpec(d, Math.max(inCount[d.id] || 0, inCount["out:" + d.id] || 0), inCount["rack:" + d.id] || 0);
       // amps (col C) anchor to the rack BOTTOM (mock rule: distribution exits
       // high toward the top band, speaker audio exits low toward the audio band)
       if (t.col === "C") { cTiles.push({ d, t }); continue; }
@@ -1853,10 +1873,15 @@ export function route(job, ix, placement, opts = {}) {
               x => segBlocked(x, Math.min(sy, ty), x, Math.max(sy, ty), skip), gapR);
             if (ze != null && ze !== zx) cands.push([[sx, sy], [ze, sy], [ze, ty], [b.x, ty]]);
           }
-          // double-jog (col A → C, or when the single Z is starved)
+          // double-jog (col A → C, or when the single Z is starved): across a
+          // free inter-row level — the nearest one first, then the next ones out
+          // (the nearest can be free itself yet leave its risers no lane; a
+          // walk-through job's cable box → amp had a clean level under the
+          // receiver that the single nearest pick, over its top, never reached)
+          const gap1 = a.col === "A" ? gapABx : gapBCx;
+          const myRange = [rackTop + 26, rackBottom - 10];
           const my = alloc(usedH, sy, gapABx[0], gapBCx[1], nWire, 0,
             y => segBlocked(gapABx[0], y, gapBCx[1], y, skip), [rackTop + 26, rackBottom - 10]);
-          const gap1 = a.col === "A" ? gapABx : gapBCx;
           const abx = my != null ? alloc(usedV, (gap1[0] + gap1[1]) / 2, Math.min(sy, my), Math.max(sy, my), nWire, 0,
             x => segBlocked(x, Math.min(sy, my), x, Math.max(sy, my), skip), gap1) : null;
           const bcx = my != null && gapR[0] <= gapR[1] ? alloc(usedV, gapR[1] - 6, Math.min(my, ty), Math.max(my, ty), nWire, -1,

@@ -160,6 +160,7 @@
   #qaChips .qc.name { background: #16181c; color: #fff; border-color: #16181c; }
   #qaChips .qc.scope { background: #f0f0f2; color: #777; border-color: #ccc; }
   #qaChips .qc.hint { background: #fdf3d8; color: #7a5a12; border-color: #e2c78a; }
+  #qaChips .qc.warn { background: #fdecea; color: #8f1d14; border-color: #efb4ad; }
   #qa .ex { font-size: 10.5px; color: #999; margin-top: 5px; }
 
   /* ---- canvas + advisor ---- */
@@ -289,22 +290,22 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20260929211945",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20260929211945",
-    "./app/commands.js": "./app/commands.js?v=20260929211945",
-    "./app/engine.js": "./app/engine.js?v=20260929211945",
-    "./app/exports.js": "./app/exports.js?v=20260929211945",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260929211945",
-    "./app/hookup.js": "./app/hookup.js?v=20260929211945",
-    "./app/importers.js": "./app/importers.js?v=20260929211945",
-    "./app/names.js": "./app/names.js?v=20260929211945",
-    "./app/network.js": "./app/network.js?v=20260929211945",
-    "./app/pages.js": "./app/pages.js?v=20260929211945",
-    "./app/power.js": "./app/power.js?v=20260929211945",
-    "./app/quickadd.js": "./app/quickadd.js?v=20260929211945",
-    "./app/rack.js": "./app/rack.js?v=20260929211945",
-    "./app/route-audit.js": "./app/route-audit.js?v=20260929211945",
-    "./app/starters.js": "./app/starters.js?v=20260929211945"
+    "./app/ai.js": "./app/ai.js?v=20260929214644",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20260929214644",
+    "./app/commands.js": "./app/commands.js?v=20260929214644",
+    "./app/engine.js": "./app/engine.js?v=20260929214644",
+    "./app/exports.js": "./app/exports.js?v=20260929214644",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260929214644",
+    "./app/hookup.js": "./app/hookup.js?v=20260929214644",
+    "./app/importers.js": "./app/importers.js?v=20260929214644",
+    "./app/names.js": "./app/names.js?v=20260929214644",
+    "./app/network.js": "./app/network.js?v=20260929214644",
+    "./app/pages.js": "./app/pages.js?v=20260929214644",
+    "./app/power.js": "./app/power.js?v=20260929214644",
+    "./app/quickadd.js": "./app/quickadd.js?v=20260929214644",
+    "./app/rack.js": "./app/rack.js?v=20260929214644",
+    "./app/route-audit.js": "./app/route-audit.js?v=20260929214644",
+    "./app/starters.js": "./app/starters.js?v=20260929214644"
 } }
 </script>
 <script>
@@ -481,7 +482,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20260929211945").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20260929214644").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1312,7 +1313,7 @@ $("#grip").onpointerdown = e => {
   addEventListener("pointermove", move); addEventListener("pointerup", up);
 };
 
-const SPK_CONFIGS = ["none", "mono", "stereo", "2.1", "surround-5.1", "surround-7.1", "soundbar", "soundbar-sub", "landscape"];
+const SPK_CONFIGS = ["none", "mono", "stereo", "2.1", "surround-5.1", "surround-7.1", "surround-7.1.4", "soundbar", "soundbar-sub", "landscape"];
 const STATUSES = ["new", "ofe", "prewire"];
 const DEV_TYPES = ["source", "avr", "amp", "videoMatrix", "avSwitch", "avbSwitch", "audioInputModule", "audioOutputModule", "controlBox", "splitter", "host", "networkSwitch", "gateway", "danteBridge", "power"];
 const SIGNALS = ["video", "audio", "speaker", "network", "audioReturn"];
@@ -1326,7 +1327,7 @@ function field(label, inner) { return `<div class="f"><label>${label}</label>${i
 // small fixed choices are taps, not dropdowns
 const chips = (act, opts, cur) => `<div class="chips">${opts.map(([v, l]) =>
   `<button type="button" class="chip${String(v) === String(cur) ? " on" : ""}" data-act="${esc(act)}" data-v="${esc(v)}" aria-pressed="${String(v) === String(cur)}">${esc(l)}</button>`).join("")}</div>`;
-const ZSPK = [["none", "None"], ["mono", "Mono"], ["stereo", "Stereo"], ["2.1", "2.1"], ["surround-5.1", "5.1"], ["surround-7.1", "7.1"],
+const ZSPK = [["none", "None"], ["mono", "Mono"], ["stereo", "Stereo"], ["2.1", "2.1"], ["surround-5.1", "5.1"], ["surround-7.1", "7.1"], ["surround-7.1.4", "7.1.4"],
               ["soundbar", "Soundbar"], ["soundbar-sub", "Bar + sub"], ["landscape", "Landscape"]];
 const ZTV = [["none", "None"], ["tv", "TV"], ["projector", "Projector"]];
 const sel = (cls, opts, val, labels = {}) => `<select class="${cls}">${opts.map(o =>
@@ -1422,7 +1423,7 @@ function zonesHTML() {
     let feed = "";
     if (h.video?.from && h.video.from === h.speakers?.from) feed = `${short(h.video.from)} → TV + speakers`;
     else feed = [h.tv && h.video?.from && `TV ← ${short(h.video.from)}`,
-                 h.spk && h.speakers?.from && `speakers ← ${short(h.speakers.from)}${h.speakers.channels ? " " + h.speakers.channels : ""}`].filter(Boolean).join(" · ");
+                 h.spk && h.speakers?.from && (h.speakers.viaTv ? "soundbar ← the TV (eARC)" : `speakers ← ${short(h.speakers.from)}${h.speakers.channels ? " " + h.speakers.channels : ""}`)].filter(Boolean).join(" · ");
     if (h.earc) feed += h.ret ? " · eARC + optical backup" : " · eARC"; else if (h.ret) feed += " · optical back";
     const issue = found.find(f => f.level === "e") || found[0];
     const head = `<div class="head zhead" data-toggle="${esc(z.id)}">${statusMark(found, wired)}
@@ -1441,6 +1442,7 @@ function zonesHTML() {
         ${tv ? fieldO("Display", chips("tvtype", ZTV, tvType), "endpoints", tvH.id, "displayType") : field("Display", chips("tvtype", ZTV, tvType))}
         ${tv ? fieldO("Size", `<input class="tvsize" type="number" min="24" max="220" value="${esc(tv.size || 65)}">${chips("tvsize", [55, 65, 75, 85, 98].map(n => [String(n), n + '"']), String(tv.size))}`, "endpoints", tvH.id, "size") : ""}
         ${tv ? fieldO("Brand", `<input class="tvbrand" value="${esc(tv.brand || "")}" placeholder="e.g. Sony">`, "endpoints", tvH.id, "brand") : ""}
+        ${tv ? fieldO("Model", `<input class="tvmodel" value="${esc(tv.model || "")}" placeholder="e.g. K-85XR90 — blank quotes “Unspecified TV”" autocorrect="off" spellcheck="false">`, "endpoints", tvH.id, "model") : ""}
         ${hookupHTML(z, sol, multi)}
         <details class="more" data-more="${esc(moreKey)}" ${S.openRows.has(moreKey) ? "open" : ""}><summary>More — name, scope, status, remote${tv ? ", size check" : ""}</summary>
           ${field("Name", `<input class="zname" value="${esc(z.name)}">`)}
@@ -1485,7 +1487,9 @@ function hookupHTML(z, sol, multi) {
   }
   if (h.spk) {
     const cur = h.speakers?.from || "";
+    const bar = /^soundbar/.test(h.spk.config || "") && h.tv;
     rows.push(field("Speakers", `<select class="hsfrom">${opt("", "— not connected —", cur)}
+      ${bar ? `<optgroup label="In this zone">${opt("__tv", "The TV — powered bar on HDMI eARC", h.speakers?.viaTv ? "__tv" : cur)}</optgroup>` : ""}
       <optgroup label="In the rack">${devOpts(SPEAKERS_FROM, cur)}</optgroup>
       <optgroup label="Add">${opt("__new_avr", "＋ New AV receiver…", "")}${opt("__new_amp", "＋ New multi-zone amp…", "")}</optgroup></select>`));
     if (byDev(cur)?.type === "amp")
@@ -1934,7 +1938,23 @@ function wirePanel(body) {
   });
   on(".zname", el => { const z = zoneOf(el); if (z) z.name = el.value; });
   on(".zoutdoor", el => { const z = zoneOf(el); if (!z) return; if (el.value === "auto") delete z.outdoor; else z.outdoor = el.value === "yes"; });
-  zon(".zscope", el => { const z = zoneOf(el); setF("zones", z, "scope", el.value); });
+  zon(".zscope", el => {
+    const z = zoneOf(el); if (!z) return;
+    // the room's runs follow it: pre-wire → included turns its pre-wire feeds
+    // into ordinary ones (and back), in every solution the change reaches
+    const sols = scopeSol ? [S.job.solutions[S.sol]] : S.job.solutions.filter(so => so.overrides?.zones?.[z.id]?.scope == null);
+    const was = sols.map(so => so.overrides?.zones?.[z.id]?.scope || z.scope || "included");
+    setF("zones", z, "scope", el.value);
+    const eps = new Set((z.endpoints || []).map(e => e.id));
+    sols.forEach((so, k) => {
+      const mine = new Set([...eps, ...(so.companions || []).filter(c => eps.has(c.serves)).map(c => c.id)]);
+      for (const c of so.connections || []) {
+        if (!mine.has(c.to) && !mine.has(c.from)) continue;
+        if ((c.scope || "included") !== was[k]) continue;          // a run deliberately scoped differently stays
+        if (el.value === "included") delete c.scope; else c.scope = el.value;
+      }
+    });
+  });
   on(".zremote", el => {
     const z = zoneOf(el); if (!z) return;
     if (scopeSol) setF("zones", z, "remote", el.value);      // "none" override = explicitly no remote in this solution
@@ -1962,6 +1982,7 @@ function wirePanel(body) {
     else z.endpoints.push({ id: uid(z.id + "-tv"), type: "display", displayType: el.value, brand: "", size: 65, status: "new" });
   });
   on(".tvbrand", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "brand", el.value); });
+  on(".tvmodel", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "model", el.value.trim()); });
   zon(".tvsize", el => { const n = Math.round(+el.value); if (!(n > 0)) return;       // blank / junk: keep the old size
     setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "size", Math.min(220, Math.max(24, n))); });
   zon(".tvstatus", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "status", el.value); });
@@ -2052,7 +2073,8 @@ function wirePanel(body) {
         if (applyPlan(planCommands(S.job, S.sol, cmds, effectiveCatalog()), label)) qaInput.value = "";
         return;
       }
-      const parses = parseQuick(qaInput.value).filter(p => !p.empty);
+      const all = parseQuick(qaInput.value), parses = all.filter(p => !p.empty), skipped = all.filter(p => p.empty).map(p => p.zone.name);
+      if (skipped.length) toast(`Skipped ${skipped.join(", ")} — nothing in ${skipped.length > 1 ? "them" : "it"} yet. Add a setup or a TV size (e.g. "${skipped[0].toLowerCase()} stereo 65").`);
       if (!parses.length) return;
       pushUndo(`add ${parses.map(p => p.zone.name).join(", ")}`);
       for (const p of parses) {
@@ -2198,9 +2220,17 @@ function wirePanel(body) {
            nodes.find(id => ok(id) && !fed.has(id)) || nodes.find(ok) || "";
     } else {
       to = d.id;
-      from = nodes.find(id => id !== d.id && nodeInfo(id).kind === "rack" && !used.has(id)) || nodes.find(id => id !== d.id) || "";
+      // an input comes from something that makes signal — a source for a receiver or matrix, the
+      // audio module / Dante bridge / a source for an amp — never the power strip or a switch;
+      // spare boxes first, then ones already feeding elsewhere, never one already plugged in here
+      const into = new Set(sol.connections.filter(c => c.to === d.id).map(c => c.from));
+      const pref = d.type === "amp" ? ["audioOutputModule", "danteBridge", "source", "avr"]
+        : d.type === "avr" ? ["videoMatrix", "avSwitch", "splitter", "source"] : ["source", "videoMatrix", "avSwitch", "splitter", "avr"];
+      const cands = pref.flatMap(t => nodes.filter(id => id !== d.id && !into.has(id) && nodeInfo(id).kind === "rack" && nodeInfo(id).type === t));
+      from = cands.find(id => !used.has(id)) || cands[0] || nodes.find(id => id !== d.id && nodeInfo(id).kind === "rack" && !used.has(id)) || nodes.find(id => id !== d.id) || "";
     }
-    sol.connections.push({ from, to, signal: suggestSignal(from, to) || "video" });
+    const sig = el.dataset.dir !== "out" && d.type === "amp" && nodeInfo(from).kind === "rack" ? "audio" : suggestSignal(from, to);
+    sol.connections.push({ from, to, signal: sig || "video" });
     S.openRows.add(`conn:${sol.connections.length - 1}@${d.id}`);
     refresh();
   });

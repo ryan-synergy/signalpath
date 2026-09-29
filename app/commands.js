@@ -20,7 +20,7 @@ export const OPS = {
                  about: "Add zones in quick-add shorthand: name + speaker setup (stereo, 2.1, 5.1, 7.1, soundbar, landscape 8) + TV size + brand; 'matrix' feeds the TV from the rack's matrix, 'avr' gives the zone its own receiver; 'ofe', 'prewire', 'future', 'no tv'. Comma = next zone. New zones are wired automatically where the rack allows." },
   set_zone:    { args: "zone, name?, speakers?, display?, tv_size?, brand?, scope?, speakers_status?, tv_status?, remote?, confirm_size?",
                  eg: `{"op":"set_zone","zone":"patio","tv_size":75,"tv_status":"ofe"}`,
-                 about: "Change a zone. speakers: none|mono|stereo|2.1|5.1|7.1|soundbar|soundbar-sub|landscape. display: none|tv|projector. scope: included|prewire|future. statuses: new|ofe. remote: none|savant|appletv|josh|factory." },
+                 about: "Change a zone. speakers: none|mono|stereo|2.1|5.1|7.1|7.1.4|soundbar|soundbar-sub|landscape. display: none|tv|projector. scope: included|prewire|future. statuses: new|ofe. remote: none|savant|appletv|josh|factory." },
   delete_zone: { args: "zone", eg: `{"op":"delete_zone","zone":"gym"}`, about: "Remove a zone and everything wired to it." },
   hookup:      { args: "zone, tv_from?, run?, speakers_from?, outputs?, audio_back?, audio_back_to?",
                  eg: `{"op":"hookup","zone":"family room","tv_from":"receiver","speakers_from":"receiver","audio_back":"earc"}`,
@@ -141,8 +141,8 @@ export function findProduct(catalog, text) {
 }
 
 /* ---------- running commands ---------- */
-const SPK_IN = { none: "none", mono: "mono", stereo: "stereo", pair: "stereo", "2.1": "2.1", "5.1": "surround-5.1", "7.1": "surround-7.1",
-  "surround-5.1": "surround-5.1", "surround-7.1": "surround-7.1", soundbar: "soundbar", "soundbar-sub": "soundbar-sub", "bar + sub": "soundbar-sub", landscape: "landscape" };
+const SPK_IN = { none: "none", mono: "mono", stereo: "stereo", pair: "stereo", "2.1": "2.1", "5.1": "surround-5.1", "7.1": "surround-7.1", "7.1.4": "surround-7.1.4", atmos: "surround-7.1.4",
+  "surround-5.1": "surround-5.1", "surround-7.1": "surround-7.1", "surround-7.1.4": "surround-7.1.4", soundbar: "soundbar", "soundbar-sub": "soundbar-sub", "bar + sub": "soundbar-sub", landscape: "landscape" };
 const RUN_IN = { balun: "balun", hdbaset: "balun", decoder: "dec", dec: "dec", mxnet: "dec", direct: "direct", hdmi: "direct", "direct hdmi": "direct" };
 const uid = p => p + "-" + Math.random().toString(36).slice(2, 7);
 function freeId(job, sol, base) {

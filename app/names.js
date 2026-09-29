@@ -50,7 +50,7 @@ export const ZONE_GROUPING_NAME = { type: "By type (surround + TV Â· TV + 2-ch Â
 export const SCOPE_NAME = { included: "Included", prewire: "Pre-wire only", future: "Future" };
 export const SPEAKER_SETUP = {
   none: "None", mono: "Mono (1 speaker)", stereo: "Stereo pair", "2.1": "2.1 (pair + sub)",
-  "surround-5.1": "5.1 surround", "surround-7.1": "7.1 surround", soundbar: "Soundbar",
+  "surround-5.1": "5.1 surround", "surround-7.1": "7.1 surround", "surround-7.1.4": "7.1.4 Atmos", soundbar: "Soundbar",
   "soundbar-sub": "Soundbar + sub", landscape: "Landscape (in-ground)",
 };
 export const DISPLAY_NAME = { none: "None", tv: "TV", projector: "Projector" };

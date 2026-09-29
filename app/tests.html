@@ -1337,7 +1337,10 @@ for (const [name, raw] of Object.entries(fixtures)) {
   hl = healthy(j2);
   t("audio back: every step leaves a valid, clean-routing job", !hl.errs.length && !hl.bad && !hl.through, JSON.stringify(hl));
 
-  // placeholder names split sensibly on the rack tile
+  // placeholder names split sensibly on the rack tile (quick-add now picks an Anthem; a hand-added box can still be a placeholder)
+  const avrDev = s2.racks.flatMap(r => r.devices).find(d => d.id === avrId);
+  t("quick-add: a 7.1 theater's new receiver is an Anthem MRX 740, catalog-linked", avrDev.model === "Anthem MRX 740" && avrDev.catalogRef === "anthem-mrx-740-8k");
+  avrDev.model = "AV receiver — Theater"; delete avrDev.catalogRef;
   const L2 = loadJob(j2), p2 = place(L2.job, L2.ix), svg2 = render(L2.job, L2.ix, p2, route(L2.job, L2.ix, p2));
   t("render: a placeholder receiver name keeps its type whole on the tile", svg2.includes(">AV receiver</text>") && svg2.includes(">Theater</text>"));
 }
@@ -2547,7 +2550,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const ab = AB.startAsBuilt(prop, 0, "2026-09-28");
   t("as-built: starting one leaves the proposal untouched and makes an AS-BUILT copy with the proposal frozen inside",
     JSON.stringify(prop) === before && ab.job.stage === "asBuilt" && ab.job.name.endsWith("— As-Built") && AB.isAsBuilt(ab) && ab.solutions.length === 1 &&
-    ab.job.revisions.at(-1).description === "As-built started");
+    ab.job.revisions.at(-1).description === "As-built started" && ab.solutions[0].name === "As-Built" && ab.job.asBuilt.fromSolution === prop.solutions[0].name);
   t("as-built: a fresh copy has no changes", AB.asBuiltChanges(ab).length === 0);
 
   // what the install crew changed: a bigger TV, a different receiver, one new run, one box left out
@@ -2637,6 +2640,99 @@ for (const [name, raw] of Object.entries(fixtures)) {
     delete ab.solutions[0].portMap;
     t("switch ports: with nothing recorded the plan is exactly the suggestion", JSON.stringify(planOf(ab).rows.map(r => r.port)) === JSON.stringify(p0.rows.map(r => r.port)));
   }
+}
+
+/* ---------- end-to-end walkthrough findings (2026-09-29) ----------
+   Building jobs from scratch through quick-add turned these up; each is pinned here. */
+{
+  const H = await import("./hookup.js");
+  const { parseQuickZone } = await import("./quickadd.js");
+  const { STARTERS, applyStarter } = await import("./starters.js");
+  const { SPEAKER_SETUP } = await import("./names.js");
+  const { planQueueFiles } = await import("./exports.js");
+  const CAT = await (await fetch("./catalog.json")).json();
+  const blank = () => ({ generator: "SignalPath", schemaVersion: 1, job: { name: "walk" }, house: { zones: [] }, solutions: [{ id: "s", name: "S", racks: [], localDevices: [], companions: [], connections: [] }] });
+  const starter = id => applyStarter(blank(), STARTERS.find(s => s.id === id), CAT);
+  const addQ = (j, text) => { const p = parseQuickZone(text), z = p.zone, hints = z._hints; delete z._hints;
+    if (hints.local) j.solutions[0].localDevices.push({ id: z.id + "-src", type: "source", sourceType: "appletv", model: "Apple TV", status: "new", zone: z.id, location: "at-display" });
+    j.house.zones.push(z); H.autoHookup(j, j.solutions[0], z, hints); return z; };
+  const errsOf = j => { const L = loadJob(j); return validate(L.job, L.ix); };
+
+  // powered soundbar: the TV feeds it over eARC — quick-add wires it, the hookup reads it back
+  const j1 = starter("theater-receiver"); const lr = addQ(j1, "living room soundbar 65 samsung");
+  const h1 = H.readHookup(j1, j1.solutions[0], lr);
+  t("walkthrough: a powered soundbar is fed by its TV (eARC) — no 'nothing feeding it' error, and it isn't mistaken for an optical return",
+    h1.speakers?.viaTv && !h1.ret && h1.audioBack === "none" && !errsOf(j1).errors.some(e => /Living Room speakers/.test(e.msg)));
+  H.setAudioBack(j1, j1.solutions[0], lr, "none");
+  t("walkthrough: changing the TV's audio back leaves its soundbar link alone", H.readHookup(j1, j1.solutions[0], lr).speakers?.viaTv);
+  H.setSpeakers(j1, j1.solutions[0], lr, "avr");
+  const h1b = H.readHookup(j1, j1.solutions[0], lr);
+  t("walkthrough: moving the bar to a receiver (passive bar) drops the TV link", h1b.speakers?.from === "avr" && !j1.solutions[0].connections.some(c => c.from === lr.endpoints.find(e => e.type === "display").id && c.to === lr.endpoints.find(e => e.type === "speakers").id));
+
+  // "local": the Apple TV put in the room is wired to its TV
+  const gym = addQ(j1, "garage gym 50 tcl local");
+  t("walkthrough: 'local' wires the room's Apple TV straight to the TV", H.readHookup(j1, j1.solutions[0], gym).video?.from === gym.id + "-src");
+
+  // pre-wire TVs run back to the video distributor, marked pre-wire
+  const j2 = starter("savant-whole-home"); const b2 = addQ(j2, "bedroom 2 55 prewire");
+  const h2 = H.readHookup(j2, j2.solutions[0], b2);
+  t("walkthrough: a pre-wire TV gets its run back to the matrix, scoped pre-wire, with no error",
+    h2.video?.from === "matrix" && j2.solutions[0].connections.filter(c => c.to === h2.video.via || c.to === b2.endpoints[0].id).every(c => c.scope === "prewire") &&
+    !errsOf(j2).errors.length && !errsOf(j2).warnings.some(w => w.code === "scope-mismatch"));
+  const loft = addQ(j2, "loft 5.1 65 prewire");
+  t("walkthrough: a pre-wire surround room doesn't get a receiver added", !j2.solutions[0].racks[0].devices.some(d => d.type === "avr"));
+
+  const mr = addQ(j2, "media room 7.1 projector 120 avr");
+  const mAvr = H.readHookup(j2, j2.solutions[0], mr).speakers.from;
+  t("walkthrough: an 'avr' room on a whole-home rack gets its receiver fed from the matrix (no silent receiver)",
+    j2.solutions[0].connections.some(c => c.from === "matrix" && c.to === mAvr && c.signal === "video") && !errsOf(j2).warnings.some(w => w.code === "no-input"));
+
+  // a pre-wire room made live: feeds still marked pre-wire are flagged (they wouldn't be quoted as live runs)
+  { const jj = structuredClone(j2), zz = jj.house.zones.find(z => z.name === "Bedroom 2"); zz.scope = "included";
+    const v = errsOf(jj);
+    t("walkthrough: an Included room still fed by Pre-wire runs is flagged", v.warnings.some(w => w.code === "scope-mismatch" && /Bedroom 2 is Included/.test(w.msg)));
+    for (const c of jj.solutions[0].connections) if (c.scope === "prewire" && /bedroom-2/.test(c.from + c.to)) delete c.scope;
+    t("walkthrough: …and clears once the runs are Included too", !errsOf(jj).warnings.some(w => w.code === "scope-mismatch" && /Bedroom 2/.test(w.msg))); }
+
+  // Savant starter says it's a Savant AVB job
+  t("walkthrough: the Savant whole-home starter sets platform Savant + audio network AVB",
+    JSON.stringify(j2.solutions[0].platforms) === '["savant"]' && j2.solutions[0].audioNetwork === "avb");
+
+  // receivers sized to the room
+  t("walkthrough: quick-add receivers are the Anthem that fits — 5.1 → MRX 540, 7.1 → MRX 740, 7.1.4 → MRX 1140",
+    H.avrFor({ config: "surround-5.1" }).catalogRef === "anthem-mrx-540-8k" && H.avrFor({ config: "surround-7.1" }).catalogRef === "anthem-mrx-740-8k" &&
+    H.avrFor({ config: "surround-7.1.4" }).catalogRef === "anthem-mrx-1140-8k" && H.avrFor(null).catalogRef === "anthem-mrx-540-8k");
+
+  // 7.1.4 has a name
+  t("walkthrough: 7.1.4 reads '7.1.4 Atmos' everywhere, not surround-7.1.4", SPEAKER_SETUP["surround-7.1.4"] === "7.1.4 Atmos" &&
+    parseQuickZone("theater 7.1.4 98 avr").chips.some(c => c.label === "7.1.4 Atmos"));
+
+  // an empty room says it will be skipped
+  const pe = parseQuickZone("bonus room future");
+  t("walkthrough: a room with nothing in it is flagged in the preview before Add skips it", pe.empty && pe.chips.some(c => c.kind === "warn"));
+
+  // an amp with no input is flagged
+  const j3 = starter("theater-receiver"); const pat = addQ(j3, "patio stereo");
+  H.addRackDevice(j3, j3.solutions[0], "amp", "Multi-zone amp"); H.setSpeakers(j3, j3.solutions[0], pat, "amp");
+  const v3 = errsOf(j3);
+  t("walkthrough: an amp driving speakers with nothing plugged into it is flagged", v3.warnings.some(w => w.code === "no-input" && /Multi-zone amp/.test(w.msg)));
+  j3.solutions[0].connections.push({ from: "atv", to: "amp", signal: "audio" });
+  t("walkthrough: …and the flag clears once a source feeds it", !errsOf(j3).warnings.some(w => w.code === "no-input"));
+  t("walkthrough: no fixture trips the no-input flag", ["residence", "estate", "stress"].every(n => { const L = loadJob(structuredClone(fixtures[n])); return !validate(L.job, L.ix).warnings.some(w => w.code === "no-input"); }));
+
+  // a cable box feeding a receiver, a far TV and an amp: its tile grows so all three exits fit
+  const j5 = starter("theater-receiver"); addQ(j5, "theater 7.1 85 sony avr"); const pb = addQ(j5, "primary bed 65 lg"); const pt = addQ(j5, "patio stereo");
+  H.setVideo(j5, j5.solutions[0], pb, "cablebox"); H.addRackDevice(j5, j5.solutions[0], "amp", "Anthem MDX-8", { catalogRef: "anthem-mdx-8" });
+  H.setSpeakers(j5, j5.solutions[0], pt, "amp"); j5.solutions[0].connections.push({ from: "cablebox", to: "amp", signal: "audio" });
+  { const L = loadJob(j5), p = place(L.job, L.ix), rt = route(L.job, L.ix, p);
+    const cb = p.racks[0].devices.find(d => d.id === "cablebox");
+    t("walkthrough: a cable box with three exits (receiver, TV, amp) gets a taller tile and every wire routes clean",
+      cb.h > 22 && !rt.warnings.some(w => /fallback|unrouted/.test(w.code)), JSON.stringify({ h: cb.h, w: rt.warnings.map(w => w.code + ":" + w.msg) })); }
+
+  // TV model flows to the quote
+  const j4 = starter("theater-receiver"); const th = addQ(j4, "theater 7.1 85 sony avr");
+  th.endpoints.find(e => e.type === "display").model = "K-85XR90";
+  t("walkthrough: a TV model typed in the zone is quoted (not Unspecified TV)", planQueueFiles(j4, 0, CAT)[0].text.includes("- 1 | Sony | K-85XR90"));
 }
 
 /* ---------- input order (user redline 2026-09-28) ----------

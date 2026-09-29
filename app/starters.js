@@ -17,6 +17,7 @@ export const STARTERS = [
     name: "Savant whole-home",
     blurb: "HDMI matrix to the TVs, Savant AVB audio into a multi-zone amp.",
     tip: "family room 5.1 75 sony matrix, kitchen stereo, patio landscape 8",
+    solution: { platforms: ["savant"], audioNetwork: "avb" },
     devices: [
       src("cablebox", "Cable Box"), src("atv", "Apple TV"),
       dev("music", "source", "savant-pav-sms2001"),
@@ -114,6 +115,7 @@ export function applyStarter(job, starter, catalog) {
   sol.companions = structuredClone(starter.companions || []);
   sol.connections = structuredClone(starter.connections);
   if (starter.solution?.audioNetwork) sol.audioNetwork = starter.solution.audioNetwork; else delete sol.audioNetwork;
+  if (starter.solution?.platforms) sol.platforms = [...starter.solution.platforms];   // a Savant rack is a Savant job: licensing advice follows
   job.job.starter = starter.id;
   return job;
 }

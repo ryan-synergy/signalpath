@@ -42,7 +42,7 @@ export function readHookup(job, sol, zone) {
     }
     // the TV's eARC into its own AXIS (Dante) is at the TV, not an audio return to the rack
     const atTv = new Set((sol.companions || []).filter(c => c.serves === tv.id).map(c => c.id));
-    const r = conns.find(c => c.from === tv.id && c.signal === "audioReturn" && !atTv.has(c.to));
+    const r = conns.find(c => c.from === tv.id && c.signal === "audioReturn" && !atTv.has(c.to) && c.to !== spk?.id);
     if (r) out.ret = { to: r.to, backup: !!r.backup };
     // one word for the TV-audio choice: earc | earc+optical | optical | none
     out.audioBack = out.earc ? (r ? "earc+optical" : "earc") : r ? "optical" : "none";
@@ -50,6 +50,8 @@ export function readHookup(job, sol, zone) {
   if (spk) {
     const c = conns.find(c => c.to === spk.id && c.signal === "speaker");
     if (c) out.speakers = { from: c.from, channels: c.channels || "" };
+    // a powered soundbar plays what its TV sends it over HDMI eARC
+    else if (tv && conns.some(c => c.from === tv.id && c.to === spk.id && c.signal === "audioReturn")) out.speakers = { from: tv.id, viaTv: true, channels: "" };
   }
   if (tv) {   // TV sound on Dante: which adapter carries it, which amp listens
     const via = (sol.companions || []).find(c => c.serves === tv.id && (c.type === "axis" || c.type === "axis16" || (c.type === "dec" && c.dante)));
@@ -137,8 +139,13 @@ export function setSpeakers(job, sol, zone, from, channels) {
   const { spk } = endpointsOf(zone); if (!spk) return;
   sol.connections ||= [];
   const prev = sol.connections.find(c => c.to === spk.id && c.signal === "speaker");
-  sol.connections = sol.connections.filter(c => !(c.to === spk.id && c.signal === "speaker"));
+  const { tv } = endpointsOf(zone);
+  sol.connections = sol.connections.filter(c => !(c.to === spk.id && c.signal === "speaker") && !(tv && c.from === tv.id && c.to === spk.id && c.signal === "audioReturn"));
   if (!from) return;
+  if (from === "__tv" || from === tv?.id) {                // powered soundbar off the TV's HDMI eARC
+    if (tv) sol.connections.push({ from: tv.id, to: spk.id, signal: "audioReturn", ...scopeOf(zone) });
+    return;
+  }
   const dev = rackDevices(sol).find(d => d.id === from);
   if (channels === undefined)
     channels = prev && prev.from === from ? prev.channels : dev?.type === "amp" && !isTheaterAmp(dev)
@@ -150,8 +157,18 @@ export function setSpeakers(job, sol, zone, from, channels) {
 export function setReturn(job, sol, zone, to, backup = false) {
   const { tv } = endpointsOf(zone); if (!tv) return;
   const atTv = new Set((sol.companions || []).filter(c => c.serves === tv.id).map(c => c.id));   // eARC into its AXIS stays
-  sol.connections = (sol.connections || []).filter(c => !(c.from === tv.id && c.signal === "audioReturn" && !atTv.has(c.to)));
+  const { spk } = endpointsOf(zone);                        // …and so does the TV's own soundbar
+  sol.connections = (sol.connections || []).filter(c => !(c.from === tv.id && c.signal === "audioReturn" && !atTv.has(c.to) && c.to !== spk?.id));
   if (to) sol.connections.push({ from: tv.id, to, signal: "audioReturn", ...(backup ? { backup: true } : {}), ...scopeOf(zone) });
+}
+
+/* quick-add's receiver for a room: the Anthem that fits its speakers (the
+   Theater starter's default is an MRX 740). Pick another on GEAR. */
+export function avrFor(spk) {
+  const cfg = spk?.config || "";
+  const [ref, model] = cfg === "surround-7.1.4" ? ["anthem-mrx-1140-8k", "Anthem MRX 1140"]
+    : cfg === "surround-7.1" ? ["anthem-mrx-740-8k", "Anthem MRX 740"] : ["anthem-mrx-540-8k", "Anthem MRX 540"];
+  return { model, catalogRef: ref };
 }
 
 /* a new box in the first rack, named plainly; returns its id */
@@ -252,12 +269,20 @@ export function setDanteAudio(job, sol, zone, ampId) {
 export function autoHookup(job, sol, zone, hints = {}) {
   const { tv, spk } = endpointsOf(zone);
   const devs = rackDevices(sol);
+  // "local": the Apple TV quick-add put in the room feeds this TV directly
+  const loc = hints.local && tv && (sol.localDevices || []).find(d => d.zone === zone.id && d.type === "source");
+  if (loc) setVideo(job, sol, zone, loc.id);
+  // a pre-wire TV is its run back to the rack — to the video distributor, like a live one
+  const tvFromRack = !loc && (hints.matrix || (zone.scope === "prewire" && !hints.avr));
+  // a powered soundbar plays its TV's sound (HDMI eARC) unless a receiver drives it
+  const barOffTv = () => { if (tv && /^soundbar/.test(spk?.config || "") && !readHookup(job, sol, zone).speakers) setSpeakers(job, sol, zone, "__tv"); };
   if ((hints.dante || isDanteJob(sol)) && !hints.avr) {
     // Dante job: video as asked (matrix → MXNet decoder), sound over Dante
     const m = devs.find(d => d.type === "avSwitch" && !d.danteSwitch) || devs.find(d => d.type === "videoMatrix");
-    if (hints.matrix && tv && m) setVideo(job, sol, zone, m.id);
+    if (tvFromRack && tv && m) setVideo(job, sol, zone, m.id);
     if (spk && !/^soundbar/.test(spk.config || "")) setDanteAudio(job, sol, zone, danteAmpFor(job, sol, zone, hints));
     else if (tv) setDanteAudio(job, sol, zone, null);
+    barOffTv();
     return;
   }
   if (hints.avr) {
@@ -265,13 +290,18 @@ export function autoHookup(job, sol, zone, hints = {}) {
     // it isn't already driving another zone's speakers
     const busy = new Set((sol.connections || []).filter(c => c.signal === "speaker").map(c => c.from));
     let avr = devs.find(d => d.type === "avr" && !busy.has(d.id))?.id;
-    if (!avr) avr = addRackDevice(job, sol, "avr", `AV receiver — ${zone.name}`);
+    if (!avr) { const a = avrFor(spk); avr = addRackDevice(job, sol, "avr", a.model, { catalogRef: a.catalogRef }); }
     if (tv) setVideo(job, sol, zone, avr, "balun", true);   // eARC back over the HDMI — the default, no extra run
     if (spk) setSpeakers(job, sol, zone, avr);
+    // a receiver on a whole-home rack plays the house sources: one matrix output
+    // into it (the Theater starter's receiver already has its own sources)
+    const m = devs.find(d => d.type === "videoMatrix") || devs.find(d => d.type === "avSwitch" && !d.danteSwitch);
+    if (m && !(sol.connections || []).some(c => c.to === avr && c.signal !== "network"))
+      sol.connections.push({ from: m.id, to: avr, signal: "video", ...scopeOf(zone) });
     return;
   }
   const m = devs.find(d => d.type === "videoMatrix") || devs.find(d => d.type === "avSwitch");
-  if (hints.matrix && tv && m) setVideo(job, sol, zone, m.id);
+  if (tvFromRack && tv && m) setVideo(job, sol, zone, m.id);
   // speakers: stereo-style sets take the next free amp zone; surround wants a
   // receiver (fed from the matrix, like a family room off a whole-home rack)
   if (spk && !readHookup(job, sol, zone).speakers) {
@@ -280,7 +310,7 @@ export function autoHookup(job, sol, zone, hints = {}) {
       if (hints.matrix && m) {
         const busy = new Set((sol.connections || []).filter(c => c.signal === "speaker").map(c => c.from));
         let avr = rackDevices(sol).find(d => d.type === "avr" && !busy.has(d.id))?.id;
-        if (!avr) avr = addRackDevice(job, sol, "avr", `AV receiver — ${zone.name}`);
+        if (!avr) { const a = avrFor(spk); avr = addRackDevice(job, sol, "avr", a.model, { catalogRef: a.catalogRef }); }
         setSpeakers(job, sol, zone, avr);
         if (!(sol.connections || []).some(c => c.from === m.id && c.to === avr && c.signal === "video"))
           sol.connections.push({ from: m.id, to: avr, signal: "video" });
@@ -291,6 +321,7 @@ export function autoHookup(job, sol, zone, hints = {}) {
       if (amp) setSpeakers(job, sol, zone, amp.id);
     }
   }
+  barOffTv();
 }
 
 export const speakerSetupName = spk => SPEAKER_SETUP[spk?.config || "stereo"] || spk?.config;

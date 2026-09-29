@@ -457,7 +457,8 @@ export function wireRuns(job, ix, opts = {}) {
       if (sm || ep.config === "2.1" || ep.config === "stereo-2.1")
         runs.push({ prefix: "S", cable: "RG6 / LFE", from: rackName, to: `${zoneName(ix, c.to)} — sub location`,
           carries: gray ? "PRE-WIRE — coil & label" : "Sub feed", color: gray ? null : "#1a5fa0",
-          term: `${amp ? devName(amp) : nameOf(job, s, c.from)} sub out`, count: 1, gray });
+          // a 2.1 on a multi-zone amp: the sub rides that zone's sub out (MDX-16: one per zone)
+          term: `${amp ? devName(amp) : nameOf(job, s, c.from)} sub out${!sm && amp?.type === "amp" && chs.length ? ` ${Math.ceil(chs[0] / 2)} (zone ${Math.ceil(chs[0] / 2)})` : ""}`, count: 1, gray });
       else if (ep.config === "landscape" && ep.buriedSub)
         runs.push({ prefix: "S", cable: "14/2 DB", from: rackName, to: `${zoneName(ix, c.to)} — buried sub`,
           carries: gray ? "PRE-WIRE — coil & label" : "Sub (speaker level)", color: gray ? null : "#1a5fa0",

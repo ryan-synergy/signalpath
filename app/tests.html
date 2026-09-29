@@ -1309,7 +1309,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const hq = H.readHookup(j2, s2, z);
   t("audio back: a receiver-fed zone defaults to eARC with no optical run", hq.earc && hq.audioBack === "earc" && !hq.ret);
   let L3 = loadJob(j2), a3 = advise(L3.job, L3.ix);
-  t("audio back: eARC through a balun gets a confirm-the-model note", a3.notes.some(n => n.code === "earc-extender" && n.ref === z.endpoints.find(e => e.type === "display").id && /passes eARC/.test(n.msg)));
+  t("audio back: eARC through the AVPro balun is called out — the kit carries no ARC/eARC, so add the optical run", a3.notes.some(n => n.code === "earc-extender" && n.ref === z.endpoints.find(e => e.type === "display").id && /AC-EX70-444-KIT\) doesn't carry ARC\/eARC/.test(n.msg)));
   const runs0 = P2.wireRuns(L3.job, L3.ix);
   t("audio back: eARC adds no pulled run — the video run says it carries eARC",
     runs0.some(r => r.prefix === "V" && /\+ eARC back/.test(r.carries) && r.to.startsWith(z.name)) && !runs0.some(r => r.prefix === "R" && r.from.startsWith(z.name)));
@@ -2728,6 +2728,25 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const cb = p.racks[0].devices.find(d => d.id === "cablebox");
     t("walkthrough: a cable box with three exits (receiver, TV, amp) gets a taller tile and every wire routes clean",
       cb.h > 22 && !rt.warnings.some(w => /fallback|unrouted/.test(w.code)), JSON.stringify({ h: cb.h, w: rt.warnings.map(w => w.code + ":" + w.msg) })); }
+
+  // 2.1 on a multi-zone amp (Ryan 2026-09-29): 2 powered channels + the zone's sub out to a powered sub
+  { const P = await import("./pages.js");
+    const jk = starter("savant-whole-home"); addQ(jk, "kitchen stereo"); const k21 = addQ(jk, "dining 2.1");
+    const hk = H.readHookup(jk, jk.solutions[0], k21);
+    const L = loadJob(jk), runs = P.wireRuns(L.job, L.ix);
+    const sub = runs.find(r => /Dining — sub location/.test(r.to));
+    t("2.1: two powered amp channels (no third), and the sub runs from that zone's sub out",
+      hk.speakers.channels === "3-4" && sub && /MDX-16 sub out 2 \(zone 2\)/.test(sub.term), JSON.stringify({ ch: hk.speakers.channels, term: sub?.term }));
+    const js = starter("theater-receiver"); const amp = H.addRackDevice(js, js.solutions[0], "amp", "Sonamp 8-50", { catalogRef: "sonance-sonamp-8-50" });
+    for (const n of ["den 2.1", "office 2.1"]) H.setSpeakers(js, js.solutions[0], addQ(js, n), amp);
+    const Ls = loadJob(js), note = advise(Ls.job, Ls.ix, CAT).notes.find(n => n.code === "amp-sub-outs");
+    t("2.1: more 2.1 zones than the amp has sub outs is flagged", note && /2 2\.1 zones but only 1 sub out/.test(note.msg), note?.msg);
+    const Lk = loadJob(jk);
+    t("2.1: an MDX-16 with sub outs to spare says nothing", !advise(Lk.job, Lk.ix, CAT).notes.some(n => n.code === "amp-sub-outs")); }
+
+  // the balun is an AVPro kit (Ryan 2026-09-29) — quoted by its PlanQueue SKU, not "Unspecified"
+  { const txt = planQueueFiles(j5, 0, CAT)[0].text;
+    t("balun: every HDBaseT balun quotes as AVPro Edge AC-EX70-444-KIT", txt.includes("| AVPro Edge | AC-EX70-444-KIT") && !/HDBaseT Extender Set/.test(txt), txt); }
 
   // TV model flows to the quote
   const j4 = starter("theater-receiver"); const th = addQ(j4, "theater 7.1 85 sony avr");

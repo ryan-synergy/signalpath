@@ -23,6 +23,7 @@ export function companionRef(comp, tenG) {
   if (!comp) return null;
   if (comp.type === "axis") return "avpro-acp-axis2";
   if (comp.type === "axis16") return "avpro-acp-axis16";
+  if (comp.type === "balun") return "avpro-ac-ex70-444-kit";
   if (comp.type === "enc") return tenG ? "avpro-mxnet-10g-tcvr" : comp.dante ? "avpro-mxnet-1g-dante-ev2" : "avpro-mxnet-1g-ev2";
   if (comp.type === "dec") return tenG ? "avpro-mxnet-10g-tcvr" : comp.dante ? "avpro-mxnet-1g-dante-dv2" : "avpro-mxnet-1g-dv2";
   return null;

@@ -158,7 +158,8 @@ function quoteRooms(job, sol, catalog, adv) {
     // what sits at the TV: extenders, decoders, Dante encoders
     for (const comp of (sol.companions || []).filter(c => z.endpoints?.some(e => e.id === c.serves))) {
       const ref = comp.type === "axis" ? "avpro-acp-axis2" : comp.type === "axis16" ? "avpro-acp-axis16"
-        : comp.type === "dec" ? (tenG ? "avpro-mxnet-10g-tcvr" : comp.dante ? "avpro-mxnet-1g-dante-dv2" : "avpro-mxnet-1g-dv2") : null;
+        : comp.type === "dec" ? (tenG ? "avpro-mxnet-10g-tcvr" : comp.dante ? "avpro-mxnet-1g-dante-dv2" : "avpro-mxnet-1g-dv2")
+        : comp.type === "balun" ? "avpro-ac-ex70-444-kit" : null;   // Ryan 2026-09-29: the balun is an AVPro kit
       const p = ref && cat(ref) ? fromCatalog(cat(ref))
         : { mfr: "Unspecified", model: comp.type === "balun" ? "HDBaseT Extender Set" : `${adapterName(comp)} Set`, unsure: true };
       add(floor, z.name, scope, p);

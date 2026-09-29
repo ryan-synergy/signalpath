@@ -2922,6 +2922,14 @@ export function advise(job, ix = indexJob(job), catalog = null) {
         zonesUsed, zonesTotal, reserved,
         spare: zonesTotal != null ? zonesTotal - zonesUsed : null,
       });
+      // a 2.1 is two powered channels + the zone's sub out (line level) to a
+      // powered sub (Ryan 2026-09-29: "like on a MDX-16") — say so when the amp
+      // has fewer sub outs than 2.1 zones (only where the catalog lists them)
+      const subOuts = catalog?.devices?.[amp?.catalogRef]?.outputs?.sub;
+      const subs = feeds.filter(f => ix.endpointsById[f.to]?.config === "2.1").length;
+      if (typeof subOuts === "number" && subs > subOuts)
+        out.notes.push({ solution: sol.id, code: "amp-sub-outs", ref: ampId, level: "w",
+          msg: `${amp?.model || ampId}: ${subs} 2.1 zones but ${subOuts ? `only ${subOuts} sub out${subOuts > 1 ? "s" : ""}` : "no sub outs"} — move a 2.1 to an amp with a free sub out, or give its sub a line-out feed` });
     }
 
     /* -- typed port budgets from catalog refs -- */
@@ -3070,7 +3078,10 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       if (!comp || !ix.endpointsById[comp.serves]) continue;
       if ((sol.connections || []).some(r => r.from === comp.serves && r.signal === "audioReturn")) continue;
       out.notes.push({ code: "earc-extender", solution: sol.id, ref: comp.serves,
-        msg: `${describeNode(job, sol, comp.serves).short}: eARC comes back through the ${adapterName(comp)} — confirm that model passes eARC (many only pass ARC), or add the optical backup` });
+        msg: comp.type === "balun"
+          // the default balun (AVPro AC-EX70-444-KIT) carries no audio back at all
+          ? `${describeNode(job, sol, comp.serves).short}: the HDBaseT balun (AVPro AC-EX70-444-KIT) doesn't carry ARC/eARC — for the TV's own apps to play through the receiver, set TV audio back to "eARC + optical backup" (an optical run)`
+          : `${describeNode(job, sol, comp.serves).short}: eARC comes back through the ${adapterName(comp)} — confirm that model passes eARC (many only pass ARC), or add the optical backup` });
     }
 
     /* -- licensing advisor per platform -- */

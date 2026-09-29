@@ -290,22 +290,22 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20260929214644",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20260929214644",
-    "./app/commands.js": "./app/commands.js?v=20260929214644",
-    "./app/engine.js": "./app/engine.js?v=20260929214644",
-    "./app/exports.js": "./app/exports.js?v=20260929214644",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260929214644",
-    "./app/hookup.js": "./app/hookup.js?v=20260929214644",
-    "./app/importers.js": "./app/importers.js?v=20260929214644",
-    "./app/names.js": "./app/names.js?v=20260929214644",
-    "./app/network.js": "./app/network.js?v=20260929214644",
-    "./app/pages.js": "./app/pages.js?v=20260929214644",
-    "./app/power.js": "./app/power.js?v=20260929214644",
-    "./app/quickadd.js": "./app/quickadd.js?v=20260929214644",
-    "./app/rack.js": "./app/rack.js?v=20260929214644",
-    "./app/route-audit.js": "./app/route-audit.js?v=20260929214644",
-    "./app/starters.js": "./app/starters.js?v=20260929214644"
+    "./app/ai.js": "./app/ai.js?v=20260929215518",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20260929215518",
+    "./app/commands.js": "./app/commands.js?v=20260929215518",
+    "./app/engine.js": "./app/engine.js?v=20260929215518",
+    "./app/exports.js": "./app/exports.js?v=20260929215518",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260929215518",
+    "./app/hookup.js": "./app/hookup.js?v=20260929215518",
+    "./app/importers.js": "./app/importers.js?v=20260929215518",
+    "./app/names.js": "./app/names.js?v=20260929215518",
+    "./app/network.js": "./app/network.js?v=20260929215518",
+    "./app/pages.js": "./app/pages.js?v=20260929215518",
+    "./app/power.js": "./app/power.js?v=20260929215518",
+    "./app/quickadd.js": "./app/quickadd.js?v=20260929215518",
+    "./app/rack.js": "./app/rack.js?v=20260929215518",
+    "./app/route-audit.js": "./app/route-audit.js?v=20260929215518",
+    "./app/starters.js": "./app/starters.js?v=20260929215518"
 } }
 </script>
 <script>
@@ -482,7 +482,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20260929214644").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20260929215518").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -532,7 +532,7 @@ function syncShippedCatalog() {
   return changed;
 }
 // advisor notes that ask for a fix (the rest are reference: setup checklists, budgets)
-const ACTION_NOTES = new Set(["earc-extender", "mxnet-no-cbox", "dante-no-controller", "mxnet-cbox-per-platform", "net-mismatch", "net-mixed",
+const ACTION_NOTES = new Set(["amp-sub-outs", "earc-extender", "mxnet-no-cbox", "dante-no-controller", "mxnet-cbox-per-platform", "net-mismatch", "net-mixed",
   "dante-multicast", "pcm-only", "switch-ports-full", "switch-no-poe", "lan-no-switch", "power-none", "power-short", "power-tight",
   "power-circuit", "power-peak", "rack-full", "rack-unknown-u", "rack-heat"]);
 const saveSettings = () => dbPut({ id: "__settings", updated: Date.now(), settings: SETTINGS });
@@ -670,6 +670,7 @@ function collectFindings(errs, warns, a, mine) {
   for (const [list, level] of [[errs, "e"], [warns, "w"]])
     for (const f of list) isDev(f.ref) ? push(byDev, f.ref, level, f.msg) : push(byZone, zoneOfRef(f.ref), level, f.msg);
   for (const n of a?.notes || []) if (n.code === "earc-extender" && mine(n)) push(byZone, zoneOfRef(n.ref), "w", n.msg);
+  for (const n of a?.notes || []) if (n.code === "amp-sub-outs" && mine(n)) push(byDev, n.ref, "w", n.msg);
   for (const io of a?.io || []) if (io.over && mine(io)) push(byDev, io.device, "e", io.msg);
   return { byZone, byDev };
 }

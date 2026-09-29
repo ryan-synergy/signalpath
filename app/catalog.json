@@ -2388,6 +2388,23 @@
       "powerIdleW": 50,
       "rackUnits": 1,
       "notes": "Sonamp 8-50/16-50 manual 12/13/2022 (sonance.com, fetched 2026-09-28): 16 ch = 8 stereo zones, 50W/ch @8Ω, 100W/ch @4Ω, 200W bridged @8Ω; no 70V. Inputs: a local stereo input per zone + Bus A + Bus B = 10 stereo sources; zone input by DIP switch (not a matrix). Bus A sub out with crossover. Audio sense or 3-30V trigger. Power: 600W max, <200W at 1/8 power (200 used), 50W idle, <0.5W standby. 1U full width (17.2 x 1.75 x 12.3in). Sonance order code 93546 (US); Synergy's PlanQueue SKU \"Sonamp 16-50\"."
+    },
+    "avpro-ac-ex70-444-kit": {
+      "brand": "AVPro Edge",
+      "model": "AC-EX70-444-KIT",
+      "partNo": "AC-EX70-444-KIT",
+      "type": "balun",
+      "inputs": {
+        "hdmi": 1
+      },
+      "outputs": {
+        "hdmi": 1
+      },
+      "lan": 0,
+      "flags": [],
+      "verified": true,
+      "desktop": true,
+      "notes": "The default HDBaseT balun (Ryan 2026-09-29: 'just use a AV Pro'). TX + RX pair: 18Gbps HDMI 2.0 (AVPro ICT compression above 10.2G), 4K60 4:4:4 with HDR10 / HDR10+ / Dolby Vision / HLG; 4K to 70m on Cat6A (the page's table says 100m — conflicting), 1080p 100–150m. One 48V PSU (12W max) powers either end over the cable (PoH). NO audio return: no ARC or eARC — it only breaks out analog L/R from 2ch PCM, so a receiver-fed TV's own apps need the optical run back. AC-EX70-UHD-KIT (also in PlanQueue) is 10.2G / 4K60 4:2:0 only — not for HDR sources. avproglobal.com/products/ac-ex70-444-kit, 2026-09-29"
     }
   },
   "licensing": {

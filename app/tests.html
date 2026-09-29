@@ -1303,16 +1303,23 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const pz = parseQuickZone("loft 5.1 65 avr prewire").zone; delete pz._hints; j3.house.zones.push(pz);
   H.autoHookup(j3, s3, pz, { avr: true });
   t("hookup: connections follow the zone's scope", !healthy(j3).warns.includes("scope-mismatch") && s3.connections.filter(c => c.to.startsWith(pz.id) || c.from.startsWith(pz.id)).every(c => c.scope === "prewire"));
-  // TV audio back: eARC over the receiver's HDMI is the default; optical is a
-  // pulled run — alone, or as a backup alongside eARC
+  // TV audio back: a receiver feeding a TV through the AVPro balun (no ARC/eARC)
+  // defaults to eARC + an optical backup run (Ryan 2026-09-29); eARC alone is a choice
   const P2 = await import("./pages.js");
   const hq = H.readHookup(j2, s2, z);
-  t("audio back: a receiver-fed zone defaults to eARC with no optical run", hq.earc && hq.audioBack === "earc" && !hq.ret);
+  t("audio back: a receiver + balun zone defaults to eARC + optical backup (the kit carries no audio back)",
+    hq.earc && hq.audioBack === "earc+optical" && hq.ret?.to === hq.video.from && hq.ret.backup);
   let L3 = loadJob(j2), a3 = advise(L3.job, L3.ix);
-  t("audio back: eARC through the AVPro balun is called out — the kit carries no ARC/eARC, so add the optical run", a3.notes.some(n => n.code === "earc-extender" && n.ref === z.endpoints.find(e => e.type === "display").id && /AC-EX70-444-KIT\) doesn't carry ARC\/eARC/.test(n.msg)));
+  t("audio back: with the optical backup in, there's no eARC warning", !a3.notes.some(n => n.code === "earc-extender"));
+  H.setAudioBack(j2, s2, z, "earc");
+  L3 = loadJob(j2); a3 = advise(L3.job, L3.ix);
+  t("audio back: choosing eARC only drops the run — and the balun's missing ARC/eARC is called out", !H.readHookup(j2, s2, z).ret &&
+    a3.notes.some(n => n.code === "earc-extender" && n.ref === z.endpoints.find(e => e.type === "display").id && /AC-EX70-444-KIT\) doesn't carry ARC\/eARC/.test(n.msg)));
   const runs0 = P2.wireRuns(L3.job, L3.ix);
-  t("audio back: eARC adds no pulled run — the video run says it carries eARC",
+  t("audio back: eARC alone adds no pulled run — the video run says it carries eARC",
     runs0.some(r => r.prefix === "V" && /\+ eARC back/.test(r.carries) && r.to.startsWith(z.name)) && !runs0.some(r => r.prefix === "R" && r.from.startsWith(z.name)));
+  H.setVideo(j2, s2, z, hq.video.from, "balun");
+  t("audio back: re-picking the same balun feed keeps an explicit eARC-only choice", !H.readHookup(j2, s2, z).ret);
   const avrId = hq.video.from;
   H.setAudioBack(j2, s2, z, "earc+optical");
   const hb = H.readHookup(j2, s2, z);

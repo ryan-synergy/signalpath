@@ -89,6 +89,12 @@ export function setVideo(job, sol, zone, from, run, earc) {
   const comp = keep || { id: freeId(job, sol, `${run}-${zone.id}`), type: run, serves: tv.id, auto: true };
   if (!keep) sol.companions.push(comp);
   sol.connections.push({ from, to: comp.id, signal: "video", ...ea, ...sc }, { from: comp.id, to: tv.id, signal: "video", ...sc });
+  // the AVPro balun carries no ARC/eARC, so a receiver newly feeding a TV through
+  // one gets "eARC + optical backup" by default (Ryan 2026-09-29) — the optical
+  // run is what actually brings the TV's own apps back. An explicit choice made
+  // afterwards (setAudioBack) still wins; re-picking the same feed keeps it.
+  const fresh = prev.video?.from !== from || prev.video?.run !== "balun";
+  if (run === "balun" && earc && fresh && !prev.ret) setReturn(job, sol, zone, from, true);
 }
 
 /* the TV's audio back to the rack, as one choice:
@@ -296,7 +302,7 @@ export function autoHookup(job, sol, zone, hints = {}) {
     // a receiver on a whole-home rack plays the house sources: one matrix output
     // into it (the Theater starter's receiver already has its own sources)
     const m = devs.find(d => d.type === "videoMatrix") || devs.find(d => d.type === "avSwitch" && !d.danteSwitch);
-    if (m && !(sol.connections || []).some(c => c.to === avr && c.signal !== "network"))
+    if (m && !(sol.connections || []).some(c => c.to === avr && c.signal !== "network" && c.signal !== "audioReturn"))   // the TV's optical return isn't a source
       sol.connections.push({ from: m.id, to: avr, signal: "video", ...scopeOf(zone) });
     return;
   }

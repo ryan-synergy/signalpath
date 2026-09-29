@@ -6,7 +6,7 @@
 import { expandChannels, effectiveJob, indexJob } from "./engine.js";
 import { TYPE_NAME, PLATFORM_NAME, adapterName, describeNode } from "./names.js";
 import { NET_ROLE_NAME, switchSetup } from "./network.js";
-import { isAsBuilt, asBuiltChanges } from "./asbuilt.js";
+import { isAsBuilt, asBuiltChanges, installRows } from "./asbuilt.js";
 
 const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const W = 1632, H = 1056;
@@ -891,6 +891,25 @@ function asBuiltPages(job, ix, opts, label) {
     `Differences from the proposal "${ab.fromName || ""}" (${ab.fromSolution || ""}) · as-built started ${ab.started || ""}`, bodies, label,
     () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">△ numbers match the revision clouds on sheet 1. Removed items are listed here only (shaded) — they are no longer on the drawing.</text>`);
 }
+/* ---------- Install Record ----------
+   Serial / MAC / IP / notes per box, rack first then in-room gear. Blank
+   cells print as blank so the sheet doubles as a write-in form on site. */
+function installPages(job, ix, opts, label) {
+  const raw = opts.rawJob || job;
+  const recs = installRows(raw, 0);
+  const rows = recs.map(r => ({ tint: r.warn.length > 0, cells: [clipText(r.name, 34), clipText(r.where, 22), clipText(r.serial, 24),
+    r.mac, clipText(r.ip, 18), clipText([r.notes, ...r.warn.map(w => `⚠ ${w}`)].filter(Boolean).join(" · "), 70)] }));
+  if (!rows.length) rows.push({ gray: true, cells: ["", "", "", "", "", "No gear on this job."] });
+  const cols = [{ label: "Box", dx: 14 }, { label: "Where", dx: 330 }, { label: "Serial", dx: 520 }, { label: "MAC", dx: 740 }, { label: "IP", dx: 940 }, { label: "Notes", dx: 1090 }];
+  const bodies = [];
+  let rest = rows;
+  do {
+    const t = tableFit(40, TOP + 10, 1552, cols, rest, 30);
+    bodies.push([t.svg]); rest = t.rest;
+  } while (rest.length);
+  return assemble(job, opts, "Install Record", `Serial numbers and network addresses as installed · ${recs.filter(r => r.filled).length} of ${recs.length} boxes recorded`, bodies, label,
+    () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Recorded on site in SignalPath (JOB → Install record). Blank rows can be filled in by hand. Shaded rows have an address to check.</text>`);
+}
 const clipText = (t, n) => String(t).length > n ? String(t).slice(0, n - 1) + "…" : String(t);
 
 function pageGroups(job, ix, adviseResult, opts) {
@@ -903,7 +922,7 @@ function pageGroups(job, ix, adviseResult, opts) {
     if (flags.elevation) g.push(["Rack", lbl => rackPages(job, ix, adviseResult, opts, lbl)]);
     return g;
   }
-  if (isAsBuilt(opts.rawJob || job)) g.push(["As-Built Changes", lbl => asBuiltPages(job, ix, opts, lbl)]);
+  if (isAsBuilt(opts.rawJob || job)) g.push(["As-Built Changes", lbl => asBuiltPages(job, ix, opts, lbl)], ["Install Record", lbl => installPages(job, ix, opts, lbl)]);
   if (flags.channelMap) g.push(["Channel Map", lbl => channelMapPages(job, ix, opts, lbl)]);
   if (flags.equipment) g.push(["Equipment & Takeoff", lbl => takeoffPages(job, ix, adviseResult, opts, lbl)]);
   if (flags.wireSchedule) g.push(["Wire Schedule", lbl => wireSchedulePages(job, ix, opts, lbl)]);

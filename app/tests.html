@@ -2585,6 +2585,31 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("as-built: the changes page lists every change, removed ones included", ch.every(c => pg.includes(`△${c.n}`)) && pg.includes("Removed"));
   t("as-built: the AI review carries the change list", /## As-built changes/.test(aiReviewMarkdown(ab, 0, CAT)));
   t("as-built: a proposal (not an as-built) prints no changes page", !renderExtraPages(loadJob(prop).job, loadJob(prop).ix, advise(loadJob(prop).job, loadJob(prop).ix, CAT), { rawJob: prop }).some(x => x.title === "As-Built Changes"));
+
+  // install record: serial / MAC / IP / notes per box
+  t("install record: MACs tidy to AA:BB:CC:DD:EE:FF from any common spelling; junk is kept as typed",
+    AB.tidyMac("001122aabbcc") === "00:11:22:AA:BB:CC" && AB.tidyMac("00-11-22-aa-bb-cc") === "00:11:22:AA:BB:CC" && AB.tidyMac("0011.22aa.bbcc") === "00:11:22:AA:BB:CC" && AB.tidyMac("n/a") === "n/a");
+  const [d1, d2] = rack.devices;
+  d1.install = { serial: "SN123", mac: "00:11:22:AA:BB:CC", ip: "192.168.1.50", notes: "fw 2.1" };
+  d2.install = { ip: "192.168.1.50", mac: "zz" };
+  const recs = AB.installRows(ab);
+  const r1 = recs.find(r => r.id === d1.id), r2 = recs.find(r => r.id === d2.id);
+  t("install record: one row per box, rack gear first, in-room gear after with its room",
+    recs.length === rack.devices.length + (ab.solutions[0].localDevices || []).length && recs.slice(0, rack.devices.length).every(r => r.where === rack.name) &&
+    recs.slice(rack.devices.length).every(r => ab.house.zones.some(z => z.name === r.where)));
+  t("install record: a duplicate IP and a malformed MAC are flagged; a clean box isn't",
+    r1.filled && r2.warn.some(w => /same IP/.test(w)) && r2.warn.some(w => /MAC/.test(w)) && r1.warn.some(w => /same IP/.test(w)) &&
+    recs.filter(r => !r.filled).every(r => !r.warn.length), JSON.stringify([r1.warn, r2.warn]));
+  t("install record: it is not a change from the proposal", AB.asBuiltChanges(ab).length === ch.length);
+  const svc2 = renderExtraPages(job, ix, a, { rawJob: ab, packet: "service" });
+  const ipg = svc2.find(x => x.title === "Install Record");
+  t("install record: the service packet prints it right after the changes; the client packet doesn't",
+    svc2[1]?.title === "Install Record" && ipg.svg.includes("SN123") && ipg.svg.includes("192.168.1.50") && /1 of \d+ boxes recorded|2 of \d+ boxes recorded/.test(ipg.svg) &&
+    !renderExtraPages(job, ix, a, { rawJob: ab, packet: "client" }).some(x => x.title === "Install Record"));
+  const csv = AB.installCSV(ab).split("\n");
+  t("install record: the CSV has a header and one row per box, formulas defused",
+    csv[0] === "Box,Where,Serial,MAC,IP,Notes,Check" && csv.length === recs.length + 1 && csv.some(l => l.includes('"SN123"')) &&
+    (() => { d1.install.notes = "=HYPERLINK(1)"; return AB.installCSV(ab).includes(`"'=HYPERLINK(1)"`); })());
 }
 
 /* ---------- input order (user redline 2026-09-28) ----------

@@ -7,6 +7,8 @@
    speakers, rack and in-room gear, adapters, and every wire — and numbers each
    difference. The same numbered list drives the △ deltas on the drawing
    (engine render, opts.changes), the As-Built Changes page and the JOB tab.
+   installRows() is the install record (serial / MAC / IP / notes per box)
+   that prints in the service packet.
    Pure module, no DOM. */
 
 import { effectiveJob } from "./engine.js";
@@ -109,6 +111,56 @@ export function asBuiltChanges(job) {
   for (const o of bsol.connections || []) if (!cw.has(connKey(o)))
     add("wire", "removed", { wire: `${o.from}→${o.to}` }, `Removed run: ${name(bj, bsol, o.from)} → ${name(bj, bsol, o.to)} (${sig(o)})`);
   return out;
+}
+
+/* ---------- install record ----------
+   What the tech writes down at the rack: serial, MAC, IP and a note per box,
+   kept on the box itself (d.install) so it moves and deletes with it. It isn't
+   a change from the proposal, so asBuiltChanges never lists it. Rack gear
+   first (in rack order), then in-room gear by room. */
+export const INSTALL_FIELDS = ["serial", "mac", "ip", "notes"];
+const text = v => v == null || typeof v === "object" ? "" : String(v).trim();
+
+// "001122aabbcc", "00-11-22-AA-BB-CC", "0011.22aa.bbcc" → "00:11:22:AA:BB:CC"; anything else is kept as typed
+export function tidyMac(v) {
+  const s = text(v), hex = s.replace(/[\s:.\-]/g, "");
+  return /^[0-9a-f]{12}$/i.test(hex) ? hex.toUpperCase().match(/../g).join(":") : s;
+}
+const ipOk = s => /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(s) && s.split(".").every(n => +n <= 255);
+const macOk = s => /^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(s);
+
+export function installRows(job, solIndex = 0) {
+  const sol = job.solutions?.[solIndex] || {};
+  const zones = job.house?.zones || [];
+  const zname = id => zones.find(z => z.id === id)?.name || id || "";
+  const row = (d, where) => {
+    const r = { id: d.id, name: describeNode(job, sol, d.id).short, where };
+    for (const k of INSTALL_FIELDS) r[k] = text(d.install?.[k]);
+    return r;
+  };
+  const rows = (sol.racks || []).flatMap(r => (r.devices || []).map(d => row(d, r.name || r.id)));
+  const order = new Map(zones.map((z, i) => [z.id, i]));
+  const locals = [...(sol.localDevices || [])].sort((a, b) => (order.get(a.zone) ?? 1e9) - (order.get(b.zone) ?? 1e9));
+  rows.push(...locals.map(d => row(d, zname(d.zone))));
+  // flags: a malformed IP or MAC, or the same address on two boxes
+  const seen = k => { const m = new Map(); for (const r of rows) if (r[k]) m.set(r[k].toLowerCase(), (m.get(r[k].toLowerCase()) || 0) + 1); return m; };
+  const ips = seen("ip"), macs = seen("mac");
+  for (const r of rows) {
+    r.warn = [];
+    if (r.ip && !ipOk(r.ip)) r.warn.push("IP isn't a v4 address");
+    else if (r.ip && ips.get(r.ip.toLowerCase()) > 1) r.warn.push("same IP as another box");
+    if (r.mac && !macOk(r.mac)) r.warn.push("MAC isn't 12 hex digits");
+    else if (r.mac && macs.get(r.mac.toLowerCase()) > 1) r.warn.push("same MAC as another box");
+    r.filled = INSTALL_FIELDS.some(k => r[k]);
+  }
+  return rows;
+}
+
+// the same record as a spreadsheet — for the network docs or a monitoring tool's import
+export function installCSV(job, solIndex = 0) {
+  const q = v => { let t = String(v ?? ""); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return `"${t.replace(/"/g, '""')}"`; };   // no spreadsheet formulas
+  return ["Box,Where,Serial,MAC,IP,Notes,Check"].concat(installRows(job, solIndex).map(r =>
+    [r.name, r.where, r.serial, r.mac, r.ip, r.notes, r.warn.join("; ")].map(q).join(","))).join("\n");
 }
 
 /* ---------- drawing: revision clouds + numbered deltas ----------

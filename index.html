@@ -289,22 +289,22 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20260928175435",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20260928175435",
-    "./app/commands.js": "./app/commands.js?v=20260928175435",
-    "./app/engine.js": "./app/engine.js?v=20260928175435",
-    "./app/exports.js": "./app/exports.js?v=20260928175435",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260928175435",
-    "./app/hookup.js": "./app/hookup.js?v=20260928175435",
-    "./app/importers.js": "./app/importers.js?v=20260928175435",
-    "./app/names.js": "./app/names.js?v=20260928175435",
-    "./app/network.js": "./app/network.js?v=20260928175435",
-    "./app/pages.js": "./app/pages.js?v=20260928175435",
-    "./app/power.js": "./app/power.js?v=20260928175435",
-    "./app/quickadd.js": "./app/quickadd.js?v=20260928175435",
-    "./app/rack.js": "./app/rack.js?v=20260928175435",
-    "./app/route-audit.js": "./app/route-audit.js?v=20260928175435",
-    "./app/starters.js": "./app/starters.js?v=20260928175435"
+    "./app/ai.js": "./app/ai.js?v=20260929211426",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20260929211426",
+    "./app/commands.js": "./app/commands.js?v=20260929211426",
+    "./app/engine.js": "./app/engine.js?v=20260929211426",
+    "./app/exports.js": "./app/exports.js?v=20260929211426",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260929211426",
+    "./app/hookup.js": "./app/hookup.js?v=20260929211426",
+    "./app/importers.js": "./app/importers.js?v=20260929211426",
+    "./app/names.js": "./app/names.js?v=20260929211426",
+    "./app/network.js": "./app/network.js?v=20260929211426",
+    "./app/pages.js": "./app/pages.js?v=20260929211426",
+    "./app/power.js": "./app/power.js?v=20260929211426",
+    "./app/quickadd.js": "./app/quickadd.js?v=20260929211426",
+    "./app/rack.js": "./app/rack.js?v=20260929211426",
+    "./app/route-audit.js": "./app/route-audit.js?v=20260929211426",
+    "./app/starters.js": "./app/starters.js?v=20260929211426"
 } }
 </script>
 <script>
@@ -366,6 +366,7 @@
       <button id="exportPq" role="menuitem"><b>PlanQueue</b><span>Proposal import (.md) — two files when there are pre-wire-only rooms</span></button>
       <button id="exportCsv" role="menuitem"><b>Takeoff</b><span>Equipment list (.csv)</span></button>
       <button id="exportLabels" role="menuitem"><b>Cable labels</b><span>One row per wire (.csv) for Brady / P-touch</span></button>
+      <button id="exportInstall" role="menuitem" hidden><b>Install record</b><span>Serial, MAC, IP and notes per box (.csv)</span></button>
       <hr>
       <button id="exportJson" role="menuitem"><b>Job file</b><span>The whole job (.json) — reopen, share, back up</span></button>
       <button id="exportSvg" role="menuitem"><b>Drawing</b><span>The schematic sheet (.svg)</span></button>
@@ -441,7 +442,7 @@ import { importAny, mergeHouse, drawFromWalk, decodeHandoff } from "./app/import
 import { planQueueFiles, aiReviewMarkdown } from "./app/exports.js";
 import { RACK_SIZES, DEFAULT_RACK_U } from "./app/rack.js";
 import { specFor, specNum } from "./app/network.js";
-import { startAsBuilt, asBuiltChanges, changeMarks, isAsBuilt } from "./app/asbuilt.js";
+import { startAsBuilt, asBuiltChanges, changeMarks, isAsBuilt, installRows, installCSV, tidyMac } from "./app/asbuilt.js";
 import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV, labelsCSV, rackFrontSVG, rackData } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
 import { STARTERS, applyStarter } from "./app/starters.js";
@@ -480,7 +481,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20260928175435").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20260929211426").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -597,6 +598,7 @@ function refresh(save = true) {
   const ab = isAsBuilt(S.job);
   $("#printBtn").hidden = ab; $("#printMenu").hidden = !ab;           // as-built jobs print two packets
   $("#startAsBuilt").hidden = ab;                                    // an as-built isn't copied again
+  $("#exportInstall").hidden = !ab;
   $("#canvas").innerHTML = svg || `<div style="color:#888;padding:60px;text-align:center">Add a zone to start drawing${err ? "<br><small>" + esc(err.message) + "</small>" : ""}</div>`;
   hideTip(); applySel(); syncGlow();
   const activeSolId = S.job.solutions[S.sol]?.id;
@@ -905,6 +907,7 @@ $("#exportPq").onclick = () => {
 };
 $("#exportAi").onclick = () => download(`${fileBase()} — AI review.md`, aiReviewMarkdown(S.job, S.sol, SETTINGS.catalog), "text/markdown");
 $("#exportLabels").onclick = () => { const { job, ix } = loadJob(effectiveJob(S.job, S.sol)); download(`${fileBase()} — cable labels.csv`, labelsCSV(job, ix, { solution: S.sol }), "text/csv"); };
+$("#exportInstall").onclick = () => download(`${fileBase()} — install record.csv`, installCSV(S.job, S.sol), "text/csv");
 $("#exportCsv").onclick = () => { const { job, ix } = loadJob(effectiveJob(S.job, S.sol)); download(`${fileBase()} — takeoff.csv`, takeoffCSV(job, ix, { solution: S.sol }), "text/csv"); };
 
 /* ---- Field Kit TOOLS switcher (hub manifest, cached; self marked) ---- */
@@ -1681,6 +1684,26 @@ function rackHTML() {
   return rs.length ? rs.map(rackRow).join("") + pw : `<div class="mini" style="padding:12px">No rack on this job yet — add gear under GEAR.</div>`;
 }
 
+/* as-built install record: serial / MAC / IP / notes per box (prints as "Install Record" in the service packet) */
+function installHTML() {
+  const rows = installRows(S.job, S.sol);
+  const done = rows.filter(r => r.filled).length;
+  const PH = { serial: "Serial number", mac: "e.g. 00:11:22:AA:BB:CC", ip: "e.g. 192.168.1.50", notes: "Firmware, login location, anything the next tech needs" };
+  return `<div class="sect">INSTALL RECORD <span class="badge">${done} of ${rows.length}</span></div>
+    ${rows.length ? rows.map(r => { const key = "inst:" + r.id, open = S.openRows.has(key);
+      const sum = [r.serial && `S/N ${r.serial}`, r.ip, r.mac].filter(Boolean).join(" · ") || "not recorded yet";
+      return `<div class="row ${open ? "open" : ""}" data-inst="${esc(r.id)}">
+      <div class="head zhead" data-toggle="${esc(key)}"><div class="zmain"><div class="zt"><span class="t">${esc(r.name)}</span></div>
+        <div class="zsum">${esc(r.where)} · ${esc(sum)}</div>
+        ${r.warn.length ? `<div class="ziss w">${esc(r.warn.join("; "))}</div>` : ""}</div></div>
+      <div class="fields">
+        ${field("Serial", `<input class="inst" data-k="serial" value="${esc(r.serial)}" placeholder="${PH.serial}" autocapitalize="characters" autocorrect="off" spellcheck="false">`)}
+        ${field("MAC", `<input class="inst" data-k="mac" value="${esc(r.mac)}" placeholder="${PH.mac}" autocapitalize="characters" autocorrect="off" spellcheck="false">`)}
+        ${field("IP", `<input class="inst" data-k="ip" value="${esc(r.ip)}" placeholder="${PH.ip}" inputmode="decimal" autocorrect="off" spellcheck="false">`)}
+        ${field("Notes", `<input class="inst" data-k="notes" value="${esc(r.notes)}" placeholder="${PH.notes}">`)}
+      </div></div>`; }).join("") : `<div class="mini" style="padding:8px 2px">No gear on this job yet.</div>`}`;
+}
+
 function jobHTML() {
   const J = S.job.job;
   return `
@@ -1691,6 +1714,7 @@ function jobHTML() {
       ${ch.length ? ch.map(c => `<div class="mini" style="margin-top:4px"><b style="color:#c2410c">△${c.n}</b> ${esc(c.text)}${c.action === "removed" ? ` <span style="color:#888">(listed only — not on the drawing)</span>` : ""}</div>`).join("")
         : `<div class="mini" style="margin-top:6px">No changes yet — built as proposed.</div>`}
     </div></div>`; })() : ""}
+    ${isAsBuilt(S.job) ? installHTML() : ""}
     <div class="sect">CLIENT</div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       ${field("Name", `<input class="jclient" value="${esc(J.client?.name || "")}">`)}
@@ -2180,6 +2204,15 @@ function wirePanel(body) {
   if (toAll) toAll.onclick = ev => { ev.preventDefault(); switchTab("job"); renderPanel(); setTimeout(() => $("#allConns")?.scrollIntoView({ block: "start", behavior: "smooth" }), 30); };
 
   /* job */
+  on(".inst", el => {
+    const id = el.closest("[data-inst]")?.dataset.inst, sol = S.job.solutions[S.sol];
+    const d = [...sol.racks.flatMap(r => r.devices), ...(sol.localDevices || [])].find(d => d.id === id);
+    if (!d) return;
+    const k = el.dataset.k, v = k === "mac" ? tidyMac(el.value) : el.value.trim();
+    d.install = { ...(d.install || {}), [k]: v };
+    if (!v) delete d.install[k];
+    if (!Object.keys(d.install).length) delete d.install;
+  });
   on(".jclient", el => { S.job.job.client.name = el.value; });
   on(".jaddr", el => { S.job.job.client.address = el.value; });
   on(".jdrawn", el => { S.job.job.drawnBy = el.value; });

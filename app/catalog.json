@@ -27,7 +27,171 @@
       "verified": true,
       "notes": "Digital ins are PCM-only (bitstream mutes) — pair sources with a 2ch downmix. No HDMI/eARC. AUDIT 2026-09-27: the 2 stereo line outs are hard-wired passthroughs of analog inputs 6 and 7 (live even in standby), not matrix outputs; the optical out repeats the selected digital input. Anthem's web spec omits the 2 coax inputs — the manual (§3.8) confirms 2 coax + 2 optical. POWER/RU 2026-09-27: 2U (rack ears fitted); Anthem publishes no power draw ('--') — anthemav.com + MDX manual 2025-12",
       "partNo": "MDX-16",
-      "rackUnits": 2
+      "rackUnits": 2,
+      "ports": [
+        {
+          "label": "ANALOG 1",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 2",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 3",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 4",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 5",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 6",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 7",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 8",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "OPTICAL 1",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "OPTICAL 2",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "COAX 1",
+          "dir": "in",
+          "conn": "coax",
+          "audio": "pcm2"
+        },
+        {
+          "label": "COAX 2",
+          "dir": "in",
+          "conn": "coax",
+          "audio": "pcm2"
+        },
+        {
+          "label": "OPTICAL OUT",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "ANALOG 6 OUT",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 7 OUT",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "ZONE 1 SUB OUT",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "ZONE 2 SUB OUT",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "ZONE 3 SUB OUT",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "ZONE 4 SUB OUT",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "ZONE 5 SUB OUT",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "ZONE 6 SUB OUT",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "ZONE 7 SUB OUT",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "ZONE 8 SUB OUT",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "ZONE 1 SPEAKER (L/R Euroblock)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 2 SPEAKER (L/R Euroblock)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 3 SPEAKER (L/R Euroblock)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 4 SPEAKER (L/R Euroblock)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 5 SPEAKER (L/R Euroblock)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 6 SPEAKER (L/R Euroblock)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 7 SPEAKER (L/R Euroblock)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 8 SPEAKER (L/R Euroblock)",
+          "dir": "out",
+          "conn": "speaker"
+        }
+      ],
+      "portsSource": "https://www.sarte-audio.com/sites/default/files/manuales/MDX_Manual.pdf (Anthem MDX-16/MDX-8 Operating Manual) (high confidence, rear-panel audit 2026-09-29)",
+      "goTo": true
     },
     "anthem-mdx-8": {
       "brand": "Anthem",
@@ -48,7 +212,77 @@
       "verified": true,
       "notes": "No coax, no line outs, no digital out. POWER/RU 2026-09-27: 2U (rack ears fitted); no power draw published — anthemav.com",
       "partNo": "MDX-8",
-      "rackUnits": 2
+      "rackUnits": 2,
+      "ports": [
+        {
+          "label": "ANALOG 1",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 2",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 3",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 4",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "OPTICAL 1",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "ZONE 1 SUB OUT",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "ZONE 2 SUB OUT",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "ZONE 3 SUB OUT",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "ZONE 4 SUB OUT",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "ZONE 1 SPEAKER (L/R Euroblock)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 2 SPEAKER (L/R Euroblock)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 3 SPEAKER (L/R Euroblock)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 4 SPEAKER (L/R Euroblock)",
+          "dir": "out",
+          "conn": "speaker"
+        }
+      ],
+      "portsSource": "https://www.sarte-audio.com/sites/default/files/manuales/MDX_Manual.pdf (Anthem MDX-16/MDX-8 Operating Manual) (high confidence, rear-panel audit 2026-09-29)",
+      "goTo": true
     },
     "anthem-mrx-540-8k": {
       "brand": "Anthem",
@@ -78,7 +312,147 @@
       "rackUnits": 4,
       "aliases": [
         "MRX 540 8K"
-      ]
+      ],
+      "ports": [
+        {
+          "label": "HDMI 1",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 2",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 3",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 4",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 5",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 6",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 7",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUT 1 (eARC)",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full",
+          "earc": true
+        },
+        {
+          "label": "HDMI OUT 2",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "pcm2"
+        },
+        {
+          "label": "COAX 1",
+          "dir": "in",
+          "conn": "coax",
+          "audio": "lossy51"
+        },
+        {
+          "label": "COAX 2",
+          "dir": "in",
+          "conn": "coax",
+          "audio": "lossy51"
+        },
+        {
+          "label": "OPTICAL 1",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "OPTICAL 2",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "OPTICAL 3",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "OPTICAL OUT",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "ANALOG 1",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 2",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 3",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 4",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 5",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "PRE OUT (height/ext. amp channels)",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "SUB 1",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "SUB 2",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "SPEAKER OUTPUTS",
+          "dir": "out",
+          "conn": "speaker"
+        }
+      ],
+      "portsSource": "https://manuals.anthemav.com/media/manuals/mrx-avm_en.pdf ; https://faq.anthemav.com/support/solutions/articles/43000720540 ; https://anthemav.com/products-current/type=av-receiver/model=mrx-540-8k (medium confidence, rear-panel audit 2026-09-29)",
+      "goTo": true
     },
     "anthem-mrx-740-8k": {
       "brand": "Anthem",
@@ -108,7 +482,158 @@
       "rackUnits": 4,
       "aliases": [
         "MRX 740 8K"
-      ]
+      ],
+      "ports": [
+        {
+          "label": "HDMI 1",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 2",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 3",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 4",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 5",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 6",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 7",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUT 1 (eARC)",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full",
+          "earc": true
+        },
+        {
+          "label": "HDMI OUT 2",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "pcm2"
+        },
+        {
+          "label": "HDMI OUT 3 (ZONE 2)",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "pcm2"
+        },
+        {
+          "label": "COAX 1",
+          "dir": "in",
+          "conn": "coax",
+          "audio": "lossy51"
+        },
+        {
+          "label": "COAX 2",
+          "dir": "in",
+          "conn": "coax",
+          "audio": "lossy51"
+        },
+        {
+          "label": "OPTICAL 1",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "OPTICAL 2",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "OPTICAL 3",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "OPTICAL OUT",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "ANALOG 1",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 2",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 3",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 4",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 5",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "PRE OUT (11.2 channel preouts)",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "SUB 1",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "SUB 2",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "ZONE 2 OUT L/R",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "SPEAKER OUTPUTS",
+          "dir": "out",
+          "conn": "speaker"
+        }
+      ],
+      "portsSource": "https://manuals.anthemav.com/media/manuals/mrx-avm_en.pdf ; https://faq.anthemav.com/support/solutions/articles/43000720540 ; https://anthemav.com/products-current/type=av-receiver/model=mrx-740-8k (medium confidence, rear-panel audit 2026-09-29)",
+      "goTo": true
     },
     "anthem-mrx-1140-8k": {
       "brand": "Anthem",
@@ -138,7 +663,158 @@
       "rackUnits": 4,
       "aliases": [
         "MRX 1140 8K"
-      ]
+      ],
+      "ports": [
+        {
+          "label": "HDMI 1",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 2",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 3",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 4",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 5",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 6",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 7",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUT 1 (eARC)",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full",
+          "earc": true
+        },
+        {
+          "label": "HDMI OUT 2",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "pcm2"
+        },
+        {
+          "label": "HDMI OUT 3 (ZONE 2)",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "pcm2"
+        },
+        {
+          "label": "COAX 1",
+          "dir": "in",
+          "conn": "coax",
+          "audio": "lossy51"
+        },
+        {
+          "label": "COAX 2",
+          "dir": "in",
+          "conn": "coax",
+          "audio": "lossy51"
+        },
+        {
+          "label": "OPTICAL 1",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "OPTICAL 2",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "OPTICAL 3",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "OPTICAL OUT",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "ANALOG 1",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 2",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 3",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 4",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG 5",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "PRE OUT (15.2 channel preouts)",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "SUB 1",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "SUB 2",
+          "dir": "out",
+          "conn": "sub"
+        },
+        {
+          "label": "ZONE 2 OUT L/R",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "SPEAKER OUTPUTS",
+          "dir": "out",
+          "conn": "speaker"
+        }
+      ],
+      "portsSource": "https://manuals.anthemav.com/media/manuals/mrx-avm_en.pdf ; https://faq.anthemav.com/support/solutions/articles/43000720540 ; https://anthemav.com/products-current/type=av-receiver/model=mrx-1140-8k (medium confidence, rear-panel audit 2026-09-29)",
+      "goTo": true
     },
     "avpro-ac-avdm-v3": {
       "brand": "AVPro Edge",
@@ -162,7 +838,49 @@
       "partNo": "AC-AVDM-V3",
       "powerMaxW": 6,
       "rackUnits": null,
-      "desktop": true
+      "desktop": true,
+      "ports": [
+        {
+          "label": "HDMI INPUT",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 1 DOWN-SCALE (OUTPUT)",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI 2 (ARC) (OUTPUT)",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "ANALOG L / R (DOWN-MIXED AUDIO OUTPUT)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "DIGITAL SPDIF (coax)",
+          "dir": "out",
+          "conn": "coax",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "DIGITAL TOSLINK",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2",
+          "downmix": true
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/ac-avdm-v3 (high confidence, rear-panel audit 2026-09-29)"
     },
     "avpro-mxnet-1g-avdm-ev2": {
       "brand": "AVPro Edge",
@@ -184,7 +902,41 @@
       "verified": true,
       "notes": "MXNet encoder with a real Dolby/DTS → 2ch downmix on its balanced 5-pin out. HDMI loop out; Toslink OUT reserved ('future audio return support only'); no coax. 1 unbalanced 3.5mm analog in; network = 1 RJ45 PoE + 1 SFP. AUDIT 2026-09-27: was 'no toslink out' — it has one (inactive); added HDMI loop + analog in.",
       "gen": "1g-ev2",
-      "partNo": "AC-MXNET-1G-AVDM-EV2"
+      "partNo": "AC-MXNET-1G-AVDM-EV2",
+      "ports": [
+        {
+          "label": "HDMI IN",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI LOOP OUT",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "BALANCED AUDIO (5-pin)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "TOSLINK (audio out)",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "AUDIO IN (3.5mm)",
+          "dir": "in",
+          "conn": "analog",
+          "audio": "pcm2"
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/ac-mxnet-1g-avdm-ev2 (high confidence, rear-panel audit 2026-09-29)"
     },
     "avpro-acp-axis2": {
       "brand": "AudioControl",
@@ -207,7 +959,35 @@
       "notes": "TV audio → Dante/AES67: eARC + Toslink + coax inputs (auto-switch on signal), 2 Dante channels out on 1 RJ45 (PoE 802.3af or USB-C 5V). The eARC Dante encoder (ACP-DANTE-ETV) is listed discontinued; AVPro doesn't name the AXIS2 its successor. AUDIT 2026-09-27: added optical + coax inputs. AUDIT 2026-09-27: manual — the TV MUST be set to stereo PCM output ('loud noises will ensue' with bitstream). Unicast: each channel to 2 receivers; multicast: up to 8 devices. POWER/RU 2026-09-27: ~2W avg, PoE af or 5V USB-C — avproglobal.com product page",
       "partNo": "ACP-AXIS2",
       "powerTypicalW": 2,
-      "desktop": true
+      "desktop": true,
+      "ports": [
+        {
+          "label": "eARC IN",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "pcm2",
+          "earc": true
+        },
+        {
+          "label": "DIGITAL IN TOSLINK",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "DIGITAL IN (coax S/PDIF)",
+          "dir": "in",
+          "conn": "coax",
+          "audio": "pcm2"
+        },
+        {
+          "label": "DANTE (PoE)",
+          "dir": "out",
+          "conn": "dante",
+          "audio": "pcm2"
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/acp-axis2 (high confidence, rear-panel audit 2026-09-29)"
     },
     "avpro-ac-mx-88": {
       "brand": "AVPro Edge",
@@ -228,7 +1008,203 @@
       "notes": "8x HDMI in/out (no HDBaseT outs — 'HDBaseT compatibility mode' only). AUDIO 1–8 on the rear panel: each block = 1 Toslink/SPDIF (up to 5.1 bitstream) + 1 balanced 5-pin 2ch. NO DOWNMIX (manual pp.42–43: 'this unit does NOT down mix … see AC-AXION-4') — the balanced outs only play if the source sends 2ch PCM; set Apple TV/cable boxes to stereo for zones fed this way, or use the Toslink. Extraction modes bind-to-input (default) / bind-to-output / independent matrix. AUDIT 2026-09-27: optical 4 → 8, confirmed from the manual's rear-panel drawing (p.6); downmix flag removed. POWER/RU 2026-09-27: 30W max, 1U, 12V/5A brick — avproglobal.com product page",
       "partNo": "AC-MX-88",
       "powerMaxW": 30,
-      "rackUnits": 1
+      "rackUnits": 1,
+      "ports": [
+        {
+          "label": "HDMI IN 1",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI IN 2",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI IN 3",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI IN 4",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI IN 5",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI IN 6",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI IN 7",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI IN 8",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUT 1",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUT 2",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUT 3",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUT 4",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUT 5",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUT 6",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUT 7",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUT 8",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "AUDIO 1 (SPDIF/TOS)",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "AUDIO 1 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "AUDIO 2 (SPDIF/TOS)",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "AUDIO 2 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "AUDIO 3 (SPDIF/TOS)",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "AUDIO 3 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "AUDIO 4 (SPDIF/TOS)",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "AUDIO 4 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "AUDIO 5 (SPDIF/TOS)",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "AUDIO 5 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "AUDIO 6 (SPDIF/TOS)",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "AUDIO 6 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "AUDIO 7 (SPDIF/TOS)",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "AUDIO 7 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "AUDIO 8 (SPDIF/TOS)",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "AUDIO 8 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/ac-mx-88 (high confidence, rear-panel audit 2026-09-29)",
+      "goTo": true
     },
     "avpro-mxnet-sw12": {
       "brand": "AVPro Edge",
@@ -386,7 +1362,115 @@
       "rackUnits": 1,
       "aliases": [
         "M4800D"
-      ]
+      ],
+      "ports": [
+        {
+          "label": "ANALOG IN 1 L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG IN 2 L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG IN 3 L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ANALOG IN 4 L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "DIGITAL IN A (COAX)",
+          "dir": "in",
+          "conn": "coax",
+          "audio": "pcm2"
+        },
+        {
+          "label": "DIGITAL IN A (TOSLINK)",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "DIGITAL IN B (COAX)",
+          "dir": "in",
+          "conn": "coax",
+          "audio": "pcm2"
+        },
+        {
+          "label": "DIGITAL IN B (TOSLINK)",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "DIGITAL IN C (COAX)",
+          "dir": "in",
+          "conn": "coax",
+          "audio": "pcm2"
+        },
+        {
+          "label": "DIGITAL IN C (TOSLINK)",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "DIGITAL IN D (COAX)",
+          "dir": "in",
+          "conn": "coax",
+          "audio": "pcm2"
+        },
+        {
+          "label": "DIGITAL IN D (TOSLINK)",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "DIGITAL OUT 1",
+          "dir": "out",
+          "conn": "coax",
+          "audio": "pcm2"
+        },
+        {
+          "label": "DIGITAL OUT 2",
+          "dir": "out",
+          "conn": "coax",
+          "audio": "pcm2"
+        },
+        {
+          "label": "ZONE 1 SPEAKER OUT (4-pin)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 2 SPEAKER OUT (4-pin)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 3 SPEAKER OUT (4-pin)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 4 SPEAKER OUT (4-pin)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "DANTE",
+          "dir": "in",
+          "conn": "dante"
+        }
+      ],
+      "portsSource": "https://adeogroup.it/sites/default/files/prodotti_allegati_pubblici/audiocontrol_M4800D%20User%20Manual.pdf ; data sheet https://partnerzon.specialelektronik.se/storage/files/products/7b0da8e88b830a16d16c29db27389c25c1113c1e.pdf (high confidence, rear-panel audit 2026-09-29)"
     },
     "audiocontrol-m6800d": {
       "brand": "AudioControl",
@@ -417,7 +1501,172 @@
       "rackUnits": 2,
       "aliases": [
         "M6800D"
-      ]
+      ],
+      "ports": [
+        {
+          "label": "ZONE 1 ANALOG IN L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ZONE 2 ANALOG IN L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ZONE 3 ANALOG IN L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ZONE 4 ANALOG IN L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ZONE 5 ANALOG IN L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ZONE 6 ANALOG IN L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ZONE 7 ANALOG IN L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ZONE 8 ANALOG IN L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "ZONE 1 LOOP OUT L/R",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "ZONE 2 LOOP OUT L/R",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "ZONE 3 LOOP OUT L/R",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "ZONE 4 LOOP OUT L/R",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "ZONE 5 LOOP OUT L/R",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "ZONE 6 LOOP OUT L/R",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "ZONE 7 LOOP OUT L/R",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "ZONE 8 LOOP OUT L/R",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "DIGITAL IN A (COAX)",
+          "dir": "in",
+          "conn": "coax",
+          "audio": "pcm2"
+        },
+        {
+          "label": "DIGITAL IN A (TOSLINK)",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "DIGITAL IN B (COAX)",
+          "dir": "in",
+          "conn": "coax",
+          "audio": "pcm2"
+        },
+        {
+          "label": "DIGITAL IN B (TOSLINK)",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "DIGITAL OUT A",
+          "dir": "out",
+          "conn": "coax",
+          "audio": "pcm2"
+        },
+        {
+          "label": "DIGITAL OUT B",
+          "dir": "out",
+          "conn": "coax",
+          "audio": "pcm2"
+        },
+        {
+          "label": "ZONE 1 SPEAKER OUT (4-pin)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 2 SPEAKER OUT (4-pin)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 3 SPEAKER OUT (4-pin)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 4 SPEAKER OUT (4-pin)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 5 SPEAKER OUT (4-pin)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 6 SPEAKER OUT (4-pin)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 7 SPEAKER OUT (4-pin)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "ZONE 8 SPEAKER OUT (4-pin)",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "DANTE",
+          "dir": "in",
+          "conn": "dante"
+        }
+      ],
+      "portsSource": "https://adeogroup.it/sites/default/files/prodotti_allegati_pubblici/audio-control_manual_acp_dmz-m6800d.pdf (high confidence, rear-panel audit 2026-09-29)",
+      "goTo": true
     },
     "audiocontrol-d2800": {
       "brand": "AudioControl",
@@ -544,7 +1793,31 @@
       "verified": true,
       "notes": "Legacy source → Dante on-ramp. AUDIT 2026-09-27: 1 stereo RCA pair (was 2); Toslink takes priority over analog — one source at a time. Ultimo-class: unicast each channel to 2 receivers, multicast to 8 — set multicast when 3+ amps subscribe. POWER/RU 2026-09-27: PoE or 5V 1A USB-C; no wattage published — avproglobal.com product page",
       "partNo": "ACP-DANTE-E-POE",
-      "desktop": true
+      "desktop": true,
+      "ports": [
+        {
+          "label": "AUDIO IN (L/R)",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "TOSLINK",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "AUDIO LOOP OUT (L/R)",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "DANTE (PoE)",
+          "dir": "out",
+          "conn": "dante"
+        }
+      ],
+      "portsSource": "https://avproglobal.egnyte.com/dd/cMDbcDJvrM (manual) ; https://www.avproglobal.com/products/acp-dante-e-poe (high confidence, rear-panel audit 2026-09-29)"
     },
     "savant-avb-output-module": {
       "brand": "Savant",
@@ -562,7 +1835,50 @@
       "notes": "CORRECTED verified flag only (port count was already right). Legacy AVB backplane output card — 8 stereo pairs / 16 RCA jacks unbalanced (AOM-D16U-00, also branded AOM-016U) or 8 balanced stereo pairs on screw-down connectors (AOM-BAL16-00). Pre-amp/line level only, no on-board amplification. Card for a Savant MSC/SSP modular matrix switcher. Still fielded; NOT the current spec path — see savant-pav-aom8c. AUDIT 2026-09-27: these are cards for Savant MSC/SSP modular matrix switchers (AOM-BAL16 QRG), not an 'SVS rack chassis' AVB backplane.",
       "partNo": "AOM-D16U-00",
       "partNoUnsure": true,
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "ports": [
+        {
+          "label": "OUT 1 L/R",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "OUT 2 L/R",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "OUT 3 L/R",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "OUT 4 L/R",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "OUT 5 L/R",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "OUT 6 L/R",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "OUT 7 L/R",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "OUT 8 L/R",
+          "dir": "out",
+          "conn": "analog"
+        }
+      ],
+      "portsSource": "search summary of Savant product listing (savantapac.com/product/aom-d16u-00 404'd) (low confidence, rear-panel audit 2026-09-29)"
     },
     "savant-avb-input-module": {
       "brand": "Savant",
@@ -580,7 +1896,50 @@
       "notes": "CORRECTED (was inputs: {analog:8, optical:2}, verified:false). This is the legacy AVB backplane input card — 8 unbalanced stereo RCA inputs (AIM-0A16-05, 16 RCA jacks) or 8 balanced stereo inputs (AIM-BAL16-01). PURE ANALOG — no coax, no optical, no digital of any kind; the optical:2 in the old placeholder was never real on this SKU. Card for a Savant MSC/SSP modular matrix switcher, no PoE, no standalone control ports. Still fielded in older installs; NOT what Savant sells for new AVB audio designs — see savant-pav-aim7c for the current spec path. AUDIT 2026-09-27: card for a Savant MSC/SSP modular matrix switcher (inferred from the sibling output card's QRG).",
       "partNo": "AIM-0A16-05",
       "partNoUnsure": true,
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "ports": [
+        {
+          "label": "IN 1 L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "IN 2 L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "IN 3 L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "IN 4 L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "IN 5 L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "IN 6 L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "IN 7 L/R",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "IN 8 L/R",
+          "dir": "in",
+          "conn": "analog"
+        }
+      ],
+      "portsSource": "https://savantapac.com/product/aim-0a16-05 ; https://www.avdci.com/product/savant-analog-audio-input-module-aim-0a16-05 (medium confidence, rear-panel audit 2026-09-29)"
     },
     "sonance-blaze-pzc-508": {
       "brand": "Sonance",
@@ -815,7 +2174,40 @@
       "partNo": "AC-MXNET-1G-EV2",
       "powerMaxW": 9.7,
       "powerTypicalW": 7,
-      "desktop": true
+      "desktop": true,
+      "ports": [
+        {
+          "label": "HDMI IN",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI LOOP OUT",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "BALANCED AUDIO (5-pin)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "TOSLINK (audio out)",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "AUDIO IN (3.5mm)",
+          "dir": "in",
+          "conn": "analog",
+          "audio": "pcm2"
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/ac-mxnet-1g-ev2 (medium confidence, rear-panel audit 2026-09-29)"
     },
     "avpro-mxnet-1g-dv2": {
       "brand": "AVPro Edge",
@@ -837,7 +2229,28 @@
       "gen": "1g-ev2",
       "partNo": "AC-MXNET-1G-DV2",
       "powerMaxW": 6.8,
-      "desktop": true
+      "desktop": true,
+      "ports": [
+        {
+          "label": "HDMI OUT",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "BALANCED AUDIO (5-pin)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "TOSLINK (audio in)",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "pcm2"
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/ac-mxnet-1g-dv2 (medium confidence, rear-panel audit 2026-09-29)"
     },
     "avpro-mxnet-sw24": {
       "brand": "AVPro Edge",
@@ -879,7 +2292,106 @@
       "notes": "4x4, 18Gbps, dual audio de-embed per output: 4x Toslink (up to 7CH PCM/DD/DTS) + 4x balanced 5-pin analog (2CH PCM). Rear panel confirmed from AVPro cut sheet 2026-09-20: AUDIO 1-4 blocks, each TOS + L+/L-/gnd/R+/R-. Extracted audio has 3 modes: bind to input, bind to output, or independent matrix. Per-output audio delay up to 630ms. AUDIT 2026-09-27: no downmix (manual pp.40–41) — balanced outs need a 2ch PCM source; Toslink carries 5.1. POWER/RU 2026-09-27: 38W max, 1U, 12V brick — avproglobal.com product page",
       "partNo": "AC-MX-44",
       "powerMaxW": 38,
-      "rackUnits": 1
+      "rackUnits": 1,
+      "ports": [
+        {
+          "label": "HDMI IN 1",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI IN 2",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI IN 3",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI IN 4",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUT 1",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUT 2",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUT 3",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUT 4",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "AUDIO 1 (SPDIF/TOS)",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "AUDIO 1 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "AUDIO 2 (SPDIF/TOS)",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "AUDIO 2 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "AUDIO 3 (SPDIF/TOS)",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "AUDIO 3 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "AUDIO 4 (SPDIF/TOS)",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "AUDIO 4 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/ac-mx-44 (high confidence, rear-panel audit 2026-09-29)"
     },
     "avpro-ac-mx-1616": {
       "brand": "AVPro Edge",
@@ -900,7 +2412,298 @@
       "partNo": "AC-MX1616-AUHD-GEN2",
       "powerMaxW": 92,
       "rackUnits": 1,
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "ports": [
+        {
+          "label": "HDMI INPUT 01",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI INPUT 02",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI INPUT 03",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI INPUT 04",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI INPUT 05",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI INPUT 06",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI INPUT 07",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI INPUT 08",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI INPUT 09",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI INPUT 10",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI INPUT 11",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI INPUT 12",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI INPUT 13",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI INPUT 14",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI INPUT 15",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI INPUT 16",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUTPUT 01",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUTPUT 02",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUTPUT 03",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUTPUT 04",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUTPUT 05",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUTPUT 06",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUTPUT 07",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUTPUT 08",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUTPUT 09",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUTPUT 10",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUTPUT 11",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUTPUT 12",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUTPUT 13",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUTPUT 14",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUTPUT 15",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUTPUT 16",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "BAL. AUDIO OUT 01",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "BAL. AUDIO OUT 02",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "BAL. AUDIO OUT 03",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "BAL. AUDIO OUT 04",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "BAL. AUDIO OUT 05",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "BAL. AUDIO OUT 06",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "BAL. AUDIO OUT 07",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "BAL. AUDIO OUT 08",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "BAL. AUDIO OUT 09",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "BAL. AUDIO OUT 10",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "BAL. AUDIO OUT 11",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "BAL. AUDIO OUT 12",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "BAL. AUDIO OUT 13",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "BAL. AUDIO OUT 14",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "BAL. AUDIO OUT 15",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "BAL. AUDIO OUT 16",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/ac-mx-1616 (high confidence, rear-panel audit 2026-09-29)"
     },
     "savant-pav-aim7c": {
       "brand": "Savant",
@@ -1043,7 +2846,22 @@
       "desktop": true,
       "aliases": [
         "Savant Music Server 2 (PAV-SMS2001)"
-      ]
+      ],
+      "ports": [
+        {
+          "label": "DIGITAL AUDIO OUT 1 (OPTICAL)",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "DIGITAL AUDIO OUT 1 (COAX)",
+          "dir": "out",
+          "conn": "coax",
+          "audio": "pcm2"
+        }
+      ],
+      "portsSource": "https://digis.ru/upload/iblock/247/46324_SAVANT_PAV_SMS2001_Deployment_Guide.pdf (high confidence, rear-panel audit 2026-09-29)"
     },
     "sonos-amp": {
       "brand": "Sonos",
@@ -1357,7 +3175,37 @@
       "notes": "Hyperion Axis16 — TV eARC (or Toslink/coax; coax wins, digital overrides eARC, falls back after 10s) → up to 16 Dante/AES67 channels: 9.1.6, or up to 9.1.4 + a stereo downmix pair (UBL/UBR slots become DM-L/DM-R). DECODES Dolby Atmos / DTS-HD. On-board EQ, crossover, distance and level — the receiver's job, so a Hyperion or Director amp can run a surround room with no AVR. CEC volume pass-through, TCP control + API. 1 RJ45 Dante (PoE 802.3af in) + 1 RJ45 control; or USB-C 5V 2A. Manual/datasheet text says '10 channels'/'Axis10' in places — copy-paste from the ACP-AXIS10 sibling. Chipset/flows unpublished. Source: avproglobal.com/products/acp-axis16 + datasheet + manual (2026-09-27). POWER/RU 2026-09-27: PoE af or 5V 2A USB-C; no wattage published — avproglobal.com product page",
       "partNo": "ACP-AXIS16",
       "desktop": true,
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "ports": [
+        {
+          "label": "eARC IN",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full",
+          "earc": true,
+          "downmix": true
+        },
+        {
+          "label": "DIGITAL IN TOSLINK",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "DIGITAL IN S/PDIF (coax)",
+          "dir": "in",
+          "conn": "coax",
+          "audio": "lossy51"
+        },
+        {
+          "label": "DANTE (PoE)",
+          "dir": "out",
+          "conn": "dante",
+          "audio": "full",
+          "downmix": true
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/acp-axis16 (high confidence, rear-panel audit 2026-09-29)"
     },
     "audiocontrol-hype-tetra": {
       "brand": "AudioControl",
@@ -1380,7 +3228,95 @@
       "notes": "Hyperion Tetra — 4-channel Class-H theater amp, 230W/ch @8Ω, 300W/ch @4Ω, bridges to 600W @8Ω. Inputs: 4 XLR + 4 RCA (mono, one per channel) and 4 Dante RX channels on one RJ45 (receive only); RCA thru outs pass analog only. Trigger in/out. Counted as ONE zone (one surround set, or a height layer). No IP control in the manual (the Hyperion page mentions a web GUI — conflict). 2U, 38 lb. Pair with an ACP-AXIS16 for a receiver-less theater. Source: avproglobal.com/products/acp-hype-tetra + Hepta manual. POWER/RU 2026-09-27: 2U; no power draw published — avproglobal.com",
       "partNo": "ACP-HYPE-TETRA",
       "rackUnits": 2,
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "ports": [
+        {
+          "label": "CH 1 XLR IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 1 RCA IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 1 RCA THRU",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 2 XLR IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 2 RCA IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 2 RCA THRU",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 3 XLR IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 3 RCA IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 3 RCA THRU",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 4 XLR IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 4 RCA IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 4 RCA THRU",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 1 SPEAKER OUT",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "CH 2 SPEAKER OUT",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "CH 3 SPEAKER OUT",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "CH 4 SPEAKER OUT",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "DANTE",
+          "dir": "in",
+          "conn": "dante"
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/acp-hype-tetra (connections inferred identical to Hepta manual) (medium confidence, rear-panel audit 2026-09-29)"
     },
     "audiocontrol-hype-penta": {
       "brand": "AudioControl",
@@ -1402,7 +3338,115 @@
       "verified": true,
       "notes": "Hyperion Penta — 5-channel Class-H theater amp, 230W/ch @8Ω, 300W/ch @4Ω, bridges to 600W @8Ω. Inputs: 5 XLR + 5 RCA (mono, one per channel) and 5 Dante RX channels on one RJ45 (receive only); RCA thru outs pass analog only. Trigger in/out. Counted as ONE zone (one surround set, or a height layer). No IP control in the manual (the Hyperion page mentions a web GUI — conflict). 3U, 43 lb. Pair with an ACP-AXIS16 for a receiver-less theater. Source: avproglobal.com/products/acp-hype-penta + Hepta manual. POWER/RU 2026-09-27: 3U; no power draw published — avproglobal.com PlanQueue 2026-09-28: SKU ACP-HYPE-PENTA is right, but its NAME field reads ACP-HYPE-HEPTA (a copy slip there) — name kept as PENTA so drawings don't mislabel it.",
       "partNo": "ACP-HYPE-PENTA",
-      "rackUnits": 3
+      "rackUnits": 3,
+      "ports": [
+        {
+          "label": "CH 1 XLR IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 1 RCA IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 1 RCA THRU",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 2 XLR IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 2 RCA IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 2 RCA THRU",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 3 XLR IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 3 RCA IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 3 RCA THRU",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 4 XLR IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 4 RCA IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 4 RCA THRU",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 5 XLR IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 5 RCA IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 5 RCA THRU",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 1 SPEAKER OUT",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "CH 2 SPEAKER OUT",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "CH 3 SPEAKER OUT",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "CH 4 SPEAKER OUT",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "CH 5 SPEAKER OUT",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "DANTE",
+          "dir": "in",
+          "conn": "dante"
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/acp-hype-penta (connections inferred identical to Hepta manual) (medium confidence, rear-panel audit 2026-09-29)"
     },
     "audiocontrol-hype-hepta": {
       "brand": "AudioControl",
@@ -1424,7 +3468,155 @@
       "verified": true,
       "notes": "Hyperion Hepta — 7-channel Class-H theater amp, 230W/ch @8Ω, 300W/ch @4Ω, bridges to 600W @8Ω. Inputs: 7 XLR + 7 RCA (mono, one per channel) and 7 Dante RX channels on one RJ45 (receive only); RCA thru outs pass analog only. Trigger in/out. Counted as ONE zone (one surround set, or a height layer). No IP control in the manual (the Hyperion page mentions a web GUI — conflict). 3U, 43 lb. Pair with an ACP-AXIS16 for a receiver-less theater. Source: avproglobal.com/products/acp-hype-hepta + Hepta manual. POWER/RU 2026-09-27: 3U; no power draw published — Hepta manual",
       "partNo": "ACP-HYPE-HEPTA",
-      "rackUnits": 3
+      "rackUnits": 3,
+      "ports": [
+        {
+          "label": "CH 1 XLR IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 1 RCA IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 1 RCA THRU",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 2 XLR IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 2 RCA IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 2 RCA THRU",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 3 XLR IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 3 RCA IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 3 RCA THRU",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 4 XLR IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 4 RCA IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 4 RCA THRU",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 5 XLR IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 5 RCA IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 5 RCA THRU",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 6 XLR IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 6 RCA IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 6 RCA THRU",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 7 XLR IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 7 RCA IN",
+          "dir": "in",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 7 RCA THRU",
+          "dir": "out",
+          "conn": "analog"
+        },
+        {
+          "label": "CH 1 SPEAKER OUT",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "CH 2 SPEAKER OUT",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "CH 3 SPEAKER OUT",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "CH 4 SPEAKER OUT",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "CH 5 SPEAKER OUT",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "CH 6 SPEAKER OUT",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "CH 7 SPEAKER OUT",
+          "dir": "out",
+          "conn": "speaker"
+        },
+        {
+          "label": "DANTE",
+          "dir": "in",
+          "conn": "dante"
+        }
+      ],
+      "portsSource": "https://avproglobal.egnyte.com/dd/QP7mhmT7VbCY (Hyperion Hepta manual) ; https://www.avproglobal.com/products/acp-hype-hepta (high confidence, rear-panel audit 2026-09-29)"
     },
     "avpro-mxnet-sw24e": {
       "brand": "AVPro Edge",
@@ -1447,7 +3639,8 @@
       "powerMaxW": 450,
       "powerNoPoeW": 30,
       "rackUnits": 1,
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "goTo": true
     },
     "avpro-mxnet-sw48e": {
       "brand": "AVPro Edge",
@@ -1513,7 +3706,45 @@
       ],
       "verified": true,
       "notes": "MXNet 1G EVO II encoder with Dante built in (software on the main chip, 2x2 channels) — puts the source's audio on Dante (stereo; the 3.5mm analog in overrides HDMI audio). Dante rides the SAME RJ45/SFP as the video, tagged on VLAN 99 (MXNet on VLAN 100): the switch port must be a trunk, and Dante + MXNet share one MAC so they need different subnets. HDMI loop out, 5-pin balanced out (2ch PCM downmix), Toslink out (future audio return only), 1 RJ45 PoE + 1 SFP, USB-B (KVM), IR x3, RS-232; 9.7W. Managed by the 1G-mode CBOX; Dante routing via Dante Controller or the Dante-mode CBOX. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27).",
-      "partNo": "AC-MXNET-1G-DANTE-EV2"
+      "partNo": "AC-MXNET-1G-DANTE-EV2",
+      "ports": [
+        {
+          "label": "HDMI IN",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI LOOP OUT",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "BALANCED AUDIO (5-pin)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "TOSLINK (audio out)",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "AUDIO IN (3.5mm)",
+          "dir": "in",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "GbE NETWORK (MXnet + Dante, PoE)",
+          "dir": "in",
+          "conn": "dante"
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/ac-mxnet-1g-dante-ev2 (medium confidence, rear-panel audit 2026-09-29)"
     },
     "avpro-mxnet-1g-dante-dv2": {
       "brand": "AVPro Edge",
@@ -1539,7 +3770,33 @@
       "verified": true,
       "notes": "MXNet 1G EVO II decoder with Dante (2x2). Its Dante is a break-out of the Dante stream carried from a DANTE-EV2 — i.e. the SOURCE's audio for whatever this TV is watching (audio follows video), NOT the TV's own app audio (Toslink in is ARC-only; no documented TV-audio→Dante path — add an AXIS2 if the client streams on the TV). Needs DANTE-EV2 encoders on the sources. Dante on VLAN 99 over the video cable (trunk port). HDMI out, 5-pin balanced out (2ch PCM), 1 RJ45 PoE + 1 SFP, 2 USB-A, IR x3, RS-232. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27).",
       "partNo": "AC-MXNET-1G-DANTE-DV2",
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "ports": [
+        {
+          "label": "HDMI OUT",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "BALANCED AUDIO (5-pin)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "TOSLINK (audio in)",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "pcm2"
+        },
+        {
+          "label": "1GbE NETWORK (MXnet + Dante, PoE)",
+          "dir": "in",
+          "conn": "dante"
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/ac-mxnet-1g-dante-dv2 (medium confidence, rear-panel audit 2026-09-29)"
     },
     "avpro-mxnet-10g-tcvr": {
       "brand": "AVPro Edge",
@@ -1746,7 +4003,8 @@
       "verified": true,
       "notes": "800 Series 6-outlet strip, individually metered, 15A (12A continuous), NEMA 5-15. All rear outlets IP-switchable; one Ethernet port (no built-in switch); no battery — OvrC UPS link for a separate WattBox UPS pack. Source: Snap One product pages + WattBox comparison chart (WB-060420), checked 2026-09-27.",
       "partNo": "WB-800-IPVM-6",
-      "rackNote": "1U mounted horizontally; can also mount vertically (10U)"
+      "rackNote": "1U mounted horizontally; can also mount vertically (10U)",
+      "goTo": true
     },
     "wattbox-800ch1u-ipvm-8": {
       "brand": "WattBox",
@@ -1784,7 +4042,8 @@
       ],
       "verified": true,
       "notes": "800 Series 2U, 12 individually metered outlets, 15A (12A continuous), 3240J. All rear outlets IP-switchable; one Ethernet port (no built-in switch); no battery — OvrC UPS link for a separate WattBox UPS pack. Source: Snap One product pages + WattBox comparison chart (WB-060420), checked 2026-09-27.",
-      "partNo": "WB-800-IPVM-12"
+      "partNo": "WB-800-IPVM-12",
+      "goTo": true
     },
     "wattbox-800vps-ipvm-12": {
       "brand": "WattBox",
@@ -1926,7 +4185,17 @@
       "aliases": [
         "Apple TV 4K (3rd gen) Wi-Fi + Ethernet"
       ],
-      "stereoSetup": "Settings › Video and Audio › Audio Format › Change Format (on) › Stereo"
+      "stereoSetup": "Settings › Video and Audio › Audio Format › Change Format (on) › Stereo",
+      "ports": [
+        {
+          "label": "HDMI",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        }
+      ],
+      "portsSource": "https://support.apple.com/guide/tv/change-audio-settings-atvba773c3c9/tvos ; https://support.apple.com/en-us/102218 (high confidence, rear-panel audit 2026-09-29)",
+      "goTo": true
     },
     "roku-ultra-2024": {
       "inputs": {},
@@ -1947,7 +4216,17 @@
       "aliases": [
         "Roku Ultra (2024)"
       ],
-      "stereoSetup": "Settings › Audio › Digital output format › Stereo (older Roku OS: HDMI = PCM-Stereo)"
+      "stereoSetup": "Settings › Audio › Digital output format › Stereo (older Roku OS: HDMI = PCM-Stereo)",
+      "ports": [
+        {
+          "label": "HDMI",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        }
+      ],
+      "portsSource": "https://support.roku.com/article/set-up-your-player-for-surround-sound ; https://www.bhphotovideo.com/c/product/1855607-REG/roku_4850r_roku_ultra_2024_4k.html (medium confidence, rear-panel audit 2026-09-29)",
+      "goTo": true
     },
     "provider-cable-box": {
       "inputs": {},
@@ -1968,7 +4247,27 @@
       "partNo": "Cable Box",
       "partNoUnsure": true,
       "notes": "Sizing profile for an unnamed provider box: the highest published 'On' draw among current cable DVRs — Spectrum 210T 17.5W (energy.cablelabs.com/charter), Xfinity XG1v4 AX014ANC 17.4W / 16.0W sleep (xfinity.com set-top-box energy page). These boxes barely sleep. Provider equipment: never quoted as a product.",
-      "stereoSetup": "Audio settings › HDMI audio output = Stereo (Xfinity X1: Device Settings › Audio; also set Optical = Stereo)"
+      "stereoSetup": "Audio settings › HDMI audio output = Stereo (Xfinity X1: Device Settings › Audio; also set Optical = Stereo)",
+      "ports": [
+        {
+          "label": "HDMI OUT",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "lossy51"
+        },
+        {
+          "label": "OPTICAL (S/PDIF) OUT",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "AUDIO OUT L/R",
+          "dir": "out",
+          "conn": "analog"
+        }
+      ],
+      "portsSource": "https://www.xfinity.com/support/articles/x1-audio-output (low confidence, rear-panel audit 2026-09-29)"
     },
     "directv-genie-hr54": {
       "inputs": {},
@@ -1990,7 +4289,27 @@
       "match": "directv|genie",
       "partNo": "HR54",
       "notes": "ENERGY STAR disclosure (AT&T): HR54-500 On 13.66W / Off 12.64W (-200: 12.2/11.1). EPS44 12V 4A brick. Optical + coax digital out. Provider equipment.",
-      "stereoSetup": "MENU › Settings & Help › Settings › Audio › Dolby Digital › Off"
+      "stereoSetup": "MENU › Settings & Help › Settings › Audio › Dolby Digital › Off",
+      "ports": [
+        {
+          "label": "HDMI",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "lossy51"
+        },
+        {
+          "label": "DIGITAL AUDIO OUT (OPTICAL)",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "A/V (10-pin legacy)",
+          "dir": "out",
+          "conn": "analog"
+        }
+      ],
+      "portsSource": "https://blog.solidsignal.com/docs/Hands%20on%20HR54.pdf ; https://blog.solidsignal.com/tutorials/how-to-turn-on-dolby-audio-directv-new-genie-menus/ (medium confidence, rear-panel audit 2026-09-29)"
     },
     "directv-genie2-hs17": {
       "inputs": {},
@@ -2410,7 +4729,47 @@
       "flags": [],
       "verified": true,
       "desktop": true,
-      "notes": "The default HDBaseT balun (Ryan 2026-09-29: 'just use a AV Pro'). TX + RX pair: 18Gbps HDMI 2.0 (AVPro ICT compression above 10.2G), 4K60 4:4:4 with HDR10 / HDR10+ / Dolby Vision / HLG; 4K to 70m on Cat6A (the page's table says 100m — conflicting), 1080p 100–150m. One 48V PSU (12W max) powers either end over the cable (PoH). NO audio return: no ARC or eARC — it only breaks out analog L/R from 2ch PCM, so a receiver-fed TV's own apps need the optical run back. AC-EX70-UHD-KIT (also in PlanQueue) is 10.2G / 4K60 4:2:0 only — not for HDR sources. avproglobal.com/products/ac-ex70-444-kit, 2026-09-29"
+      "notes": "The default HDBaseT balun (Ryan 2026-09-29: 'just use a AV Pro'). TX + RX pair: 18Gbps HDMI 2.0 (AVPro ICT compression above 10.2G), 4K60 4:4:4 with HDR10 / HDR10+ / Dolby Vision / HLG; 4K to 70m on Cat6A (the page's table says 100m — conflicting), 1080p 100–150m. One 48V PSU (12W max) powers either end over the cable (PoH). NO audio return: no ARC or eARC — it only breaks out analog L/R from 2ch PCM, so a receiver-fed TV's own apps need the optical run back. AC-EX70-UHD-KIT (also in PlanQueue) is 10.2G / 4K60 4:2:0 only — not for HDR sources. avproglobal.com/products/ac-ex70-444-kit, 2026-09-29",
+      "ports": [
+        {
+          "label": "TX: HDMI IN",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "TX: HDBaseT",
+          "dir": "out",
+          "conn": "hdbaset",
+          "audio": "full"
+        },
+        {
+          "label": "TX: L/R OUT (PCM Only)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        },
+        {
+          "label": "RX: HDBaseT",
+          "dir": "in",
+          "conn": "hdbaset",
+          "audio": "full"
+        },
+        {
+          "label": "RX: HDMI OUT",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "RX: L/R OUT (PCM Only)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/ac-ex70-444-kit (medium confidence, rear-panel audit 2026-09-29)",
+      "goTo": true
     },
     "avpro-ac-axion-4": {
       "brand": "AVPro Edge",
@@ -2435,7 +4794,138 @@
         "downmix2ch"
       ],
       "verified": true,
-      "notes": "4x4 18G matrix, each output mirrored HDMI + HDBaseT (PoH, ICT above 10.2G; audio unimpeded — Atmos/DTS:X pass). AUDIO 1–4: each block = Toslink + balanced 5-pin, ALWAYS downmixed to 2ch (automatic, incl. Atmos/DTS:X; 7 presets per input) — the matrix to put in front of 2-channel amp zones. No ARC. Ports verified 2026-09-29 from the rear panel / manual — avproglobal.com/products/ac-axion-4"
+      "notes": "4x4 18G matrix, each output mirrored HDMI + HDBaseT (PoH, ICT above 10.2G; audio unimpeded — Atmos/DTS:X pass). AUDIO 1–4: each block = Toslink + balanced 5-pin, ALWAYS downmixed to 2ch (automatic, incl. Atmos/DTS:X; 7 presets per input) — the matrix to put in front of 2-channel amp zones. No ARC. Ports verified 2026-09-29 from the rear panel / manual — avproglobal.com/products/ac-axion-4",
+      "ports": [
+        {
+          "label": "IN-1",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "IN-2",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "IN-3",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "IN-4",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-1 HDBT",
+          "dir": "out",
+          "conn": "hdbaset",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-1 HDMI",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-2 HDBT",
+          "dir": "out",
+          "conn": "hdbaset",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-2 HDMI",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-3 HDBT",
+          "dir": "out",
+          "conn": "hdbaset",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-3 HDMI",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-4 HDBT",
+          "dir": "out",
+          "conn": "hdbaset",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-4 HDMI",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "AUDIO 1 SPDIF",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 1 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 2 SPDIF",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 2 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 3 SPDIF",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 3 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 4 SPDIF",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 4 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2",
+          "downmix": true
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/ac-axion-4 (high confidence, rear-panel audit 2026-09-29)"
     },
     "avpro-ac-axion-8": {
       "brand": "AVPro Edge",
@@ -2460,7 +4950,267 @@
         "downmix2ch"
       ],
       "verified": true,
-      "notes": "8x8 18G matrix, each output mirrored HDMI + HDBaseT (PoH, ICT above 10.2G; audio unimpeded — Atmos/DTS:X pass). AUDIO 1–8: each block = Toslink + balanced 5-pin, ALWAYS downmixed to 2ch (automatic, incl. Atmos/DTS:X; 7 presets per input) — the matrix to put in front of 2-channel amp zones. No ARC. Ports verified 2026-09-29 from the rear panel / manual — avproglobal.com/products/ac-axion-8"
+      "notes": "8x8 18G matrix, each output mirrored HDMI + HDBaseT (PoH, ICT above 10.2G; audio unimpeded — Atmos/DTS:X pass). AUDIO 1–8: each block = Toslink + balanced 5-pin, ALWAYS downmixed to 2ch (automatic, incl. Atmos/DTS:X; 7 presets per input) — the matrix to put in front of 2-channel amp zones. No ARC. Ports verified 2026-09-29 from the rear panel / manual — avproglobal.com/products/ac-axion-8",
+      "ports": [
+        {
+          "label": "IN-1",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "IN-2",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "IN-3",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "IN-4",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "IN-5",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "IN-6",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "IN-7",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "IN-8",
+          "dir": "in",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-1 HDBT",
+          "dir": "out",
+          "conn": "hdbaset",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-1 HDMI",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-2 HDBT",
+          "dir": "out",
+          "conn": "hdbaset",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-2 HDMI",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-3 HDBT",
+          "dir": "out",
+          "conn": "hdbaset",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-3 HDMI",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-4 HDBT",
+          "dir": "out",
+          "conn": "hdbaset",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-4 HDMI",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-5 HDBT",
+          "dir": "out",
+          "conn": "hdbaset",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-5 HDMI",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-6 HDBT",
+          "dir": "out",
+          "conn": "hdbaset",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-6 HDMI",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-7 HDBT",
+          "dir": "out",
+          "conn": "hdbaset",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-7 HDMI",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-8 HDBT",
+          "dir": "out",
+          "conn": "hdbaset",
+          "audio": "full"
+        },
+        {
+          "label": "OUT-8 HDMI",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "AUDIO 1 SPDIF",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 1 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 2 SPDIF",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 2 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 3 SPDIF",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 3 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 4 SPDIF",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 4 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 5 SPDIF",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 5 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 6 SPDIF",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 6 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 7 SPDIF",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 7 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 8 SPDIF",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "pcm2",
+          "downmix": true
+        },
+        {
+          "label": "AUDIO 8 (L+ L- GND R+ R-)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2",
+          "downmix": true
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/ac-axion-8 (high confidence, rear-panel audit 2026-09-29)",
+      "goTo": true
     }
   },
   "licensing": {

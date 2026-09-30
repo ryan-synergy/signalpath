@@ -453,8 +453,8 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
   const parseOk = svg => !new DOMParser().parseFromString(svg, "image/svg+xml").querySelector("parsererror");
 
   t("pages: default flags = channel map + equipment + network + audio setup on, wire schedule + comparison opt-in",
-    JSON.stringify(pageFlags(fixtures.residence)) === JSON.stringify({ channelMap: true, equipment: true, wireSchedule: false, bomCompare: false, network: true, labels: false, elevation: true, audioSetup: true }) &&
-    sheetCount(fixtures.residence) === 6);
+    JSON.stringify(pageFlags(fixtures.residence)) === JSON.stringify({ channelMap: true, equipment: true, wireSchedule: false, bomCompare: false, network: true, labels: false, elevation: true, audioSetup: true, patchList: true }) &&
+    sheetCount(fixtures.residence) === 7);
 
   const cm = renderChannelMap(job, ix, { sheetLabel: "Sheet 2 of 4" });
   t("channel map: valid SVG, no leaks", parseOk(cm) && !/NaN|undefined/.test(cm));
@@ -496,9 +496,9 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
   withWs.job.pages = { wireSchedule: true };
   const pages = renderExtraPages(loadJob(withWs).job, loadJob(withWs).ix, a, {});
   t("packet: flags drive page list + sheet numbering",
-    pages.length === 6 && pages[1].title === "Audio Setup" && pages[3].title === "Wire Schedule" && pages[5].svg.includes("Sheet 7 of 7") && sheetCount(withWs) === 7);
+    pages.length === 7 && pages[1].title === "Audio Setup" && pages[3].title === "Wire Schedule" && pages[4].title === "Patch List" && pages[6].svg.includes("Sheet 8 of 8") && sheetCount(withWs) === 8);
   const noPages = structuredClone(fixtures.residence);
-  noPages.job.pages = { channelMap: false, equipment: false, network: false, elevation: false, audioSetup: false };
+  noPages.job.pages = { channelMap: false, equipment: false, network: false, elevation: false, audioSetup: false, patchList: false };
   t("packet: all pages off → schematic only, sheet 1 of 1",
     renderExtraPages(loadJob(noPages).job, loadJob(noPages).ix, a, {}).length === 0 && sheetCount(noPages) === 1);
 }
@@ -1128,7 +1128,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
     raw.job.pages = { bomCompare: true };
     const n2 = sheetCount(raw);
     const single = structuredClone(raw); single.solutions = [single.solutions[0]];
-    return !f1.bomCompare && n2 === 7 && sheetCount(single) === 6;   // + the Audio Setup sheet (on by default)
+    return !f1.bomCompare && n2 === 8 && sheetCount(single) === 7;   // + the Audio Setup and Patch List sheets (on by default)
   })());
 
   const { job, ix } = loadJob(raw);
@@ -1149,7 +1149,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
 
   const pages = renderExtraPages(raw, ix, a, { rawJob: raw });
   t("bom: renderExtraPages includes the comparison sheet when flagged",
-    pages.some(p => p.title === "Solution Comparison") && pages.length === 5 + (pages.some(p => p.title === "Audio Setup") ? 1 : 0));
+    pages.some(p => p.title === "Solution Comparison") && pages.length === 5 + ["Audio Setup", "Patch List"].filter(t => pages.some(p => p.title === t)).length);
 }
 
 /* ---------- catalog auto-link: saved jobs self-heal their catalogRefs ---------- */
@@ -2787,6 +2787,49 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const L = loadJob(structuredClone(fixtures.estate)), a = advise(L.job, L.ix, CAT);
   const pg = renderExtraPages(L.job, L.ix, a, {}).find(p => p.title === "Audio Setup");
   t("audio chain: the Audio Setup sheet prints each setting with where to set it", pg && pg.svg.includes("Stereo (2ch PCM)") && pg.svg.includes("Audio Format") && pg.svg.includes("also gets stereo"));
+}
+
+/* ---------- ports: which jack each wire lands on (2026-09-29 rear-panel audit) ---------- */
+{
+  const P = await import("./ports.js");
+  const PG = await import("./pages.js");
+  const CAT = await (await fetch("./catalog.json")).json();
+  const lab = (j, i) => { const L = loadJob(structuredClone(j)); return P.assignPorts(L.job, L.ix, CAT, 0)[i]; };
+  const R = fixtures.residence, conns = R.solutions[0].connections;
+  const at = (f, t) => conns.findIndex(c => c.from === f && c.to === t);
+  t("ports: audited gear lands on its real rear-panel jacks (MDX-16 zone terminals by channel, analog in)",
+    /^ZONE 2 SPEAKER/.test(lab(R, at("mdx16", conns.find(c => c.from === "mdx16" && c.channels === "3-4")?.to)).from?.label || "") &&
+    lab(R, at("sav-out", "mdx16")).to?.label === "ANALOG 1", JSON.stringify(lab(R, at("sav-out", "mdx16"))));
+  t("ports: an unlinked 'Cable Box' jacks like the cable-box profile (HDMI OUT) and lands on a receiver HDMI input", lab(R, at("cablebox", "mrx540")).from?.label === "HDMI OUT" && /^HDMI \d$/.test(lab(R, at("cablebox", "mrx540")).to?.label || ""));
+  // a receiver's first TV feed takes HDMI OUT 1 (eARC)
+  const j = structuredClone(R); j.solutions[0].connections.push({ from: "mrx540", to: "balun-family", signal: "video", earc: true });
+  j.solutions[0].connections = j.solutions[0].connections.filter(c => !(c.to === "balun-family" && c.from !== "mrx540"));
+  const k = j.solutions[0].connections.findIndex(c => c.from === "mrx540" && c.to === "balun-family");
+  t("ports: a receiver feeding its TV (eARC) lands on HDMI OUT 1 (eARC)", lab(j, k).from?.label === "HDMI OUT 1 (eARC)" && lab(j, k).to?.label === "TX: HDMI IN");
+  // one HDMI out, two feeds: the second has no jack and says why
+  const j2 = structuredClone(R); j2.solutions[0].connections.push({ from: "cablebox", to: "balun-master", signal: "video" });
+  const m2 = lab(j2, j2.solutions[0].connections.length - 1);
+  t("ports: a source's one HDMI out feeding two places is flagged (needs a splitter)", !m2.from && /every HDMI/.test(m2.fromWhy || ""), JSON.stringify(m2));
+  const L2 = loadJob(j2), a2 = advise(L2.job, L2.ix, CAT);
+  t("ports: …and the advisor says so", a2.notes.some(n => n.code === "no-port" && /Cable Box/.test(n.msg)));
+  // a jack picked by hand wins
+  const j3 = structuredClone(R); const c3 = j3.solutions[0].connections[at("sav-out", "mdx16")]; c3.toPort = "ANALOG 5";
+  t("ports: a jack set by hand wins over the automatic pick", lab(j3, at("sav-out", "mdx16")).to?.label === "ANALOG 5");
+  // MXNet: the encoder's LAN jack, not its HDMI loop-out
+  const E = fixtures.estate, ek = E.solutions[0].connections.findIndex(c => c.from === "enc-atv1");
+  t("ports: an MXNet encoder's stream leaves its LAN jack (the switch port is the Network sheet's)", lab(E, ek).from?.label === "LAN (MXNet)" && !lab(E, ek).to);
+  // plug-into: compatible boxes with jacks; the rest grayed with a reason
+  const Lp = loadJob(structuredClone(R)), cands = P.plugCandidates(Lp.job, Lp.ix, CAT, 0, "mdx16", "in");
+  t("plug into: the MDX-16 is offered sources with a free analog/optical out; speakers are grayed with a reason",
+    cands.some(c => !c.disabled && c.id === "cablebox") && cands.find(c => c.id === "family-spk" || /spk/.test(c.id))?.disabled && cands.every(c => !c.disabled || c.reason),
+    JSON.stringify(cands.slice(0, 6)));
+  // paper: the patch list and the wire schedule's rack end
+  const La = loadJob(structuredClone(R)), aa = advise(La.job, La.ix, CAT);
+  const pages = renderExtraPages(La.job, La.ix, aa, { solution: 0 });
+  const pl = pages.find(p => p.title === "Patch List");
+  t("paper: the Patch List prints jack to jack", pl && pl.svg.includes("ANALOG 1") && pl.svg.includes("HDMI OUT") && pl.svg.includes("ZONE 1 SPEAKER"));
+  const runs = PG.wireRuns(La.job, La.ix, { solution: 0, portMap: aa.ports[0].map });
+  t("paper: a speaker run's rack end names the amp's zone terminals", runs.some(r => r.prefix === "S" && /MDX-16 ch 1–2 · ZONE 1 SPEAKER/.test(r.term)), JSON.stringify(runs.filter(r => r.prefix === "S").map(r => r.term)));
 }
 
 /* ---------- input order (user redline 2026-09-28) ----------

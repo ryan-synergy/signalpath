@@ -271,6 +271,15 @@ export function setDanteAudio(job, sol, zone, ampId) {
   return src;
 }
 
+/* a receiver fed by the house video: an HDMI matrix output straight in; an
+   MXNet switch through a decoder at the receiver (it has no MXNet jack) */
+function feedReceiver(job, sol, m, avr, sc) {
+  if (m.type !== "avSwitch") { sol.connections.push({ from: m.id, to: avr, signal: "video", ...sc }); return; }
+  const dec = { id: freeId(job, sol, `dec-${avr}`), type: "dec", serves: avr, auto: true };
+  (sol.companions ||= []).push(dec);
+  sol.connections.push({ from: m.id, to: dec.id, signal: "video", ...sc }, { from: dec.id, to: avr, signal: "video", ...sc });
+}
+
 /* quick-add: wire a new zone from its shorthand hints */
 export function autoHookup(job, sol, zone, hints = {}) {
   const { tv, spk } = endpointsOf(zone);
@@ -303,7 +312,7 @@ export function autoHookup(job, sol, zone, hints = {}) {
     // into it (the Theater starter's receiver already has its own sources)
     const m = devs.find(d => d.type === "videoMatrix") || devs.find(d => d.type === "avSwitch" && !d.danteSwitch);
     if (m && !(sol.connections || []).some(c => c.to === avr && c.signal !== "network" && c.signal !== "audioReturn"))   // the TV's optical return isn't a source
-      sol.connections.push({ from: m.id, to: avr, signal: "video", ...scopeOf(zone) });
+      feedReceiver(job, sol, m, avr, scopeOf(zone));
     return;
   }
   const m = devs.find(d => d.type === "videoMatrix") || devs.find(d => d.type === "avSwitch");
@@ -318,8 +327,8 @@ export function autoHookup(job, sol, zone, hints = {}) {
         let avr = rackDevices(sol).find(d => d.type === "avr" && !busy.has(d.id))?.id;
         if (!avr) { const a = avrFor(spk); avr = addRackDevice(job, sol, "avr", a.model, { catalogRef: a.catalogRef }); }
         setSpeakers(job, sol, zone, avr);
-        if (!(sol.connections || []).some(c => c.from === m.id && c.to === avr && c.signal === "video"))
-          sol.connections.push({ from: m.id, to: avr, signal: "video" });
+        if (!(sol.connections || []).some(c => c.to === avr && c.signal === "video"))   // (directly, or via its decoder)
+          feedReceiver(job, sol, m, avr, {});
       }
     } else if (!/^soundbar/.test(cfg)) {
       const used = id => (sol.connections || []).filter(c => c.from === id && c.signal === "speaker").length;

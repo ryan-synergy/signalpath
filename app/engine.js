@@ -7,6 +7,7 @@ import { networkPlan, suggestLanSwitch } from "./network.js";
 import { powerPlan } from "./power.js";
 import { rackPlans } from "./rack.js";
 import { audioSetup } from "./audiochain.js";
+import { assignPorts } from "./ports.js";
 
 export const SIGNAL_COLORS = {
   video: "#d22b1f",
@@ -3179,5 +3180,12 @@ export function advise(job, ix = indexJob(job), catalog = null) {
   // source / TV audio settings (downres-the-source rule, audiochain.js)
   out.setup = ix.solutions.map((s, i) => ({ solution: s.sol.id, ...audioSetup(job, ix, catalog, i) }));
   for (const st of out.setup) for (const n of st.notes) out.notes.push({ ...n, solution: st.solution });
+  // which jack each wire lands on (ports.js) — and the wires that have no free one
+  out.ports = ix.solutions.map((s, i) => ({ solution: s.sol.id, map: assignPorts(job, ix, catalog, i) }));
+  for (const { solution, map } of out.ports) map.forEach((m, i) => {
+    const why = m.fromWhy || m.toWhy; if (!why) return;
+    const c = ix.solutions.find(x => x.sol.id === solution).sol.connections[i];
+    out.notes.push({ code: "no-port", solution, ref: m.fromWhy ? c.from : c.to, conn: i, msg: `${why} — ${describeNode(job, ix.solutions.find(x => x.sol.id === solution).sol, c.from).short} → ${describeNode(job, ix.solutions.find(x => x.sol.id === solution).sol, c.to).short} has no jack to land on (add a splitter / pick another box)` });
+  });
   return out;
 }

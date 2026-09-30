@@ -160,6 +160,28 @@
   #qaChips .qc.name { background: #16181c; color: #fff; border-color: #16181c; }
   #qaChips .qc.scope { background: #f0f0f2; color: #777; border-color: #ccc; }
   #qaChips .qc.hint { background: #fdf3d8; color: #7a5a12; border-color: #e2c78a; }
+  /* the one picker: a searchable sheet (bottom sheet on touch, centered card on desktop) */
+  #picker { position: fixed; inset: 0; background: rgba(10,12,16,.45); display: none; z-index: 60; align-items: flex-end; justify-content: center; }
+  #picker.on { display: flex; }
+  #picker .card { background: #fff; width: min(560px, 100vw); max-height: 78vh; border-radius: 14px 14px 0 0; display: flex; flex-direction: column; box-shadow: 0 -6px 30px rgba(0,0,0,.18); }
+  @media (min-width: 900px) and (pointer: fine) { #picker { align-items: center; } #picker .card { border-radius: 12px; } }
+  #picker .pk-hd { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px 6px; gap: 10px; }
+  #picker .pk-hd b { font-size: 15px; }
+  #picker .pk-hd button { border: 0; background: none; font-size: 18px; cursor: pointer; min-width: 44px; min-height: 44px; }
+  #pkSearch { margin: 0 14px 8px; padding: 9px 10px; font: inherit; font-size: 15px; border: 1px solid var(--line); border-radius: 8px; }
+  #pkList { overflow-y: auto; padding: 0 8px 16px; -webkit-overflow-scrolling: touch; }
+  #pkList .pk-g { font-size: 11px; color: #666; margin: 12px 8px 4px; text-transform: uppercase; letter-spacing: .05em; }
+  #pkList .pk-i { display: block; width: 100%; text-align: left; padding: 9px 10px; border: 0; background: none; border-radius: 8px; font: inherit; font-size: 14px; min-height: 44px; cursor: pointer; color: #1b1d21; }
+  #pkList .pk-i:hover:not([disabled]), #pkList .pk-i:focus-visible { background: #eef3fa; outline: none; }
+  #pkList .pk-i.cur { background: #e6effa; font-weight: 600; }
+  #pkList .pk-i small { display: block; color: #666; font-size: 12px; font-weight: 400; margin-top: 1px; }
+  #pkList .pk-i[disabled] { color: #9a9a9a; cursor: not-allowed; }
+  #pkList .pk-i[disabled] small { color: #a45a12; }
+  .pickbtn { width: 100%; text-align: left; font: inherit; font-size: 12.5px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 5px; background: #fff; cursor: pointer; min-height: 30px; }
+  .pickbtn .mini { color: #777; }
+  .portchip { font: inherit; font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid #c7d6ea; background: #eef3fa; color: #23507e; cursor: pointer; }
+  .portchip.none { background: #fff6e0; border-color: #e2c78a; color: #7a5a12; }
+  .jacks { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 2px 0 6px 80px; font-size: 11px; color: #777; }
   #qaChips .qc.warn { background: #fdecea; color: #8f1d14; border-color: #efb4ad; }
   #qa .ex { font-size: 10.5px; color: #999; margin-top: 5px; }
 
@@ -290,23 +312,24 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20260929235918",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20260929235918",
-    "./app/audiochain.js": "./app/audiochain.js?v=20260929235918",
-    "./app/commands.js": "./app/commands.js?v=20260929235918",
-    "./app/engine.js": "./app/engine.js?v=20260929235918",
-    "./app/exports.js": "./app/exports.js?v=20260929235918",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260929235918",
-    "./app/hookup.js": "./app/hookup.js?v=20260929235918",
-    "./app/importers.js": "./app/importers.js?v=20260929235918",
-    "./app/names.js": "./app/names.js?v=20260929235918",
-    "./app/network.js": "./app/network.js?v=20260929235918",
-    "./app/pages.js": "./app/pages.js?v=20260929235918",
-    "./app/power.js": "./app/power.js?v=20260929235918",
-    "./app/quickadd.js": "./app/quickadd.js?v=20260929235918",
-    "./app/rack.js": "./app/rack.js?v=20260929235918",
-    "./app/route-audit.js": "./app/route-audit.js?v=20260929235918",
-    "./app/starters.js": "./app/starters.js?v=20260929235918"
+    "./app/ai.js": "./app/ai.js?v=20260930001611",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20260930001611",
+    "./app/audiochain.js": "./app/audiochain.js?v=20260930001611",
+    "./app/ports.js": "./app/ports.js?v=20260930001611",
+    "./app/commands.js": "./app/commands.js?v=20260930001611",
+    "./app/engine.js": "./app/engine.js?v=20260930001611",
+    "./app/exports.js": "./app/exports.js?v=20260930001611",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260930001611",
+    "./app/hookup.js": "./app/hookup.js?v=20260930001611",
+    "./app/importers.js": "./app/importers.js?v=20260930001611",
+    "./app/names.js": "./app/names.js?v=20260930001611",
+    "./app/network.js": "./app/network.js?v=20260930001611",
+    "./app/pages.js": "./app/pages.js?v=20260930001611",
+    "./app/power.js": "./app/power.js?v=20260930001611",
+    "./app/quickadd.js": "./app/quickadd.js?v=20260930001611",
+    "./app/rack.js": "./app/rack.js?v=20260930001611",
+    "./app/route-audit.js": "./app/route-audit.js?v=20260930001611",
+    "./app/starters.js": "./app/starters.js?v=20260930001611"
 } }
 </script>
 <script>
@@ -420,6 +443,12 @@
 </div></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
+<div id="picker" role="dialog" aria-modal="true" aria-labelledby="pkTitle"><div class="card">
+  <div class="pk-hd"><b id="pkTitle"></b><button id="pkClose" aria-label="Close">✕</button></div>
+  <input id="pkSearch" placeholder="Search…" autocomplete="off" autocorrect="off" spellcheck="false">
+  <div id="pkList"></div>
+</div></div>
+
 <div id="starter" role="dialog" aria-modal="true" aria-labelledby="stTitle"><div class="card">
   <h2 id="stTitle">New job — start from a rack</h2>
   <div class="s">Pick the rack this job looks most like. Its gear and the patching inside the rack are filled in; then add zones with quick-add and they wire themselves to it.</div>
@@ -444,6 +473,7 @@ import { importAny, mergeHouse, drawFromWalk, decodeHandoff } from "./app/import
 import { planQueueFiles, aiReviewMarkdown } from "./app/exports.js";
 import { RACK_SIZES, DEFAULT_RACK_U } from "./app/rack.js";
 import { specFor, specNum, tidyPort, NET_ROLE_NAME } from "./app/network.js";
+import { assignPorts, jacksOf, plugCandidates, familyName } from "./app/ports.js";
 import { startAsBuilt, asBuiltChanges, changeMarks, isAsBuilt, installRows, installCSV, tidyMac } from "./app/asbuilt.js";
 import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV, labelsCSV, rackFrontSVG, rackData } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
@@ -483,7 +513,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20260929235918").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20260930001611").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -533,7 +563,7 @@ function syncShippedCatalog() {
   return changed;
 }
 // advisor notes that ask for a fix (the rest are reference: setup checklists, budgets)
-const ACTION_NOTES = new Set(["downres-surround", "amp-sub-outs", "earc-extender", "mxnet-no-cbox", "dante-no-controller", "mxnet-cbox-per-platform", "net-mismatch", "net-mixed",
+const ACTION_NOTES = new Set(["no-port", "downres-surround", "amp-sub-outs", "earc-extender", "mxnet-no-cbox", "dante-no-controller", "mxnet-cbox-per-platform", "net-mismatch", "net-mixed",
   "dante-multicast", "pcm-only", "switch-ports-full", "switch-no-poe", "lan-no-switch", "power-none", "power-short", "power-tight",
   "power-circuit", "power-peak", "rack-full", "rack-unknown-u", "rack-heat"]);
 const saveSettings = () => dbPut({ id: "__settings", updated: Date.now(), settings: SETTINGS });
@@ -583,6 +613,7 @@ function refresh(save = true) {
     const { job, ix } = loadJob(effectiveJob(S.job, S.sol));   // active solution's overrides applied
     S.view = { job, ix };                                      // interactive sheet resolves names from here
     v = validate(job, ix); a = advise(job, ix, effectiveCatalog());
+    S.portMap = (a.ports || []).find(p => p.solution === job.solutions[S.sol]?.id)?.map || [];   // which jack each wire lands on
     // "1 of N" counts the continuation sheets a long schedule/map paginates into
     const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, company: SETTINGS.company,
                    sheet: `1 of ${sheetTotal(job, ix, a, { solution: S.sol, rawJob: S.job })}` };
@@ -672,6 +703,7 @@ function collectFindings(errs, warns, a, mine) {
     for (const f of list) isDev(f.ref) ? push(byDev, f.ref, level, f.msg) : push(byZone, zoneOfRef(f.ref), level, f.msg);
   for (const n of a?.notes || []) if (n.code === "earc-extender" && mine(n)) push(byZone, zoneOfRef(n.ref), "w", n.msg);
   for (const n of a?.notes || []) if (n.code === "amp-sub-outs" && mine(n)) push(byDev, n.ref, "w", n.msg);
+  for (const n of a?.notes || []) if (n.code === "no-port" && mine(n)) isDev(n.ref) ? push(byDev, n.ref, "w", n.msg) : push(byZone, zoneOfRef(n.ref), "w", n.msg);
   for (const io of a?.io || []) if (io.over && mine(io)) push(byDev, io.device, "e", io.msg);
   return { byZone, byDev };
 }
@@ -909,7 +941,8 @@ $("#exportPq").onclick = () => {
   toast(files.length > 1 ? "2 PlanQueue files: technology-systems + technology-prewire (the pre-wire-only rooms)" : "PlanQueue file saved");
 };
 $("#exportAi").onclick = () => download(`${fileBase()} — AI review.md`, aiReviewMarkdown(S.job, S.sol, SETTINGS.catalog), "text/markdown");
-$("#exportLabels").onclick = () => { const { job, ix } = loadJob(effectiveJob(S.job, S.sol)); download(`${fileBase()} — cable labels.csv`, labelsCSV(job, ix, { solution: S.sol }), "text/csv"); };
+$("#exportLabels").onclick = () => { const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
+  download(`${fileBase()} — cable labels.csv`, labelsCSV(job, ix, { solution: S.sol, portMap: assignPorts(job, ix, effectiveCatalog(), S.sol) }), "text/csv"); };
 $("#exportInstall").onclick = () => download(`${fileBase()} — install record.csv`, installCSV(S.job, S.sol), "text/csv");
 $("#exportCsv").onclick = () => { const { job, ix } = loadJob(effectiveJob(S.job, S.sol)); download(`${fileBase()} — takeoff.csv`, takeoffCSV(job, ix, { solution: S.sol }), "text/csv"); };
 
@@ -1325,6 +1358,52 @@ const SIGNALS = ["video", "audio", "speaker", "network", "audioReturn"];
 const DEV_TYPE_LABEL = TYPE_NAME, SIGNAL_LABEL = SIGNAL_NAME, SCOPE_LABEL = SCOPE_NAME, STATUS_LABEL = STATUS_NAME,
       SPK_LABEL = SPEAKER_SETUP, REMOTE_LABEL = REMOTE_NAME, PLATFORM_LABEL = PLATFORM_NAME;
 
+/* one picker for every long choice: groups of items, grayed items keep their
+   reason (Ryan 2026-09-29: gray, don't hide), search narrows; a group marked
+   searchOnly (legacy gear, other kinds of box) only shows while searching */
+function openPicker({ title, groups, onPick }) {
+  const box = $("#picker"), list = $("#pkList"), q = $("#pkSearch");
+  $("#pkTitle").textContent = title; q.value = "";
+  const draw = () => {
+    const t = q.value.trim().toLowerCase();
+    list.innerHTML = groups.map(g => {
+      if (g.searchOnly && !t) return "";
+      const items = g.items.filter(it => !t || `${it.label} ${it.sub || ""} ${it.reason || ""} ${it.keys || ""}`.toLowerCase().includes(t));
+      if (!items.length) return "";
+      return `<div class="pk-g">${esc(g.label)}</div>` + items.map(it => `<button class="pk-i${it.current ? " cur" : ""}" data-v="${esc(it.value)}" ${it.disabled ? "disabled" : ""}>${esc(it.label)}${(it.disabled ? it.reason : it.sub) ? `<small>${esc(it.disabled ? it.reason : it.sub)}</small>` : ""}</button>`).join("");
+    }).join("") || `<div class="mini" style="padding:14px">Nothing matches “${esc(q.value)}”.</div>`;
+    list.querySelectorAll(".pk-i:not([disabled])").forEach(b => b.onclick = () => { close(); onPick(b.dataset.v); });
+  };
+  const key = e => { if (e.key === "Escape") close(); };
+  const close = () => { box.classList.remove("on"); removeEventListener("keydown", key); };
+  q.oninput = draw; $("#pkClose").onclick = close; box.onclick = e => { if (e.target === box) close(); };
+  addEventListener("keydown", key);
+  draw(); box.classList.add("on");
+  if (matchMedia("(pointer: fine)").matches) q.focus();
+  list.querySelector(".pk-i.cur")?.scrollIntoView({ block: "center" });
+}
+
+/* product picker groups for a box: your go-to gear of this kind first, then
+   the rest of the kind by brand; legacy gear and other kinds of box only
+   while searching (picking another kind re-types the box) */
+function productGroups(d) {
+  const EC = effectiveCatalog(), all = Object.entries(EC.devices || {});
+  const kind = DEV_TYPE_LABEL[d.type] || d.type;
+  const item = ([id, c]) => ({ value: id, label: productName(c), current: d.catalogRef === id,
+    sub: [productSku(c) && productSku(c) !== c.model ? productSku(c) : "", c.notInPlanQueue ? "not in PlanQueue" : "", c.verified === false ? "⚠ unverified" : "",
+          c.type !== d.type ? `makes this box a ${DEV_TYPE_LABEL[c.type] || c.type}` : ""].filter(Boolean).join(" · "),
+    keys: `${c.brand || ""} ${c.model} ${(c.aliases || []).join(" ")} ${c.partNo || ""}` });
+  const byName = (a, b) => String((a[1].brand || "") + a[1].model).localeCompare(String((b[1].brand || "") + b[1].model));
+  const mine = all.filter(([, c]) => c.type === d.type && !(c.flags || []).includes("legacy")).sort(byName);
+  return [
+    { label: "Our go-to", items: mine.filter(([, c]) => c.goTo).map(item) },
+    { label: `${kind} — all`, items: mine.filter(([, c]) => !c.goTo).map(item) },
+    { label: "Not linked", items: [{ value: "__none", label: "— not linked —", sub: "keeps the name you typed; no specs, SKU or jacks", current: !d.catalogRef }] },
+    { label: "Legacy", searchOnly: true, items: all.filter(([, c]) => c.type === d.type && (c.flags || []).includes("legacy")).sort(byName).map(item) },
+    { label: "Other kinds of box", searchOnly: true, items: all.filter(([, c]) => c.type !== d.type).sort(byName).map(item) },
+  ];
+}
+
 function field(label, inner) { return `<div class="f"><label>${label}</label>${inner}</div>`; }
 // small fixed choices are taps, not dropdowns
 const chips = (act, opts, cur) => `<div class="chips">${opts.map(([v, l]) =>
@@ -1532,11 +1611,6 @@ function gearHTML() {
   const sol = S.job.solutions[S.sol];
   // catalog link: powers the port-budget advisor + snapshot lockfile (same-type entries listed first)
   const EC = effectiveCatalog();                       // one clone per render, not one per lookup
-  const catDevs = Object.entries(EC.devices || {});
-  const catSel = d => `<select class="dcat"><option value="">— not linked —</option>${catDevs
-    .slice().sort((a, b) => ((b[1].type === d.type) - (a[1].type === d.type)) ||
-      String((a[1].brand || "") + a[1].model).localeCompare(String((b[1].brand || "") + b[1].model)))
-    .map(([id, c]) => `<option value="${esc(id)}" ${d.catalogRef === id ? "selected" : ""}>${esc(productName(c))}${productSku(c) ? " · " + esc(productSku(c)) : ""}${c.verified === false ? " ⚠" : ""}${c.type === d.type ? "" : " · " + esc(DEV_TYPE_LABEL[c.type] || c.type)}</option>`).join("")}</select>`;
   // a linked box is called by its product's name — the drawing, this list and
   // the dropdown all read the same words; flag any that drifted
   const catOf = d => d.catalogRef ? EC.devices?.[d.catalogRef] : null;
@@ -1560,7 +1634,7 @@ function gearHTML() {
           ${issue && !open ? `<div class="ziss ${issue.level}">${esc(issue.msg)}</div>` : ""}</div></div>
       <div class="fields">
         ${found.length ? `<div class="zissues">${found.map(f => `<div class="${f.level}">${esc(f.msg)}</div>`).join("")}</div>` : ""}
-        ${field("Product", catSel(d))}
+        ${field("Product", `<button class="pickbtn dcatbtn">${catOf(d) ? `${esc(productName(catOf(d)))}${productSku(catOf(d)) ? ` <span class="mini">· ${esc(productSku(catOf(d)))}</span>` : ""}` : `<span class="mini">Pick a product…</span>`} ▾</button>`)}
         ${field("Name", `<input class="dmodel" value="${esc(d.model || "")}" title="What the drawing and paperwork call this box — follows the product you pick">`)}
         ${drifted(d) ? `<div class="mini" style="margin:-2px 0 6px 80px;color:#8a5a00">The drawing says “${esc(d.model || "")}”, the product is “${esc(drifted(d))}”. <a href="#" class="dusecat">Use “${esc(drifted(d))}”</a></div>` : ""}
         <div class="sect">INPUTS${cap.ins ? ` <span class="mini">${esc(cap.ins)}</span>` : ""}</div>
@@ -1590,8 +1664,15 @@ function connRowHTML(c, i, sol, ctx, dir) {
   const tail = [c.dante ? "Dante audio (network)" : signalName(c.signal), c.earc && "eARC back", c.backup && "backup to eARC", c.channels && `outputs ${c.channels}`, c.scope && c.scope !== "included" && SCOPE_LABEL[c.scope]].filter(Boolean).join(" · ");
   const fromRcv = sol.racks.some(r => r.devices.some(d => d.id === c.from && d.type === "avr"));
   const title = dir === "in" ? `← ${nodeInfo(c.from).label}` : `→ ${nodeInfo(c.to).label}`;
+  const pm = S.portMap?.[i] || {};
+  // a jack chip only where that end is a box with jacks (TVs and speakers have none to pick)
+  const chip = (end, p, why, id) => p || why ? `<button class="portchip${p ? "" : " none"}" data-end="${end}" title="${esc(why || "Tap to pick the jack")}">${esc(p ? p.label : "no free jack ⚠")}</button>`
+    : `<span>${esc(nodeInfo(id).short)}</span>`;
+  const jacks = c.signal !== "network" && (pm.from || pm.to || pm.fromWhy || pm.toWhy)
+    ? `<div class="jacks">${chip("from", pm.from, pm.fromWhy, c.from)} → ${chip("to", pm.to, pm.toWhy, c.to)}${c.fromPort || c.toPort ? ` <span title="set by hand">📌</span>` : ""}</div>` : "";
   return `<div class="row ${open ? "open" : ""}" data-ci="${i}">
       <div class="head" data-toggle="${esc(key)}"><span class="t">${esc(title)}</span><span class="sub">${esc(tail)}</span></div>
+      ${jacks}
       <div class="fields">
         ${field("From", nodeSel("cfrom", c.from))}
         ${field("To", nodeSel("cto", c.to))}
@@ -1759,7 +1840,7 @@ function jobHTML() {
     <button class="addbtn" id="addConn">＋ Add connection</button>
     <div class="sect">PACKET PAGES <span class="mini">sheet 1 always prints</span></div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
-      ${["channelMap:Channel Map", "audioSetup:Audio Setup (source & TV settings)", "equipment:Equipment & Takeoff", "wireSchedule:Wire Schedule", "elevation:Rack (elevation, hardware, power)", "network:Network (switch ports)", "labels:Cable Labels",
+      ${["channelMap:Channel Map", "audioSetup:Audio Setup (source & TV settings)", "equipment:Equipment & Takeoff", "patchList:Patch List (every jack)", "wireSchedule:Wire Schedule", "elevation:Rack (elevation, hardware, power)", "network:Network (switch ports)", "labels:Cable Labels",
          ...(S.job.solutions.length > 1 ? ["bomCompare:Solution Comparison"] : [])].map(kv => {
         const [k, label] = kv.split(":");
         return `<div class="f"><input type="checkbox" class="pgflag" data-pg="${k}" ${pageFlags(S.job)[k] ? "checked" : ""}> <span>${label}</span></div>`;
@@ -2132,16 +2213,19 @@ function wirePanel(body) {
     return {};
   };
   on(".dmodel", el => { const { d } = devOf(el); if (d) d.model = el.value; });
-  on(".dcat", el => {
+  body.querySelectorAll(".dcatbtn").forEach(el => el.onclick = () => {
     const { d } = devOf(el); if (!d) return;
-    if (!el.value) { delete d.catalogRef; return; }
-    d.catalogRef = el.value;
-    const c = effectiveCatalog().devices[el.value];
+    openPicker({ title: `Product — ${d.model || d.id}`, groups: productGroups(d), onPick: v => { linkProduct(d, v === "__none" ? "" : v); refresh(); } });
+  });
+  function linkProduct(d, ref) {
+    if (!ref) { delete d.catalogRef; return; }
+    d.catalogRef = ref;
+    const c = effectiveCatalog().devices[ref];
     if (!c) return;
     d.model = productName(c);   // the box is called what was picked — drawing, list and dropdown agree
     if (c.type && d.type !== c.type) d.type = c.type;   // the catalog knows what this box is
     if (c.zones && c.type === "amp") d.zones = c.zones;
-  });
+  }
   body.querySelectorAll(".dusecat").forEach(el => el.onclick = ev => {
     ev.preventDefault();
     const { d } = devOf(el); const c = d && effectiveCatalog().devices?.[d.catalogRef];
@@ -2207,34 +2291,63 @@ function wirePanel(body) {
   };
   // a box's back panel: plug something in / connect an output, starting from
   // the likeliest other end (an unfed zone for amps and receivers)
+  // a jack chip: pick the port at that end; used / wrong-kind jacks grayed with the reason
+  body.querySelectorAll(".portchip").forEach(el => el.onclick = ev => {
+    ev.stopPropagation();
+    const i = +el.closest("[data-ci]").dataset.ci, sol = S.job.solutions[S.sol], c = sol.connections[i]; if (!c) return;
+    const end = el.dataset.end, id = end === "from" ? c.from : c.to, dir = end === "from" ? "out" : "in";
+    const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
+    const jacks = jacksOf(job, ix, effectiveCatalog(), S.sol, id, dir, S.portMap || []);
+    const cur = S.portMap?.[i]?.[end];
+    const want = c.dante ? ["dante"] : { video: ["hdmi", "hdbaset", "mxnet"], audio: ["analog", "optical", "coax"], audioReturn: ["optical", "coax", "hdmi", "analog"], speaker: ["speaker"] }[c.signal] || [];
+    const items = jacks.map(p => {
+      const other = p.usedBy != null && p.usedBy !== i ? sol.connections[p.usedBy] : null;
+      const reason = !want.includes(p.conn) ? `${familyName(p.conn)} — this wire carries ${SIGNAL_LABEL[c.signal] || c.signal}`
+        : other ? `in use: ${nodeInfo(other.from).short} → ${nodeInfo(other.to).short}` : "";
+      return { value: p.id, label: p.label, current: cur?.id === p.id, disabled: !!reason, reason, sub: familyName(p.conn) };
+    });
+    openPicker({ title: `${nodeInfo(id).short} — ${dir === "out" ? "output" : "input"} jack`, groups: [
+      { label: "Automatic", items: [{ value: "__auto", label: "Let SignalPath pick", sub: "the first free, compatible jack", current: !(end === "from" ? c.fromPort : c.toPort) }] },
+      { label: dir === "out" ? "Outputs" : "Inputs", items: items.filter(x => !x.disabled) },
+      { label: "Can't use", items: items.filter(x => x.disabled) },
+    ], onPick: v => {
+      const k = end === "from" ? "fromPort" : "toPort";
+      if (v === "__auto") delete c[k]; else c[k] = v;
+      refresh();
+    } });
+  });
+
+  // "＋ Plug something into X" / "＋ Connect an output": a picker of every other
+  // box with the jack pair the wire would use; the ones that can't connect are
+  // grayed with the reason (ports.js plugCandidates). "Advanced" keeps the old
+  // free-form row for the exceptions.
   body.querySelectorAll(".addconn").forEach(el => el.onclick = () => {
     const { d } = devOf(el); if (!d) return;
-    const sol = S.job.solutions[S.sol], nodes = allNodes();
-    const fed = new Set(sol.connections.map(c => c.to)), used = new Set(sol.connections.map(c => c.from));
-    let from, to;
-    if (el.dataset.dir === "out") {
-      from = d.id;
-      // an output never lands on a source; prefer what this kind of box drives, unfed first
-      const want = d.type === "amp" ? ["speakers"] : d.type === "avr" ? ["display", "speakers"] : ["display", "speakers", "adapter"];
-      const ok = id => id !== d.id && nodeInfo(id).type !== "source";
-      to = nodes.find(id => ok(id) && !fed.has(id) && want.includes(nodeInfo(id).kind)) ||
-           nodes.find(id => ok(id) && want.includes(nodeInfo(id).kind)) ||
-           nodes.find(id => ok(id) && !fed.has(id)) || nodes.find(ok) || "";
-    } else {
-      to = d.id;
-      // an input comes from something that makes signal — a source for a receiver or matrix, the
-      // audio module / Dante bridge / a source for an amp — never the power strip or a switch;
-      // spare boxes first, then ones already feeding elsewhere, never one already plugged in here
-      const into = new Set(sol.connections.filter(c => c.to === d.id).map(c => c.from));
-      const pref = d.type === "amp" ? ["audioOutputModule", "danteBridge", "source", "avr"]
-        : d.type === "avr" ? ["videoMatrix", "avSwitch", "splitter", "source"] : ["source", "videoMatrix", "avSwitch", "splitter", "avr"];
-      const cands = pref.flatMap(t => nodes.filter(id => id !== d.id && !into.has(id) && nodeInfo(id).kind === "rack" && nodeInfo(id).type === t));
-      from = cands.find(id => !used.has(id)) || cands[0] || nodes.find(id => id !== d.id && nodeInfo(id).kind === "rack" && !used.has(id)) || nodes.find(id => id !== d.id) || "";
-    }
-    const sig = el.dataset.dir !== "out" && d.type === "amp" && nodeInfo(from).kind === "rack" ? "audio" : suggestSignal(from, to);
-    sol.connections.push({ from, to, signal: sig || "video" });
-    S.openRows.add(`conn:${sol.connections.length - 1}@${d.id}`);
-    refresh();
+    const sol = S.job.solutions[S.sol], dir = el.dataset.dir === "out" ? "out" : "in";
+    const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
+    const cands = plugCandidates(job, ix, effectiveCatalog(), S.sol, d.id, dir);
+    const item = c => ({ value: c.id, label: c.port ? `${c.name} — ${c.port}` : c.name, disabled: c.disabled, reason: c.reason,
+      sub: c.disabled ? "" : [c.note, c.other ? `${dir === "in" ? "into" : "from"} ${d.model || d.id} ${c.other}` : ""].filter(Boolean).join(" · ") });
+    const ok = cands.filter(c => !c.disabled), no = cands.filter(c => c.disabled);
+    const groups = ["In the rack", "Adapters", "In the zones"].map(g => ({ label: g, items: ok.filter(c => c.group === g).map(item) }));
+    groups.push({ label: "Can't connect", items: no.map(item) });
+    groups.push({ label: "Advanced", items: [{ value: "__free", label: "Any connection — pick both ends and the signal yourself", sub: "for the exceptions: nothing is checked" }] });
+    openPicker({ title: dir === "in" ? `Plug into ${d.model || d.id}` : `Connect an output of ${d.model || d.id}`, groups, onPick: v => {
+      if (v === "__free") {
+        const other = allNodes().find(x => x !== d.id) || "";
+        sol.connections.push(dir === "in" ? { from: other, to: d.id, signal: suggestSignal(other, d.id) || "video" } : { from: d.id, to: other, signal: suggestSignal(d.id, other) || "video" });
+        S.openRows.add(`conn:${sol.connections.length - 1}@${d.id}`); refresh(); return;
+      }
+      const c = cands.find(x => x.id === v); if (!c) return;
+      const [from, to] = dir === "in" ? [c.id, d.id] : [d.id, c.id];
+      const zone = S.job.house.zones.find(z => (z.endpoints || []).some(e => e.id === to));
+      if (c.viaHookup && zone && c.signal === "video") setVideo(S.job, sol, zone, from);            // a TV: the balun / decoder comes with it
+      else if (c.viaHookup && zone && c.signal === "speaker") setSpeakers(S.job, sol, zone, from);  // speakers: the next free amp outputs
+      else sol.connections.push({ from, to, signal: c.signal, ...(c.dante ? { dante: true } : {}),
+        ...(c.fromPort ? { fromPort: c.fromPort } : {}), ...(c.toPort ? { toPort: c.toPort } : {}) });
+      toast(`Connected ${nodeInfo(from).short} → ${nodeInfo(to).short}${c.port ? ` (${c.port})` : ""}`);
+      refresh();
+    } });
   });
   const cs = body.querySelector("#connSearch");
   if (cs) {

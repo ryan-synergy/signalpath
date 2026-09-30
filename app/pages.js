@@ -16,11 +16,11 @@ export function pageFlags(job) {
   const p = job.job?.pages || {};
   return { channelMap: p.channelMap !== false, equipment: p.equipment !== false,
            wireSchedule: p.wireSchedule === true, bomCompare: p.bomCompare === true, network: p.network !== false, labels: p.labels === true, elevation: p.elevation !== false,
-           audioSetup: p.audioSetup !== false };
+           audioSetup: p.audioSetup !== false, patchList: p.patchList !== false };
 }
 export function sheetCount(job) {
   const f = pageFlags(job);
-  return 1 + (f.channelMap ? 1 : 0) + (f.equipment ? 1 : 0) + (f.wireSchedule ? 1 : 0) + (f.network ? 1 : 0) + (f.labels ? 1 : 0) + (f.elevation ? 1 : 0) + (f.audioSetup ? 1 : 0) +
+  return 1 + (f.channelMap ? 1 : 0) + (f.equipment ? 1 : 0) + (f.wireSchedule ? 1 : 0) + (f.network ? 1 : 0) + (f.labels ? 1 : 0) + (f.elevation ? 1 : 0) + (f.audioSetup ? 1 : 0) + (f.patchList ? 1 : 0) +
          (f.bomCompare && (job.solutions || []).length > 1 ? 1 : 0);
 }
 
@@ -418,7 +418,11 @@ export function wireRuns(job, ix, opts = {}) {
     if (c.startsWith("surround")) return "14/2";
     return "16/2";
   };
-  for (const c of sol.connections || []) {
+  // the jack at the rack end of each run (ports.js, via advise → opts.portMap)
+  const shortPort = p => p ? String(p.label).replace(/\s*\((?!eARC)[^)]*\)/g, "").trim() : "";
+  const at = (id, p) => p ? `${rackName} · ${devName(s.devices[id] || { model: nameOf(job, s, id) })} ${shortPort(p)}` : rackName;
+  for (const [ci, c] of (sol.connections || []).entries()) {
+    const pm = opts.portMap?.[ci] || {};
     const gray = (c.scope || "included") !== "included";
     const toComp = servesEp(s, c.to);
     const toEp = ix.endpointsById[c.to];
@@ -435,7 +439,7 @@ export function wireRuns(job, ix, opts = {}) {
     }
     if (c.signal === "audioReturn" && s.companions[c.to]) continue;   // TV eARC into its AXIS — an HDMI at the TV
     if (c.signal === "video" && toComp) {                // rack video feed to a display chip
-      runs.push({ prefix: "V", cable: "Cat6", from: rackName, to: `${zoneName(ix, toComp.serves)} — TV location`,
+      runs.push({ prefix: "V", cable: "Cat6", from: s.devices[c.from] ? at(c.from, pm.from) : rackName, to: `${zoneName(ix, toComp.serves)} — TV location`,
         carries: `${toComp.type === "balun" ? "Video (HDBaseT)" : "Video (MXNet)"}${toComp.dante ? " + Dante (VLAN 99)" : ""}${c.earc ? " + eARC back" : ""}`, color: "#b32017",
         term: `${adapterName(toComp)} at TV`, count: 1, gray });
     } else if (c.signal === "video" && toEp && s.devices[c.from]) {   // direct rack → display (no extender chip drawn)
@@ -452,7 +456,7 @@ export function wireRuns(job, ix, opts = {}) {
       if (n > 0) runs.push({ prefix: "S", legs: speakerLegs(ep, n, sm), zone: zoneName(ix, c.to), cable: `${spkCable(ep)} ×${n}`, from: rackName,
         to: `${zoneName(ix, c.to)} — ${ep.config === "landscape" ? "landscape array" : n > 2 ? "speaker set" : "ceiling pair"}`,
         carries: gray ? "PRE-WIRE — coil & label" : "Speaker level", color: gray ? null : "#1a5fa0",
-        term: `${amp?.model || nameOf(job, s, c.from)}${chs.length ? ` ch ${chs[0]}–${chs[chs.length - 1]}` : ""}${gray ? " (reserved)" : ""}`, count: n, gray });
+        term: `${amp?.model || nameOf(job, s, c.from)}${chs.length ? ` ch ${chs[0]}–${chs[chs.length - 1]}` : ""}${pm.from ? ` · ${shortPort(pm.from)}` : ""}${gray ? " (reserved)" : ""}`, count: n, gray });
       // subs: surround + 2.1 take an RG6/LFE home run; a landscape buried sub
       // is amp-powered on its own speaker pair; a soundbar's sub is wireless
       if (sm || ep.config === "2.1" || ep.config === "stereo-2.1")
@@ -466,7 +470,7 @@ export function wireRuns(job, ix, opts = {}) {
           term: `${amp ? devName(amp) : nameOf(job, s, c.from)}${chs.length ? ` ch ${chs[0]}–${chs[chs.length - 1]}` : ""}`, count: 1, gray });
     } else if (c.signal === "audioReturn" && fromEp) {
       if (s.locals[c.to] || ix.endpointsById[c.to]) continue;   // handled at the TV (local encoder / soundbar) — no pull
-      runs.push({ prefix: "R", cable: "Optical (Toslink)", from: `${zoneName(ix, c.from)} — TV location`, to: rackName,
+      runs.push({ prefix: "R", cable: "Optical (Toslink)", from: `${zoneName(ix, c.from)} — TV location`, to: s.devices[c.to] ? at(c.to, pm.to) : rackName,
         carries: c.backup ? "Audio return — optical backup to eARC" : "Audio return", color: "#a45a12", term: s.devices[c.to]?.model || nameOf(job, s, c.to), count: 1, gray });
     } else if (c.signal === "network" && (toEp || servesEp(s, c.to))) {
       runs.push({ prefix: "N", cable: "Cat6", from: rackName, to: zoneName(ix, toEp ? c.to : s.companions[c.to].serves), carries: "Network", color: "#2f9e44", term: "RJ45", count: 1, gray });
@@ -564,7 +568,7 @@ function labelPages(job, ix, opts, label) {
 function wireSchedulePages(job, ix, opts, label) {
   const runs = wireRuns(job, ix, opts);
   const HEAD = `<rect x="40" y="120" width="1520" height="30" fill="#16181c"/>
-<g fill="#fff" font-weight="600"><text x="58" y="140">✓</text><text x="100" y="140">Run</text><text x="170" y="140">Cable</text><text x="330" y="140">From</text><text x="520" y="140">To</text><text x="900" y="140">Carries</text><text x="1200" y="140">Terminates</text></g>`;
+<g fill="#fff" font-weight="600"><text x="58" y="140">✓</text><text x="100" y="140">Run</text><text x="170" y="140">Cable</text><text x="300" y="140">From</text><text x="640" y="140">To</text><text x="960" y="140">Carries</text><text x="1210" y="140">Terminates</text></g>`;
   const bodies = [];
   let body = null, ry = 0;
   const open = () => { body = [`<g font-size="12.5">${HEAD}`]; bodies.push(body); ry = 150; };
@@ -577,9 +581,9 @@ function wireSchedulePages(job, ix, opts, label) {
 <rect x="54" y="${ry + 6}" width="14" height="14" fill="none" stroke="#aab"/>
 <g fill="${r.gray ? "#8a8a8a" : "#222"}">
 <text x="100" y="${ry + 19}">${esc(r.id)}</text><text x="170" y="${ry + 19}">${esc(r.cable)}</text>
-<text x="330" y="${ry + 19}">${esc(r.from)}</text><text x="520" y="${ry + 19}">${esc(String(r.to).length > 52 ? String(r.to).slice(0, 50) + "…" : r.to)}</text>
-<text x="900" y="${ry + 19}"${r.color ? ` fill="${r.color}"` : ""}${r.gray ? ' font-weight="600"' : ""}>${esc(r.carries)}</text>
-<text x="1200" y="${ry + 19}">${esc(r.term)}</text></g>`);
+<text x="300" y="${ry + 19}">${esc(String(r.from).length > 48 ? String(r.from).slice(0, 47) + "…" : r.from)}</text><text x="640" y="${ry + 19}">${esc(String(r.to).length > 44 ? String(r.to).slice(0, 43) + "…" : r.to)}</text>
+<text x="960" y="${ry + 19}"${r.color ? ` fill="${r.color}"` : ""}${r.gray ? ' font-weight="600"' : ""}>${esc(String(r.carries).length > 34 ? String(r.carries).slice(0, 33) + "…" : r.carries)}</text>
+<text x="1210" y="${ry + 19}">${esc(String(r.term).length > 48 ? String(r.term).slice(0, 47) + "…" : r.term)}</text></g>`);
     ry += 27;
   });
   close();
@@ -916,6 +920,41 @@ function installPages(job, ix, opts, label) {
   return assemble(job, opts, "Install Record", `Serial numbers and network addresses as installed · ${recs.filter(r => r.filled).length} of ${recs.length} boxes recorded`, bodies, label,
     () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Recorded on site in SignalPath (JOB → Install record). Blank rows can be filled in by hand. Shaded rows have an address to check.</text>`);
 }
+/* ---------- Patch List ----------
+   Every wire, jack to jack: box · port → box · port and the cable it takes
+   (ports.js). The in-rack patching (HDMI, analog, Toslink between rack gear)
+   is listed here — the wire schedule only covers the pulls to the rooms.
+   A wire with no free jack prints "—" on a shaded row with the reason. */
+const CABLE = { hdmi: "HDMI", hdbaset: "Cat6 (HDBaseT)", analog: "Analog audio", optical: "Toslink", coax: "Coax (RCA)", speaker: "Speaker wire", sub: "RCA (sub)", dante: "Cat6 (Dante)", mxnet: "Cat6 (MXNet)" };
+export function patchRows(job, ix, map, opts = {}) {
+  const s = ix.solutions[opts.solution ?? 0], sol = s.sol;
+  const where = id => s.devices[id] ? 0 : s.companions[id] && s.devices[s.companions[id].serves] ? 0 : 1;   // rack gear first
+  return (sol.connections || []).map((c, i) => ({ c, i, m: map?.[i] || {} }))
+    .filter(({ c }) => c.signal !== "network" && (s.devices[c.from] || s.companions[c.from] || s.devices[c.to] || s.companions[c.to] || s.locals[c.from]))
+    .sort((a, b) => (where(a.c.from) + where(a.c.to)) - (where(b.c.from) + where(b.c.to)) || a.i - b.i)
+    .map(({ c, i, m }) => {
+      const fam = m.from?.conn || m.to?.conn;
+      return { i, from: nameOf(job, s, c.from), fromPort: m.from?.label || "", to: nameOf(job, s, c.to), toPort: m.to?.label || "",
+        cable: c.dante ? CABLE.dante : CABLE[fam] || (c.signal === "speaker" ? CABLE.speaker : c.signal === "video" ? CABLE.hdmi : ""),
+        why: m.fromWhy || m.toWhy || "", gray: (c.scope || "included") !== "included" };
+    });
+}
+function patchListPages(job, ix, adviseResult, opts, label) {
+  const solId = ix.solutions[opts.solution ?? 0]?.sol.id;
+  const map = (adviseResult?.ports || []).find(p => p.solution === solId)?.map;
+  if (!map) return [];
+  const list = patchRows(job, ix, map, opts);
+  if (!list.length) return [];
+  const cols = [{ label: "#", dx: 14 }, { label: "From", dx: 56 }, { label: "Jack", dx: 360 }, { label: "To", dx: 640 }, { label: "Jack", dx: 960 }, { label: "Cable", dx: 1240 }];
+  const rows = list.map((r, k) => ({ tint: !!r.why, gray: r.gray, cells: [String(k + 1), clipText(r.from, 44), r.fromPort ? clipText(r.fromPort, 40) : "—", clipText(r.to, 46),
+    r.why ? { text: clipText(`⚠ ${r.why}`, 60), color: "#b32017" } : r.toPort ? clipText(r.toPort, 40) : "—", r.cable] }));
+  const bodies = [];
+  let rest = rows;
+  do { const t = tableFit(40, TOP + 10, 1552, cols, rest, 26); bodies.push([t.svg]); rest = t.rest; } while (rest.length);
+  return assemble(job, opts, "Patch List", "Every connection jack to jack — rack patching first, then the runs to the rooms", bodies, label,
+    () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Jacks are the rear-panel labels. SignalPath picks free, compatible jacks (a receiver's eARC output for its TV, each amp zone's own terminals); a jack set by hand on GEAR wins. "—" = no jack known or none free. Cat6 switch ports are on the Network sheet.</text>`);
+}
+
 /* ---------- Audio Setup ----------
    How each source and TV is set so every room plays: surround rooms decode
    bitstream; 2-channel boxes get 2ch PCM — downres the source where nothing
@@ -944,6 +983,9 @@ const clipText = (t, n) => String(t).length > n ? String(t).slice(0, n - 1) + "�
 
 function pageGroups(job, ix, adviseResult, opts) {
   const flags = pageFlags(job);
+  // the wire schedule and labels print each run's rack-end jack (ports.js via advise)
+  const solId = ix.solutions[opts.solution ?? 0]?.sol.id;
+  opts = { ...opts, portMap: opts.portMap || (adviseResult?.ports || []).find(p => p.solution === solId)?.map };
   const g = [];
   // the CLIENT packet is a clean handover: the schematic, the equipment list and the rack — no
   // change list, ports, wire schedule or labels (Ryan 2026-09-28: two packets, service + client)
@@ -957,6 +999,7 @@ function pageGroups(job, ix, adviseResult, opts) {
   if (flags.audioSetup) g.push(["Audio Setup", lbl => audioSetupPages(job, ix, adviseResult, opts, lbl)]);
   if (flags.equipment) g.push(["Equipment & Takeoff", lbl => takeoffPages(job, ix, adviseResult, opts, lbl)]);
   if (flags.wireSchedule) g.push(["Wire Schedule", lbl => wireSchedulePages(job, ix, opts, lbl)]);
+  if (flags.patchList) g.push(["Patch List", lbl => patchListPages(job, ix, adviseResult, opts, lbl)]);
   if (flags.elevation) g.push(["Rack", lbl => rackPages(job, ix, adviseResult, opts, lbl)]);
   if (flags.network) g.push(["Network", lbl => networkPowerPages(job, ix, adviseResult, opts, lbl)]);
   if (flags.bomCompare && (job.solutions || []).length > 1) g.push(["Solution Comparison", lbl => bomComparePages(job, ix, adviseResult, opts, lbl)]);

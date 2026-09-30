@@ -319,6 +319,16 @@ export function setDanteAudio(job, sol, zone, ampId) {
 
 /* a receiver fed by the house video: an HDMI matrix output straight in; an
    MXNet switch through a decoder at the receiver (it has no MXNet jack) */
+// a TV fed from the matrix in a receiver room: its own apps reach the surround speakers
+// only if its sound comes back — optical into the receiver (the receiver decodes it),
+// or the eARC kit where Atmos matters or the run is too long for Toslink. Skipped when the TV already sends it somewhere.
+function tvBackToReceiver(job, sol, zone, avr) {
+  const { tv } = endpointsOf(zone);
+  if (!tv || readHookup(job, sol, zone).ret || readHookup(job, sol, zone).video?.from === avr) return;
+  // Toslink past ~10 m is unreliable: a far room gets the kit (Cat6A, 100 m) as well
+  const far = (knownRunM(zone) ?? 0) > RUN_LIMIT_M.optical + 0.5;
+  setReturn(job, sol, zone, avr, false, isAtmosRoom(zone) || far);
+}
 function feedReceiver(job, sol, m, avr, sc) {
   if (m.type !== "avSwitch") { sol.connections.push({ from: m.id, to: avr, signal: "video", ...sc }); return; }
   const dec = { id: freeId(job, sol, `dec-${avr}`), type: "dec", serves: avr, auto: true };
@@ -352,13 +362,21 @@ export function autoHookup(job, sol, zone, hints = {}) {
     const busy = new Set((sol.connections || []).filter(c => c.signal === "speaker").map(c => c.from));
     let avr = devs.find(d => d.type === "avr" && !busy.has(d.id))?.id;
     if (!avr) { const a = avrFor(spk); avr = addRackDevice(job, sol, "avr", a.model, { catalogRef: a.catalogRef }); }
+    // a whole-home rack (a matrix / AV switch): the matrix feeds the receiver and the TV
+    // SEPARATELY — one output each (Ryan 2026-09-30: matrix → receiver → TV is unstable
+    // HDMI practice, an option for extreme cases, never the default). Without one, the
+    // receiver is the room's source switch and feeds the TV itself.
+    const m = devs.find(d => d.type === "videoMatrix") || devs.find(d => d.type === "avSwitch" && !d.danteSwitch);
+    if (m) {
+      if (tv) setVideo(job, sol, zone, m.id, hints.bullet && m.type !== "avSwitch" ? "bullet" : undefined);
+      if (spk) setSpeakers(job, sol, zone, avr);
+      if (!(sol.connections || []).some(c => c.to === avr && c.signal !== "network" && c.signal !== "audioReturn"))   // the TV's return isn't a source
+        feedReceiver(job, sol, m, avr, scopeOf(zone));
+      tvBackToReceiver(job, sol, zone, avr);
+      return;
+    }
     if (tv) setVideo(job, sol, zone, avr, hints.bullet ? "bullet" : "balun", true);   // eARC back over the HDMI — the default, no extra run
     if (spk) setSpeakers(job, sol, zone, avr);
-    // a receiver on a whole-home rack plays the house sources: one matrix output
-    // into it (the Theater starter's receiver already has its own sources)
-    const m = devs.find(d => d.type === "videoMatrix") || devs.find(d => d.type === "avSwitch" && !d.danteSwitch);
-    if (m && !(sol.connections || []).some(c => c.to === avr && c.signal !== "network" && c.signal !== "audioReturn"))   // the TV's optical return isn't a source
-      feedReceiver(job, sol, m, avr, scopeOf(zone));
     return;
   }
   const m = devs.find(d => d.type === "videoMatrix") || devs.find(d => d.type === "avSwitch");
@@ -375,6 +393,7 @@ export function autoHookup(job, sol, zone, hints = {}) {
         setSpeakers(job, sol, zone, avr);
         if (!(sol.connections || []).some(c => c.to === avr && c.signal === "video"))   // (directly, or via its decoder)
           feedReceiver(job, sol, m, avr, {});
+        tvBackToReceiver(job, sol, zone, avr);
       }
     } else if (!/^soundbar/.test(cfg)) {
       const used = id => (sol.connections || []).filter(c => c.from === id && c.signal === "speaker").length;

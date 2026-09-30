@@ -1292,6 +1292,9 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const sw = es.racks.flatMap(r => r.devices).find(d => d.type === "avSwitch").id;
   H.setVideo(e, es, ez, sw);
   t("hookup: a feed from the AV-over-IP switch arrives through an MXNet decoder", H.readHookup(e, es, ez).video.run === "dec");
+  // the pass-through option (receiver → TV) on a matrix rack: quick-add gives separate feeds;
+  // these blocks then pick pass-through to test its own defaults (eARC + optical, the kit, Bullet Trains)
+  const passThrough = (j, sl, zz, run) => { const r = H.readHookup(j, sl, zz).speakers.from; H.setReturn(j, sl, zz, null); H.setVideo(j, sl, zz, r, run, true); };
   // quick-add: "avr" wires a new zone end to end
   const q = parseQuickZone("theater 7.1 85 sony avr");
   t("quick-add: 'avr' asks for a receiver hookup", q.zone._hints.avr === true && q.chips.some(c => /AV receiver feeds the TV \+ speakers/.test(c.label)));
@@ -1299,9 +1302,22 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const z = q.zone; delete z._hints; j2.house.zones.push(z);
   const nDev = s2.racks.flatMap(r => r.devices).length;
   H.autoHookup(j2, s2, z, { avr: true });
-  const h2 = H.readHookup(j2, s2, z);
+  const h2 = H.readHookup(j2, s2, z), rcv2 = h2.speakers.from;
   t("quick-add: the busy MRX-540 is left alone — a new receiver is added for the theater",
-    s2.racks.flatMap(r => r.devices).length === nDev + 1 && h2.video.from === h2.speakers.from && h2.video.from !== "mrx540");
+    s2.racks.flatMap(r => r.devices).length === nDev + 1 && s2.racks.flatMap(r => r.devices).some(d => d.id === rcv2 && d.type === "avr") && rcv2 !== "mrx540");
+  // Ryan 2026-09-30: on a whole-home rack the matrix feeds the TV and the receiver SEPARATELY
+  // (one output each); the TV's own sound comes back to the receiver (optical; the kit for Atmos or a far room)
+  t("quick-add (matrix on the rack): the matrix feeds the TV and the receiver separately, and the TV's sound comes back to the receiver",
+    h2.video.from === "axion8" && s2.connections.some(c => c.from === "axion8" && c.to === rcv2 && c.signal === "video") && h2.ret?.to === rcv2 && h2.audioBack === "optical",
+    JSON.stringify([h2.video, h2.ret, h2.audioBack]));
+  { const ja = structuredClone(fixtures.residence), sa = ja.solutions[0];
+    const za = parseQuickZone("screening 7.1.4 98 avr").zone; delete za._hints; ja.house.zones.push(za); H.autoHookup(ja, sa, za, { avr: true });
+    const zf = parseQuickZone("pool house 5.1 65 avr far").zone; delete zf._hints; ja.house.zones.push(zf); H.autoHookup(ja, sa, zf, { avr: true });
+    t("quick-add (matrix on the rack): an Atmos room's TV sound comes back on the eARC kit; so does a far room's (Toslink tops out ~10 m)",
+      H.readHookup(ja, sa, za).audioBack === "earc-kit" && H.readHookup(ja, sa, zf).audioBack === "earc-kit"); }
+  // the pass-through option (the receiver feeds the TV — for extreme cases): its own defaults below
+  H.setReturn(j2, s2, z, null);
+  H.setVideo(j2, s2, z, rcv2, "balun", true);
   hl = healthy(j2);
   t("quick-add: the avr-wired theater validates and routes clean", !hl.errs.length && !hl.bad && !hl.through, JSON.stringify(hl));
   // pre-wire zones get pre-wire connections (no scope-mismatch warning)
@@ -1370,12 +1386,12 @@ for (const [name, raw] of Object.entries(fixtures)) {
   { // Atmos rooms default to the eARC kit (Ryan 2026-09-30); plain surround keeps eARC + optical backup
     const ja = structuredClone(fixtures.residence), sa = ja.solutions[0];
     const za = parseQuickZone("screening room 7.1.4 85 avr").zone; delete za._hints; ja.house.zones.push(za);
-    H.autoHookup(ja, sa, za, { avr: true });
+    H.autoHookup(ja, sa, za, { avr: true }); passThrough(ja, sa, za, "balun");
     const ha = H.readHookup(ja, sa, za);
     t("Atmos default: a new 7.1.4 room on a receiver + balun gets the eARC extender kit, not optical",
       ha.audioBack === "earc-kit" && ha.ret?.to === ha.video?.from && !ha.earc && ha.video?.run === "balun", JSON.stringify(ha.ret));
     const z5 = parseQuickZone("den 5.1 65 avr").zone; delete z5._hints; ja.house.zones.push(z5);
-    H.autoHookup(ja, sa, z5, { avr: true });
+    H.autoHookup(ja, sa, z5, { avr: true }); passThrough(ja, sa, z5, "balun");
     t("Atmos default: a 5.1 room still gets eARC + optical backup", H.readHookup(ja, sa, z5).audioBack === "earc+optical");
     H.setAudioBack(ja, sa, za, "earc+optical");
     H.setVideo(ja, sa, za, H.readHookup(ja, sa, za).video.from, "balun");
@@ -1394,18 +1410,18 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const qs = parseQuickZone("media room 7.1 75 avr bullet short run").zone;
     t("bullet: quick-add reads 'bullet' and 'short run'", qs._hints.bullet && qs.reach === "short");
     delete qs._hints; jb.house.zones.push(qs);
-    H.autoHookup(jb, sb, qs, { avr: true, bullet: true });
+    H.autoHookup(jb, sb, qs, { avr: true, bullet: true }); passThrough(jb, sb, qs, "bullet");
     const hs = H.readHookup(jb, sb, qs);
     t("bullet: a short run from the receiver — no adapter, eARC back over the cable, no extra audio run",
       hs.video.run === "bullet" && !hs.video.via && hs.earc && !hs.ret && !(sb.companions || []).some(c => c.serves === hs.tv.id));
     const qa = parseQuickZone("pool house 7.1.4 75 avr bullet far").zone;
     t("bullet: quick-add reads 'far'", qa.reach === "far");
     delete qa._hints; jb.house.zones.push(qa);
-    H.autoHookup(jb, sb, qa, { avr: true, bullet: true });
+    H.autoHookup(jb, sb, qa, { avr: true, bullet: true }); passThrough(jb, sb, qa, "bullet");
     const ha = H.readHookup(jb, sb, qa);
     t("bullet: a far Atmos room (40 m, ARC only) gets the eARC kit back", ha.video.run === "bullet" && ha.audioBack === "earc-kit");
     const q5 = parseQuickZone("den 5.1 65 avr bullet").zone; delete q5._hints; jb.house.zones.push(q5);
-    H.autoHookup(jb, sb, q5, { avr: true, bullet: true });
+    H.autoHookup(jb, sb, q5, { avr: true, bullet: true }); passThrough(jb, sb, q5, "bullet");
     const h5 = H.readHookup(jb, sb, q5);
     t("bullet: an average 5.1 room rides the cable's ARC — no optical, no kit", h5.video.run === "bullet" && h5.earc && !h5.ret);
     const Lb = loadJob(jb), ab = advise(Lb.job, Lb.ix, CAT), rb = P2.wireRuns(Lb.job, Lb.ix);
@@ -3154,7 +3170,9 @@ for (const [name, raw] of Object.entries(fixtures)) {
 }
 
 /* ---------- walkthrough 2026-09-30: Savant whole-home + an Atmos theater, a far pool house, a short den ----------
-   Built through quick-add ("theater 7.1.4 98 sony avr bullet, pool house 5.1 75 avr bullet far, …"). */
+   Built through quick-add ("theater 7.1.4 98 sony avr bullet, pool house 5.1 75 avr bullet far, …") the
+   same day, before the separate-feeds default — its receivers feed their TVs, so it now stands for the
+   pass-through option (receiver → TV). */
 {
   const W = await (await fetch("./test-fixtures/walk-savant-atmos.json")).json();
   const CAT = await (await fetch("./catalog.json")).json();

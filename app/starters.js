@@ -33,6 +33,9 @@ export const STARTERS = [
       // so never into the analog input module; outside a Savant audio system it goes optical into the amp
       { from: "avb", to: "music", signal: "network" },
       { from: "avb", to: "sav-in", signal: "network" }, { from: "avb", to: "sav-out", signal: "network" },
+      // the sources reach the audio rooms through the input module: the matrix's audio outs
+      // (AUDIO 1–2 follow HDMI inputs 1–2 by default — bind-to-input) into its inputs (Ryan 2026-09-30)
+      { from: "matrix", to: "sav-in", signal: "audio", count: 2 },
       { from: "sav-out", to: "amp", signal: "audio" }],
   },
   {

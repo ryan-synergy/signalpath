@@ -243,6 +243,10 @@ Print = new window, `@page 17in 11in landscape`, one SVG per page, `print()`. Pa
 
 51. **Checks that need a measurement stay quiet without one.** Distance defaults to Average for sizing a Bullet Train, but the length checks (copper HDMI, balun, Cat6, Toslink) only run when someone actually set the room's distance — otherwise every legacy direct run would light up on a guess.
 
+52. **Mock the look by hand, then make the router find it.** The trunk idea was settled on a hand-laid mockup over the app's own Harlow sheet (same boxes, only the wires redrawn) with measured numbers — 102 → 22 crossings, wire length −3% — so the build had a target, not a vibe. The router pass (4T) reproduces the mockup's structure rather than its coordinates: riser per family in the rack corridor, stacked buses in each row's strip, per-cluster express runs and gutter risers, on-ramps, breakouts. Everything else it needed already existed: the lane registry, `alloc`, `pathBlocked`, `pathRegisterable` and the harness idea that a shared run is ONE net (so the registry and the hop pass treat a trunk as one conductor and it is legal by construction). Anything the trunk can't carry legally is left to the classic passes — a safety net, not a failure.
+
+53. **Count what the eye counts.** The router's own crossing count is per wire pair, so a ×5 bundle crossing a ×7 bundle scores 35; trunks looked *worse* (102 → 133) by that metric while the sheet read far cleaner. Measuring visible crossing points (deduplicated by position) and ink (shared runs counted once) told the truth: 102 → 55, ink −38%. Pick the metric the reader experiences before judging a drawing change.
+
 ## 10. Order of construction (what to build when)
 
 1. Data model + `loadJob`/`indexJob` + first fixtures — get tests running the same day.

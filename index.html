@@ -41,6 +41,10 @@
   #topbar .mlist span, #topbar .mlist em { font-size: 11px; color: #9aa3b2; font-style: normal; line-height: 1.35; white-space: normal; }
   #topbar .mlist .danger b { color: #ff9d8e; }
   #topbar .mlist hr { border: 0; border-top: 1px solid #333842; margin: 4px 2px; }
+  #topbar .mlist .mgroup { display: flex; flex-direction: column; border-bottom: 1px solid #333842; padding-bottom: 4px; margin-bottom: 4px; }
+  #topbar .mlist .mlabel { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: #cfd5de; padding: 6px 10px 2px; }
+  #topbar .mlist .mlabel em { display: block; text-transform: none; letter-spacing: 0; font-weight: 400; margin-top: 2px; }
+  #topbar .mlist label:has(input:disabled) { opacity: .45; cursor: default; }
   #topbar .mbtn[aria-expanded="true"] { border-color: #58607a; background: #2a303b; }
   #rulesChip { border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 600; border: 1px solid transparent; }
   #rulesChip.ok { background: #14301c; color: #7fd695; border-color: #2f7a3a; }
@@ -399,24 +403,24 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20260930142324",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20260930142324",
-    "./app/audiochain.js": "./app/audiochain.js?v=20260930142324",
-    "./app/ports.js": "./app/ports.js?v=20260930142324",
-    "./app/commands.js": "./app/commands.js?v=20260930142324",
-    "./app/engine.js": "./app/engine.js?v=20260930142324",
-    "./app/exports.js": "./app/exports.js?v=20260930142324",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260930142324",
-    "./app/hookup.js": "./app/hookup.js?v=20260930142324",
-    "./app/importers.js": "./app/importers.js?v=20260930142324",
-    "./app/names.js": "./app/names.js?v=20260930142324",
-    "./app/network.js": "./app/network.js?v=20260930142324",
-    "./app/pages.js": "./app/pages.js?v=20260930142324",
-    "./app/power.js": "./app/power.js?v=20260930142324",
-    "./app/quickadd.js": "./app/quickadd.js?v=20260930142324",
-    "./app/rack.js": "./app/rack.js?v=20260930142324",
-    "./app/route-audit.js": "./app/route-audit.js?v=20260930142324",
-    "./app/starters.js": "./app/starters.js?v=20260930142324"
+    "./app/ai.js": "./app/ai.js?v=20260930205040",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20260930205040",
+    "./app/audiochain.js": "./app/audiochain.js?v=20260930205040",
+    "./app/ports.js": "./app/ports.js?v=20260930205040",
+    "./app/commands.js": "./app/commands.js?v=20260930205040",
+    "./app/engine.js": "./app/engine.js?v=20260930205040",
+    "./app/exports.js": "./app/exports.js?v=20260930205040",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260930205040",
+    "./app/hookup.js": "./app/hookup.js?v=20260930205040",
+    "./app/importers.js": "./app/importers.js?v=20260930205040",
+    "./app/names.js": "./app/names.js?v=20260930205040",
+    "./app/network.js": "./app/network.js?v=20260930205040",
+    "./app/pages.js": "./app/pages.js?v=20260930205040",
+    "./app/power.js": "./app/power.js?v=20260930205040",
+    "./app/quickadd.js": "./app/quickadd.js?v=20260930205040",
+    "./app/rack.js": "./app/rack.js?v=20260930205040",
+    "./app/route-audit.js": "./app/route-audit.js?v=20260930205040",
+    "./app/starters.js": "./app/starters.js?v=20260930205040"
 } }
 </script>
 <script>
@@ -471,6 +475,12 @@
   <div class="menu" id="viewMenu"><button class="mbtn" aria-haspopup="true" aria-expanded="false">View ▾</button>
     <div class="mlist" role="menu" hidden>
       <label class="chk"><input type="checkbox" id="hideNet"><span><b>Hide network</b><em>Drop the Cat6 network wires from the drawing</em></span></label>
+      <div class="mgroup" role="group" aria-label="Trunks">
+        <div class="mlabel">Trunks <em>Saved with the job: one trunk per signal type, breaking out room by room</em></div>
+        <label class="chk"><input type="radio" name="trunkStyle" value=""><span><b>Off</b><em>Each wire takes its own path</em></span></label>
+        <label class="chk"><input type="radio" name="trunkStyle" value="bundle"><span><b>Bundle</b><em>One heavy run with ×N, thin breakouts, wire numbers</em></span></label>
+        <label class="chk"><input type="radio" name="trunkStyle" value="ribbon"><span><b>Ribbon</b><em>Same trunks, every wire its own line side by side</em></span></label>
+      </div>
       <label class="chk"><input type="checkbox" id="harnessMode"><span><b>Harness style</b><em>Saved with the job: runs to 3+ zones share one trunk and break out near each zone, like an electrical drawing</em></span></label>
       <label class="chk"><input type="checkbox" id="bwMode"><span><b>Black &amp; white</b><em>Dash patterns carry each signal, for office laser printers</em></span></label>
     </div></div>
@@ -564,7 +574,7 @@ import { RACK_SIZES, DEFAULT_RACK_U } from "./app/rack.js";
 import { specFor, specNum, tidyPort, NET_ROLE_NAME } from "./app/network.js";
 import { assignPorts, jacksOf, plugCandidates, familyName } from "./app/ports.js";
 import { startAsBuilt, asBuiltChanges, changeMarks, isAsBuilt, installRows, installCSV, tidyMac } from "./app/asbuilt.js";
-import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV, labelsCSV, rackFrontSVG, rackData } from "./app/pages.js";
+import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV, labelsCSV, rackFrontSVG, rackData, wireLabels } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
 import { STARTERS, applyStarter } from "./app/starters.js";
 import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/commands.js";
@@ -602,7 +612,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20260930142324").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20260930205040").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -697,6 +707,8 @@ function refresh(save = true) {
   S.sol = S.job.solutions.indexOf(sol);
   let v, a, svg = "", err, routeWarn = [], placeWarn = [];
   $("#harnessMode").checked = !!S.job.job.harnessStyle;     // a per-job drawing choice: follows job switches
+  for (const r of document.querySelectorAll('input[name="trunkStyle"]')) r.checked = r.value === (S.job.job.trunkStyle || "");
+  $("#harnessMode").disabled = !!S.job.job.trunkStyle;       // trunks replace the harness
   try {
     autoLinkCatalog(S.job, effectiveCatalog());                // self-heal: fill missing catalog links by model
     const { job, ix } = loadJob(effectiveJob(S.job, S.sol));   // active solution's overrides applied
@@ -706,6 +718,7 @@ function refresh(save = true) {
     // "1 of N" counts the continuation sheets a long schedule/map paginates into
     const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, company: SETTINGS.company,
                    sheet: `1 of ${sheetTotal(job, ix, a, { solution: S.sol, rawJob: S.job })}` };
+    if (job.job.trunkStyle) opts.wireLabels = wireLabels(job, ix, { solution: S.sol, portMap: S.portMap });
     if (S.job.house.zones.length) {
       const p = place(job, ix, opts);
       const rt = route(job, ix, p, opts);
@@ -876,6 +889,10 @@ $("#jobName").onchange = e => { S.job.job.name = e.target.value; refresh(); };
 $("#stageSel").onchange = e => { S.job.job.stage = e.target.value; refresh(); };
 $("#hideNet").onchange = () => refresh(false);
 $("#bwMode").onchange = () => refresh(false);
+for (const r of document.querySelectorAll('input[name="trunkStyle"]')) r.onchange = () => {
+  if (r.value) S.job.job.trunkStyle = r.value; else delete S.job.job.trunkStyle;
+  refresh();
+};
 $("#harnessMode").onchange = e => { if (e.target.checked) S.job.job.harnessStyle = true; else delete S.job.job.harnessStyle; refresh(); };
 $("#solSel").onchange = e => {
   if (e.target.value === "__add") {
@@ -1143,6 +1160,7 @@ function printPacket(packet = "service") {
     const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, company: SETTINGS.company,
                    rawJob: S.job, packet };
     opts.sheet = `1 of ${sheetTotal(job, ix, a, opts)}`;
+    if (job.job.trunkStyle) opts.wireLabels = wireLabels(job, ix, { solution: S.sol });
     const p = place(job, ix, opts);
     const rt = route(job, ix, p, opts);
     if (packet !== "client" && isAsBuilt(S.job)) opts.marks = changeMarks(asBuiltChanges(S.job), p, rt, { grayscale: opts.grayscale });

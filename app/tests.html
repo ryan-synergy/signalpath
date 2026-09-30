@@ -3009,6 +3009,79 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t(`page width — 60 random jobs print ≥ 6% bigger on average (${((gain / n - 1) * 100).toFixed(1)}%) and never smaller`, gain / n >= 1.06 && never);
 }
 
+/* ---------- trunks: one trunk per signal type (Ryan 2026-09-30) ----------
+   job.job.trunkStyle = "bundle" | "ribbon" (off by default). Room-bound feeds of
+   a family share one net: riser in the rack corridor, a bus under each row,
+   breakouts room by room; inputs land on the input (left) edge. */
+{
+  const F = await import("./fuzz-jobs.js"), PG = await import("./pages.js");
+  const legal = (p, rt) => {   // no body crossed, no two nets on one lane
+    const PAD = 2, bad = [];
+    const inside = (x1, y1, x2, y2, o) => Math.min(x1, x2) < o.x + o.w - PAD && Math.max(x1, x2) > o.x + PAD && Math.min(y1, y2) < o.y + o.h - PAD && Math.max(y1, y2) > o.y + PAD;
+    const bodies = [...p.racks.flatMap(r => r.devices), ...p.chips, ...p.zones], runs = [];
+    for (const w of rt.wires) if (!w.insideCard && w.cls !== "local" && !/fallback/.test(w.cls)) w.pts.forEach((q, i) => { if (!i) return;
+      const [a, b] = [w.pts[i - 1], q];
+      const hit = bodies.find(o => inside(a[0], a[1], b[0], b[1], o)); if (hit) bad.push(`${w.id} crosses ${hit.id}`);
+      const h = a[1] === b[1]; runs.push({ w, h, c: h ? a[1] : a[0], lo: Math.min(h ? a[0] : a[1], h ? b[0] : b[1]), hi: Math.max(h ? a[0] : a[1], h ? b[0] : b[1]) }); });
+    for (let i = 0; i < runs.length; i++) for (let j = i + 1; j < runs.length; j++) { const a = runs[i], b = runs[j];
+      if (a.w.net !== b.w.net && a.h === b.h && Math.abs(a.c - b.c) < 0.5 && Math.min(a.hi, b.hi) - Math.max(a.lo, b.lo) > 2) bad.push(`${a.w.id} on ${b.w.id}`); }
+    return bad;
+  };
+  const visCross = rt => { const segs = []; for (const w of rt.wires) w.pts.forEach((q, i) => i && segs.push({ net: w.net, a: w.pts[i - 1], b: q }));
+    const pts = new Set(); for (const h of segs) if (h.a[1] === h.b[1]) for (const v of segs) if (v.a[0] === v.b[0] && v.net !== h.net) {
+      const x = v.a[0], y = h.a[1]; if (x > Math.min(h.a[0], h.b[0]) + 1 && x < Math.max(h.a[0], h.b[0]) - 1 && y > Math.min(v.a[1], v.b[1]) + 1 && y < Math.max(v.a[1], v.b[1]) - 1) pts.add(`${x},${y}`); }
+    return pts.size; };
+  const draw = (raw, trunks) => { const { job, ix } = loadJob(structuredClone(raw)); const p = place(job, ix, { trunks }); return { job, ix, p, rt: route(job, ix, p, { trunks }) }; };
+
+  { const { rt } = draw(fixtures.residence);
+    t("trunks: off by default — no job draws trunks unless it asks", !rt.wires.some(w => w.cls === "trunk")); }
+  for (const name of ["residence", "stress"]) {
+    const off = draw(fixtures[name], false), on = draw(fixtures[name], "bundle"), rb = draw(fixtures[name], "ribbon");
+    const trunk = on.rt.wires.filter(w => w.cls === "trunk");
+    t(`trunks — ${name}: room feeds ride trunks, legally (bundle and ribbon)`, trunk.length >= (name === "stress" ? 30 : 8) && !legal(on.p, on.rt).length && !legal(rb.p, rb.rt).length,
+      JSON.stringify([trunk.length, legal(on.p, on.rt).slice(0, 2), legal(rb.p, rb.rt).slice(0, 2)]));
+    // a family is one conductor: every trunk wire of one signal type shares a net
+    const nets = {}; for (const w of trunk) (nets[`${w.trunk}`] ||= new Set()).add(w.net);
+    t(`trunks — ${name}: one net per trunk`, Object.values(nets).every(s => s.size === 1));
+    // inputs on the input side: a trunk wire into a rack box ends on its LEFT edge; one leaving a box starts on its RIGHT edge
+    const dev = {}; for (const r of on.p.racks) for (const d of r.devices) dev[d.id] = d;
+    t(`trunks — ${name}: into a box on its left edge, out of a box on its right edge`,
+      trunk.every(w => (!dev[w.to] || Math.abs(w.pts.at(-1)[0] - dev[w.to].x) < 0.5) && (!dev[w.from] || Math.abs(w.pts[0][0] - (dev[w.from].x + dev[w.from].w)) < 0.5)));
+    if (name === "stress") t(`trunks — stress: fewer visible crossings than today's routing (${visCross(off.rt)} → ${visCross(on.rt)})`, visCross(on.rt) <= visCross(off.rt) * 0.75);
+    const svgB = render(on.job, on.ix, on.p, on.rt, { trunks: "bundle", wireLabels: PG.wireLabels(on.job, on.ix) });
+    const svgR = render(rb.job, rb.ix, rb.p, rb.rt, { trunks: "ribbon", wireLabels: PG.wireLabels(rb.job, rb.ix) });
+    t(`trunks — ${name}: bundle draws ×N and schedule numbers; ribbon draws lanes; no NaN`,
+      /class="bustick"[^>]*>×\d/.test(svgB) && /class="wirenum"[^>]*>[VSRN]-\d\d/.test(svgB) && (svgR.match(/stroke-width="1.4"/g) || []).length > 6 &&
+      !/NaN|undefined/.test(svgB + svgR) && !new DOMParser().parseFromString(svgB, "image/svg+xml").querySelector("parsererror"));
+  }
+  { // the schedule numbers the sheet prints are the Wire Schedule's own
+    const { job, ix } = loadJob(structuredClone(fixtures.residence));
+    const L = PG.wireLabels(job, ix), runs = PG.wireRuns(job, ix);
+    t("trunks: wire labels come from the Wire Schedule (one id per connection)", Object.keys(L).length >= 8 && Object.entries(L).every(([wid, id]) => runs.some(r => r.wid === wid && r.id === id)));
+  }
+  { // rooms placed by their feed: within a band, rooms on one amp sit together in its zone order
+    const j = structuredClone(fixtures.residence), sol = j.solutions[0];
+    const spkZones = j.house.zones.filter(z => !z.endpoints.some(e => e.type === "display") && z.endpoints.some(e => e.type === "speakers"));
+    const feeds = spkZones.map(z => sol.connections.find(c => c.to === z.endpoints.find(e => e.type === "speakers").id && c.signal === "speaker")).filter(Boolean);
+    j.house.zones = [...j.house.zones].reverse();   // added in the "wrong" order
+    const { job, ix } = loadJob(j); const p = place(job, ix, { trunks: "bundle" });
+    const order = p.zones.filter(z => spkZones.some(s => s.id === z.id) && z.band === "audio").map(z => z.id);
+    const ch = id => { const c = feeds.find(c => c.to.startsWith(id)); return c ? [sol.racks[0].devices.findIndex(d => d.id === c.from), +(String(c.channels || "0").match(/\d+/) || [0])[0]] : [1e6, 0]; };
+    const keys = order.map(ch);
+    t("trunks: speaker rooms placed in their amp's zone order, whatever order they were added", order.length >= 2 && keys.every((k, i) => !i || k[0] > keys[i - 1][0] || (k[0] === keys[i - 1][0] && k[1] >= keys[i - 1][1])), JSON.stringify(order));
+  }
+  { // 60 random jobs: legal, fewer visible crossings overall, wire length about the same
+    const g = F.jobGenerator(1, { extras: true }); let x0 = 0, x1 = 0, L0 = 0, L1 = 0, illegal = [];
+    const len = rt => rt.wires.reduce((n, w) => n + w.pts.slice(1).reduce((m, q, i) => m + Math.abs(q[0] - w.pts[i][0]) + Math.abs(q[1] - w.pts[i][1]), 0), 0);
+    for (let k = 0; k < 60; k++) { let raw; try { raw = g(k); loadJob(structuredClone(raw)); } catch { continue; }
+      if (!raw.house.zones.length) continue;
+      const a = draw(raw, false), b = draw(raw, "bundle"); x0 += visCross(a.rt); x1 += visCross(b.rt); L0 += len(a.rt); L1 += len(b.rt);
+      illegal.push(...legal(b.p, b.rt).map(x => `#${k} ${x}`)); }
+    t(`trunks — 60 random jobs: legal, ≤ 60% of today's visible crossings (${x0} → ${x1}), wire length within 3% (${(L1 / L0 * 100 - 100).toFixed(1)}%)`,
+      !illegal.length && x1 <= x0 * 0.6 && L1 <= L0 * 1.03, illegal.slice(0, 3).join(" | "));
+  }
+}
+
 /* ---------- input order (user redline 2026-09-28) ----------
    Feeds into a device's left edge land in the order their sources stack —
    ATV 1, ATV 2, cable box into the MXNet switch — so they nest without a hop. */

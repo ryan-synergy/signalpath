@@ -575,6 +575,41 @@ export function place(job, ix = indexJob(job), opts = {}) {
   return best;
 }
 
+/* ---------- trunk mode (one trunk per signal type) ----------
+   job.job.trunkStyle = "bundle" | "ribbon" turns it on; opts.trunks overrides
+   (false forces the classic drawing). Off by default: nothing moves until chosen. */
+export const trunkMode = (job, opts = {}) => {
+  const t = opts.trunks !== undefined ? opts.trunks : job.job?.trunkStyle;
+  return t === "bundle" || t === "ribbon" ? t : null;
+};
+// the box that feeds a room: its speakers' amp / receiver first (the speaker
+// trunk is the one that fans out room by room), then the TV's video source —
+// each as [rack order, output order]
+function feedKeyFn(sol, s) {
+  const order = {};
+  (sol.racks || []).flatMap(r => r.devices || []).forEach((d, i) => { order[d.id] = i; });
+  const conns = sol.connections || [];
+  const firstCh = c => { const m = String(c?.channels || "").match(/\d+/); return m ? +m[0] : 0; };
+  const outIdx = (from, to) => conns.filter(c => c.from === from).findIndex(c => c === to);
+  return z => {
+    const eps = z.endpoints || [];
+    const spk = eps.find(e => e.type === "speakers"), tv = eps.find(e => e.type === "display");
+    const sc = spk && conns.find(c => c.to === spk.id && c.signal === "speaker" && order[c.from] != null);
+    let vc = tv && conns.find(c => c.to === tv.id && c.signal === "video");
+    if (vc && s.companions[vc.from]) vc = conns.find(c => c.to === vc.from && c.signal === "video") || vc;
+    if (vc && order[vc.from] == null) vc = null;
+    return [sc ? order[sc.from] : 1e6, sc ? firstCh(sc) || outIdx(sc.from, sc) : 0,
+            vc ? order[vc.from] : 1e6, vc ? outIdx(vc.from, vc) : 0];
+  };
+}
+const cmpKey = (a, b) => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] - b[i]; return 0; };
+// reorder within each rank group only — the band rules (surround first …) stay intact
+function stableGroups(list, rank, reorder) {
+  const groups = new Map();
+  for (const z of list) (groups.get(rank(z)) || groups.set(rank(z), []).get(rank(z))).push(z);
+  return [...groups.keys()].sort((a, b) => a - b).flatMap(k => reorder(groups.get(k)));
+}
+
 function placeOnce(job, ix, opts, variant) {
   const s = ix.solutions[opts.solution ?? 0];
   const wrapRight = SHEET.content.x + SHEET.content.w * (variant.wrap || 1) - PL.marginX;   // where rows wrap (layout units)
@@ -622,6 +657,17 @@ function placeOnce(job, ix, opts, variant) {
     const spkRank = z => /^surround/.test((z.endpoints || []).find(e => e.type === "speakers")?.config || "") ? 0 : 1;
     const stable = (list, rank) => list.map((z, i) => [z, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]);
     for (const c of clusters) { c.video = stable(c.video, tvRank); c.audio = stable(c.audio, spkRank); }
+    // trunk mode: within each band, rooms fed by the same box sit together, in that
+    // box's output order (amp zones 1-2, 3-4…), boxes in rack order — so a trunk
+    // peels off room by room instead of doubling back (Ryan 2026-09-30)
+    if (trunkMode(job, opts)) {
+      const key = feedKeyFn(sol, s);
+      const byFeed = list => list.map((z, i) => [z, i, key(z)]).sort((a, b) => cmpKey(a[2], b[2]) || a[1] - b[1]).map(x => x[0]);
+      for (const c of clusters) {
+        c.video = stableGroups(c.video, tvRank, byFeed);
+        c.audio = stableGroups(c.audio, spkRank, byFeed);
+      }
+    }
   }
   // primary cluster first, others in area order
   clusters.sort((a, b) => {
@@ -1289,6 +1335,13 @@ export function route(job, ix, placement, opts = {}) {
     return { tx, landY: null, cardTop: pz.y, cardBot: pz.y + pz.h, pz };
   };
 
+  const __chk = stage => { if (!globalThis.__LANECHK) return; const runs = [];
+    for (const w of out.wires) if (w.pts && !w.insideCard && w.cls !== "local" && !/fallback/.test(w.cls))
+      for (let i = 0; i + 1 < w.pts.length; i++) { const [[x1, y1], [x2, y2]] = [w.pts[i], w.pts[i + 1]]; const h = y1 === y2;
+        runs.push({ w, h, c: h ? y1 : x1, lo: Math.min(h ? x1 : y1, h ? x2 : y2), hi: Math.max(h ? x1 : y1, h ? x2 : y2) }); }
+    for (let i = 0; i < runs.length; i++) for (let j = i + 1; j < runs.length; j++) { const a = runs[i], b = runs[j];
+      if (a.w.net === b.w.net || a.h !== b.h || Math.abs(a.c - b.c) > 0.5) continue;
+      if (Math.min(a.hi, b.hi) - Math.max(a.lo, b.lo) > 2) { globalThis.__LANECHK.push(stage + ": " + a.w.id + " / " + b.w.id); return; } } };
   /* ============ pass 1: fixed-geometry stubs (no allocation) ============ */
   const done = new Set();
   visConns.forEach((conn, i) => {
@@ -1471,6 +1524,264 @@ export function route(job, ix, placement, opts = {}) {
     out.warnings.push({ code: "unrouted", msg: `no route class for ${wireId(conn)}` });
   });
 
+  /* ============ pass 4T: TRUNKS (trunk mode only) ============
+     One trunk per signal type (Ryan 2026-09-30). Every room-bound feed of a
+     family — video, speakers, Dante, audio returns — rides ONE shared net:
+       rack end:  its own jack → an on-ramp → the family's riser in the rack
+                  corridor (right of the sources for feeds out, left of the
+                  targets for feeds in: every input lands on its input edge)
+       spine:     the riser up to a bus in the strip under each row of rooms,
+                  buses stacked busiest-nearest-the-rooms; upper rows reached
+                  through a gap between the cards below (or the west gutter)
+       room end:  straight up/down off the bus into its room, or — for rooms
+                  beside/below the rack — the cheapest legal breakout off the
+                  riser or bus (a room next to its amp fans out right there)
+     Shared runs are one conductor (one net), so the registry and the hop pass
+     treat a trunk as a single line — legal by construction, like the harness.
+     A feed the trunk can't carry legally is left to passes 4a–4c. */
+  const TRUNK = trunkMode(job, opts);
+  if (TRUNK && P.racks.length === 1) {
+    const rack = P.racks[0];
+    const colRight = col => { const t = allDevs.filter(d => d.col === col); return t.length ? Math.max(...t.map(d => d.x + d.w)) : null; };
+    const eastRange = [(colRight("C") ?? colRight("B") ?? rackRight) + 8, rackRight + (corRight?.w || 90) - 6];
+    const gapRightOf = col => col === "A" ? gapABx : col === "B" ? (colX("C") != null ? gapBCx : eastRange) : eastRange;
+    const gapLeftOf = col => col === "C" ? gapBCx : col === "B" ? gapABx : [westMarginX[0], PL.colA - 6];
+    const famOf = c => c.dante ? "dante" : c.signal;
+    const segLen = pts => pts.slice(1).reduce((n, q, i) => n + Math.abs(q[0] - pts[i][0]) + Math.abs(q[1] - pts[i][1]), 0);
+    const cleanPts = pts => pts.filter((q, k) => k === 0 || q[0] !== pts[k - 1][0] || q[1] !== pts[k - 1][1]);
+
+    /* -- the members: room-bound feeds out (from the plans) and room→rack feeds in -- */
+    const members = [];
+    for (const plan of plans) for (const o of [...plan.west, ...plan.east]) {
+      if (done.has(o.i)) continue;
+      members.push({ dir: "out", c: o.c, i: o.i, dev: plan.dev, port: o.portY, t: o.t, fam: famOf(o.c) });
+    }
+    visConns.forEach((c, i) => {
+      if (done.has(i) || !devById[c.to]) return;
+      const zc = s.companions[c.from];
+      const origin = ix.endpointsById[c.from] ? c.from : zc && ix.endpointsById[zc.serves] ? zc.serves : null;
+      if (!origin) return;
+      const { pz, cx } = slotOf(origin);
+      const chip = zc ? chipById[c.from] : null;
+      const compChip = !zc ? (sol.companions || []).find(k => k.serves === origin && chipById[k.id]) : null;
+      // leave the room beside the video landing: off its own chip, or just right of the TV's feed
+      const sx = chip ? chip.x + chip.w / 2 + 14 : cx + (compChip ? chipById[compChip.id].w / 2 + 8 : RT.lane);
+      const sy = chip ? chip.y + chip.h : pz.y + pz.h;
+      members.push({ dir: "in", c, i, dev: devById[c.to], t: { tx: sx, landY: chip ? sy : null, cardTop: pz.y, cardBot: pz.y + pz.h, pz, chipId: chip?.id }, fam: famOf(c) });
+    });
+
+    /* -- rows of the top band, bottom row first; each row's strip under its cards -- */
+    const topZones = P.zones.filter(z => z.band === "top");
+    const rowYs = [...new Set(topZones.map(z => z.y))].sort((a, b) => b - a);
+    const rows = rowYs.map(y => {
+      const zs = topZones.filter(z => z.y === y);
+      const chipsHere = P.chips.filter(ch => zs.some(z => ch.x < z.x + z.w && ch.x + ch.w > z.x && ch.y >= z.y + z.h - 1 && ch.y < z.y + z.h + 60));
+      const bot = Math.max(...zs.map(z => z.y + z.h), ...chipsHere.map(ch => ch.y + ch.h));
+      return { y, zs, bot, x0: Math.min(...zs.map(z => z.x)), x1: Math.max(...zs.map(z => z.x + z.w)) };
+    });
+    const rowOf = pz => rows.find(r => r.zs.includes(pz));
+    // secondary areas (other floors, outdoor) sit to the right as their own clusters:
+    // each cluster row gets a bus too, reached up a gutter just west of the cluster
+    const clusterOf = pz => (P.clusters || []).findIndex((cl, k) => k > 0 && pz.x >= cl.x0 - 1 && pz.x <= cl.x1 + 1);
+    const crows = [];
+    for (const z of P.zones.filter(z => z.band === "cluster")) {
+      const k = clusterOf(z); if (k < 1) continue;
+      let r = crows.find(r => r.k === k && r.y === z.y);
+      if (!r) crows.push(r = { k, y: z.y, zs: [] });
+      r.zs.push(z);
+    }
+    for (const r of crows) {
+      const chipsHere = P.chips.filter(ch => r.zs.some(z => ch.x < z.x + z.w && ch.x + ch.w > z.x && ch.y >= z.y + z.h - 1 && ch.y < z.y + z.h + 60));
+      r.bot = Math.max(...r.zs.map(z => z.y + z.h), ...chipsHere.map(ch => ch.y + ch.h));
+      r.x0 = Math.min(...r.zs.map(z => z.x)); r.x1 = Math.max(...r.zs.map(z => z.x + z.w));
+      const prev = P.clusters[r.k - 1];
+      r.gutter = [prev.x1 + 8, P.clusters[r.k].x0 - 8];
+    }
+    const crowOf = pz => crows.find(r => r.zs.includes(pz));
+    // how far down a row's strip reaches over [x0, x1]: the first body below it
+    const stripFloor = (row, x0, x1) => {
+      const below = obstacles.filter(o => o.y > row.bot + 2 && o.x < x1 && o.x + o.w > x0).map(o => o.y);
+      return below.length ? Math.min(...below) : row.bot + 220;
+    };
+
+    /* -- families: outbound feeds climb a riser right of their sources; inbound
+          feeds descend one left of their targets. Busiest family nearest the rooms. -- */
+    const fams = {};
+    for (const m of members) (fams[`${m.dir}:${m.fam}`] ||= { key: `${m.dir}:${m.fam}`, dir: m.dir, members: [] }).members.push(m);
+    const famList = Object.values(fams).sort((a, b) => b.members.length - a.members.length || (a.dir === "out" ? -1 : 1));
+    const colRank = { A: 0, B: 1, C: 2 };
+
+    for (const F of famList) {
+      F.net = nWire++;                                   // one conductor for the whole family
+      const net = F.net;
+      // riser column: right of the rightmost source column (out) / left of the leftmost target column (in)
+      const cols = F.members.map(m => m.dev.col || "B");
+      const col = F.dir === "out" ? cols.reduce((a, b) => colRank[b] > colRank[a] ? b : a) : cols.reduce((a, b) => colRank[b] < colRank[a] ? b : a);
+      const rRange = F.dir === "out" ? gapRightOf(col) : gapLeftOf(col);
+      const why = (m, r) => { if (opts.debug) (out.trunkSkips ||= []).push(`${F.key} ${m ? wireId(m.c) : "*"}: ${r}`); };
+      // ribbon: a trunk is as wide as its wires side by side — keep other nets off that width
+      const half = TRUNK === "ribbon" ? Math.min(RIBBON_MAX - 1, F.members.length - 1) * RIBBON_PITCH / 2 : 0;
+      const widen = (used, c, a1, a2) => { if (half < 4) return; for (const d of [-half, half]) used.push({ c: c + d, a1: Math.min(a1, a2), a2: Math.max(a1, a2), net }); };
+      if (!(rRange[1] > rRange[0])) { why(null, "no riser channel"); continue; }
+      // buses: one per top-band row this family reaches
+      const inRow = new Map(), inCrow = new Map();
+      for (const m of F.members) {
+        const r = m.t.pz.band === "top" ? rowOf(m.t.pz) : null; if (r) (inRow.get(r) || inRow.set(r, []).get(r)).push(m);
+        const cr = m.t.pz.band === "cluster" ? crowOf(m.t.pz) : null; if (cr) (inCrow.get(cr) || inCrow.set(cr, []).get(cr)).push(m);
+      }
+
+      F.bus = new Map();
+      const lowRow = rows[0];
+      const busRows = rows.filter((r, k) => inRow.has(r) || rows.slice(k + 1).some(r2 => inRow.has(r2)) || (k === 0 && inRow.size));
+      // an upper row is reached from the one below through a clear vertical: a gap
+      // between the lower row's cards nearest the riser, else the west gutter
+      for (const r of busRows) {
+        const xs = [...(inRow.get(r) || []).map(m => m.t.tx), rRange[0], rRange[1]];
+        let x0 = Math.min(...xs) - 4, x1 = Math.max(...xs) + 4;
+        if (r !== lowRow) x0 = Math.min(x0, westMarginX[0]);
+        const floor = stripFloor(r, x0, x1);
+        const range = [r.bot + 10, floor - 10];
+        const y = range[1] >= range[0] ? alloc(usedH, range[0], x0, x1, net, +1, yy => !!segBlocked(x0, yy, x1, yy, null), range) : null;
+        if (y == null) { why(null, `no bus lane under row y=${r.y} (strip ${range[0]}–${range[1]})`); break; }
+        F.bus.set(r, y); widen(usedH, y, x0, x1);
+      }
+      if (inRow.size && !F.bus.has(lowRow)) { why(null, "no bus under the bottom row"); continue; }   // no strip for this family: the classic passes take it
+      const busY = F.bus.get(lowRow);
+      // riser: spans from the bus (or the rack top) down to the lowest rack jack of the family
+      const jackYs = F.members.map(m => m.dir === "out" ? m.port : (leftPorts[m.dev.id] ? peekPort(leftPorts, m.dev, m.dev.y + m.dev.h / 2) : m.dev.y + m.dev.h / 2));
+      const rTop = busY ?? rackTop + 6, rBot = Math.max(...jackYs) + RT.lane * 3;
+      const rx = alloc(usedV, (rRange[0] + rRange[1]) / 2, rTop, rBot, net, 0, xx => !!segBlocked(xx, rTop, xx, Math.max(...jackYs), null), rRange);
+      if (rx == null) { why(null, `no riser x in ${rRange}`); continue; }
+      widen(usedV, rx, rTop, rBot);
+      // connectors to the upper rows
+      const up = new Map();
+      for (let k = 1; k < rows.length; k++) {
+        const r = rows[k]; if (!F.bus.has(r)) continue;
+        const yLo = F.bus.get(rows[0]), yHi = F.bus.get(r);
+        const gaps = [];
+        for (const rr of rows.slice(0, k)) {
+          const zs = [...rr.zs].sort((a, b) => a.x - b.x);
+          for (let j = 1; j < zs.length; j++) gaps.push(Math.round((zs[j - 1].x + zs[j - 1].w + zs[j].x) / 2));
+        }
+        gaps.sort((a, b) => Math.abs(a - rx) - Math.abs(b - rx));
+        let cx = null;
+        for (const g of [...gaps, (westMarginX[0] + westMarginX[1]) / 2]) {
+          const gx = alloc(usedV, g, yHi, yLo, net, 0, xx => !!segBlocked(xx, yHi, xx, yLo, null), [g - 18, g + 18]);
+          if (gx != null) { cx = gx; break; }
+        }
+        if (cx != null) up.set(r, cx);
+      }
+
+      // cluster rows: a bus under each, and one gutter riser per cluster from the express run
+      const cgut = new Map();
+      for (const [r, ms] of inCrow) {
+        const x0 = r.gutter[0], x1 = Math.max(...ms.map(m => m.t.tx)) + 4;
+        const floor = (() => { const below = obstacles.filter(o => o.y > r.bot + 2 && o.x < x1 && o.x + o.w > x0).map(o => o.y); return below.length ? Math.min(...below) : r.bot + 220; })();
+        const range = [r.bot + 10, floor - 10];
+        const y = range[1] >= range[0] ? alloc(usedH, range[0], x0, x1, net, +1, yy => !!segBlocked(x0, yy, x1, yy, null), range) : null;
+        if (y == null) { why(null, `no bus lane under cluster row y=${r.y}`); continue; }
+        F.bus.set(r, y); widen(usedH, y, x0, x1);
+      }
+      // each cluster: an express level with a clear run from the riser to its gutter
+      // (over the rack first, then under it), and a gutter riser to its row buses
+      for (const k of new Set([...inCrow.keys()].map(r => r.k))) {
+        const rowYs = [...inCrow.keys()].filter(r => r.k === k && F.bus.has(r)).map(r => F.bus.get(r));
+        if (!rowYs.length) continue;
+        const g = [...inCrow.keys()].find(r => r.k === k).gutter, gmid = (g[0] + g[1]) / 2;
+        const levels = [];
+        const hiY = busY ?? (lowRow ? lowRow.bot + 10 : rackTop - 60);
+        for (let y = rackTop - 10; y >= hiY; y -= RT.lane) levels.push(y);
+        for (let y = rackBottom + 14; y <= rackBottom + 320; y += RT.lane) levels.push(y);
+        let got = null;
+        for (const ey of levels) {
+          if (segBlocked(rx, ey, g[1], ey, null) || conflicts(usedH, ey, rx, gmid, net)) continue;
+          const lo = Math.min(ey, ...rowYs), hi = Math.max(ey, ...rowYs);
+          const gx = alloc(usedV, gmid, lo, hi, net, 0, xx => !!segBlocked(xx, lo, xx, hi, null), g);
+          if (gx != null) { got = { ey, gx }; break; }
+        }
+        if (!got) { why(null, `no express run to cluster ${k}`); continue; }
+        cgut.set(k, got);
+      }
+
+      /* -- each member: rack end + spine + room end, the cheapest legal one -- */
+      for (const m of F.members) {
+        const dev = m.dev, t = m.t;
+        // rack end, written rack→spine: [points…, join on the riser]
+        let rackEnd = null;
+        if (m.dir === "out") {
+          const sx = dev.x + dev.w, py = m.port;
+          const direct = [[sx, py], [rx, py]];
+          if (!pathBlocked(direct, null) && pathRegisterable(direct, net)) rackEnd = direct;
+          else {
+            // around a column in the way: step into the gap beside the source, to a free level, then across
+            const g = gapRightOf(dev.col || "B");
+            for (let k = 1; k <= 12 && !rackEnd; k++) for (const sgn of [1, -1]) {
+              const ly = py + sgn * k * RT.lane;
+              if (ly < rackTop + 8 || ly > rackBottom + 60) continue;
+              const gx = alloc(usedV, (g[0] + g[1]) / 2, Math.min(py, ly), Math.max(py, ly), net, 0, xx => !!segBlocked(xx, Math.min(py, ly), xx, Math.max(py, ly), null), g);
+              if (gx == null) continue;
+              const p = [[sx, py], [gx, py], [gx, ly], [rx, ly]];
+              if (!pathBlocked(p, null) && pathRegisterable(p, net)) { rackEnd = p; break; }
+            }
+          }
+        } else {
+          const ty = peekPort(leftPorts, dev, dev.y + dev.h / 2);
+          const p = [[rx, ty], [dev.x, ty]];
+          if (!pathBlocked(p, null) && pathRegisterable(p, net)) rackEnd = [[dev.x, ty], [rx, ty]];   // written rack→spine
+          m.ty = ty;
+        }
+        if (!rackEnd) { why(m, "no on-ramp"); continue; }
+        const join = rackEnd[rackEnd.length - 1];
+        // room end candidates, each written spine→room, starting on the spine
+        const land = t.landY ?? (t.cardBot);
+        const cands = [];
+        const row = t.pz.band === "top" ? rowOf(t.pz) : null;
+        const crow = t.pz.band === "cluster" ? crowOf(t.pz) : null;
+        if (crow) {
+          const e = cgut.get(crow.k);
+          if (F.bus.has(crow) && e) cands.push([[rx, e.ey], [e.gx, e.ey], [e.gx, F.bus.get(crow)], [t.tx, F.bus.get(crow)], [t.tx, land]]);
+        } else if (row && F.bus.has(row)) {
+          const by = F.bus.get(row);
+          const viaRow = row === lowRow ? [[rx, busY]] : up.has(row) ? [[rx, busY], [up.get(row), busY], [up.get(row), by]] : null;
+          if (viaRow) cands.push([...viaRow, [t.tx, by], [t.tx, land]]);
+        } else {
+          // beside/below the rack: break out of the riser or the lowest bus
+          const picks = [];
+          for (let y = Math.min(join[1], rTop); y <= Math.max(join[1], rBot); y += RT.lane) picks.push([[rx, y]]);
+          if (busY != null) for (let x = Math.min(rx, t.tx - 240); x <= Math.max(rx, t.tx + 240); x += 24) picks.push([[rx, busY], [x, busY]]);
+          const above = t.landY == null && join[1] < t.cardTop;
+          const L = t.landY ?? (above ? t.cardTop : t.cardBot);
+          for (const pre of picks) {
+            const B = pre[pre.length - 1];
+            if (t.landY != null ? B[1] >= L + 8 : above ? B[1] <= L - 8 : B[1] >= L + 8) cands.push([...pre, [t.tx, B[1]], [t.tx, L]]);
+            for (let k = 1; k <= 4; k++) {
+              const y2 = (t.landY != null || !above) ? L + 2 + k * RT.lane : L - 2 - k * RT.lane;
+              cands.push([...pre, [B[0], y2], [t.tx, y2], [t.tx, L]]);
+            }
+          }
+        }
+        let best = null, bestCost = Infinity;
+        const skipLand = new Set([t.chipId, t.chipId ? null : t.pz.id].filter(Boolean));
+        for (const roomEnd of cands) {
+          const fwd = cleanPts([...rackEnd.slice(0, -1), join, ...roomEnd]);
+          const len = segLen(fwd);
+          if (len >= bestCost) continue;
+          // the landing body is exempt only for the final leg
+          if (pathBlocked(fwd.slice(0, -1), null) || pathBlocked(fwd.slice(-2), skipLand) || !pathRegisterable(fwd, net)) continue;
+          const cost = countCrossings(fwd) * 100 + len;
+          if (cost < bestCost) { bestCost = cost; best = fwd; }
+        }
+        if (!best) { why(m, `no legal room end (${cands.length} tried, row ${row ? (F.bus.has(row) ? "bus ok" : "no bus") : "none"}, up ${row && up.has(row)})`); continue; }
+        const pts = m.dir === "out" ? best : [...best].reverse();
+        if (m.dir === "in") (leftPorts[dev.id] ||= []).push(m.ty);
+        commit(m.c, "trunk", pts, { net, group: "trunk-" + F.key, trunk: F.key });
+        done.add(m.i);
+      }
+    }
+    // the classic passes see only what the trunks left behind
+    for (const plan of plans) { plan.west = plan.west.filter(o => !done.has(o.i)); plan.east = plan.east.filter(o => !done.has(o.i)); }
+  }
+
   /* ============ pass 4a: WEST wires — ONE global river-ordered pass ============
      All top-band feeds across every device, sorted by drop-x: westmost drop
      takes the TOP corridor lane and the EASTMOST riser of its channel. For
@@ -1581,6 +1892,7 @@ export function route(job, ix, placement, opts = {}) {
     }
   };
   for (const { plan, o } of allWest) routeWestOne(plan, o);
+  __chk("4a");
 
   /* untwist: two top-band feeds that cross each other twice are wound round
      each other — the first-routed one took the lane the other needed (the
@@ -1625,6 +1937,7 @@ export function route(job, ix, placement, opts = {}) {
     }
   }
 
+  __chk("untwist");
   /* ============ pass 4b: EAST wires per plan ============ */
   for (const plan of plans) {
     const d = plan.dev;
@@ -1834,6 +2147,7 @@ export function route(job, ix, placement, opts = {}) {
     if (eastNets.length > 1) out.groups.push({ dev: d.id + "-east", nets: eastNets });
   }
 
+  __chk("4b");
   /* ============ pass 4b': HARNESS — electrical-drawing bundling ============
      A feed that found no lane of its own rides an already-routed sibling (same
      source device, same signal) as ONE conductor — it takes the sibling's net,
@@ -1850,6 +2164,7 @@ export function route(job, ix, placement, opts = {}) {
     out.warnings.push({ code: "route-fallback", msg: wireId(o.c), why: h.why });
   }
 
+  __chk("4b'");
   function bundleOnto(h, proactive) {
     const { o, d, tx } = h;
     const t = o.t;
@@ -2326,6 +2641,7 @@ export function route(job, ix, placement, opts = {}) {
     out.warnings.push({ code: "unrouted", msg: `no route class for ${wireId(conn)}` });
   });
 
+  __chk("4c");
   /* ============ pass 4d: untwist by lane swap ============
      Two feeds that cross each other twice are wound round each other: each has
      a riser, a lane, a drop, and the one routed first took the lane the other
@@ -2404,6 +2720,7 @@ export function route(job, ix, placement, opts = {}) {
     }
   }
 
+  __chk("4d");
   /* ============ pass 5: crossings → hops ============ */
   computeHops(out);
   if (opts.debug) out.channels = { h: usedH, v: usedV };  // registered segments, for the congestion overlay
@@ -2616,6 +2933,100 @@ const tileName = (model, brand) => {
   return m.split(" ");
 };
 
+/* ---------- trunk drawing (trunk mode) ----------
+   A trunk net's members share runs. Split every net into pieces carried by the
+   same set of wires, then draw
+     bundle: a shared piece as one heavy line with ×N, a single wire thin;
+     ribbon: every wire its own thin line, packed side by side (lanes ordered so
+             the wire that turns off first rides on the side it turns to);
+             past RIBBON_MAX wires a piece falls back to the bundle look.
+   Each piece gets a white halo, so whatever it passes over reads as crossed
+   under. Wire numbers (the Wire Schedule's) sit on each wire's room end. */
+const RIBBON_MAX = 10, RIBBON_PITCH = 4;
+function drawTrunks(list, style, labels) {
+  const o = [];
+  const byNet = new Map();
+  for (const t of list) (byNet.get(t.w.net) || byNet.set(t.w.net, []).get(t.w.net)).push(t);
+  const tags = [];
+  for (const members of byNet.values()) {
+    const { color, dash } = members[0];
+    // pieces: per axis line, elementary intervals with the set of wires on them
+    const lines = new Map();
+    members.forEach((m, mi) => m.w.pts.forEach((q, i) => {
+      if (!i) return;
+      const a = m.w.pts[i - 1], b = q, hz = a[1] === b[1];
+      if (a[0] === b[0] && a[1] === b[1]) return;
+      const key = `${hz ? "h" : "v"}|${hz ? a[1] : a[0]}`;
+      (lines.get(key) || lines.set(key, []).get(key)).push({ mi, si: i - 1, lo: Math.min(hz ? a[0] : a[1], hz ? b[0] : b[1]), hi: Math.max(hz ? a[0] : a[1], hz ? b[0] : b[1]) });
+    }));
+    const pieces = [];
+    for (const [key, ivs] of lines) {
+      const [dir, c] = key.split("|"); const at = +c;
+      const bps = [...new Set(ivs.flatMap(v => [v.lo, v.hi]))].sort((a, b) => a - b);
+      for (let k = 1; k < bps.length; k++) {
+        const on = ivs.filter(v => v.lo <= bps[k - 1] && v.hi >= bps[k]);
+        if (on.length) pieces.push({ dir, at, lo: bps[k - 1], hi: bps[k], on });
+      }
+    }
+    const xy = p => p.dir === "h" ? [[p.lo, p.at], [p.hi, p.at]] : [[p.at, p.lo], [p.at, p.hi]];
+    const W = p => p.on.length > 1 && (style === "bundle" || p.on.length > RIBBON_MAX) ? 5.2 : 2.2;
+    const ribbon = p => style === "ribbon" && p.on.length > 1 && p.on.length <= RIBBON_MAX;
+    // halos first, then the lines
+    for (const p of pieces) {
+      const [[x1, y1], [x2, y2]] = xy(p), wd = ribbon(p) ? (p.on.length - 1) * RIBBON_PITCH + 2 : W(p);
+      o.push(`<path d="M${x1} ${y1}L${x2} ${y2}" stroke="#fff" stroke-width="${wd + 4}" stroke-linecap="butt"/>`);
+    }
+    const dashA = dash ? ` stroke-dasharray="${dash}"` : "";
+    // ribbon lane order per piece: turn-toward-+ first (earliest turn outermost), straight, then turn-toward-−
+    const laneOf = new Map();   // `${mi}|${si}|${lo}` → offset
+    for (const p of pieces.filter(ribbon)) {
+      const info = p.on.map(v => {
+        const pts = members[v.mi].w.pts, a = pts[v.si], b = pts[v.si + 1], nx = pts[v.si + 2];
+        const along = p.dir === "h" ? (b[0] - a[0]) : (b[1] - a[1]);
+        const end = p.dir === "h" ? b[0] : b[1];
+        const turn = nx ? Math.sign(p.dir === "h" ? nx[1] - b[1] : nx[0] - b[0]) : 0;
+        // distance travelled on this line before turning (smaller = turns off sooner)
+        const t = along >= 0 ? end - p.lo : p.hi - end;
+        return { v, turn, t };
+      });
+      const plus = info.filter(i => i.turn > 0).sort((a, b) => a.t - b.t);
+      const zero = info.filter(i => i.turn === 0);
+      const minus = info.filter(i => i.turn < 0).sort((a, b) => b.t - a.t);
+      const ordered = [...plus, ...zero, ...minus], n = ordered.length;
+      ordered.forEach((i, k) => laneOf.set(`${i.v.mi}|${i.v.si}|${p.lo}|${p.dir}`, ((n - 1) / 2 - k) * RIBBON_PITCH));
+    }
+    for (const p of pieces) {
+      const [[x1, y1], [x2, y2]] = xy(p);
+      if (!ribbon(p)) { o.push(`<path d="M${x1} ${y1}L${x2} ${y2}" stroke="${color}" stroke-width="${W(p)}" stroke-linecap="round"${dashA}/>`); continue; }
+      for (const v of p.on) {
+        const off = laneOf.get(`${v.mi}|${v.si}|${p.lo}|${p.dir}`) || 0;
+        const [a, b] = p.dir === "h" ? [[x1, y1 + off], [x2, y2 + off]] : [[x1 + off, y1], [x2 + off, y2]];
+        o.push(`<path d="M${a[0]} ${a[1]}L${b[0]} ${b[1]}" stroke="${color}" stroke-width="1.4" stroke-linecap="square"${dashA}/>`);
+      }
+    }
+    // ×N on the longer shared runs (bundle look)
+    const longestOnLine = new Map();
+    for (const p of pieces) if (p.dir === "h" && p.on.length > 1) { const k = p.at, b = longestOnLine.get(k); if (!b || p.hi - p.lo > b.hi - b.lo) longestOnLine.set(k, p); }
+    for (const p of pieces) {
+      if (p.on.length < 2 || p.hi - p.lo < 70 || ribbon(p)) continue;
+      if (p.dir === "h" && longestOnLine.get(p.at) !== p) continue;
+      const [[x1, y1], [x2, y2]] = xy(p), mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+      o.push(`<text class="bustick" x="${p.dir === "v" ? mx + 7 : mx}" y="${p.dir === "v" ? my + 4 : my - 7}"${p.dir === "v" ? "" : ' text-anchor="middle"'} font-size="10.5" font-weight="700" fill="${color}" paint-order="stroke" stroke="#fff" stroke-width="3">×${p.on.length}</text>`);
+    }
+    // wire numbers at each room end
+    for (const m of members) {
+      const lab = labels[m.w.id]; if (!lab) continue;
+      const pts = m.w.pts, inbound = /^(audioReturn)$/.test(m.w.signal) || m.w.dante;
+      const [a, b] = inbound ? [pts[1], pts[0]] : [pts[pts.length - 2], pts[pts.length - 1]];
+      if (!a || !b) continue;
+      const vert = a[0] === b[0];
+      const mx = vert ? a[0] : (a[0] + b[0]) / 2, my = vert ? (a[1] + b[1]) / 2 : a[1];
+      tags.push(`<text class="wirenum" x="${vert ? mx + 6 : mx}" y="${vert ? my + 3.5 : my - 5}"${vert ? "" : ' text-anchor="middle"'} font-size="9" font-weight="700" letter-spacing=".3" fill="${color}" paint-order="stroke" stroke="#fff" stroke-width="3">${esc(lab)}</text>`);
+    }
+  }
+  return `<g class="trunks" fill="none">${o.join("")}</g>${tags.join("")}`;
+}
+
 export function render(job, ix, P, rt, opts = {}) {
   const bw = !!opts.grayscale;   // B&W-safe mode: dashes carry signal identity
   const s = ix.solutions[opts.solution ?? 0];
@@ -2816,13 +3227,15 @@ export function render(job, ix, P, rt, opts = {}) {
   }
 
   /* wires (under chips so badges sit inline on their runs) */
+  const TRK = trunkMode(job, opts), trunkWires = [];
   push(`<g fill="none" stroke-width="2.2" stroke-linecap="round">`);
   for (const w of rt.wires) {
     const key = w.scope !== "included" ? "prewire" : w.dante ? "dante" : (w.signal === "speaker" ? "audio" : w.signal);
     const gs = bw ? (SIGNAL_DASHES[key] || SIGNAL_DASHES.video) : null;
     const color = gs ? gs.stroke : SIGNAL_COLORS[key] || "#555";
     const dash = gs?.dash || (key === "dante" ? "6 4" : null);
-    push(`<path class="wire${w.dante ? " dante" : ""}" data-wire="${esc(w.id)}" data-from="${esc(w.from)}" data-to="${esc(w.to)}" data-signal="${esc(w.signal)}" d="${wireD(w)}" stroke="${color}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`);
+    if (TRK && w.cls === "trunk") trunkWires.push({ w, color, dash });   // drawn as trunks below
+    else push(`<path class="wire${w.dante ? " dante" : ""}" data-wire="${esc(w.id)}" data-from="${esc(w.from)}" data-to="${esc(w.to)}" data-signal="${esc(w.signal)}" d="${wireD(w)}" stroke="${color}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`);
     // one-line bus notation: a trunk drawn once carries its real run count
     const conn = (sol.connections || []).find(c => c.from === w.from && c.to === w.to && c.signal === w.signal);
     const n = conn ? trunkCount(conn, s) : 1;
@@ -2849,6 +3262,7 @@ export function render(job, ix, P, rt, opts = {}) {
     }
   }
   push(`</g>`);
+  if (trunkWires.length) push(drawTrunks(trunkWires, TRK, opts.wireLabels || {}));
   // a tag reads beside its run — on whichever side no other wire runs alongside
   const segsAll = rt.wires.flatMap(w => w.pts.slice(1).map((q, i) => [w.pts[i], q]));
   const clear = (x0, x1, y0, y1) => !segsAll.some(([[ax, ay], [bx, by]]) =>

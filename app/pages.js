@@ -422,7 +422,11 @@ export function wireRuns(job, ix, opts = {}) {
   // the jack at the rack end of each run (ports.js, via advise → opts.portMap)
   const shortPort = p => p ? String(p.label).replace(/\s*\((?!eARC)[^)]*\)/g, "").trim() : "";
   const at = (id, p) => p ? `${rackName} · ${devName(s.devices[id] || { model: nameOf(job, s, id) })} ${shortPort(p)}` : rackName;
+  // each run remembers the connection it came from (the sheet labels trunk breakouts with it)
+  let mark = 0, markWid = null;
+  const tagRuns = wid => { for (let k = mark; k < runs.length; k++) runs[k].wid ??= markWid; mark = runs.length; markWid = wid; };
   for (const [ci, c] of (sol.connections || []).entries()) {
+    tagRuns(`${c.from}→${c.to}`);
     const pm = opts.portMap?.[ci] || {};
     const gray = (c.scope || "included") !== "included";
     const toComp = servesEp(s, c.to);
@@ -482,6 +486,7 @@ export function wireRuns(job, ix, opts = {}) {
       runs.push({ prefix: "N", cable: "Cat6", from: rackName, to: zoneName(ix, toEp ? c.to : s.companions[c.to].serves), carries: "Network", color: "#2f9e44", term: "RJ45", count: 1, gray });
     }
   }
+  tagRuns(null);
   // every TV takes an Ethernet drop of its own (smart-TV apps, control, updates)
   for (const z of job.house?.zones || []) {
     if ((z.scope || "included") === "future") continue;
@@ -510,6 +515,12 @@ export function wireRuns(job, ix, opts = {}) {
                        : `${r.prefix}-${String(start).padStart(2, "0")}`;
   }
   return runs;
+}
+// connection id → the schedule number the sheet prints at its breakout (first run of that connection)
+export function wireLabels(job, ix, opts = {}) {
+  const out = {};
+  for (const r of wireRuns(job, ix, opts)) if (r.wid && !out[r.wid]) out[r.wid] = r.id;
+  return out;
 }
 
 // one name per speaker wire, the way a tech labels them at the rack

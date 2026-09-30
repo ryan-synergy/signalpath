@@ -2545,7 +2545,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
     if (k < 60) { dbl += A.doubleCrossings(rt).length; cor += A.cornerHops(rt).length; }
     if (k === 65) j65 = A.doubleCrossings(rt);
   }
-  t(`twists — 60 random jobs: pairs crossing twice ≤ 85 (${dbl}; about 300 before the untwist pass, 101 before input order, 97 before page-width placement), corner hops ≤ 8 (${cor})`, dbl <= 85 && cor <= 8);
+  t(`twists — 60 random jobs: pairs crossing twice ≤ 70 (${dbl}; about 300 before the untwist pass, 101 before input order, 97 before page-width placement, 77 before bundles moved as one), corner hops ≤ 8 (${cor})`, dbl <= 70 && cor <= 8);
   t("twists — job #65: the red video feed and blue speaker feed no longer wind round each other", !j65.some(d => [d.a, d.b].includes("mx→z0-tv") && [d.a, d.b].includes("amp0→z5-spk")));
 }
 
@@ -3102,6 +3102,42 @@ for (const [name, raw] of Object.entries(fixtures)) {
     }
     t(`input order — ${st.id} starter: rack feeds land in source order, no hops on them`, !flipped.length && !hopped.length, flipped.concat(hopped).join(", "));
   }
+}
+
+/* ---------- lane registry: two nets never share a lane (fuzz seed 1, 2026-09-30) ----------
+   Pass 4d (lane/riser swap) moved a harness leader alone: its members' trunk
+   prefixes stayed on the old riser, unregistered, and the swapped partner
+   landed on it (src0→z11-tv drawn up src2→z3-tv's riser at x=198 in random
+   job #12). The 4a untwist ripped up a leader's whole net and re-routed only
+   the leader — its members vanished from the sheet. */
+{
+  const F = await import("./fuzz-jobs.js");
+  const onTop = rt => { const runs = [], bad = [];
+    for (const w of rt.wires) if (w.pts && !w.insideCard && w.cls !== "local" && !/fallback/.test(w.cls)) w.pts.forEach((q, i) => { if (!i) return;
+      const [a, b] = [w.pts[i - 1], q], h = a[1] === b[1];
+      runs.push({ w, h, c: h ? a[1] : a[0], lo: Math.min(h ? a[0] : a[1], h ? b[0] : b[1]), hi: Math.max(h ? a[0] : a[1], h ? b[0] : b[1]) }); });
+    for (let i = 0; i < runs.length; i++) for (let j = i + 1; j < runs.length; j++) { const a = runs[i], b = runs[j];
+      if (a.w.net !== b.w.net && a.h === b.h && Math.abs(a.c - b.c) < 0.5 && Math.min(a.hi, b.hi) - Math.max(a.lo, b.lo) > 2) bad.push(`${a.w.id} on ${b.w.id}`); }
+    return bad; };
+  const g = F.jobGenerator(1, { extras: true }), jobs = [];
+  for (let k = 0; k <= 152; k++) jobs.push(g(k));
+  const draw = (raw, opts) => { const { job, ix } = loadJob(effectiveJob(structuredClone(raw), 0));
+    const J = opts.outdoor ? { ...job, job: { ...job.job, zoneGrouping: "type-outdoor" } } : job;
+    return { job: J, rt: route(J, ix, place(J, ix, opts), opts) }; };
+  { const { rt } = draw(jobs[12], {});
+    const a = rt.wires.find(w => w.id === "src0→z11-tv"), b = rt.wires.find(w => w.id === "src2→z3-tv");
+    t("lanes: random #12 — src0→z11-tv and src2→z3-tv no longer share the x=198 riser", a && b && a.net !== b.net && !onTop({ wires: [a, b] }).length);
+    t("lanes: random #12 — no two nets on one lane", !onTop(rt).length, onTop(rt).slice(0, 2).join(" | ")); }
+  const bad = [];
+  for (let k = 0; k < 40; k++) { if (!jobs[k].house.zones.length) continue;
+    for (const [vn, opts] of [["default", {}], ["harness", { harness: true }], ["outdoor", { outdoor: true }]])
+      bad.push(...onTop(draw(jobs[k], opts).rt).slice(0, 1).map(x => `#${k} ${vn}: ${x}`)); }
+  t("lanes: 40 random jobs × default/harness/outdoor — no two nets ever share a lane", !bad.length, bad.slice(0, 3).join(" | "));
+  const lost = [];
+  for (const k of [20, 33, 68, 152]) { const { job, rt } = draw(jobs[k], { harness: true });
+    const n = job.solutions[0].connections.length, drawn = rt.wires.length + rt.warnings.filter(w => w.code === "unrouted").length;
+    if (drawn !== n) lost.push(`#${k}: ${drawn}/${n}`); }
+  t("lanes: harness untwist keeps every bundled member (random #20/#33/#68/#152)", !lost.length, lost.join(" | "));
 }
 
 document.getElementById("summary").innerHTML =

@@ -45,13 +45,11 @@ const METRIC = { fallbackWires: 0, jobsWithFallback: 0 };
 const inside = (x1, y1, x2, y2, o) =>
   Math.min(x1, x2) < o.x + o.w - PAD && Math.max(x1, x2) > o.x + PAD &&
   Math.min(y1, y2) < o.y + o.h - PAD && Math.max(y1, y2) > o.y + PAD;
-function geometryProblems(p, rt, strictLanes = false) {
+function geometryProblems(p, rt) {
   const probs = [];
-  // two different nets never run on top of each other (a shared trunk is ONE net).
-  // Trunk mode only for now: the classic router still lets a harness-bundled feed
-  // share a riser with another source's feed (a known bug, tracked separately)
+  // two different nets never run on top of each other (a shared trunk is ONE net) —
+  // every variant: classic, harness, outdoor, trunks and reroutes
   const runs = [];
-  if (strictLanes)
   for (const w of rt.wires) if (w.pts && !w.insideCard && w.cls !== "local" && !/fallback/.test(w.cls))
     for (let i = 0; i + 1 < w.pts.length; i++) {
       const [[x1, y1], [x2, y2]] = [w.pts[i], w.pts[i + 1]];
@@ -116,7 +114,7 @@ function exercise(raw, label, strict = false) {
         svgCheck(render(J, ix, p, rt, opts), `sheet sol${si}${opts.grayscale ? " bw" : ""}${opts.outdoor ? " outdoor" : ""}`);
         if (!opts.grayscale) {
           const fb0 = METRIC.fallbackWires;
-          problems.push(...geometryProblems(p, rt, !!opts.trunks).slice(0, 3).map(x => opts.harness ? "harness: " + x : opts.outdoor ? "outdoor: " + x : opts.trunks ? "trunks: " + x : x));
+          problems.push(...geometryProblems(p, rt).slice(0, 3).map(x => opts.harness ? "harness: " + x : opts.outdoor ? "outdoor: " + x : opts.trunks ? "trunks: " + x : x));
           if (opts.harness || opts.outdoor || opts.trunks) METRIC.fallbackWires = fb0;   // the metric tracks the default drawing
           // a well-formed job must route every wire — "unrouted" means a wire silently vanished
           if (strict) for (const w of rt.warnings.filter(w => w.code === "unrouted")) problems.push(`${w.code}: ${w.msg}`);

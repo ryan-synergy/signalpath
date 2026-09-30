@@ -2849,6 +2849,22 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("paper: a speaker run's rack end names the amp's zone terminals", runs.some(r => r.prefix === "S" && /MDX-16 ch 1–2 · ZONE 1 SPEAKER/.test(r.term)), JSON.stringify(runs.filter(r => r.prefix === "S").map(r => r.term)));
 }
 
+/* ---------- the drawing grows with the job (Ryan 2026-09-30) ---------- */
+{
+  const small = structuredClone(fixtures.residence); small.house.zones = small.house.zones.slice(0, 2);
+  { const so = small.solutions[0], eps = new Set(small.house.zones.flatMap(z => (z.endpoints || []).map(e => e.id)));
+    so.companions = (so.companions || []).filter(c => eps.has(c.serves) || so.racks.some(r => r.devices.some(d => d.id === c.serves)));
+    so.localDevices = (so.localDevices || []).filter(d => small.house.zones.some(z => z.id === d.zone));
+    const ok = id => eps.has(id) || so.racks.some(r => r.devices.some(d => d.id === id)) || so.companions.some(c => c.id === id) || so.localDevices.some(d => d.id === id);
+    so.connections = so.connections.filter(c => ok(c.from) && ok(c.to)); }
+  const Ls = loadJob(small), ps = place(Ls.job, Ls.ix);
+  const Lb = loadJob(structuredClone(fixtures.stress)), pb = place(Lb.job, Lb.ix);
+  t("sheet: a small job's drawing grows past 100% to fill the page (capped), a big one still shrinks", ps.fitScale > 1 && ps.fitScale <= 1.6 && pb.fitScale < 1, `${ps.fitScale} / ${pb.fitScale}`);
+  t("sheet: the grown drawing still fits the page and is centred in any spare width",
+    ps.bounds.w * ps.fitScale + ps.fitOffset.x <= SHEET.content.w + 1 && ps.bounds.h * ps.fitScale <= SHEET.content.h + 1 &&
+    Math.abs(ps.fitOffset.x - (SHEET.content.w - ps.bounds.w * ps.fitScale) / 2) < 1);
+}
+
 /* ---------- input order (user redline 2026-09-28) ----------
    Feeds into a device's left edge land in the order their sources stack —
    ATV 1, ATV 2, cable box into the MXNet switch — so they nest without a hop. */

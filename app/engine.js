@@ -426,6 +426,7 @@ const PL = {
   chip: { w: 54, h: 18 },
   lanePitch: 14, corridorQuantum: 56, topCorridorMin: 120, rightCorridorMin: 90,
   legendRowW: 140, legendH: 56,
+  growMax: 1.6,                                   // how far a small job's drawing may grow to fill the sheet
 };
 
 // column grid cell for a band: the 75th-percentile card width (wider cards span cells)
@@ -899,7 +900,12 @@ export function place(job, ix = indexJob(job), opts = {}) {
   const maxX = Math.max(...rects.map(r => r.x + r.w), PL.marginX);
   const maxY = Math.max(...rects.map(r => r.y + r.h), PL.topY);
   out.bounds = { x: 0, y: 0, w: maxX + PL.marginX, h: maxY + 40 };
-  out.fitScale = Math.min(1, SHEET.content.w / out.bounds.w, (SHEET.content.h - out.legend.h - 20) / out.bounds.h);
+  // the drawing fills the page: a big job shrinks to fit, a small one GROWS
+  // (Ryan 2026-09-30: "the scaling grows with the job" — a four-room condo
+  // shouldn't sit small in a corner of an 11×17), capped so a one-room job
+  // doesn't turn cartoonish; leftover width is split evenly left and right
+  out.fitScale = Math.min(PL.growMax, SHEET.content.w / out.bounds.w, (SHEET.content.h - out.legend.h - 20) / out.bounds.h);
+  out.fitOffset = { x: Math.max(0, Math.round((SHEET.content.w - out.bounds.w * out.fitScale) / 2)), y: 0 };
   if (out.fitScale < 0.75) out.warnings.push({ code: "scale", msg: `The drawing fits at ${Math.round(out.fitScale * 100)}% — captions may print small` });
 
   return out;
@@ -2556,7 +2562,7 @@ export function render(job, ix, P, rt, opts = {}) {
   push(`<rect x="${SHEET.content.x}" y="${SHEET.content.y}" width="${SHEET.content.w}" height="${SHEET.content.h}" fill="none" stroke="#777"/>`);
 
   /* drawing space */
-  push(`<g transform="translate(${SHEET.content.x} ${SHEET.content.y}) scale(${P.fitScale})">`);
+  push(`<g transform="translate(${SHEET.content.x + (P.fitOffset?.x || 0)} ${SHEET.content.y + (P.fitOffset?.y || 0)}) scale(${P.fitScale})">`);
 
   for (const h of P.areaHeaders)
     push(`<text x="${h.cx}" y="${h.y}" text-anchor="middle" font-size="13" letter-spacing="4" fill="#8a8a8a" font-weight="600">${esc(h.name)}</text>`);

@@ -1361,6 +1361,22 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const r2 = C2.planCommands(jk, 0, [{ op: "hookup", zone: zk.name, audio_back: "earc-kit" }], CAT);
     t("eARC kit: the hookup command takes audio_back earc-kit", !r2.errors?.length && H.readHookup(r2.job, r2.job.solutions[0], r2.job.house.zones.find(q => q.id === z.id)).audioBack === "earc-kit", JSON.stringify(r2.errors || r2.error));
   }
+  { // Atmos rooms default to the eARC kit (Ryan 2026-09-30); plain surround keeps eARC + optical backup
+    const ja = structuredClone(fixtures.residence), sa = ja.solutions[0];
+    const za = parseQuickZone("screening room 7.1.4 85 avr").zone; delete za._hints; ja.house.zones.push(za);
+    H.autoHookup(ja, sa, za, { avr: true });
+    const ha = H.readHookup(ja, sa, za);
+    t("Atmos default: a new 7.1.4 room on a receiver + balun gets the eARC extender kit, not optical",
+      ha.audioBack === "earc-kit" && ha.ret?.to === ha.video?.from && !ha.earc && ha.video?.run === "balun", JSON.stringify(ha.ret));
+    const z5 = parseQuickZone("den 5.1 65 avr").zone; delete z5._hints; ja.house.zones.push(z5);
+    H.autoHookup(ja, sa, z5, { avr: true });
+    t("Atmos default: a 5.1 room still gets eARC + optical backup", H.readHookup(ja, sa, z5).audioBack === "earc+optical");
+    H.setAudioBack(ja, sa, za, "earc+optical");
+    H.setVideo(ja, sa, za, H.readHookup(ja, sa, za).video.from, "balun");
+    t("Atmos default: an explicit choice survives re-picking the same feed", H.readHookup(ja, sa, za).audioBack === "earc+optical");
+    const hla = healthy(ja);
+    t("Atmos default: valid and routes clean", !hla.errs.length && !hla.bad && !hla.through, JSON.stringify(hla));
+  }
   H.setAudioBack(j2, s2, z, "optical", "sav-in");
   const ho = H.readHookup(j2, s2, z);
   t("audio back: optical only drops eARC and runs to the chosen box", !ho.earc && ho.ret?.to === "sav-in" && !ho.ret.backup && ho.audioBack === "optical");

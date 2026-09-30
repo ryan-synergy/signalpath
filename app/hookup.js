@@ -84,18 +84,25 @@ export function setVideo(job, sol, zone, from, run, earc) {
     !(c.to === tv.id && c.signal === "video") && !(keep && c.to === keep.id && c.signal === "video"));
   if (!from) return;
   const sc = scopeOf(zone);
+  // the AVPro balun carries no ARC/eARC, so a receiver newly feeding a TV through
+  // one gets "eARC + optical backup" by default (Ryan 2026-09-29) — the optical
+  // run is what actually brings the TV's own apps back. An Atmos room (7.1.4…)
+  // gets the eARC extender kit instead (Ryan 2026-09-30): optical stops at Dolby
+  // Digital 5.1. An explicit choice made afterwards (setAudioBack) still wins;
+  // re-picking the same feed keeps it.
+  const fresh = prev.video?.from !== from || prev.video?.run !== "balun";
+  const autoBack = run === "balun" && earc && fresh && !prev.ret;
+  const kit = autoBack && isAtmosRoom(zone);
+  if (kit) earc = false;                     // the kit carries the eARC, not the HDMI video run
   const ea = earc ? { earc: true } : {};
   if (run === "direct") { sol.connections.push({ from, to: tv.id, signal: "video", ...ea, ...sc }); return; }
   const comp = keep || { id: freeId(job, sol, `${run}-${zone.id}`), type: run, serves: tv.id, auto: true };
   if (!keep) sol.companions.push(comp);
   sol.connections.push({ from, to: comp.id, signal: "video", ...ea, ...sc }, { from: comp.id, to: tv.id, signal: "video", ...sc });
-  // the AVPro balun carries no ARC/eARC, so a receiver newly feeding a TV through
-  // one gets "eARC + optical backup" by default (Ryan 2026-09-29) — the optical
-  // run is what actually brings the TV's own apps back. An explicit choice made
-  // afterwards (setAudioBack) still wins; re-picking the same feed keeps it.
-  const fresh = prev.video?.from !== from || prev.video?.run !== "balun";
-  if (run === "balun" && earc && fresh && !prev.ret) setReturn(job, sol, zone, from, true);
+  if (autoBack) setReturn(job, sol, zone, from, !kit, kit);
 }
+// an Atmos speaker set: height channels in its layout (surround-7.1.4, surround-5.1.2 …)
+export const isAtmosRoom = zone => (zone.endpoints || []).some(e => e.type === "speakers" && /^surround-\d\.\d\.\d/.test(e.config || ""));
 
 /* the TV's audio back to the rack, as one choice:
    "earc"          — over the HDMI from the receiver (default; no extra run)

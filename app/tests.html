@@ -2417,7 +2417,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
     if (k < 60) { dbl += A.doubleCrossings(rt).length; cor += A.cornerHops(rt).length; }
     if (k === 65) j65 = A.doubleCrossings(rt);
   }
-  t(`twists — 60 random jobs: pairs crossing twice ≤ 97 (${dbl}; about 300 in 60 jobs before the untwist pass, 101 before input order), corner hops ≤ 8 (${cor})`, dbl <= 97 && cor <= 8);
+  t(`twists — 60 random jobs: pairs crossing twice ≤ 85 (${dbl}; about 300 before the untwist pass, 101 before input order, 97 before page-width placement), corner hops ≤ 8 (${cor})`, dbl <= 85 && cor <= 8);
   t("twists — job #65: the red video feed and blue speaker feed no longer wind round each other", !j65.some(d => [d.a, d.b].includes("mx→z0-tv") && [d.a, d.b].includes("amp0→z5-spk")));
 }
 
@@ -2445,7 +2445,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   // 2026-09-27 baseline before the audit fixes: big 30, ratio 1.189, smells 27, fallbacks 7; after audit round 1: big 17
   t(`route audit — 60 random jobs: wires with a much shorter legal route ≤ 10 (${big})`, big <= 10);
   t(`route audit — 60 random jobs: drawn length ≤ 1.170× the Manhattan minimum (${(len / manh).toFixed(3)})`, len / manh <= 1.170);
-  t(`route audit — 60 random jobs: kinks/spikes ≤ 2 (${smells}), best-effort fallbacks ≤ 5 (${fb})`, smells <= 2 && fb <= 5);
+  t(`route audit — 60 random jobs: kinks/spikes ≤ 2 (${smells}), best-effort fallbacks ≤ 3 (${fb}; 5 before page-width placement)`, smells <= 2 && fb <= 3);
 }
 
 /* ---------- hardening (2026-09-27): typos, "?" values, old and hand-edited files ----------
@@ -2863,6 +2863,22 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("sheet: the grown drawing still fits the page and is centred in any spare width",
     ps.bounds.w * ps.fitScale + ps.fitOffset.x <= SHEET.content.w + 1 && ps.bounds.h * ps.fitScale <= SHEET.content.h + 1 &&
     Math.abs(ps.fitOffset.x - (SHEET.content.w - ps.bounds.w * ps.fitScale) / 2) < 1);
+}
+
+/* ---------- placement uses the page width (Ryan 2026-09-30) ----------
+   place() tries a few layouts (a longer top row; TV-only rooms beside the
+   speaker rooms) and keeps the one that prints biggest, by a 3% margin. */
+{
+  const F = await import("./fuzz-jobs.js");
+  for (const name of ["residence", "estate", "stress"]) {
+    const { job, ix } = loadJob(structuredClone(fixtures[name]));
+    const a = place(job, ix), b = place(job, ix, { classicLayout: true });
+    t(`page width — ${name}: already fills the width, keeps its classic layout`, a.fitScale === b.fitScale && JSON.stringify(a.zones.map(z => [z.x, z.y])) === JSON.stringify(b.zones.map(z => [z.x, z.y])));
+  }
+  const g = F.jobGenerator(1); let gain = 0, n = 0, never = true;
+  for (let k = 0; k < 60; k++) { let job, ix; try { ({ job, ix } = loadJob(g(k))); } catch { continue; }
+    const a = place(job, ix), b = place(job, ix, { classicLayout: true }); gain += a.fitScale / b.fitScale; n++; if (a.fitScale < b.fitScale) never = false; }
+  t(`page width — 60 random jobs print ≥ 6% bigger on average (${((gain / n - 1) * 100).toFixed(1)}%) and never smaller`, gain / n >= 1.06 && never);
 }
 
 /* ---------- input order (user redline 2026-09-28) ----------

@@ -547,8 +547,36 @@ function deviceTileSpec(d, inCount = 0, rackOuts = 0) {
 
 const quant = (need, min) => Math.max(min, Math.ceil(need / PL.corridorQuantum) * PL.corridorQuantum);
 
+/* Page-width search (Ryan 2026-09-30: "make placement use the page width").
+   The layout rules stay (surround + TV rooms along the top, TV-only rooms in
+   the mid band, speaker rooms bottom-right, rack at the left); what varies is
+   how the right-of-rack bands share the space: stacked (the classic sheet),
+   side by side (mid band left, speaker rooms right — both bottom-aligned with
+   the rack), and speaker rows allowed to run to the page edge. The layout that
+   prints biggest (highest fitScale) wins, but only by a clear margin (3%), so
+   a job that already fills the width keeps its tuned classic layout. */
 export function place(job, ix = indexJob(job), opts = {}) {
+  const base = placeOnce(job, ix, opts, {});
+  if (opts.classicLayout) return base;
+  let best = base;
+  // a wider virtual page (wrap) lets the top row run long when the drawing will
+  // be scaled down anyway — two short rows of TV rooms waste the page's width
+  // (measured on 60 random jobs, 2026-09-30: side by side ALONE lengthened
+  // wires — 1.202× the Manhattan minimum vs 1.168 — while these print 8.3%
+  // bigger on average AND route better: 1.162×, 7 long detours vs 10, 2
+  // best-effort wires vs 5)
+  const variants = [...[1.35, 1.7, 2.1].map(wrap => ({ wrap })),
+    ...[1.15, 1.35, 1.7, 2.1].map(wrap => ({ wrap, sideBySide: true, audioWide: true }))];
+  for (const v of opts.layoutVariants || variants) {
+    const p = placeOnce(job, ix, opts, v);
+    if (p.fitScale > best.fitScale * 1.03) best = p;
+  }
+  return best;
+}
+
+function placeOnce(job, ix, opts, variant) {
   const s = ix.solutions[opts.solution ?? 0];
+  const wrapRight = SHEET.content.x + SHEET.content.w * (variant.wrap || 1) - PL.marginX;   // where rows wrap (layout units)
   if (!s) throw new Error("no solution to place");
   const sol = s.sol;
   // view filter (e.g. hideSignals: ["network"]): hidden wires get no corridor
@@ -631,7 +659,7 @@ export function place(job, ix = indexJob(job), opts = {}) {
     let x = PL.marginX, y = PL.topY, rowH = 0, rowZones = [];
     for (const z of primary.video) {
       const c = cardOf[z.id];
-      if (x + c.w > SHEET.content.x + SHEET.content.w - PL.marginX && x > PL.marginX) {
+      if (x + c.w > wrapRight && x > PL.marginX) {
         y += rowH + rowGapFor(rowZones); x = PL.marginX; rowH = 0; rowZones = [];
       }
       placeZone(out, z, c, x, y, "top");
@@ -746,7 +774,9 @@ export function place(job, ix = indexJob(job), opts = {}) {
      width budget and the block grows UPWARD as zone count rises. */
   {
     const bandX = rackRight + rightCorridorW;
-    const bandMaxW = Math.max(680, Math.ceil(Math.sqrt(primary.audio.length)) * 170);
+    const pageRight = wrapRight;
+    let bandMaxW = Math.max(680, Math.ceil(Math.sqrt(primary.audio.length)) * 170);
+    if (variant.audioWide) bandMaxW = Math.max(bandMaxW, pageRight - bandX);   // speaker rows may run to the page edge
     // column grid: compact cards vary in width, but rows must advance on a
     // shared cell pitch or the inter-column gutters (return/dive escape
     // channels) get pierced by a lower row's card
@@ -765,11 +795,12 @@ export function place(job, ix = indexJob(job), opts = {}) {
     }
     const bandTopMin = topBandBottom + topCorridorH + (out.racks.length ? 100 : 0);
     let y0 = Math.max(bandTopMin, (out.racks.length ? rackBottom : bandTopMin + bandH) - bandH);
+    let audioShift = 0;                                // side by side: the speaker rooms move right of the mid band
     // mid band (TV-only rooms): its own column grid from the same left edge,
     // sitting on top of the audio band with room for each card's chip strip
     // and feed lanes (rowGapFor) — the audio band moves down only if they don't fit
     if (midZones.length) {
-      const midMaxW = Math.max(bandMaxW, SHEET.content.x + SHEET.content.w - PL.marginX - bandX);
+      const midMaxW = Math.max(bandMaxW, wrapRight - bandX);
       const midCell = gridCell(midZones.map(z => cardOf[z.id].w));
       const midSpan = c => Math.max(1, Math.ceil((c.w + PL.cardGapX) / (midCell + PL.cardGapX))) * (midCell + PL.cardGapX) - PL.cardGapX;
       const mdry = [], rows = [[]];
@@ -781,12 +812,32 @@ export function place(job, ix = indexJob(job), opts = {}) {
         mx += midSpan(c) + PL.cardGapX; mRowH = Math.max(mRowH, c.h); midH = Math.max(midH, my + c.h);
       }
       const gapBelow = rowGapFor(rows[rows.length - 1]);
-      const midBottom = (dry.length ? y0 : (out.racks.length ? rackBottom : bandTopMin + midH));
-      let midTop = midBottom - (dry.length ? gapBelow : 0) - midH;
-      if (midTop < bandTopMin) { y0 += bandTopMin - midTop; midTop = bandTopMin; }
-      for (const p of mdry) placeZone(out, p.z, p.c, p.x, midTop + p.y, "mid");
+      if (variant.sideBySide && dry.length) {
+        // mid band on its own, bottom-aligned with the rack (as if there were no
+        // speaker rooms); the speaker rooms sit to its right on a feed gutter
+        const midW = Math.max(...mdry.map(p => p.x + p.c.w)) - bandX;
+        const midBottom = out.racks.length ? rackBottom : bandTopMin + midH;
+        const midTop = Math.max(bandTopMin, midBottom - midH);
+        for (const p of mdry) placeZone(out, p.z, p.c, p.x, midTop + p.y, "mid");
+        audioShift = midW + Math.max(PL.areaGapX, gapBelow);
+        if (variant.audioWide) {                       // re-wrap the speaker rows on the width that's left
+          const room = pageRight - (bandX + audioShift);
+          let x = bandX, y = 0, rowH = 0; bandH = 0;
+          for (const p of dry) {
+            const span = spanOf(p.c) * (cellW + PL.cardGapX) - PL.cardGapX;
+            if (x + span > bandX + Math.max(room, cellW) && x > bandX) { y += rowH + PL.rowGapY; x = bandX; rowH = 0; }
+            p.x = x; p.y = y; x += span + PL.cardGapX; rowH = Math.max(rowH, p.c.h); bandH = Math.max(bandH, y + p.c.h);
+          }
+          y0 = Math.max(bandTopMin, (out.racks.length ? rackBottom : bandTopMin + bandH) - bandH);
+        }
+      } else {
+        const midBottom = (dry.length ? y0 : (out.racks.length ? rackBottom : bandTopMin + midH));
+        let midTop = midBottom - (dry.length ? gapBelow : 0) - midH;
+        if (midTop < bandTopMin) { y0 += bandTopMin - midTop; midTop = bandTopMin; }
+        for (const p of mdry) placeZone(out, p.z, p.c, p.x, midTop + p.y, "mid");
+      }
     }
-    for (const p of dry) placeZone(out, p.z, p.c, p.x, y0 + p.y, "audio");
+    for (const p of dry) placeZone(out, p.z, p.c, p.x + audioShift, y0 + p.y, "audio");
   }
 
   /* -- secondary clusters: full stacks to the right (video row, audio rows below) -- */
@@ -1175,8 +1226,38 @@ export function route(job, ix, placement, opts = {}) {
     dropStraight();
     return p;
   };
+  // a hairline jog in the MIDDLE of a path (a riser that steps sideways <6px
+  // on its way up) is straightened by sliding one neighbouring run onto the
+  // other's line — only when the moved run crosses no body and overlaps no
+  // other wire's lane; otherwise the wire keeps its jog (it was legal)
+  const dejog = (pts, net) => {
+    let p = pts;
+    for (let guard = 0; guard < 6; guard++) {
+      let changed = false;
+      for (let i = 1; i + 2 < p.length && !changed; i++) {
+        const a = p[i], b = p[i + 1], d = Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
+        if (d === 0 || d >= 6) continue;
+        const k = a[1] === b[1] ? 0 : 1;               // the coordinate the jog steps along
+        const tries = [];
+        if (i - 1 >= 1) tries.push([i - 1, i, b[k]]);                  // slide the run before the jog
+        if (i + 2 <= p.length - 2) tries.push([i + 1, i + 2, a[k]]);   // …or the run after it
+        for (const [u, v, val] of tries) {
+          const q = p.map(r => [r[0], r[1]]); q[u][k] = val; q[v][k] = val;
+          const ok = [[u - 1, u], [u, v], [v, v + 1]].filter(([x, y]) => x >= 0 && y < q.length).every(([x, y]) => {
+            const [s1, s2] = [q[x], q[y]];
+            if (s1[0] === s2[0] && s1[1] === s2[1]) return true;
+            if (segBlocked(s1[0], s1[1], s2[0], s2[1], null)) return false;
+            return s1[1] === s2[1] ? !conflicts(usedH, s1[1], s1[0], s2[0], net) : !conflicts(usedV, s1[0], s1[1], s2[1], net);
+          });
+          if (ok) { p = tidy(q); changed = true; break; }
+        }
+      }
+      if (!changed) break;
+    }
+    return p;
+  };
   const commit = (conn, cls, pts, extra = {}) => {
-    const clean = tidy(pts);
+    const clean = cls.endsWith("-fallback") ? tidy(pts) : dejog(tidy(pts), nWire);
     const w = { id: wireId(conn), net: nWire++, cls, signal: conn.signal, scope: conn.scope || "included", from: conn.from, to: conn.to, pts: clean, hops: [], ...(conn.dante ? { dante: true } : {}), ...extra };
     // a fallback is known-bad geometry: draw it, but never let it poison the
     // registry and starve later (valid) wires

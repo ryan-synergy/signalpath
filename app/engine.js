@@ -1502,7 +1502,8 @@ export function route(job, ix, placement, opts = {}) {
   // trunk mode: the rack's network and Dante patches ride their trunks too (pass 4T)
   const TRUNK = trunkMode(job, opts);
   const SWITCHY = new Set(["avSwitch", "networkSwitch", "avbSwitch", "gateway"]);
-  const rackPatchFam = conn => TRUNK && P.racks.length === 1 && devById[conn.from] && devById[conn.to]
+  const rackOfDev = id => P.racks.find(r => r.devices.some(d => d.id === id));
+  const rackPatchFam = conn => TRUNK && devById[conn.from] && devById[conn.to] && rackOfDev(conn.from) === rackOfDev(conn.to)
     ? (conn.dante ? "dante" : conn.signal === "network" ? "network" : null) : null;
 
   /* ============ pass 3: rigid non-zone wires FIRST (short structural runs
@@ -1538,8 +1539,8 @@ export function route(job, ix, placement, opts = {}) {
      Shared runs are one conductor (one net), so the registry and the hop pass
      treat a trunk as a single line — legal by construction, like the harness.
      A feed the trunk can't carry legally is left to passes 4a–4c. */
-  if (TRUNK && P.racks.length === 1) {
-    const rack = P.racks[0];
+  if (TRUNK && P.racks.length) {
+    // several racks: each builds its own trunks from its own boxes (a family per rack)
     const colRight = col => { const t = allDevs.filter(d => d.col === col); return t.length ? Math.max(...t.map(d => d.x + d.w)) : null; };
     const eastRange = [(colRight("C") ?? colRight("B") ?? rackRight) + 8, rackRight + (corRight?.w || 90) - 6];
     const gapRightOf = col => col === "A" ? gapABx : col === "B" ? (colX("C") != null ? gapBCx : eastRange) : eastRange;
@@ -1616,7 +1617,11 @@ export function route(job, ix, placement, opts = {}) {
     /* -- families: outbound feeds climb a riser right of their sources; inbound
           feeds descend one left of their targets. Busiest family nearest the rooms. -- */
     const fams = {};
-    for (const m of members) (fams[`${m.dir}:${m.fam}`] ||= { key: `${m.dir}:${m.fam}`, dir: m.dir, members: [] }).members.push(m);
+    for (const m of members) {
+      const rk = rackOfDev(m.dev.id);
+      const key = `${m.dir}:${m.fam}` + (P.racks.length > 1 ? `@${rk.id}` : "");
+      (fams[key] ||= { key, dir: m.dir, rack: rk, members: [] }).members.push(m);
+    }
     const famList = Object.values(fams).sort((a, b) => b.members.length - a.members.length || (a.dir === "out" ? -1 : 1));
     const colRank = { A: 0, B: 1, C: 2 };
 
@@ -1660,7 +1665,8 @@ export function route(job, ix, placement, opts = {}) {
       const busY = F.bus.get(lowRow);
       // riser: spans from the bus (or the rack top) down to the lowest rack jack of the family
       const jackYs = F.members.flatMap(m => m.dir === "out" ? [m.port] : [m.dev.y + m.dev.h / 2, ...(m.rack ? [m.src.y + m.src.h / 2] : [])]);
-      const rTop = busY ?? (inRow.size || inCrow.size ? rackTop + 6 : Math.min(...jackYs) - RT.lane * 3), rBot = Math.max(...jackYs) + RT.lane * 3;
+      const rkTop = F.rack.y, rkBot = F.rack.y + F.rack.h;
+      const rTop = busY ?? (inRow.size || inCrow.size ? rkTop + 6 : Math.min(...jackYs) - RT.lane * 3), rBot = Math.max(...jackYs) + RT.lane * 3;
       // side of the corridor: network hugs its switches, feeds coming in hug their targets,
       // feeds going out sit between — so each family's on-ramps and branches meet the fewest risers
       const want = F.dir === "net" ? rRange[0] + RT.lane : F.dir === "in" ? rRange[1] - RT.lane : (rRange[0] + rRange[1]) / 2;
@@ -1703,15 +1709,25 @@ export function route(job, ix, placement, opts = {}) {
         if (!rowYs.length) continue;
         const g = [...inCrow.keys()].find(r => r.k === k).gutter, gmid = (g[0] + g[1]) / 2;
         const levels = [];
-        const hiY = busY ?? (lowRow ? lowRow.bot + 10 : rackTop - 60);
-        for (let y = rackTop - 10; y >= hiY; y -= RT.lane) levels.push(y);
-        for (let y = rackBottom + 14; y <= rackBottom + 320; y += RT.lane) levels.push(y);
-        let got = null;
+        const hiY = busY ?? (lowRow ? lowRow.bot + 10 : rkTop - 60);
+        // the clear level nearest the family's own jacks: straight across when nothing's in the way
+        const jackMid = (Math.min(...jackYs) + Math.max(...jackYs)) / 2;
+        for (let y = hiY; y <= rkBot + 320; y += RT.lane) levels.push(Math.round(y));
+        levels.sort((a, b) => Math.abs(a - jackMid) - Math.abs(b - jackMid));
+        // of the clear levels, the one the rest of the sheet crosses least, then the nearest
+        let got = null, gotCost = Infinity, tried = 0;
         for (const ey of levels) {
+          if (tried >= 40) break;
           if (segBlocked(rx, ey, g[1], ey, null) || conflicts(usedH, ey, rx, gmid, net)) continue;
+          // the riser has to reach that level from the family's jacks, clear of bodies and other nets
+          const vy0 = Math.min(ey, ...jackYs), vy1 = Math.max(ey, ...jackYs);
+          if (segBlocked(rx, vy0, rx, vy1, null) || conflicts(usedV, rx, vy0, vy1, net)) continue;
           const lo = Math.min(ey, ...rowYs), hi = Math.max(ey, ...rowYs);
           const gx = alloc(usedV, gmid, lo, hi, net, 0, xx => !!segBlocked(xx, lo, xx, hi, null), g);
-          if (gx != null) { got = { ey, gx }; break; }
+          if (gx == null) continue;
+          tried++;
+          const cost = countCrossings([[rx, ey], [gx, ey], [gx, lo === ey ? hi : lo]]) * 100 + Math.abs(ey - jackMid) / 4;
+          if (cost < gotCost) { gotCost = cost; got = { ey, gx }; }
         }
         if (!got) { why(null, `no express run to cluster ${k}`); continue; }
         cgut.set(k, got);
@@ -1789,7 +1805,7 @@ export function route(job, ix, placement, opts = {}) {
             const g = gapRightOf(dev.col || "B");
             for (let k = 1; k <= 12 && !rackEnd; k++) for (const sgn of [1, -1]) {
               const ly = py + sgn * k * RT.lane;
-              if (ly < rackTop + 8 || ly > rackBottom + 60) continue;
+              if (ly < rkTop + 8 || ly > rkBot + 60) continue;
               const gx = alloc(usedV, (g[0] + g[1]) / 2, Math.min(py, ly), Math.max(py, ly), net, 0, xx => !!segBlocked(xx, Math.min(py, ly), xx, Math.max(py, ly), null), g);
               if (gx == null) continue;
               const p = [[sx, py], [gx, py], [gx, ly], [rx, ly]];
@@ -1843,7 +1859,12 @@ export function route(job, ix, placement, opts = {}) {
           const cost = countCrossings(fwd) * 100 + len;
           if (cost < bestCost) { bestCost = cost; best = fwd; }
         }
-        if (!best) { why(m, `no legal room end (${cands.length} tried, row ${row ? (F.bus.has(row) ? "bus ok" : "no bus") : "none"}, up ${row && up.has(row)})`); continue; }
+        if (!best) {
+          const c0 = cands[0] && cleanPts([...rackEnd.slice(0, -1), join, ...cands[0]]);
+          why(m, `no legal room end (${cands.length} tried, row ${row ? (F.bus.has(row) ? "bus ok" : "no bus") : "none"}, up ${row && up.has(row)})` +
+            (c0 ? ` first ${JSON.stringify(c0)}: ${pathBlocked(c0.slice(0, -1), null) || pathBlocked(c0.slice(-2), skipLand) || (!pathRegisterable(c0, net) ? "lane taken" : "?")}` : ""));
+          continue;
+        }
         const pts = m.dir === "out" ? best : [...best].reverse();
         if (m.dir === "in") (leftPorts[dev.id] ||= []).push(m.ty);
         commit(m.c, "trunk", pts, { net, group: "trunk-" + F.key, trunk: F.key });

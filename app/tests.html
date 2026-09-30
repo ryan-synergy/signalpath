@@ -3032,6 +3032,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
       const x = v.a[0], y = h.a[1]; if (x > Math.min(h.a[0], h.b[0]) + 1 && x < Math.max(h.a[0], h.b[0]) - 1 && y > Math.min(v.a[1], v.b[1]) + 1 && y < Math.max(v.a[1], v.b[1]) - 1) pts.add(`${x},${y}`); }
     return pts.size; };
   const draw = (raw, trunks) => { const { job, ix } = loadJob(structuredClone(raw)); const p = place(job, ix, { trunks }); return { job, ix, p, rt: route(job, ix, p, { trunks }) }; };
+  const E2 = raw => effectiveJob(structuredClone(raw), 0);   // a job's first option, overrides applied
 
   { const { rt } = draw(fixtures.residence);
     t("trunks: off by default — no job draws trunks unless it asks", !rt.wires.some(w => w.cls === "trunk")); }
@@ -3067,6 +3068,25 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const skipped = on.rt.wires.filter(w => (w.signal === "network" || w.dante) && ["cbx→sw", "dante-cbox→dante-sw", "dante-sw→director", "dante-sw→hype", "dante-sw→hype-2", "dante-in→director"].includes(w.id) && w.cls !== "trunk");
     t(`trunks — Harlow: every rack network / Dante patch on its trunk; visible crossings ${visCross(off.rt)} → ${visCross(on.rt)} (≤ 40)`,
       !skipped.length && visCross(on.rt) <= 40 && !legal(on.p, on.rt).length, JSON.stringify(skipped.map(w => w.id)));
+  }
+  { // two racks (Estate: a main rack + a pool-house rack): each rack builds its own trunks from its own boxes
+    const off = draw(fixtures.estate, false), on = draw(fixtures.estate, "bundle");
+    const feeds = on.rt.wires.filter(w => /→(dec-(family|master|pool)|.*-spk)$/.test(w.id));
+    const byRack = new Set(on.rt.wires.filter(w => w.cls === "trunk").map(w => w.trunk.split("@")[1]));
+    t(`trunks — Estate (2 racks): every room feed on a trunk, one set per rack, legal; crossings ${visCross(off.rt)} → ${visCross(on.rt)}`,
+      feeds.length >= 10 && feeds.every(w => w.cls === "trunk") && byRack.has("rack-main") && byRack.has("rack-pool") && !legal(on.p, on.rt).length && visCross(on.rt) <= visCross(off.rt),
+      JSON.stringify(feeds.filter(w => w.cls !== "trunk").map(w => w.id)));
+    const pool = on.rt.wires.filter(w => w.trunk?.endsWith("@rack-pool"));
+    const rackPool = on.p.racks.find(r => r.id === "rack-pool");
+    t("trunks — Estate: the pool rack's trunks leave from the pool rack's own height, not up through the main rack",
+      pool.length >= 4 && pool.every(w => w.pts.every(q => q[1] >= rackPool.y - 1 || q[0] > rackPool.x + rackPool.w)));
+  }
+  { // 79 seeded two-rack jobs
+    const g = F.jobGenerator(1, { extras: true }); let x0 = 0, x1 = 0, n = 0, illegal = [];
+    for (let k = 0; k < 325; k++) { const raw = g(k); if (raw.solutions[0].racks.length < 2 || !raw.house.zones.length) continue;
+      const a = draw(E2(raw), false), b = draw(E2(raw), "bundle"); x0 += visCross(a.rt); x1 += visCross(b.rt); n++;
+      illegal.push(...legal(b.p, b.rt).map(x => `#${k} ${x}`)); }
+    t(`trunks — ${n} random two-rack jobs: legal, ≤ 50% of today's visible crossings (${x0} → ${x1})`, n >= 50 && !illegal.length && x1 <= x0 * 0.5, illegal.slice(0, 3).join(" | "));
   }
   { // the schedule numbers the sheet prints are the Wire Schedule's own
     const { job, ix } = loadJob(structuredClone(fixtures.residence));

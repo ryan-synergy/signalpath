@@ -94,6 +94,17 @@ export function jobGenerator(SEED, { extras = false } = {}) {
         if (rx() < 0.6) conns.push({ from: tv.id, to: "avr", signal: "audioReturn", earcKit: true, ...(z.scope !== "included" ? { scope: z.scope } : {}) });
       }
     }
+    // a second rack in a second area (a pool house, a detached garage): some boxes and rooms move there
+    if (rx() < 0.3 && devs.length > 3 && job.house.zones.length > 2) {
+      const rack2 = { id: "rack2", name: "Second Rack", area: "a-out", devices: [] };
+      for (const d of [...devs]) if ((d.type === "amp" || d.type === "avr" || d.type === "networkSwitch" || d.type === "source") && rx() < 0.5) { devs.splice(devs.indexOf(d), 1); rack2.devices.push(d); }
+      if (rack2.devices.length) {
+        sol.racks[0].area = "a-main";
+        sol.racks.push(rack2);
+        job.house.areas = [{ id: "a-main", name: "Main House", homeRack: "rack" }, { id: "a-out", name: "Outbuilding", homeRack: "rack2" }];
+        for (const z of job.house.zones) z.area = rx() < 0.35 ? "a-out" : "a-main";
+      }
+    }
     // an eARC kit pointed somewhere odd (an input module) must not break anything
     const tv = job.house.zones.flatMap(z => z.endpoints).find(e => e.type === "display");
     if (tv && devs.some(d => d.id === "in") && rx() < 0.2) conns.push({ from: tv.id, to: "in", signal: "audioReturn", earcKit: true });

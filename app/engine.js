@@ -576,10 +576,11 @@ export function place(job, ix = indexJob(job), opts = {}) {
 }
 
 /* ---------- trunk mode (one trunk per signal type) ----------
-   job.job.trunkStyle = "bundle" | "ribbon" turns it on; opts.trunks overrides
-   (false forces the classic drawing). Off by default: nothing moves until chosen. */
+   On by default since 2026-09-30 (Ryan): a job draws as "bundle" unless it says
+   job.job.trunkStyle = "ribbon" or "off". opts.trunks overrides ("bundle" |
+   "ribbon" | false / "off" for the classic drawing). */
 export const trunkMode = (job, opts = {}) => {
-  const t = opts.trunks !== undefined ? opts.trunks : job.job?.trunkStyle;
+  const t = opts.trunks !== undefined ? opts.trunks : (job.job?.trunkStyle ?? "bundle");
   return t === "bundle" || t === "ribbon" ? t : null;
 };
 // Dante as labels (job.job.danteStyle = "labels"; opts.danteLabels overrides): a Dante
@@ -3199,7 +3200,10 @@ function drawTrunks(list, style, labels) {
       tags.push(`<text class="wirenum" x="${vert ? mx + 6 : mx}" y="${vert ? my + 3.5 : my - 5}"${vert ? "" : ' text-anchor="middle"'} font-size="9" font-weight="700" letter-spacing=".3" fill="${color}" paint-order="stroke" stroke="#fff" stroke-width="3">${esc(lab)}</text>`);
     }
   }
-  return `<g class="trunks" fill="none">${o.join("")}</g>${tags.join("")}`;
+  // each trunk wire keeps a path of its own, invisible until selected: tapping a trunk picks
+  // one wire, and the selection shows that wire's whole route through its trunk
+  const own = list.map(({ w, color }) => `<path class="wire trunkwire${w.dante ? " dante" : ""}" data-wire="${esc(w.id)}" data-from="${esc(w.from)}" data-to="${esc(w.to)}" data-signal="${esc(w.signal)}" d="${wireD(w)}" stroke="${color}" stroke-opacity="0" fill="none"/>`);
+  return `<g class="trunks" fill="none">${o.join("")}</g>${tags.join("")}${own.join("")}`;
 }
 
 export function render(job, ix, P, rt, opts = {}) {

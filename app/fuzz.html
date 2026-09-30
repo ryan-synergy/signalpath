@@ -105,7 +105,7 @@ function exercise(raw, label, strict = false) {
       const { job, ix } = loadJob(eff);
       validate(job, ix);
       const a = advise(job, ix, catalog);
-      for (const opts of [{ solution: si }, { solution: si, grayscale: true, hideSignals: ["network"] }, { solution: si, harness: true }, { solution: si, outdoor: true, danteLabels: true }, { solution: si, trunks: "bundle" }]) {
+      for (const opts of [{ solution: si, trunks: false }, { solution: si }, { solution: si, grayscale: true, hideSignals: ["network"] }, { solution: si, harness: true, trunks: false }, { solution: si, outdoor: true, danteLabels: true }, { solution: si, trunks: "ribbon" }]) {
         if (!job.house.zones.length) continue;
         // the outdoor variant draws the same job with outdoor zones as their own cluster
         const J = opts.outdoor ? { ...job, job: { ...job.job, zoneGrouping: "type-outdoor" } } : job;
@@ -114,16 +114,16 @@ function exercise(raw, label, strict = false) {
         svgCheck(render(J, ix, p, rt, opts), `sheet sol${si}${opts.grayscale ? " bw" : ""}${opts.outdoor ? " outdoor" : ""}`);
         if (!opts.grayscale) {
           const fb0 = METRIC.fallbackWires;
-          problems.push(...geometryProblems(p, rt).slice(0, 3).map(x => opts.harness ? "harness: " + x : opts.outdoor ? "outdoor: " + x : opts.trunks ? "trunks: " + x : x));
-          if (opts.harness || opts.outdoor || opts.trunks) METRIC.fallbackWires = fb0;   // the metric tracks the default drawing
+          problems.push(...geometryProblems(p, rt).slice(0, 3).map(x => opts.harness ? "harness: " + x : opts.outdoor ? "outdoor: " + x : opts.trunks === false ? "classic: " + x : "trunks: " + x));
+          if (opts.trunks !== false || opts.harness) METRIC.fallbackWires = fb0;   // the metric tracks the classic router's plain drawing
           // a well-formed job must route every wire — "unrouted" means a wire silently vanished
           if (strict) for (const w of rt.warnings.filter(w => w.code === "unrouted")) problems.push(`${w.code}: ${w.msg}`);
-          if (!opts.harness && !opts.outdoor && !opts.trunks && rt.warnings.some(w => w.code === "route-fallback")) METRIC.jobsWithFallback++;
+          if (opts.trunks === false && !opts.harness && rt.warnings.some(w => w.code === "route-fallback")) METRIC.jobsWithFallback++;
         }
         for (const w of rt.wires) if (w.pts) for (const pt of w.pts)
           if (!Number.isFinite(pt[0]) || !Number.isFinite(pt[1])) { problems.push(`non-finite wire point on ${w.id}`); break; }
-        if (!opts.grayscale && !opts.trunks) {
-          // reroute: alternates must be legal and a picked hint must reproduce its preview
+        if (opts.trunks === false && !opts.harness) {
+          // reroute (hints steer the classic router; a trunk wire rides its trunk): alternates must be legal and a picked hint must reproduce its preview
           const cands = [...rt.wires.filter(w => w.pts && (w.signal === "audioReturn" || w.cls === "intra" || w.cls === "staple" || w.cls === "wrap")).slice(0, 2),
                          ...rt.wires.filter(w => w.pts && /^zone-(west|east)$/.test(w.cls)).slice(0, 2)];
           for (const w of cands) {

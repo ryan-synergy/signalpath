@@ -15,7 +15,13 @@
 <div id="summary">running…</div>
 <ul id="out"></ul>
 <script type="module">
-import { loadJob, validate, advise, place, route, render, routeAlternates, expandChannels, effectiveHouse, effectiveJob, trunkCount, autoLinkCatalog, indexJob, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
+import { loadJob, validate, advise, place as enginePlace, route as engineRoute, render, routeAlternates as engineAlternates, expandChannels, effectiveHouse, effectiveJob, trunkCount, autoLinkCatalog, indexJob, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
+// Trunks are the app's default (Ryan 2026-09-30). The router regression suite below
+// pins the classic drawing explicitly — it still guards the "Off" choice — and the
+// trunk tests pass trunks: "bundle" / "ribbon" (or call enginePlace/engineRoute bare).
+const place = (job, ix, o = {}) => enginePlace(job, ix, { trunks: false, ...o });
+const route = (job, ix, p, o = {}) => engineRoute(job, ix, p, { trunks: false, ...o });
+const routeAlternates = (job, ix, p, o = {}, wid) => engineAlternates(job, ix, p, { trunks: false, ...o }, wid);
 import { sniff, importAny, importSiteWalk, importBlueprinted, mergeHouse, stripUnsafe, assertJobShape, drawFromWalk, decodeHandoff, encodeHandoff } from "./importers.js";
 import { pageFlags, sheetCount, renderChannelMap, renderTakeoff, renderWireSchedule, renderExtraPages, renderBomCompare, wireRuns, takeoffItems, takeoffCSV } from "./pages.js";
 
@@ -1979,7 +1985,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
 
 /* ---------- guided rerouting (user request 2026-09-21) ---------- */
 {
-  const { routeAlternates } = await import("./engine.js");
+  // (routeAlternates: the classic-pinned wrapper from the top of the file)
   // 1. a between-hint pins the return's lane to the strip between two devices
   const raw = structuredClone(fixtures.residence);
   const rconn = raw.solutions[0].connections.find(c => c.signal === "audioReturn");
@@ -3034,8 +3040,16 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const draw = (raw, trunks) => { const { job, ix } = loadJob(structuredClone(raw)); const p = place(job, ix, { trunks }); return { job, ix, p, rt: route(job, ix, p, { trunks }) }; };
   const E2 = raw => effectiveJob(structuredClone(raw), 0);   // a job's first option, overrides applied
 
-  { const { rt } = draw(fixtures.residence);
-    t("trunks: off by default — no job draws trunks unless it asks", !rt.wires.some(w => w.cls === "trunk")); }
+  { // the default: a job with no trunk setting draws bundled trunks; "off" is an explicit choice
+    const { job, ix } = loadJob(structuredClone(fixtures.residence)); const p = enginePlace(job, ix), rt = engineRoute(job, ix, p);
+    const j2 = structuredClone(fixtures.residence); j2.job.trunkStyle = "off"; const L2 = loadJob(j2), rt2 = engineRoute(L2.job, L2.ix, enginePlace(L2.job, L2.ix));
+    t("trunks: on by default — a job with no setting draws bundled trunks; trunkStyle \"off\" draws the classic sheet",
+      rt.wires.some(w => w.cls === "trunk") && !rt2.wires.some(w => w.cls === "trunk"));
+    // every trunk wire keeps a selectable path of its own (tap a trunk → one wire)
+    const svg = render(job, ix, p, rt), doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+    t("trunks: each trunk wire has its own (invisible until selected) wire path for tapping",
+      rt.wires.filter(w => w.cls === "trunk").every(w => doc.querySelector(`path.wire.trunkwire[data-wire="${CSS.escape(w.id)}"]`)) && doc.querySelectorAll("path.wire").length === rt.wires.length);
+  }
   for (const name of ["residence", "stress"]) {
     const off = draw(fixtures[name], false), on = draw(fixtures[name], "bundle"), rb = draw(fixtures[name], "ribbon");
     const trunk = on.rt.wires.filter(w => w.cls === "trunk");

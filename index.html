@@ -215,6 +215,8 @@
   #canvas svg .wirehit, #canvas svg .zcard .hit, #canvas svg .devtile { cursor: pointer; }
   #canvas svg.wiresel path.wire:not(.sel) { opacity: .13; }
   #canvas svg path.wire.sel { stroke-width: 3.6; }
+  #canvas svg.wiresel g.trunks { opacity: .13; }
+  #canvas svg path.wire.trunkwire.sel { stroke-opacity: 1; }
   #canvas .devtile.selnode rect:first-of-type { stroke: #e8842c; stroke-width: 2.5; }
   #canvas .zcard.selnode > rect.hit { stroke: #e8842c; stroke-width: 2.2; fill: rgba(232,132,44,.06); }
   #canvas .zcard.zglow > rect.hit { stroke: #e8842c99; stroke-width: 2; fill: rgba(232,132,44,.04); }
@@ -403,24 +405,24 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20260930225948",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20260930225948",
-    "./app/audiochain.js": "./app/audiochain.js?v=20260930225948",
-    "./app/ports.js": "./app/ports.js?v=20260930225948",
-    "./app/commands.js": "./app/commands.js?v=20260930225948",
-    "./app/engine.js": "./app/engine.js?v=20260930225948",
-    "./app/exports.js": "./app/exports.js?v=20260930225948",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260930225948",
-    "./app/hookup.js": "./app/hookup.js?v=20260930225948",
-    "./app/importers.js": "./app/importers.js?v=20260930225948",
-    "./app/names.js": "./app/names.js?v=20260930225948",
-    "./app/network.js": "./app/network.js?v=20260930225948",
-    "./app/pages.js": "./app/pages.js?v=20260930225948",
-    "./app/power.js": "./app/power.js?v=20260930225948",
-    "./app/quickadd.js": "./app/quickadd.js?v=20260930225948",
-    "./app/rack.js": "./app/rack.js?v=20260930225948",
-    "./app/route-audit.js": "./app/route-audit.js?v=20260930225948",
-    "./app/starters.js": "./app/starters.js?v=20260930225948"
+    "./app/ai.js": "./app/ai.js?v=20260930231256",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20260930231256",
+    "./app/audiochain.js": "./app/audiochain.js?v=20260930231256",
+    "./app/ports.js": "./app/ports.js?v=20260930231256",
+    "./app/commands.js": "./app/commands.js?v=20260930231256",
+    "./app/engine.js": "./app/engine.js?v=20260930231256",
+    "./app/exports.js": "./app/exports.js?v=20260930231256",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260930231256",
+    "./app/hookup.js": "./app/hookup.js?v=20260930231256",
+    "./app/importers.js": "./app/importers.js?v=20260930231256",
+    "./app/names.js": "./app/names.js?v=20260930231256",
+    "./app/network.js": "./app/network.js?v=20260930231256",
+    "./app/pages.js": "./app/pages.js?v=20260930231256",
+    "./app/power.js": "./app/power.js?v=20260930231256",
+    "./app/quickadd.js": "./app/quickadd.js?v=20260930231256",
+    "./app/rack.js": "./app/rack.js?v=20260930231256",
+    "./app/route-audit.js": "./app/route-audit.js?v=20260930231256",
+    "./app/starters.js": "./app/starters.js?v=20260930231256"
 } }
 </script>
 <script>
@@ -477,9 +479,9 @@
       <label class="chk"><input type="checkbox" id="hideNet"><span><b>Hide network</b><em>Drop the Cat6 network wires from the drawing</em></span></label>
       <div class="mgroup" role="group" aria-label="Trunks">
         <div class="mlabel">Trunks <em>Saved with the job: one trunk per signal type, breaking out room by room</em></div>
-        <label class="chk"><input type="radio" name="trunkStyle" value=""><span><b>Off</b><em>Each wire takes its own path</em></span></label>
-        <label class="chk"><input type="radio" name="trunkStyle" value="bundle"><span><b>Bundle</b><em>One heavy run with ×N, thin breakouts, wire numbers</em></span></label>
+        <label class="chk"><input type="radio" name="trunkStyle" value="bundle"><span><b>Bundle</b><em>The default: one heavy run with ×N, thin breakouts, wire numbers</em></span></label>
         <label class="chk"><input type="radio" name="trunkStyle" value="ribbon"><span><b>Ribbon</b><em>Same trunks, every wire its own line side by side</em></span></label>
+        <label class="chk"><input type="radio" name="trunkStyle" value="off"><span><b>Off</b><em>Each wire takes its own path (the older drawing)</em></span></label>
       </div>
       <label class="chk"><input type="checkbox" id="danteLabels"><span><b>Dante as labels</b><em>Saved with the job: no Dante lines — each amp lists its Dante sources, each source says where it goes</em></span></label>
       <label class="chk"><input type="checkbox" id="harnessMode"><span><b>Harness style</b><em>Saved with the job: runs to 3+ zones share one trunk and break out near each zone, like an electrical drawing</em></span></label>
@@ -568,7 +570,7 @@
 </div></div>
 
 <script type="module">
-import { loadJob, normalizeJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock } from "./app/engine.js";
+import { loadJob, normalizeJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock, trunkMode } from "./app/engine.js";
 import { importAny, mergeHouse, drawFromWalk, decodeHandoff } from "./app/importers.js";
 import { planQueueFiles, aiReviewMarkdown } from "./app/exports.js";
 import { RACK_SIZES, DEFAULT_RACK_U } from "./app/rack.js";
@@ -613,7 +615,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20260930225948").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20260930231256").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -708,8 +710,8 @@ function refresh(save = true) {
   S.sol = S.job.solutions.indexOf(sol);
   let v, a, svg = "", err, routeWarn = [], placeWarn = [];
   $("#harnessMode").checked = !!S.job.job.harnessStyle;     // a per-job drawing choice: follows job switches
-  for (const r of document.querySelectorAll('input[name="trunkStyle"]')) r.checked = r.value === (S.job.job.trunkStyle || "");
-  $("#harnessMode").disabled = !!S.job.job.trunkStyle;       // trunks replace the harness
+  for (const r of document.querySelectorAll('input[name="trunkStyle"]')) r.checked = r.value === (S.job.job.trunkStyle || "bundle");
+  $("#harnessMode").disabled = !!trunkMode(S.job);          // trunks replace the harness; it applies with trunks off
   $("#danteLabels").checked = S.job.job.danteStyle === "labels";
   try {
     autoLinkCatalog(S.job, effectiveCatalog());                // self-heal: fill missing catalog links by model
@@ -720,7 +722,7 @@ function refresh(save = true) {
     // "1 of N" counts the continuation sheets a long schedule/map paginates into
     const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, company: SETTINGS.company,
                    sheet: `1 of ${sheetTotal(job, ix, a, { solution: S.sol, rawJob: S.job })}` };
-    if (job.job.trunkStyle) opts.wireLabels = wireLabels(job, ix, { solution: S.sol, portMap: S.portMap });
+    if (trunkMode(job)) opts.wireLabels = wireLabels(job, ix, { solution: S.sol, portMap: S.portMap });
     if (S.job.house.zones.length) {
       const p = place(job, ix, opts);
       const rt = route(job, ix, p, opts);
@@ -892,7 +894,7 @@ $("#stageSel").onchange = e => { S.job.job.stage = e.target.value; refresh(); };
 $("#hideNet").onchange = () => refresh(false);
 $("#bwMode").onchange = () => refresh(false);
 for (const r of document.querySelectorAll('input[name="trunkStyle"]')) r.onchange = () => {
-  if (r.value) S.job.job.trunkStyle = r.value; else delete S.job.job.trunkStyle;
+  if (r.value === "bundle") delete S.job.job.trunkStyle; else S.job.job.trunkStyle = r.value;   // bundle is the default
   refresh();
 };
 $("#danteLabels").onchange = e => { if (e.target.checked) S.job.job.danteStyle = "labels"; else delete S.job.job.danteStyle; refresh(); };
@@ -1163,7 +1165,7 @@ function printPacket(packet = "service") {
     const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, company: SETTINGS.company,
                    rawJob: S.job, packet };
     opts.sheet = `1 of ${sheetTotal(job, ix, a, opts)}`;
-    if (job.job.trunkStyle) opts.wireLabels = wireLabels(job, ix, { solution: S.sol });
+    if (trunkMode(job)) opts.wireLabels = wireLabels(job, ix, { solution: S.sol });
     const p = place(job, ix, opts);
     const rt = route(job, ix, p, opts);
     if (packet !== "client" && isAsBuilt(S.job)) opts.marks = changeMarks(asBuiltChanges(S.job), p, rt, { grayscale: opts.grayscale });
@@ -1484,7 +1486,7 @@ $("#canvas").addEventListener("click", e => {
     const p = $("#canvas svg").querySelector(`path.wire[data-wire="${CSS.escape(selWire)}"]`);
     showTip(e.clientX, e.clientY,
       `<b>${esc(nodeName(p.dataset.from))}</b> → <b>${esc(nodeName(p.dataset.to))}</b> · ${esc(signalName(p.dataset.signal))}${connOf(selWire, p.dataset.signal)?.routeHint ? ' · <span class="mini">custom route</span>' : ""}${ids.length > 1 ? ` <span class="mini">(${idx + 2 > ids.length ? 1 : idx + 2}/${ids.length} here — tap to cycle)</span>` : ""}` +
-      `<div id="rrGo" class="altrow">⟲ Reroute…</div>` +
+      (p.classList.contains("trunkwire") ? `<div class="mini" style="padding:4px 2px">Rides its trunk. For a path of its own, set View ▾ → Trunks → Off.</div>` : `<div id="rrGo" class="altrow">⟲ Reroute…</div>`) +
       `<div id="ceGo" class="altrow">✎ Edit connection — change what it connects</div>` +
       (wireZone(selWire, p.dataset.signal) ? `<div id="zhGo" class="altrow">⚙ ${esc(S.view.ix.zonesById[wireZone(selWire, p.dataset.signal)]?.name || "Zone")} hookup</div>` : ""));
     return;

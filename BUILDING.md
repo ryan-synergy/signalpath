@@ -251,6 +251,8 @@ Print = new window, `@page 17in 11in landscape`, one SVG per page, `print()`. Pa
 
 54. **A shared key needs every writer to share the move.** The harness made a bundle legal by construction — one net, one conductor — but that is a promise every later pass has to keep: the untwist passes were written before bundles existed and treated a wire as the unit, not its net. The fuzz check that would have caught it was turned off for the classic router as a "known bug"; switching it on and bisecting with a per-pass overlap probe put all 279 first-overlaps in one pass (4d) within minutes. A disabled invariant is a bug report nobody is reading.
 
+54. **Corridor order decides the rack crossings.** Folding the rack's network and Dante patches into trunks first made Harlow *worse* (55 → 68): the network riser landed right of the Dante riser, so the Dante switch's on-ramps had to cut across the Dante branches heading into the same amps at nearly the same heights — the lane registry refused them and they fell back. Giving each family a side of the corridor (network beside its switches, feeds coming in beside their targets, video between — the mockup's order) took it to 37. Two smaller rules mattered: try several jack heights, not the one closest to the middle; and a box under its own switch (a CBOX) gets a local staple through the gap between them, not a trip out to the riser and back.
+
 ## 10. Order of construction (what to build when)
 
 1. Data model + `loadJob`/`indexJob` + first fixtures — get tests running the same day.

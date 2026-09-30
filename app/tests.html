@@ -3044,15 +3044,29 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const nets = {}; for (const w of trunk) (nets[`${w.trunk}`] ||= new Set()).add(w.net);
     t(`trunks — ${name}: one net per trunk`, Object.values(nets).every(s => s.size === 1));
     // inputs on the input side: a trunk wire into a rack box ends on its LEFT edge; one leaving a box starts on its RIGHT edge
-    const dev = {}; for (const r of on.p.racks) for (const d of r.devices) dev[d.id] = d;
+    // (a network patch is drawn from its switch, whichever way it was stored)
+    const devs = on.p.racks.flatMap(r => r.devices);
+    const touches = (pt, side) => devs.find(d => Math.abs(pt[0] - (side === "L" ? d.x : d.x + d.w)) < 0.5 && pt[1] >= d.y - 0.5 && pt[1] <= d.y + d.h + 0.5);
+    const onBox = pt => devs.find(d => pt[0] >= d.x - 0.5 && pt[0] <= d.x + d.w + 0.5 && pt[1] >= d.y - 0.5 && pt[1] <= d.y + d.h + 0.5);
     t(`trunks — ${name}: into a box on its left edge, out of a box on its right edge`,
-      trunk.every(w => (!dev[w.to] || Math.abs(w.pts.at(-1)[0] - dev[w.to].x) < 0.5) && (!dev[w.from] || Math.abs(w.pts[0][0] - (dev[w.from].x + dev[w.from].w)) < 0.5)));
+      trunk.every(w => (!onBox(w.pts.at(-1)) || touches(w.pts.at(-1), "L")) && (!onBox(w.pts[0]) || touches(w.pts[0], "R"))),
+      JSON.stringify(trunk.filter(w => !((!onBox(w.pts.at(-1)) || touches(w.pts.at(-1), "L")) && (!onBox(w.pts[0]) || touches(w.pts[0], "R")))).map(w => w.id)));
+    t(`trunks — ${name}: the rack's network patches ride the network trunk, drawn from the switch`,
+      on.rt.wires.filter(w => w.signal === "network" && w.rackPatch).every(w => { const a = touches(w.pts[0], "R"); return a && /switch|gateway/i.test(on.job.solutions[0].racks.flatMap(r => r.devices).find(d => d.id === a.id)?.type || ""); }) &&
+      on.rt.wires.some(w => w.signal === "network" && w.trunk === "net:network"));
     if (name === "stress") t(`trunks — stress: fewer visible crossings than today's routing (${visCross(off.rt)} → ${visCross(on.rt)})`, visCross(on.rt) <= visCross(off.rt) * 0.75);
     const svgB = render(on.job, on.ix, on.p, on.rt, { trunks: "bundle", wireLabels: PG.wireLabels(on.job, on.ix) });
     const svgR = render(rb.job, rb.ix, rb.p, rb.rt, { trunks: "ribbon", wireLabels: PG.wireLabels(rb.job, rb.ix) });
     t(`trunks — ${name}: bundle draws ×N and schedule numbers; ribbon draws lanes; no NaN`,
       /class="bustick"[^>]*>×\d/.test(svgB) && /class="wirenum"[^>]*>[VSRN]-\d\d/.test(svgB) && (svgR.match(/stroke-width="1.4"/g) || []).length > 6 &&
       !/NaN|undefined/.test(svgB + svgR) && !new DOMParser().parseFromString(svgB, "image/svg+xml").querySelector("parsererror"));
+  }
+  { // Harlow (walkthrough job: MXNet video + Dante audio + a theater receiver): the sheet Ryan reviewed
+    const H = await (await fetch("./test-fixtures/harlow-dante.json")).json();
+    const off = draw(H, false), on = draw(H, "bundle");
+    const skipped = on.rt.wires.filter(w => (w.signal === "network" || w.dante) && ["cbx→sw", "dante-cbox→dante-sw", "dante-sw→director", "dante-sw→hype", "dante-sw→hype-2", "dante-in→director"].includes(w.id) && w.cls !== "trunk");
+    t(`trunks — Harlow: every rack network / Dante patch on its trunk; visible crossings ${visCross(off.rt)} → ${visCross(on.rt)} (≤ 40)`,
+      !skipped.length && visCross(on.rt) <= 40 && !legal(on.p, on.rt).length, JSON.stringify(skipped.map(w => w.id)));
   }
   { // the schedule numbers the sheet prints are the Wire Schedule's own
     const { job, ix } = loadJob(structuredClone(fixtures.residence));

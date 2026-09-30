@@ -48,6 +48,14 @@ export function parseQuickZone(text) {
   if (eat(/\bmatrix\b|\bdistributed\b/)) matrix = true;
   // "avr" / "receiver": one AV receiver drives this zone's TV and speakers
   if (eat(/\bav\s?rs?\b|\breceiver\b/)) avr = true;
+  // "bullet" / "bullet train": the TV's run is an AVPro Bullet Train fiber HDMI
+  let bullet = false;
+  if (eat(/\bbullet(?:\s*train)?\b|\baoc\b|\bfiber hdmi\b/)) bullet = true;
+  // rough distance to the rack: "far" (a pool house), "short run"; or "120ft"
+  const ftm = eat(/\b(\d{2,4})\s*(?:ft|feet|')(?:\s+run)?(?=\s|,|$)/);
+  if (ftm) zone.runFt = +ftm[1];
+  else if (eat(/\bfar(?:\s+run)?\b|\blong\s+run\b/)) zone.reach = "far";
+  else if (eat(/\bshort\s+run\b|\bclose\s+to\s+the\s+rack\b/)) zone.reach = "short";
   // "dante": sound over Dante (AXIS2 / Dante decoder at the TV → a Director);
   // "director": a surround set on a Director instead of a Hyperion
   let dante = false, director = false;
@@ -123,7 +131,9 @@ export function parseQuickZone(text) {
   if (matrix && tv) chips.push({ kind: "hint", label: "TV fed from the rack" });
   if (avr) chips.push({ kind: "hint", label: tv && spk ? "AV receiver feeds the TV + speakers" : tv ? "AV receiver feeds the TV" : "AV receiver feeds the speakers" });
   if (dante) chips.push({ kind: "hint", label: director ? "Dante → Director amp" : "sound over Dante" });
-  zone._hints = { local, matrix, avr, dante, director };
+  if (bullet && tv) chips.push({ kind: "hint", label: "Bullet Train fiber HDMI to the TV" });
+  if (zone.reach || zone.runFt) chips.push({ kind: "hint", label: zone.runFt ? `${zone.runFt} ft from the rack` : `${zone.reach} from the rack` });
+  zone._hints = { local, matrix, avr, dante, director, bullet };
   // a room with no speakers and no TV has nothing to draw — say so before Add skips it
   if (!zone.endpoints.length) chips.push({ kind: "warn", label: "nothing to add — give it a setup or a TV size" });
   return { zone, chips, empty: !zone.endpoints.length };

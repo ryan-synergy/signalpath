@@ -237,6 +237,8 @@ Print = new window, `@page 17in 11in landscape`, one SVG per page, `print()`. Pa
 
 48. **Read the DIP switches, not the product page.** The eARC extender kit's page says it delivers eARC "to an AVR" — true, but its receiver-end HDMI defaults to eARC OUT mode, which means it pretends to be a TV and wants the receiver's eARC *output*, the very jack the HDBaseT video already uses. Only the manual (p15, RX DIP 2) shows the second mode: a plain audio-only HDMI out into any receiver input. That one switch decides which jack it lands on, the input budget it counts against, and the install note. It was modelled as a flag on the TV's audio-return wire (`earcKit`), not a new adapter chip, so the drawing, router and validator needed no changes — only the places that name cables, jacks, parts and power learned about it.
 
+49. **Keep distance rough on purpose.** A Bullet Train's length decides two things — its SKU and whether eARC survives (only up to 10 m) — so the app needed *some* distance, but Ryan's call was that footage belongs to another stage. Three words (Short / Average / Far) with an optional exact-feet override is enough to size the part and pick the audio-back rule, and never pretends to be a survey. It lives on the zone (`reach`, `runFt`), not the connection, because a guest pool house is far no matter what feeds it. The Bullet Train itself is a flag on the video edge (`run: "bullet"`), not an adapter chip: a cable with no box has nothing to draw.
+
 ## 10. Order of construction (what to build when)
 
 1. Data model + `loadJob`/`indexJob` + first fixtures — get tests running the same day.

@@ -3,6 +3,7 @@
    Pure functions, no DOM. Spec: ../DESIGN.md (FROZEN 2026-09-17). */
 
 import { describeNode, adapterName, adapterTag, isOutdoorZone, SIGNAL_SHORT, SCOPE_NAME } from "./names.js";
+import { bulletFor, isAtmosRoom } from "./hookup.js";
 import { networkPlan, suggestLanSwitch } from "./network.js";
 import { powerPlan } from "./power.js";
 import { rackPlans } from "./rack.js";
@@ -3173,6 +3174,19 @@ export function advise(job, ix = indexJob(job), catalog = null) {
           // the default balun (AVPro AC-EX70-444-KIT) carries no audio back at all
           ? `${describeNode(job, sol, comp.serves).short}: the HDBaseT balun (AVPro AC-EX70-444-KIT) doesn't carry ARC/eARC — for the TV's own apps to play through the receiver, set TV audio back to "eARC + optical backup" (an optical run)`
           : `${describeNode(job, sol, comp.serves).short}: eARC comes back through the ${adapterName(comp)} — confirm that model passes eARC (many only pass ARC), or add the optical backup` });
+    }
+
+    /* -- Bullet Train runs: sized by the room's distance; past 40 m there's no such
+       cable, and past 10 m it carries ARC — an Atmos room with nothing else
+       bringing the TV's sound back loses Atmos from the TV apps -- */
+    for (const c of sol.connections || []) {
+      if (c.signal !== "video" || c.run !== "bullet" || !ix.endpointsById[c.to]) continue;
+      const z = ix.zonesById[ix.endpointZone[c.to]], b = bulletFor(z), tv = describeNode(job, sol, c.to).short;
+      if (!b.m) out.notes.push({ code: "bullet-too-far", solution: sol.id, ref: c.to,
+        msg: `${tv}: a Bullet Train tops out at 40 m and this run is ~${b.need} m — use the HDBaseT balun (70 m at 4K) or MXNet` });
+      else if (c.earc && !b.earc && isAtmosRoom(z) && !(sol.connections || []).some(r => r.from === c.to && r.signal === "audioReturn"))
+        out.notes.push({ code: "bullet-arc", solution: sol.id, ref: c.to,
+          msg: `${tv}: a ${b.m} m Bullet Train carries ARC, not eARC (eARC only up to 10 m) — no Atmos from the TV apps; set TV audio back to "eARC extender kit"` });
     }
 
     /* -- a surround room whose TV sound comes back on optical: optical tops out at

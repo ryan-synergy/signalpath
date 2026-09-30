@@ -1377,6 +1377,53 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const hla = healthy(ja);
     t("Atmos default: valid and routes clean", !hla.errs.length && !hla.bad && !hla.through, JSON.stringify(hla));
   }
+  { // Bullet Train (AVPro AOC fiber HDMI): a run choice next to the balun, sized by the room's rough distance
+    const CAT = await (await fetch("./catalog.json")).json();
+    const XM = await import("./exports.js"), X2 = () => XM;
+    t("bullet: distance → cable length and eARC (eARC only up to 10 m)",
+      H.bulletFor({ reach: "short" }).m === 10 && H.bulletFor({ reach: "short" }).earc && H.bulletFor({}).m === 20 && !H.bulletFor({}).earc &&
+      H.bulletFor({ reach: "far" }).m === 40 && H.bulletFor({ runFt: 30 }).m === 10 && H.bulletFor({ runFt: 60 }).m === 20 && H.bulletFor({ runFt: 200 }).m === null &&
+      ["05", "10", "15", "20", "30", "40"].every(k => CAT.devices[`avpro-ac-btssf-10kuhd-${k}`]?.partNo === `AC-BTSSF-10KUHD-${k}`));
+    const jb = structuredClone(fixtures.residence), sb = jb.solutions[0];
+    const qs = parseQuickZone("media room 7.1 75 avr bullet short run").zone;
+    t("bullet: quick-add reads 'bullet' and 'short run'", qs._hints.bullet && qs.reach === "short");
+    delete qs._hints; jb.house.zones.push(qs);
+    H.autoHookup(jb, sb, qs, { avr: true, bullet: true });
+    const hs = H.readHookup(jb, sb, qs);
+    t("bullet: a short run from the receiver — no adapter, eARC back over the cable, no extra audio run",
+      hs.video.run === "bullet" && !hs.video.via && hs.earc && !hs.ret && !(sb.companions || []).some(c => c.serves === hs.tv.id));
+    const qa = parseQuickZone("pool house 7.1.4 75 avr bullet far").zone;
+    t("bullet: quick-add reads 'far'", qa.reach === "far");
+    delete qa._hints; jb.house.zones.push(qa);
+    H.autoHookup(jb, sb, qa, { avr: true, bullet: true });
+    const ha = H.readHookup(jb, sb, qa);
+    t("bullet: a far Atmos room (40 m, ARC only) gets the eARC kit back", ha.video.run === "bullet" && ha.audioBack === "earc-kit");
+    const q5 = parseQuickZone("den 5.1 65 avr bullet").zone; delete q5._hints; jb.house.zones.push(q5);
+    H.autoHookup(jb, sb, q5, { avr: true, bullet: true });
+    const h5 = H.readHookup(jb, sb, q5);
+    t("bullet: an average 5.1 room rides the cable's ARC — no optical, no kit", h5.video.run === "bullet" && h5.earc && !h5.ret);
+    const Lb = loadJob(jb), ab = advise(Lb.job, Lb.ix, CAT), rb = P2.wireRuns(Lb.job, Lb.ix);
+    t("bullet: wire schedule names the cable length and what comes back",
+      rb.some(r => r.to.startsWith("Media Room") && r.cable === "Bullet Train fiber HDMI 10 m" && /eARC back/.test(r.carries)) &&
+      rb.some(r => r.to.startsWith("Den") && r.cable === "Bullet Train fiber HDMI 20 m" && /ARC back \(over 10 m\)/.test(r.carries)));
+    const pq = X2().planQueueFiles(jb, 0, CAT)[0].text;
+    t("bullet: PlanQueue lists the sized SKU in each room", /## Media Room[\s\S]*?AC-BTSSF-10KUHD-10/.test(pq) && /## Pool House[\s\S]*?AC-BTSSF-10KUHD-40/.test(pq) && /## Den[\s\S]*?AC-BTSSF-10KUHD-20/.test(pq));
+    t("bullet: no warnings on a sensible job", !ab.notes.some(n => n.code === "bullet-too-far" || n.code === "bullet-arc"));
+    qa.runFt = 200;
+    H.setAudioBack(jb, sb, qa, "earc");
+    const L2b = loadJob(jb), a2b = advise(L2b.job, L2b.ix, CAT);
+    t("bullet: past 40 m → too-far note; an Atmos room left on ARC → bullet-arc note",
+      a2b.notes.some(n => n.code === "bullet-too-far" && /40 m/.test(n.msg)) && !a2b.notes.some(n => n.code === "bullet-arc"));
+    delete qa.runFt;
+    const L3b = loadJob(jb), a3b = advise(L3b.job, L3b.ix, CAT);
+    t("bullet: …and the ARC note once the length fits", a3b.notes.some(n => n.code === "bullet-arc" && /Pool House/.test(n.msg)));
+    const pre = structuredClone(jb); pre.house.zones.find(q => q.name === "Den").scope = "prewire";
+    t("bullet: a pre-wire room's Bullet Train run is Synergy's Bullet Train TV pre-wire", /## Den[\s\S]*?Prewire - TV \(Bullet Train\)/.test(X2().planQueueFiles(pre, 0, CAT).map(f => f.text).join("\n")));
+    H.setVideo(jb, sb, qs, hs.video.from, "balun");
+    t("bullet: switching back to the balun restores its adapter", H.readHookup(jb, sb, qs).video.run === "balun");
+    const hlb = healthy(jb);
+    t("bullet: valid and routes clean", !hlb.errs.length && !hlb.bad && !hlb.through, JSON.stringify(hlb));
+  }
   H.setAudioBack(j2, s2, z, "optical", "sav-in");
   const ho = H.readHookup(j2, s2, z);
   t("audio back: optical only drops eARC and runs to the chosen box", !ho.earc && ho.ret?.to === "sav-in" && !ho.ret.backup && ho.audioBack === "optical");

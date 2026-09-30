@@ -399,24 +399,24 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20260930140135",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20260930140135",
-    "./app/audiochain.js": "./app/audiochain.js?v=20260930140135",
-    "./app/ports.js": "./app/ports.js?v=20260930140135",
-    "./app/commands.js": "./app/commands.js?v=20260930140135",
-    "./app/engine.js": "./app/engine.js?v=20260930140135",
-    "./app/exports.js": "./app/exports.js?v=20260930140135",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260930140135",
-    "./app/hookup.js": "./app/hookup.js?v=20260930140135",
-    "./app/importers.js": "./app/importers.js?v=20260930140135",
-    "./app/names.js": "./app/names.js?v=20260930140135",
-    "./app/network.js": "./app/network.js?v=20260930140135",
-    "./app/pages.js": "./app/pages.js?v=20260930140135",
-    "./app/power.js": "./app/power.js?v=20260930140135",
-    "./app/quickadd.js": "./app/quickadd.js?v=20260930140135",
-    "./app/rack.js": "./app/rack.js?v=20260930140135",
-    "./app/route-audit.js": "./app/route-audit.js?v=20260930140135",
-    "./app/starters.js": "./app/starters.js?v=20260930140135"
+    "./app/ai.js": "./app/ai.js?v=20260930140737",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20260930140737",
+    "./app/audiochain.js": "./app/audiochain.js?v=20260930140737",
+    "./app/ports.js": "./app/ports.js?v=20260930140737",
+    "./app/commands.js": "./app/commands.js?v=20260930140737",
+    "./app/engine.js": "./app/engine.js?v=20260930140737",
+    "./app/exports.js": "./app/exports.js?v=20260930140737",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260930140737",
+    "./app/hookup.js": "./app/hookup.js?v=20260930140737",
+    "./app/importers.js": "./app/importers.js?v=20260930140737",
+    "./app/names.js": "./app/names.js?v=20260930140737",
+    "./app/network.js": "./app/network.js?v=20260930140737",
+    "./app/pages.js": "./app/pages.js?v=20260930140737",
+    "./app/power.js": "./app/power.js?v=20260930140737",
+    "./app/quickadd.js": "./app/quickadd.js?v=20260930140737",
+    "./app/rack.js": "./app/rack.js?v=20260930140737",
+    "./app/route-audit.js": "./app/route-audit.js?v=20260930140737",
+    "./app/starters.js": "./app/starters.js?v=20260930140737"
 } }
 </script>
 <script>
@@ -571,7 +571,7 @@ import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/comma
 import { askClaude, handoffPrompt, extractProposal, jobSummary, assess, loadConn, saveConn, connReady, MODELS } from "./app/ai.js";
 import { setDanteAudio, danteAmpFor } from "./app/hookup.js";
 import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, nextFreeOutputs, outputsNeeded,
-         VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS } from "./app/hookup.js";
+         VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS, REACH, bulletFor } from "./app/hookup.js";
 import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME, AUDIO_NET_NAME,
          signalName, describeNode, humanizeWireIds, productName, productSku, ADAPTER, isOutdoorZone, ZONE_GROUPING_NAME } from "./app/names.js";
 
@@ -602,7 +602,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20260930140135").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20260930140737").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -652,7 +652,7 @@ function syncShippedCatalog() {
   return changed;
 }
 // advisor notes that ask for a fix (the rest are reference: setup checklists, budgets)
-const ACTION_NOTES = new Set(["no-port", "downres-surround", "amp-sub-outs", "earc-extender", "mxnet-no-cbox", "dante-no-controller", "mxnet-cbox-per-platform", "net-mismatch", "net-mixed",
+const ACTION_NOTES = new Set(["no-port", "bullet-too-far", "bullet-arc", "downres-surround", "amp-sub-outs", "earc-extender", "mxnet-no-cbox", "dante-no-controller", "mxnet-cbox-per-platform", "net-mismatch", "net-mixed",
   "dante-multicast", "pcm-only", "switch-ports-full", "switch-no-poe", "lan-no-switch", "power-none", "power-short", "power-tight",
   "power-circuit", "power-peak", "rack-full", "rack-unknown-u", "rack-heat"]);
 const saveSettings = () => dbPut({ id: "__settings", updated: Date.now(), settings: SETTINGS });
@@ -1693,7 +1693,8 @@ function zonesHTML() {
     if (h.video?.from && h.video.from === h.speakers?.from) feed = `${short(h.video.from)} → TV + speakers`;
     else feed = [h.tv && h.video?.from && `TV ← ${short(h.video.from)}`,
                  h.spk && h.speakers?.from && (h.speakers.viaTv ? "soundbar ← the TV (eARC)" : `speakers ← ${short(h.speakers.from)}${h.speakers.channels ? " " + h.speakers.channels : ""}`)].filter(Boolean).join(" · ");
-    if (h.ret?.kit) feed += " · eARC kit back"; else if (h.earc) feed += h.ret ? " · eARC + optical backup" : " · eARC"; else if (h.ret) feed += " · optical back";
+    if (h.video?.run === "bullet") feed += ` · Bullet Train ${bulletFor(z).m ? bulletFor(z).m + " m" : "(too far)"}`;
+    if (h.ret?.kit) feed += " · eARC kit back"; else if (h.earc) feed += h.ret ? " · eARC + optical backup" : h.video?.run === "bullet" && !bulletFor(z).earc ? " · ARC" : " · eARC"; else if (h.ret) feed += " · optical back";
     const issue = found.find(f => f.level === "e") || found[0];
     const head = `<div class="head zhead" data-toggle="${esc(z.id)}">${statusMark(found, wired)}
       <div class="zmain"><div class="zt"><span class="t">${esc(z.name)}</span>
@@ -1767,7 +1768,18 @@ function hookupHTML(z, sol, multi) {
       <optgroup label="In the rack">${devOpts(VIDEO_FROM, cur)}</optgroup>
       ${locals.length ? `<optgroup label="In this zone">${locals.map(d => opt(d.id, nm(d.id), cur)).join("")}</optgroup>` : ""}
       <optgroup label="Add">${opt("__new_avr", "＋ New AV receiver…", "")}</optgroup></select>`));
-    if (byDev(cur)) rows.push(field("Run to TV", chips("hvrun", Object.entries(RUNS), h.video.run, "seg")));
+    if (byDev(cur)) {
+      rows.push(field("Run to TV", chips("hvrun", Object.entries(RUNS), h.video.run, "seg")));
+      // rough distance to the rack (exact footage is optional) — sizes a Bullet Train
+      rows.push(field("Distance", chips("hreach", Object.entries(REACH), z.runFt ? "" : z.reach || "average", "seg")
+        + `<input class="hrunft" inputmode="numeric" style="width:64px;margin-left:6px" placeholder="ft" value="${esc(z.runFt ?? "")}" aria-label="Exact run in feet">`));
+      if (h.video.run === "bullet") {
+        const b = bulletFor(z);
+        rows.push(`<div class="mini" style="margin:-2px 0 6px 80px">${b.m
+          ? `Bullet Train AC-BTSSF-10KUHD-${String(b.m).padStart(2, "0")} (${b.m} m) · ${b.earc ? "eARC back over the cable" : "ARC back only (eARC stops at 10 m)"} · source head at the rack, display head at the TV`
+          : `~${b.need} m is past the longest Bullet Train (40 m) — use the balun or MXNet`}</div>`);
+      }
+    }
   }
   if (h.spk) {
     const cur = h.speakers?.from || "";
@@ -2311,6 +2323,9 @@ function wirePanel(body) {
     const n = prompt('TV size in inches (24–220):', ""); if (n == null) return;
     ZH[".tvsize"]?.({ value: n, checked: false, closest: q => b.closest(q) }); refresh();
   });
+  ZH[".hreach"] = el => { const z = zoneOf(el); if (z) { z.reach = el.value; delete z.runFt; } };
+  body.querySelectorAll(".hrunft").forEach(el => el.onchange = () => { const z = zoneOf(el); if (!z) return;
+    const ft = Math.round(+el.value); if (ft > 0 && ft < 2000) z.runFt = ft; else delete z.runFt; refresh(); });
   ZH[".hvrun"] = el => { const z = zoneOf(el); const sol = S.job.solutions[S.sol]; if (z) setVideo(S.job, sol, z, readHookup(S.job, sol, z).video?.from, el.value); };
 
   /* zone hookup */

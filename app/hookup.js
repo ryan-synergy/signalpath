@@ -14,7 +14,23 @@ export const VIDEO_FROM = ["avr", "videoMatrix", "avSwitch", "splitter", "source
 export const SPEAKERS_FROM = ["avr", "amp"];
 export const RETURN_TO = ["avr", "audioInputModule"];
 // how a rack video feed reaches the TV
-export const RUNS = { balun: "HDBaseT balun", dec: "MXNet decoder", direct: "Direct HDMI" };
+export const RUNS = { balun: "HDBaseT balun", bullet: "Bullet Train", dec: "MXNet decoder", direct: "Direct HDMI" };
+
+/* how far the TV is from the rack — rough by design (Ryan 2026-09-30: exact footage
+   lives elsewhere). zone.reach = short | average | far; zone.runFt, when someone
+   knows it, wins. Used to size a Bullet Train (AVPro AOC fiber HDMI, source head at
+   the rack, display head at the TV): the 48G model comes 5–40 m and carries eARC
+   only up to 10 m — longer ones fall back to ARC (avproglobal.com, 2026-09-30). */
+export const REACH = { short: "Short", average: "Average", far: "Far" };
+const REACH_M = { short: 10, average: 20, far: 40 };
+export const BULLET_M = [5, 10, 15, 20, 30, 40];
+export const BULLET_EARC_M = 10;
+export function bulletFor(zone) {
+  const ft = +zone?.runFt;
+  const need = ft > 0 ? ft * 0.3048 : REACH_M[zone?.reach] ?? REACH_M.average;
+  const m = BULLET_M.find(x => x >= need - 0.01) ?? null;       // null: past 40 m — no Bullet Train that long
+  return { m, need: Math.round(need), ref: m ? `avpro-ac-btssf-10kuhd-${String(m).padStart(2, "0")}` : null, earc: m != null && m <= BULLET_EARC_M };
+}
 
 const rackDevices = sol => (sol.racks || []).flatMap(r => r.devices || []);
 const endpointsOf = z => ({ tv: (z.endpoints || []).find(e => e.type === "display"), spk: (z.endpoints || []).find(e => e.type === "speakers") });
@@ -37,7 +53,7 @@ export function readHookup(job, sol, zone) {
     if (inTv) {
       const comp = (sol.companions || []).find(c => c.id === inTv.from);
       const src = comp ? conns.find(c => c.to === comp.id && c.signal === "video") : inTv;   // the edge leaving the source
-      out.video = comp ? { from: src?.from || null, run: comp.type, via: comp.id } : { from: inTv.from, run: "direct" };
+      out.video = comp ? { from: src?.from || null, run: comp.type, via: comp.id } : { from: inTv.from, run: inTv.run === "bullet" ? "bullet" : "direct" };
       out.earc = !!src?.earc;
     }
     // the TV's eARC into its own AXIS (Dante) is at the TV, not an audio return to the rack
@@ -90,16 +106,22 @@ export function setVideo(job, sol, zone, from, run, earc) {
   // gets the eARC extender kit instead (Ryan 2026-09-30): optical stops at Dolby
   // Digital 5.1. An explicit choice made afterwards (setAudioBack) still wins;
   // re-picking the same feed keeps it.
-  const fresh = prev.video?.from !== from || prev.video?.run !== "balun";
-  const autoBack = run === "balun" && earc && fresh && !prev.ret;
+  // A Bullet Train brings eARC back itself up to 10 m; a longer one carries ARC
+  // (Dolby Digital 5.1 — what optical would), so only an Atmos room adds the kit.
+  const fresh = prev.video?.from !== from || prev.video?.run !== run;
+  const autoBack = (run === "balun" || (run === "bullet" && !bulletFor(zone).earc)) && earc && fresh && !prev.ret;
   const kit = autoBack && isAtmosRoom(zone);
   if (kit) earc = false;                     // the kit carries the eARC, not the HDMI video run
   const ea = earc ? { earc: true } : {};
-  if (run === "direct") { sol.connections.push({ from, to: tv.id, signal: "video", ...ea, ...sc }); return; }
+  if (run === "direct" || run === "bullet") {
+    sol.connections.push({ from, to: tv.id, signal: "video", ...(run === "bullet" ? { run: "bullet" } : {}), ...ea, ...sc });
+    if (kit) setReturn(job, sol, zone, from, false, true);
+    return;
+  }
   const comp = keep || { id: freeId(job, sol, `${run}-${zone.id}`), type: run, serves: tv.id, auto: true };
   if (!keep) sol.companions.push(comp);
   sol.connections.push({ from, to: comp.id, signal: "video", ...ea, ...sc }, { from: comp.id, to: tv.id, signal: "video", ...sc });
-  if (autoBack) setReturn(job, sol, zone, from, !kit, kit);
+  if (autoBack) setReturn(job, sol, zone, from, !kit, kit);   // balun: optical backup, or the kit in an Atmos room
 }
 // an Atmos speaker set: height channels in its layout (surround-7.1.4, surround-5.1.2 …)
 export const isAtmosRoom = zone => (zone.endpoints || []).some(e => e.type === "speakers" && /^surround-\d\.\d\.\d/.test(e.config || ""));
@@ -321,7 +343,7 @@ export function autoHookup(job, sol, zone, hints = {}) {
     const busy = new Set((sol.connections || []).filter(c => c.signal === "speaker").map(c => c.from));
     let avr = devs.find(d => d.type === "avr" && !busy.has(d.id))?.id;
     if (!avr) { const a = avrFor(spk); avr = addRackDevice(job, sol, "avr", a.model, { catalogRef: a.catalogRef }); }
-    if (tv) setVideo(job, sol, zone, avr, "balun", true);   // eARC back over the HDMI — the default, no extra run
+    if (tv) setVideo(job, sol, zone, avr, hints.bullet ? "bullet" : "balun", true);   // eARC back over the HDMI — the default, no extra run
     if (spk) setSpeakers(job, sol, zone, avr);
     // a receiver on a whole-home rack plays the house sources: one matrix output
     // into it (the Theater starter's receiver already has its own sources)
@@ -331,7 +353,7 @@ export function autoHookup(job, sol, zone, hints = {}) {
     return;
   }
   const m = devs.find(d => d.type === "videoMatrix") || devs.find(d => d.type === "avSwitch");
-  if (tvFromRack && tv && m) setVideo(job, sol, zone, m.id);
+  if (tvFromRack && tv && m) setVideo(job, sol, zone, m.id, hints.bullet && m.type !== "avSwitch" ? "bullet" : undefined);
   // speakers: stereo-style sets take the next free amp zone; surround wants a
   // receiver (fed from the matrix, like a family room off a whole-home rack)
   if (spk && !readHookup(job, sol, zone).speakers) {

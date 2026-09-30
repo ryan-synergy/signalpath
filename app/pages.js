@@ -5,6 +5,7 @@
 
 import { expandChannels, effectiveJob, indexJob } from "./engine.js";
 import { TYPE_NAME, PLATFORM_NAME, adapterName, describeNode } from "./names.js";
+import { bulletFor } from "./hookup.js";
 import { NET_ROLE_NAME, switchSetup } from "./network.js";
 import { isAsBuilt, asBuiltChanges, installRows } from "./asbuilt.js";
 
@@ -442,6 +443,11 @@ export function wireRuns(job, ix, opts = {}) {
       runs.push({ prefix: "V", cable: "Cat6", from: s.devices[c.from] ? at(c.from, pm.from) : rackName, to: `${zoneName(ix, toComp.serves)} — TV location`,
         carries: `${toComp.type === "balun" ? "Video (HDBaseT)" : "Video (MXNet)"}${toComp.dante ? " + Dante (VLAN 99)" : ""}${c.earc ? " + eARC back" : ""}`, color: "#b32017",
         term: `${adapterName(toComp)} at TV`, count: 1, gray });
+    } else if (c.signal === "video" && toEp && s.devices[c.from] && c.run === "bullet") {   // Bullet Train fiber HDMI, rack → TV
+      const b = bulletFor(zoneOf(ix, c.to));
+      runs.push({ prefix: "V", cable: b.m ? `Bullet Train fiber HDMI ${b.m} m` : "Bullet Train — over 40 m, won't reach", from: s.devices[c.from] ? at(c.from, pm.from) : rackName, to: `${zoneName(ix, c.to)} — TV location`,
+        carries: `Video (48 Gbps)${c.earc ? b.earc ? " + eARC back" : " + ARC back (over 10 m)" : ""}`, color: "#b32017",
+        term: `display head → TV HDMI${c.earc ? " (eARC port)" : ""} · source head at the rack`, count: 1, gray });
     } else if (c.signal === "video" && toEp && s.devices[c.from]) {   // direct rack → display (no extender chip drawn)
       runs.push({ prefix: "V", cable: "HDMI / extender", from: rackName, to: `${zoneName(ix, c.to)} — TV location`,
         carries: `Video (direct)${c.earc ? " + eARC back" : ""}`, color: "#b32017", term: "TV input — verify run length", count: 1, gray });

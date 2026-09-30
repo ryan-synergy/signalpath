@@ -24,7 +24,7 @@ export const OPS = {
   delete_zone: { args: "zone", eg: `{"op":"delete_zone","zone":"gym"}`, about: "Remove a zone and everything wired to it." },
   hookup:      { args: "zone, tv_from?, run?, speakers_from?, outputs?, audio_back?, audio_back_to?",
                  eg: `{"op":"hookup","zone":"family room","tv_from":"receiver","speakers_from":"receiver","audio_back":"earc"}`,
-                 about: "What feeds a zone. tv_from / speakers_from: a box in the rack (or 'none'). run: balun|decoder|direct. outputs: amp outputs like '5-6' (default: next free). audio_back: earc|earc+optical|earc-kit|optical|none (earc-kit = AVPro eARC extender kit, full Atmos back over one Cat6A; audio_back_to for optical: a receiver or audio input module)." },
+                 about: "What feeds a zone. tv_from / speakers_from: a box in the rack (or 'none'). run: balun|bullet|decoder|direct (bullet = AVPro Bullet Train fiber HDMI, rack → TV, sized by the zone's distance). outputs: amp outputs like '5-6' (default: next free). audio_back: earc|earc+optical|earc-kit|optical|none (earc-kit = AVPro eARC extender kit, full Atmos back over one Cat6A; audio_back_to for optical: a receiver or audio input module)." },
   connect:     { args: "from, to, signal?, outputs?, scope?", eg: `{"op":"connect","from":"cable box","to":"mrx"}`,
                  about: "Plug one thing into another. from/to: a box, or '<zone> tv' / '<zone> speakers'. signal (guessed if left out): video|audio|speaker|network|audioReturn." },
   disconnect:  { args: "from?, to, signal?", eg: `{"op":"disconnect","from":"mdx16","to":"kitchen speakers"}`,
@@ -143,7 +143,7 @@ export function findProduct(catalog, text) {
 /* ---------- running commands ---------- */
 const SPK_IN = { none: "none", mono: "mono", stereo: "stereo", pair: "stereo", "2.1": "2.1", "5.1": "surround-5.1", "7.1": "surround-7.1", "7.1.4": "surround-7.1.4", atmos: "surround-7.1.4",
   "surround-5.1": "surround-5.1", "surround-7.1": "surround-7.1", "surround-7.1.4": "surround-7.1.4", soundbar: "soundbar", "soundbar-sub": "soundbar-sub", "bar + sub": "soundbar-sub", landscape: "landscape" };
-const RUN_IN = { balun: "balun", hdbaset: "balun", decoder: "dec", dec: "dec", mxnet: "dec", direct: "direct", hdmi: "direct", "direct hdmi": "direct" };
+const RUN_IN = { bullet: "bullet", "bullet train": "bullet", fiber: "bullet", aoc: "bullet", balun: "balun", hdbaset: "balun", decoder: "dec", dec: "dec", mxnet: "dec", direct: "direct", hdmi: "direct", "direct hdmi": "direct" };
 const uid = p => p + "-" + Math.random().toString(36).slice(2, 7);
 function freeId(job, sol, base) {
   const taken = new Set([...job.house.zones.flatMap(z => [z.id, ...(z.endpoints || []).map(e => e.id)]),
@@ -261,7 +261,7 @@ const HANDLERS = {
     if (tvFrom !== undefined || c.run != null) {
       if (!h.tv) throw new Error(`${z.name} has no TV`);
       const run = c.run != null ? RUN_IN[norm(c.run)] : undefined;
-      if (c.run != null && !run) throw new Error(`run must be balun, decoder or direct`);
+      if (c.run != null && !run) throw new Error(`run must be balun, bullet, decoder or direct`);
       const from = tvFrom !== undefined ? tvFrom : h.video?.from;
       if (!from && tvFrom !== null) throw new Error(`${z.name}'s TV isn't fed yet — say where it comes from`);
       setVideo(job, sol, z, from, run);

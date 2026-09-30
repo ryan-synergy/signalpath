@@ -19,7 +19,7 @@
 
 import { loadJob, validate, advise, effectiveJob, expandChannels } from "./engine.js";
 import { wireRuns } from "./pages.js";
-import { readHookup } from "./hookup.js";
+import { readHookup, bulletFor } from "./hookup.js";
 import { vocabularyText } from "./commands.js";
 import { NET_ROLE_NAME } from "./network.js";
 import { isAsBuilt, asBuiltChanges } from "./asbuilt.js";
@@ -134,7 +134,10 @@ function quoteRooms(job, sol, catalog, adv) {
     const prewire = scope === "prewire";
     for (const ep of z.endpoints || []) {
       if (ep.type === "display") {
-        if (prewire) { add(floor, z.name, scope, SYN("Prewire - TV (Standard)")); continue; }
+        // a Bullet Train run pre-wires as Synergy's Bullet Train TV item
+        const bullet = (sol.connections || []).some(c => c.to === ep.id && c.signal === "video" && c.run === "bullet");
+        if (prewire) { add(floor, z.name, scope, SYN(bullet ? "Prewire - TV (Bullet Train)" : "Prewire - TV (Standard)")); continue; }
+        if (bullet) { const b = bulletFor(z), c = b.ref && cat(b.ref); add(floor, z.name, scope, c ? fromCatalog(c) : { mfr: "AVPro Edge", model: "Bullet Train 10K AOC HDMI (length?)", unsure: true }); }
         const ofe = ep.status === "ofe", tv = ep.displayType !== "projector";
         const p = ofe ? { customer: tv ? "TV" : "Equipment" }
           : ep.model ? { mfr: ep.brand || "Unspecified", model: ep.model }

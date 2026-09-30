@@ -4832,6 +4832,132 @@
       ],
       "portsSource": "https://www.avproglobal.com/products/ac-aex-dearc-kit + user manual (rear panels p7-8, DIP settings p13-15), 2026-09-30"
     },
+    "avpro-ac-btssf-10kuhd-05": {
+      "brand": "AVPro Edge",
+      "model": "AC-BTSSF-10KUHD-05",
+      "partNo": "AC-BTSSF-10KUHD-05",
+      "type": "cable",
+      "aliases": [
+        "Bullet Train 5m",
+        "Bullet Train 10K AOC 5m"
+      ],
+      "inputs": {
+        "hdmi": 1
+      },
+      "outputs": {
+        "hdmi": 1
+      },
+      "lan": 0,
+      "flags": [],
+      "verified": true,
+      "lengthM": 5,
+      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 5 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. eARC back over the cable (eARC works up to 10 m). Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5\u201340 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
+    },
+    "avpro-ac-btssf-10kuhd-10": {
+      "brand": "AVPro Edge",
+      "model": "AC-BTSSF-10KUHD-10",
+      "partNo": "AC-BTSSF-10KUHD-10",
+      "type": "cable",
+      "aliases": [
+        "Bullet Train 10m",
+        "Bullet Train 10K AOC 10m"
+      ],
+      "inputs": {
+        "hdmi": 1
+      },
+      "outputs": {
+        "hdmi": 1
+      },
+      "lan": 0,
+      "flags": [],
+      "verified": true,
+      "lengthM": 10,
+      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 10 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. eARC back over the cable (eARC works up to 10 m). Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5\u201340 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
+    },
+    "avpro-ac-btssf-10kuhd-15": {
+      "brand": "AVPro Edge",
+      "model": "AC-BTSSF-10KUHD-15",
+      "partNo": "AC-BTSSF-10KUHD-15",
+      "type": "cable",
+      "aliases": [
+        "Bullet Train 15m",
+        "Bullet Train 10K AOC 15m"
+      ],
+      "inputs": {
+        "hdmi": 1
+      },
+      "outputs": {
+        "hdmi": 1
+      },
+      "lan": 0,
+      "flags": [],
+      "verified": true,
+      "lengthM": 15,
+      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 15 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. ARC only back over the cable (eARC only up to 10 m) \u2014 Atmos from the TV apps needs the AC-AEX-DEARC-KIT. Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5\u201340 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
+    },
+    "avpro-ac-btssf-10kuhd-20": {
+      "brand": "AVPro Edge",
+      "model": "AC-BTSSF-10KUHD-20",
+      "partNo": "AC-BTSSF-10KUHD-20",
+      "type": "cable",
+      "aliases": [
+        "Bullet Train 20m",
+        "Bullet Train 10K AOC 20m"
+      ],
+      "inputs": {
+        "hdmi": 1
+      },
+      "outputs": {
+        "hdmi": 1
+      },
+      "lan": 0,
+      "flags": [],
+      "verified": true,
+      "lengthM": 20,
+      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 20 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. ARC only back over the cable (eARC only up to 10 m) \u2014 Atmos from the TV apps needs the AC-AEX-DEARC-KIT. Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5\u201340 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
+    },
+    "avpro-ac-btssf-10kuhd-30": {
+      "brand": "AVPro Edge",
+      "model": "AC-BTSSF-10KUHD-30",
+      "partNo": "AC-BTSSF-10KUHD-30",
+      "type": "cable",
+      "aliases": [
+        "Bullet Train 30m",
+        "Bullet Train 10K AOC 30m"
+      ],
+      "inputs": {
+        "hdmi": 1
+      },
+      "outputs": {
+        "hdmi": 1
+      },
+      "lan": 0,
+      "flags": [],
+      "verified": true,
+      "lengthM": 30,
+      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 30 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. ARC only back over the cable (eARC only up to 10 m) \u2014 Atmos from the TV apps needs the AC-AEX-DEARC-KIT. Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5\u201340 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
+    },
+    "avpro-ac-btssf-10kuhd-40": {
+      "brand": "AVPro Edge",
+      "model": "AC-BTSSF-10KUHD-40",
+      "partNo": "AC-BTSSF-10KUHD-40",
+      "type": "cable",
+      "aliases": [
+        "Bullet Train 40m",
+        "Bullet Train 10K AOC 40m"
+      ],
+      "inputs": {
+        "hdmi": 1
+      },
+      "outputs": {
+        "hdmi": 1
+      },
+      "lan": 0,
+      "flags": [],
+      "verified": true,
+      "lengthM": 40,
+      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 40 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. ARC only back over the cable (eARC only up to 10 m) \u2014 Atmos from the TV apps needs the AC-AEX-DEARC-KIT. Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5\u201340 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
+    },
     "avpro-ac-axion-4": {
       "brand": "AVPro Edge",
       "model": "AC-AXION-4",

@@ -59,7 +59,7 @@
 
   /* ---- main split ---- */
   #main { flex: 1; display: flex; min-height: 0; }
-  #panel { width: 360px; flex: 0 0 auto; background: var(--panel);
+  #panel { width: 390px; flex: 0 0 auto; background: var(--panel);
            display: flex; flex-direction: column; min-height: 0; transition: width .15s; }
   #panel.collapsed { width: 42px; }
   #panel.collapsed .body, #panel.collapsed .tabs .lbl { display: none; }
@@ -231,8 +231,8 @@
   #advisor { flex: 0 0 auto; background: #fff; border-top: 1px solid var(--line); max-height: 130px; overflow-y: auto;
              padding: 6px 14px; font-size: 12px; }
   #advisor .item { padding: 3px 0; }
-  #advisor .e { color: var(--bad); } #advisor .w { color: var(--warn); } #advisor .i { color: #444; }
-  #advisor .ok { color: var(--ok); }
+  #advisor .item.e { color: var(--bad); } #advisor .item.w { color: var(--warn); } #advisor .item.i { color: #444; }
+  #advisor .item.ok { color: var(--ok); }
   #advisor details.ref { margin-top: 4px; }
   #advisor details.ref summary { cursor: pointer; color: #666; padding: 3px 0; font-size: 12px; }
   #advisor details.ref[open] summary { color: #333; }
@@ -305,6 +305,93 @@
 .rtab th { text-align: left; font-weight: 600; color: var(--muted, #888); padding: 3px 4px; border-bottom: 1px solid rgba(128,128,128,.25); }
 .rtab td { padding: 3px 4px; border-bottom: 1px solid rgba(128,128,128,.12); }
 .rtab input { font-size: 12px; padding: 2px 4px; }
+
+  /* ===== UI refresh (Ryan 2026-09-30, from the before/after mockup) =====
+     one control per kind of choice (≤ a handful → chips; longer or needing
+     a reason → a field button that opens the picker; text → an input),
+     one meaning per colour (filled blue = selected, outlined = action,
+     soft blue ✦ = suggestion, amber / red = to check, green = done),
+     finger-size targets on touch, labels above fields. */
+  :root { --hit: 34px; --act-line: #c9ccd3; --sug-bg: #eef3fa; --sug-line: #c7d6ea; --sug-ink: #23507e;
+          --tag-bg: #f0f1f4; --tag-line: #dfe1e6; --tag-ink: #3b3f47; --muted: #5d626b; --lbl: #4a4f58; }
+  @media (pointer: coarse) { :root { --hit: 44px; } }
+  /* top bar: [job] … [AI · status] … [View · Export · Print · tools] */
+  #topbar { min-height: 56px; }
+  #topbar #jobsSel, #topbar #fileMenu, #topbar #jobName, #topbar #solSel, #topbar #stageSel { display: none; }
+  #topbar #jobBtn { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; min-height: 44px; padding: 4px 12px;
+                    border-radius: 8px; max-width: 340px; overflow: hidden; }
+  #jobBtn b { font-size: 13.5px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 316px; }
+  #jobBtn span { font-size: 11px; color: #9aa3b2; }
+  #topbar .mbtn, #topbar #aiBtn, #topbar #undoBtn { min-height: 38px; border-radius: 8px; padding: 0 12px; }
+  #topbar #viewMenu .mbtn, #topbar #exportMenu .mbtn { background: transparent; }
+  #topbar #printBtn, #topbar #printMenu .mbtn { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; min-height: 38px; border-radius: 8px; padding: 0 18px; }
+  #topbar #toolsBtn { width: 38px; height: 38px; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: #c9cfda; border-radius: 8px; }
+  #rulesChip.ok { background: #1f3a25; color: #9fdcaa; border-color: transparent; }
+  /* panel */
+  .tabs button { font-size: 13px; font-weight: 600; letter-spacing: 0; min-height: var(--hit); }
+  .sect { font-size: 11px; font-weight: 700; letter-spacing: .08em; color: #3b3f47; margin: 14px 2px 6px; }
+  .sect .mini, .sect .badge + .mini { display: block; font-weight: 400; letter-spacing: 0; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .row { border-radius: 12px; }
+  .row > .head .t { font-size: 15px; }
+  .zsum { font-size: 12.5px; color: var(--lbl); }
+  .fields .f:has(> label) { flex-direction: column; align-items: stretch; gap: 5px; margin-bottom: 10px; }
+  .fields .f:has(> label) > label { width: auto; font-size: 12px; font-weight: 600; color: var(--lbl); }
+  .fields .f.inline { flex-direction: row !important; align-items: center !important; }
+  .fields .f.inline > label { width: 120px !important; font-weight: 400 !important; }
+  .fields input:not([type=checkbox]):not([type=radio]):not(.rspec) { min-height: var(--hit); border-radius: 8px; border-color: var(--act-line); font-size: 13px; padding: 0 10px; }
+  .chips { gap: 6px; }
+  .chip { min-height: var(--hit); padding: 0 12px; border-radius: 8px; border-color: var(--act-line); font-size: 13px; color: #16181c; }
+  .chip.more { border-style: dashed; background: transparent; color: var(--tag-ink); }
+  .chips.seg { gap: 0; flex: 0 1 auto; border: 1px solid var(--act-line); border-radius: 8px; overflow: hidden; flex-wrap: nowrap; }
+  .chips.seg .chip { border: 0; border-radius: 0; border-left: 1px solid var(--act-line); flex: 1 1 auto; white-space: nowrap; }
+  .chips.seg .chip:first-child { border-left: 0; }
+  /* a select becomes a field button that opens the picker */
+  select.enh { display: none !important; }
+  .fieldbtn { display: flex; align-items: center; gap: 8px; width: 100%; min-height: var(--hit); padding: 4px 12px; border: 1px solid var(--act-line);
+              border-radius: 8px; background: #fff; font: inherit; font-size: 13px; text-align: left; cursor: pointer; color: #16181c; }
+  .fieldbtn .v { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .fieldbtn .v > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fieldbtn small { font-size: 11.5px; color: var(--muted); }
+  .fieldbtn .ch { color: var(--muted); }
+  .pickbtn { min-height: var(--hit); border-radius: 8px; border-color: var(--act-line); font-size: 13px; padding: 4px 12px; }
+  /* actions: outlined, neutral; suggestions: soft blue with ✦ */
+  .addconn, .addbtn { min-height: var(--hit); border: 1px solid var(--act-line) !important; background: #fff; color: #16181c; font-weight: 600;
+                      border-radius: 8px; text-align: left; padding: 0 12px; font-size: 13px; }
+  .addbtn.sug { display: flex; align-items: center; gap: 10px; background: var(--sug-bg); border-color: var(--sug-line) !important; color: var(--sug-ink); font-weight: 400; }
+  .addbtn.sug .t { flex: 1; } .addbtn.sug .ap { font-weight: 700; color: #1d4f8a; }
+  /* jacks: quiet tags you can tap */
+  .portchip { min-height: 28px; padding: 0 9px; border-radius: 6px; border: 1px solid var(--tag-line); background: var(--tag-bg); color: var(--tag-ink); font-size: 12px; }
+  @media (pointer: coarse) { .portchip { min-height: 34px; } }
+  .portchip.none { background: #fff1d6; border-color: #e7c68a; color: #7a4b00; }
+  .jacks { margin: 2px 10px 8px; font-size: 12px; color: var(--muted); }
+  #qa #qaInput { min-height: var(--hit); border-radius: 8px; }
+  #qa .ex { font-size: 12px; color: var(--muted); } #qa .ex details summary { color: var(--accent); cursor: pointer; display: inline; }
+  #qa .ex details[open] { color: #888; font-size: 11px; }
+  /* the advisor: one strip, opens into a list you can tap */
+  #advisor { max-height: none !important; overflow: visible; padding: 0; }
+  .advbar { display: flex; align-items: center; gap: 10px; padding: 8px 14px; min-height: 52px; }
+  .advcount, .advnotes { border: 0; border-radius: 999px; padding: 0 12px; min-height: 34px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .advcount.w { background: #fff1d6; color: #7a4b00; } .advcount.e { background: #fdecea; color: #8f1d14; } .advcount.ok { background: #e8f3ea; color: #245c2e; cursor: default; }
+  .advnotes { background: #eef0f3; color: #3b3f47; font-weight: 600; }
+  .advpeek { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--lbl); font-size: 13px; }
+  .advtoggle { border: 0; background: transparent; color: var(--accent); font: inherit; font-weight: 600; font-size: 13px; cursor: pointer; min-height: 34px; white-space: nowrap; }
+  .advlist { max-height: 38vh; overflow-y: auto; border-top: 1px solid #eceef1; }
+  .advsec { font-size: 11px; font-weight: 700; letter-spacing: .08em; color: #3b3f47; padding: 10px 14px 4px; }
+  .advitem { display: flex; gap: 12px; align-items: center; width: 100%; padding: 9px 14px; border: 0; border-bottom: 1px solid #eceef1; background: #fff;
+             font: inherit; text-align: left; color: #16181c; }
+  button.advitem { cursor: pointer; } button.advitem:hover { background: #f7f9fc; }
+  .advitem .dot { width: 8px; height: 8px; border-radius: 4px; flex: 0 0 8px; background: #9aa0aa; }
+  .advitem.e .dot { background: var(--bad); } .advitem.w .dot { background: #c77c00; }
+  .advitem .x { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .advitem .tt { font-size: 13px; font-weight: 600; } .advitem .dd { font-size: 12px; color: var(--muted); }
+  .advitem .go { color: var(--accent); font-weight: 600; font-size: 12.5px; white-space: nowrap; }
+  .advhd { display: none; }
+  /* narrow screens: the open list slides up full width, like the picker */
+  @media (max-width: 900px) {
+    .advlist { position: fixed; left: 0; right: 0; bottom: 0; max-height: 70vh; z-index: 58; background: #fff; border-radius: 14px 14px 0 0; box-shadow: 0 -6px 30px rgba(0,0,0,.22); }
+    .advhd { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 0; position: sticky; top: 0; background: #fff; }
+    .advhd b { font-size: 15px; }
+  }
 </style>
 <!-- Every app file carries the build stamp (deploy replaces "v=dev"): GitHub
      Pages lets a browser keep a file 10 minutes, and a new page mixed with
@@ -312,24 +399,24 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20260930012558",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20260930012558",
-    "./app/audiochain.js": "./app/audiochain.js?v=20260930012558",
-    "./app/ports.js": "./app/ports.js?v=20260930012558",
-    "./app/commands.js": "./app/commands.js?v=20260930012558",
-    "./app/engine.js": "./app/engine.js?v=20260930012558",
-    "./app/exports.js": "./app/exports.js?v=20260930012558",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260930012558",
-    "./app/hookup.js": "./app/hookup.js?v=20260930012558",
-    "./app/importers.js": "./app/importers.js?v=20260930012558",
-    "./app/names.js": "./app/names.js?v=20260930012558",
-    "./app/network.js": "./app/network.js?v=20260930012558",
-    "./app/pages.js": "./app/pages.js?v=20260930012558",
-    "./app/power.js": "./app/power.js?v=20260930012558",
-    "./app/quickadd.js": "./app/quickadd.js?v=20260930012558",
-    "./app/rack.js": "./app/rack.js?v=20260930012558",
-    "./app/route-audit.js": "./app/route-audit.js?v=20260930012558",
-    "./app/starters.js": "./app/starters.js?v=20260930012558"
+    "./app/ai.js": "./app/ai.js?v=20260930015234",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20260930015234",
+    "./app/audiochain.js": "./app/audiochain.js?v=20260930015234",
+    "./app/ports.js": "./app/ports.js?v=20260930015234",
+    "./app/commands.js": "./app/commands.js?v=20260930015234",
+    "./app/engine.js": "./app/engine.js?v=20260930015234",
+    "./app/exports.js": "./app/exports.js?v=20260930015234",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260930015234",
+    "./app/hookup.js": "./app/hookup.js?v=20260930015234",
+    "./app/importers.js": "./app/importers.js?v=20260930015234",
+    "./app/names.js": "./app/names.js?v=20260930015234",
+    "./app/network.js": "./app/network.js?v=20260930015234",
+    "./app/pages.js": "./app/pages.js?v=20260930015234",
+    "./app/power.js": "./app/power.js?v=20260930015234",
+    "./app/quickadd.js": "./app/quickadd.js?v=20260930015234",
+    "./app/rack.js": "./app/rack.js?v=20260930015234",
+    "./app/route-audit.js": "./app/route-audit.js?v=20260930015234",
+    "./app/starters.js": "./app/starters.js?v=20260930015234"
 } }
 </script>
 <script>
@@ -363,6 +450,7 @@
 
 <div id="topbar">
   <span class="logo">SIGNALPATH</span>
+  <button id="jobBtn" title="Job, stage, option, file"><b id="jobBtnName">Job ▾</b><span id="jobBtnSub"></span></button>
   <select id="jobsSel" title="Jobs"></select>
   <div class="menu" id="fileMenu"><button class="mbtn" aria-haspopup="true" aria-expanded="false">File ▾</button>
     <div class="mlist" role="menu" hidden>
@@ -376,9 +464,10 @@
   <select id="solSel" title="Solution"></select>
   <select id="stageSel"><option value="proposal">PROPOSAL</option><option value="asBuilt">AS-BUILT</option></select>
   <button id="undoBtn" title="Undo the last change made by a command or the AI" style="display:none">↶ Undo</button>
-  <button id="aiBtn" title="Describe a change — Claude proposes it, you preview and apply">✦ AI</button>
   <span class="spacer"></span>
+  <button id="aiBtn" title="Describe a change — Claude proposes it, you preview and apply">✦ Ask AI</button>
   <span id="rulesChip" class="ok">✓</span>
+  <span class="spacer"></span>
   <div class="menu" id="viewMenu"><button class="mbtn" aria-haspopup="true" aria-expanded="false">View ▾</button>
     <div class="mlist" role="menu" hidden>
       <label class="chk"><input type="checkbox" id="hideNet"><span><b>Hide network</b><em>Drop the Cat6 network wires from the drawing</em></span></label>
@@ -403,16 +492,16 @@
       <button id="printService" role="menuitem"><b>Service packet</b><span>Everything: drawing with revision clouds, As-Built Changes, channel map, rack, network, labels</span></button>
       <button id="printClient" role="menuitem"><b>Client packet</b><span>Clean handover: the drawing without marks, the equipment list and the rack</span></button>
     </div></div>
-  <button id="toolsBtn" title="Synergy Field Kit">TOOLS</button>
+  <button id="toolsBtn" title="Synergy Field Kit" aria-label="Synergy Field Kit tools"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="1.5" y="1.5" width="5" height="5" rx="1"/><rect x="9.5" y="1.5" width="5" height="5" rx="1"/><rect x="1.5" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/></svg></button>
 </div>
 
 <div id="main">
   <div id="panel">
     <div class="tabs">
-      <button data-tab="zones" class="on"><span class="lbl">ZONES</span><span class="mini" style="display:none">Z</span></button>
-      <button data-tab="gear"><span class="lbl">GEAR</span></button>
-      <button data-tab="rack"><span class="lbl">RACK</span></button>
-      <button data-tab="job"><span class="lbl">JOB</span></button>
+      <button data-tab="zones" class="on"><span class="lbl">Zones</span><span class="mini" style="display:none">Z</span></button>
+      <button data-tab="gear"><span class="lbl">Gear</span></button>
+      <button data-tab="rack"><span class="lbl">Rack</span></button>
+      <button data-tab="job"><span class="lbl">Job</span></button>
       <button data-tab="settings"><span class="lbl">⚙</span></button>
       <button id="collapse" title="Collapse">⟨⟨</button>
     </div>
@@ -513,7 +602,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20260930012558").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20260930015234").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -644,39 +733,40 @@ function refresh(save = true) {
 
   const vsol = S.view?.job?.solutions[S.sol];
   const wname = t => S.view ? humanizeWireIds(S.view.job, vsol, t) : t;
-  // two piles: what needs fixing (always shown) and reference — setup
-  // checklists, budgets, licensing — folded under one line until opened
+  // two piles: what needs checking and reference notes (setup checklists,
+  // budgets, licensing). One strip shows the counts and the first item; it
+  // opens into a list — each item a short title, one line of detail, and a
+  // jump to its room or box when it names one (UI refresh 2026-09-30)
   const adv = [], ref = [];
-  for (const e of errs) adv.push(`<div class="item e">✗ ${esc(e.msg)}</div>`);
-  for (const w of warns) adv.push(`<div class="item w">⚠ ${esc(w.msg)}</div>`);
-  // the router knows when a drawing is compromised — say so instead of leaving
-  // a wire through a box unexplained
-  for (const w of routeWarn.filter(w => w.code === "unrouted")) adv.push(`<div class="item e">✗ Wire not drawn: ${esc(wname(w.msg).replace(/^no route class for /, ""))}</div>`);
+  const A = (lvl, msg, r = null) => adv.push({ lvl, msg, ref: r }), R = (msg, r = null) => ref.push({ lvl: "i", msg, ref: r });
+  for (const e of errs) A("e", e.msg, e.ref);
+  for (const w of warns) A("w", w.msg, w.ref);
+  // the router knows when a drawing is compromised — say so instead of leaving a wire through a box unexplained
+  for (const w of routeWarn.filter(w => w.code === "unrouted")) A("e", `Wire not drawn — ${wname(w.msg).replace(/^no route class for /, "")}`);
   const fb = routeWarn.filter(w => w.code === "route-fallback").map(w => wname(w.msg));
-  if (fb.length) adv.push(`<div class="item w">⚠ ${fb.length} wire${fb.length > 1 ? "s have" : " has"} no clean path on this layout — drawn best-effort and may cross gear: ${esc(fb.slice(0, 4).join("; "))}${fb.length > 4 ? "…" : ""}</div>`);
-  for (const w of new Map(routeWarn.filter(w => w.code === "hint-unroutable").map(w => [w.msg, w])).values()) adv.push(`<div class="item w">⚠ The custom route for ${esc(wname(w.msg))} can't be drawn on this layout — routed automatically</div>`);
-  for (const w of placeWarn) adv.push(`<div class="item w">⚠ ${esc(w.msg)}</div>`);
+  if (fb.length) A("w", `${fb.length} wire${fb.length > 1 ? "s have" : " has"} no clean path on this layout — drawn best-effort and may cross gear: ${fb.slice(0, 4).join("; ")}${fb.length > 4 ? "…" : ""}`);
+  for (const w of new Map(routeWarn.filter(w => w.code === "hint-unroutable").map(w => [w.msg, w])).values()) A("w", `A custom route can't be drawn — ${wname(w.msg)} is routed automatically`);
+  for (const w of placeWarn) A("w", w.msg, w.ref);
   const drift = catalogDrift(S.job, SETTINGS.catalog);
-  if (drift.length) ref.push(`<div class="item i">📦 The catalog has newer specs for ${drift.length} device${drift.length > 1 ? "s" : ""} on this job (${esc(drift.slice(0, 3).map(d => d.model).join(", "))}${drift.length > 3 ? "…" : ""}) — this job still uses the specs it was quoted with. JOB tab → Update catalog specs.</div>`);
+  if (drift.length) R(`Newer catalog specs for ${drift.length} device${drift.length > 1 ? "s" : ""} — ${drift.slice(0, 3).map(d => d.model).join(", ")}${drift.length > 3 ? "…" : ""} still use the quoted specs. JOB tab → Update catalog specs.`);
   for (const io of (a?.io || []).filter(mine)) {
-    if (io.over) adv.push(`<div class="item e">✗ ${esc(io.msg)}</div>`);
-    else if (io.msg && (io.kind === "analog-in" || io.kind === "audio-out" || io.kind === "return-in")) ref.push(`<div class="item i">🔌 ${esc(io.msg)}</div>`);
+    if (io.over) A("e", io.msg, io.device);
+    else if (io.msg && (io.kind === "analog-in" || io.kind === "audio-out" || io.kind === "return-in")) R(io.msg, io.device);
   }
-  for (const amp of (a?.amps || []).filter(mine)) (amp.spare != null && amp.spare < 0 ? adv : ref).push(`<div class="item ${amp.spare != null && amp.spare < 0 ? "e" : "i"}">🔊 ${esc(amp.model || amp.amp)}: ${amp.zonesTotal != null ? `${amp.zonesUsed}/${amp.zonesTotal} zones` : `${amp.zonesUsed} zone${amp.zonesUsed === 1 ? "" : "s"}`}${amp.reserved ? ` (${amp.reserved} reserved)` : ""}${amp.spare != null ? ` · ${amp.spare} spare` : ""}</div>`);
+  for (const amp of (a?.amps || []).filter(mine)) {
+    const t = `${amp.model || amp.amp} — ${amp.zonesTotal != null ? `${amp.zonesUsed}/${amp.zonesTotal} zones` : `${amp.zonesUsed} zone${amp.zonesUsed === 1 ? "" : "s"}`}${amp.reserved ? ` (${amp.reserved} reserved)` : ""}${amp.spare != null ? ` · ${amp.spare} spare` : ""}`;
+    amp.spare != null && amp.spare < 0 ? A("e", t, amp.amp) : R(t, amp.amp);
+  }
   for (const lic of (a?.licensing || []).filter(mine)) {
-    ref.push(`<div class="item i">🎛 <b>${esc(PLATFORM_NAME[lic.platform] || lic.platform)}</b> → ${esc(lic.pick)} · ${lic.lines.map(esc).join(" · ")}</div>`);
-    for (const w of lic.warns || []) adv.push(`<div class="item w">⚠ ${esc(PLATFORM_NAME[lic.platform] || lic.platform)}: ${esc(w)}</div>`);
+    R(`${PLATFORM_NAME[lic.platform] || lic.platform} — ${lic.pick} · ${lic.lines.join(" · ")}`);
+    for (const w of lic.warns || []) A("w", `${PLATFORM_NAME[lic.platform] || lic.platform} — ${w}`);
   }
   for (const n of (a?.notes || []).filter(mine)) {
-    if (ACTION_NOTES.has(n.code) || (n.code === "savant-host" && /exceeds/.test(n.msg))) adv.push(`<div class="item w">⚠ ${esc(n.msg)}</div>`);
-    else ref.push(`<div class="item i">${n.code === "avb-switch" || n.code === "sonos-net" ? "🌐" : "🎛"} ${esc(n.msg)}</div>`);
+    if (ACTION_NOTES.has(n.code) || (n.code === "savant-host" && /exceeds/.test(n.msg))) A("w", n.msg, n.ref);
+    else R(n.msg, n.ref);
   }
-  let refOpen = false; try { refOpen = localStorage.getItem("sp.refOpen") === "1"; } catch {}
-  $("#advisor").innerHTML = (adv.join("") || `<div class="item ok">✓ No issues</div>`) +
-    (ref.length ? `<details class="ref"${refOpen ? " open" : ""}><summary>Reference · ${ref.length} note${ref.length > 1 ? "s" : ""} — setup checklists, budgets, licensing</summary>${ref.join("")}</details>` : "");
-  const det = $("#advisor details.ref");
-  if (det) det.ontoggle = () => { try { localStorage.setItem("sp.refOpen", det.open ? "1" : "0"); } catch {} };
-
+  S.adv = { adv, ref };
+  drawAdvisor();
   S.findings = collectFindings(errs, warns, a, mine);
   // the advisor's port counts (a trunk can carry several channels) win over counting rows
   S.ioByDev = new Map();
@@ -687,6 +777,41 @@ function refresh(save = true) {
 }
 /* findings → the row they belong to: zones by the endpoint / adapter / in-zone
    gear they name (`ref`), boxes by device id (validator refs, port budgets) */
+/* a long advisor sentence → a short title and one line of detail */
+function splitMsg(msg) {
+  const m = String(msg);
+  // the earliest break wins: "Media Room projector: the balun … — set …" → "Media Room projector"
+  const cut = [" — ", ": "].map(sep => ({ sep, k: m.indexOf(sep) })).filter(x => x.k > 8 && x.k <= 90).sort((a, b) => a.k - b.k)[0];
+  const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+  if (cut) return { title: m.slice(0, cut.k), detail: cap(m.slice(cut.k + cut.sep.length)) };
+  return m.length <= 90 ? { title: m, detail: "" } : { title: m.slice(0, m.lastIndexOf(" ", 86)) + "…", detail: m };
+}
+// jump to the room or box a finding names
+function goToRef(ref) {
+  if (!ref) return;
+  const sol = S.job.solutions[S.sol], ix = S.view?.ix;
+  if (sol.racks.some(r => r.devices.some(d => d.id === ref))) { openGear(ref); return; }
+  const comp = (sol.companions || []).find(c => c.id === ref);
+  if (comp && sol.racks.some(r => r.devices.some(d => d.id === comp.serves))) { openGear(comp.serves); return; }
+  const z = ix?.zonesById?.[ref] ? ref : ix?.endpointZone?.[ref] || (comp && ix?.endpointZone?.[comp.serves]) || (sol.localDevices || []).find(d => d.id === ref)?.zone;
+  if (z) openZone(z);
+}
+function drawAdvisor() {
+  const { adv = [], ref = [] } = S.adv || {};
+  let open = false; try { open = localStorage.getItem("sp.advOpen") === "1"; } catch {}
+  const worst = adv.some(x => x.lvl === "e") ? "e" : "w";
+  const item = x => { const { title, detail } = splitMsg(x.msg); const tag = x.ref ? "button" : "div";
+    return `<${tag} class="advitem ${x.lvl}"${x.ref ? ` data-ref="${esc(x.ref)}"` : ""}><span class="dot"></span><span class="x"><span class="tt">${esc(title)}</span>${detail ? `<span class="dd">${esc(detail)}</span>` : ""}</span>${x.ref ? `<span class="go">Go to ›</span>` : ""}</${tag}>`; };
+  $("#advisor").innerHTML = `<div class="advbar">
+      ${adv.length ? `<button class="advcount ${worst}" data-adv="toggle">${worst === "e" ? "✗" : "⚠"} ${adv.length} to check</button>` : `<span class="advcount ok">✓ Nothing to check</span>`}
+      ${ref.length ? `<button class="advnotes" data-adv="toggle">${ref.length} note${ref.length > 1 ? "s" : ""}</button>` : ""}
+      <span class="advpeek">${adv.length ? esc(splitMsg(adv[0].msg).title) : ""}</span>
+      ${adv.length || ref.length ? `<button class="advtoggle" data-adv="toggle">${open ? "Hide ▾" : "Show all ▴"}</button>` : ""}
+    </div>${open && (adv.length || ref.length) ? `<div class="advlist"><div class="advhd"><b>Advisor</b><button class="advtoggle" data-adv="toggle">Close ✕</button></div>${adv.length ? `<div class="advsec">TO CHECK</div>${adv.map(item).join("")}` : ""}${ref.length ? `<div class="advsec">NOTES — setup checklists, budgets, licensing</div>${ref.map(item).join("")}` : ""}</div>` : ""}`;
+  $("#advisor").querySelectorAll("[data-adv=toggle]").forEach(b => b.onclick = () => { try { localStorage.setItem("sp.advOpen", open ? "0" : "1"); } catch {} drawAdvisor(); });
+  $("#advisor").querySelectorAll("button.advitem").forEach(b => b.onclick = () => goToRef(b.dataset.ref));
+}
+
 function collectFindings(errs, warns, a, mine) {
   const byZone = new Map(), byDev = new Map();
   const ix = S.view?.ix, sol = S.view?.job?.solutions[S.sol];
@@ -732,6 +857,8 @@ const safeUrl = u => /^https?:\/\//i.test(String(u || "")) ? u : "#";   // exter
 /* ============ top bar ============ */
 function renderTopbar() {
   $("#jobName").value = S.job.job.name || "";
+  $("#jobBtnName").textContent = `${S.job.job.name || "Untitled job"} ▾`;
+  $("#jobBtnSub").textContent = `${(S.job.job.stage || "proposal") === "asBuilt" ? "As-built" : "Proposal"} · ${S.job.solutions[S.sol]?.name || "Solution"}`;
   $("#stageSel").value = (S.job.job.stage || "proposal") === "asBuilt" ? "asBuilt" : "proposal";
   const sel = $("#solSel");
   sel.innerHTML = S.job.solutions.map((s, i) => `<option value="${i}">${esc(s.name)}</option>`).join("") + `<option value="__add">＋ new solution…</option>`;
@@ -759,6 +886,38 @@ $("#solSel").onchange = e => {
   } else S.sol = +e.target.value;
   refresh();
 };
+/* the job button: rename, stage, option, file actions and other jobs in one
+   picker — the old selects / File menu stay in the DOM (hidden) and do the work */
+$("#jobBtn").onclick = () => {
+  const stage = (S.job.job.stage || "proposal") === "asBuilt" ? "asBuilt" : "proposal";
+  const opts = sel => [...$(sel).querySelectorAll("option")];
+  const jobs = [...$("#jobsSel").children];
+  openPicker({ title: S.job.job.name || "Job", groups: [
+    { label: "This job", items: [
+      { value: "rename", label: "Rename…", sub: S.job.job.name || "" },
+      { value: "stage:proposal", label: "Proposal", current: stage === "proposal", sub: "stage" },
+      { value: "stage:asBuilt", label: "As-built", current: stage === "asBuilt", sub: "stage" } ] },
+    { label: "Option", items: opts("#solSel").map(o => ({ value: `sol:${o.value}`, label: o.textContent, current: o.value === String(S.sol) })) },
+    { label: "File", items: [
+      { value: "file:newJob", label: "New job…", sub: "Start from a rack: Savant, theater, MXNet, Dante or blank" },
+      { value: "file:importBtn", label: "Import…", sub: "A SignalPath job, an AVWalk survey or a Blueprinted file" },
+      ...($("#startAsBuilt").hidden ? [] : [{ value: "file:startAsBuilt", label: "Start as-built", sub: "Copy this job to record what was installed" }]),
+      { value: "file:delJob", label: "Delete job", sub: "Removes this job from this browser" } ] },
+    { label: "Open another job", items: jobs.filter(o => o.tagName === "OPTION").map(o => ({ value: `job:${o.value}`, label: o.textContent, current: o.value === String(S.id) })) },
+    ...jobs.map(g => g.tagName === "OPTGROUP"
+      ? { label: g.label, items: [...g.children].map(o => ({ value: `job:${o.value}`, label: o.textContent })) }
+      : null).filter(Boolean),
+  ], onPick: v => {
+    const [k, ...rest] = v.split(":"), val = rest.join(":");
+    const set = (sel, x) => { $(sel).value = x; $(sel).dispatchEvent(new Event("change")); };
+    if (k === "rename") { const n = prompt("Job name:", S.job.job.name || ""); if (n != null && n.trim()) set("#jobName", n.trim()); }
+    else if (k === "stage") set("#stageSel", val);
+    else if (k === "sol") set("#solSel", val);
+    else if (k === "file") $("#" + val).click();
+    else if (k === "job") set("#jobsSel", val);
+  } });
+};
+
 // new job: pick a rack starting point (or blank); quick-add then wires zones to it
 /* top-bar menus: one open at a time; picking an action closes it (View's checkboxes stay open) */
 const menus = [...document.querySelectorAll("#topbar .menu")];
@@ -1325,8 +1484,8 @@ document.querySelectorAll(".tabs button[data-tab]").forEach(b => b.onclick = () 
 });
 // the panel's width is the viewer's own preference (per browser); collapsing
 // drops the inline width so the collapsed rule wins, and expanding restores it
-let panelW = 360;
-try { panelW = Math.min(640, Math.max(280, +localStorage.getItem("signalpath.panelW") || 360)); } catch {}
+let panelW = 390;
+try { panelW = Math.min(640, Math.max(280, +localStorage.getItem("signalpath.panelW") || 390)); } catch {}
 $("#panel").style.width = panelW + "px";
 $("#collapse").onclick = () => {
   const p = $("#panel");
@@ -1406,10 +1565,11 @@ function productGroups(d) {
 
 function field(label, inner) { return `<div class="f"><label>${label}</label>${inner}</div>`; }
 // small fixed choices are taps, not dropdowns
-const chips = (act, opts, cur) => `<div class="chips">${opts.map(([v, l]) =>
+const chips = (act, opts, cur, cls = "") => `<div class="chips${cls ? " " + cls : ""}">${opts.map(([v, l]) =>
   `<button type="button" class="chip${String(v) === String(cur) ? " on" : ""}" data-act="${esc(act)}" data-v="${esc(v)}" aria-pressed="${String(v) === String(cur)}">${esc(l)}</button>`).join("")}</div>`;
 const ZSPK = [["none", "None"], ["mono", "Mono"], ["stereo", "Stereo"], ["2.1", "2.1"], ["surround-5.1", "5.1"], ["surround-7.1", "7.1"], ["surround-7.1.4", "7.1.4"],
               ["soundbar", "Soundbar"], ["soundbar-sub", "Bar + sub"], ["landscape", "Landscape"]];
+const SPK_MAIN = ["stereo", "2.1", "surround-5.1", "surround-7.1", "surround-7.1.4", "soundbar"];   // shown as chips; the rest under More
 const ZTV = [["none", "None"], ["tv", "TV"], ["projector", "Projector"]];
 const sel = (cls, opts, val, labels = {}) => `<select class="${cls}">${opts.map(o =>
   `<option value="${esc(o)}" ${o === val ? "selected" : ""}>${esc(labels[o] ?? o)}</option>`).join("")}</select>`;
@@ -1463,6 +1623,33 @@ function renderPanel() {
   else body.innerHTML = jobHTML();
   wirePanel(body);
   if (S.tab === "settings") wireSettings(body);
+  enhanceSelects(body);
+}
+
+/* every menu in the panel becomes a field button that opens the picker (one
+   control for "pick one of several"); the <select> stays, hidden, and still
+   does the work — a pick sets its value and fires its change handler.
+   data-sub on a select adds a second line (e.g. the jack it lands on). */
+function enhanceSelects(root) {
+  root.querySelectorAll("select:not(.enh)").forEach(sel => {
+    sel.classList.add("enh");
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "fieldbtn";
+    const cur = sel.options[sel.selectedIndex];
+    b.innerHTML = `<span class="v"><span>${esc(cur ? cur.textContent : "—")}</span>${sel.dataset.sub ? `<small>${esc(sel.dataset.sub)}</small>` : ""}</span><span class="ch">▾</span>`;
+    const label = sel.closest(".f")?.querySelector(":scope > label")?.textContent?.replace(/×$/, "").trim() || sel.getAttribute("aria-label") || sel.title || "Choose";
+    b.onclick = () => {
+      const groups = [];
+      for (const ch of sel.children) {
+        if (ch.tagName === "OPTGROUP") groups.push({ label: ch.label, items: [...ch.children] });
+        else (groups[groups.length - 1]?.loose ? groups[groups.length - 1] : (groups.push({ label: label, loose: true, items: [] }), groups[groups.length - 1])).items.push(ch);
+      }
+      openPicker({ title: label, groups: groups.map(g => ({ label: g.label, items: g.items.map(o => ({ value: o.value, label: o.textContent, current: o.selected,
+        disabled: o.disabled, reason: o.title || "not available here" })) })),
+        onPick: v => { sel.value = v; sel.dispatchEvent(new Event("change", { bubbles: true })); } });
+    };
+    sel.after(b);
+  });
 }
 
 function zonesHTML() {
@@ -1475,11 +1662,12 @@ function zonesHTML() {
     <label><input type="radio" name="escope" value="sol" ${scopeSol ? "checked" : ""}> ${esc(sol.name)} only</label>
     <span class="mini" title="Zone names and adding/removing zones, speakers or displays always edit the House.">ⓘ</span></div>` : "";
   const qa = `<div id="qa">
-    <div class="line"><input id="qaInput" placeholder="${esc(S.qaHint || "family room 5.1 75 sony matrix")}…" autocomplete="off">
+    <div class="line"><input id="qaInput" placeholder="Add rooms — e.g. ${esc(S.qaHint || "family room 5.1 75 sony matrix")}" autocomplete="off">
       <button id="qaMic" title="Dictate">🎤</button><button id="qaGo">Add</button></div>
     <div id="qaChips"></div>
-    <div class="ex">new zones: name + setup (5.1, stereo, 2.1, soundbar, landscape 8) + TV size + brand · "matrix" / "avr" wires it · "ofe" "prewire" · comma = next zone<br>
-      changes: "connect cable box to mrx" · "kitchen, office to amp 2" · "family room from the receiver" · "patio 75 ofe" · "master optical backup" · "add an mrx 1140"</div>
+    <div class="ex">Name, setup, TV size, brand — commas for more rooms. <details><summary>How quick-add works</summary>
+      new zones: name + setup (5.1, stereo, 2.1, soundbar, landscape 8) + TV size + brand · "matrix" / "avr" / "local" wires it · "ofe" "prewire" · comma = next zone<br>
+      changes: "connect cable box to mrx" · "kitchen, office to amp 2" · "family room from the receiver" · "patio 75 ofe" · "master optical backup" · "add an mrx 1140"</details></div>
   </div>`;
   const ovHas = (kind, id, f) => ov[kind]?.[id] != null && f in ov[kind][id];
   const fieldO = (label, inner, kind, id, f) => {
@@ -1519,15 +1707,23 @@ function zonesHTML() {
     return `<div class="row ${open ? "open" : ""}" data-zid="${esc(z.id)}">${head}
       <div class="fields">
         ${found.length ? `<div class="zissues">${found.map(f => `<div class="${f.level}">${esc(f.msg)}</div>`).join("")}</div>` : ""}
-        ${spk ? fieldO("Speakers", chips("spkcfg", ZSPK, spkCfg), "endpoints", spkH.id, "config") : field("Speakers", chips("spkcfg", ZSPK, spkCfg))}
-        ${tv ? fieldO("Display", chips("tvtype", ZTV, tvType), "endpoints", tvH.id, "displayType") : field("Display", chips("tvtype", ZTV, tvType))}
-        ${tv ? fieldO("Size", `<input class="tvsize" type="number" min="24" max="220" value="${esc(tv.size || 65)}">${chips("tvsize", [55, 65, 75, 85, 98].map(n => [String(n), n + '"']), String(tv.size))}`, "endpoints", tvH.id, "size") : ""}
+        ${(() => {   // the setups used most as chips; the rest behind More (UI refresh 2026-09-30)
+          const main = ZSPK.filter(([v]) => SPK_MAIN.includes(v) || v === spkCfg);
+          const inner = chips("spkcfg", main, spkCfg).replace(/<\/div>$/, `<button type="button" class="chip more" data-more="spkcfg">More ▾</button></div>`);
+          return spk ? fieldO("Speakers", inner, "endpoints", spkH.id, "config") : field("Speakers", inner);
+        })()}
+        ${tv ? fieldO("Display", chips("tvtype", ZTV, tvType, "seg"), "endpoints", tvH.id, "displayType") : field("Display", chips("tvtype", ZTV, tvType, "seg"))}
+        ${tv ? fieldO("TV size", (() => {
+          const sizes = [55, 65, 75, 85, 98], cur = +tv.size || 65;
+          const list = sizes.includes(cur) ? sizes : [...sizes, cur].sort((a, b) => a - b);
+          return chips("tvsize", list.map(n => [String(n), n + "″"]), String(cur)).replace(/<\/div>$/, `<button type="button" class="chip more" data-other="tvsize">Other…</button></div>`);
+        })(), "endpoints", tvH.id, "size") : ""}
         ${tv ? fieldO("Brand", `<input class="tvbrand" value="${esc(tv.brand || "")}" placeholder="e.g. Sony">`, "endpoints", tvH.id, "brand") : ""}
         ${tv ? fieldO("Model", `<input class="tvmodel" value="${esc(tv.model || "")}" placeholder="e.g. K-85XR90 — blank quotes “Unspecified TV”" autocorrect="off" spellcheck="false">`, "endpoints", tvH.id, "model") : ""}
         ${hookupHTML(z, sol, multi)}
         <details class="more" data-more="${esc(moreKey)}" ${S.openRows.has(moreKey) ? "open" : ""}><summary>More — name, scope, status, remote${tv ? ", size check" : ""}</summary>
           ${field("Name", `<input class="zname" value="${esc(z.name)}">`)}
-          ${fieldO("Scope", chips("zscope", ["included", "prewire", "future"].map(k => [k, SCOPE_LABEL[k]]), zEff.scope || "included"), "zones", z.id, "scope")}
+          ${fieldO("Scope", chips("zscope", ["included", "prewire", "future"].map(k => [k, SCOPE_LABEL[k]]), zEff.scope || "included", "seg"), "zones", z.id, "scope")}
           ${fieldO("Remote", sel("zremote", ["none", "savant", "appletv", "josh", "factory"], zEff.remote || "none", REMOTE_LABEL), "zones", z.id, "remote")}
           ${field("Outdoor", sel("zoutdoor", ["auto", "yes", "no"], typeof z.outdoor === "boolean" ? (z.outdoor ? "yes" : "no") : "auto",
             { auto: `Auto (${isOutdoorZone({ ...z, outdoor: undefined }) ? "outdoor" : "indoor"})`, yes: "Outdoor", no: "Indoor" }))}
@@ -1547,6 +1743,13 @@ function zonesHTML() {
 /* HOOKUP: what feeds this zone — the TV's video (and how it gets there), the
    speakers' drive, the TV's audio back. Writes ordinary connections for the
    active solution (app/hookup.js); the GEAR tab's list shows the result. */
+// the jack(s) a hookup wire lands on, as a field button's second line
+function jackSub(sol, from, to, signal) {
+  if (!from || !to) return "";
+  const i = (sol.connections || []).findIndex(c => c.from === from && c.to === to && c.signal === signal);
+  const pm = S.portMap?.[i]; if (!pm) return "";
+  return [pm.from?.label, pm.to?.label].filter(Boolean).join(" → ");
+}
 function hookupHTML(z, sol, multi) {
   const h = readHookup(S.job, sol, z);
   if (!h.tv && !h.spk) return "";
@@ -1560,16 +1763,16 @@ function hookupHTML(z, sol, multi) {
   const byDev = id => devs.find(d => d.id === id);
   if (h.tv) {
     const cur = h.video?.from || "";
-    rows.push(field("TV video", `<select class="hvfrom">${opt("", "— not connected —", cur)}
+    rows.push(field("TV video", `<select class="hvfrom" data-sub="${esc(jackSub(sol, h.video?.from, h.video?.via || h.tv.id, "video"))}">${opt("", "— not connected —", cur)}
       <optgroup label="In the rack">${devOpts(VIDEO_FROM, cur)}</optgroup>
       ${locals.length ? `<optgroup label="In this zone">${locals.map(d => opt(d.id, nm(d.id), cur)).join("")}</optgroup>` : ""}
       <optgroup label="Add">${opt("__new_avr", "＋ New AV receiver…", "")}</optgroup></select>`));
-    if (byDev(cur)) rows.push(field("Run to TV", chips("hvrun", Object.entries(RUNS), h.video.run)));
+    if (byDev(cur)) rows.push(field("Run to TV", chips("hvrun", Object.entries(RUNS), h.video.run, "seg")));
   }
   if (h.spk) {
     const cur = h.speakers?.from || "";
     const bar = /^soundbar/.test(h.spk.config || "") && h.tv;
-    rows.push(field("Speakers", `<select class="hsfrom">${opt("", "— not connected —", cur)}
+    rows.push(field("Speakers", `<select class="hsfrom" data-sub="${esc(jackSub(sol, h.speakers?.from, h.spk.id, "speaker"))}">${opt("", "— not connected —", cur)}
       ${bar ? `<optgroup label="In this zone">${opt("__tv", "The TV — powered bar on HDMI eARC", h.speakers?.viaTv ? "__tv" : cur)}</optgroup>` : ""}
       <optgroup label="In the rack">${devOpts(SPEAKERS_FROM, cur)}</optgroup>
       <optgroup label="Add">${opt("__new_avr", "＋ New AV receiver…", "")}${opt("__new_amp", "＋ New multi-zone amp…", "")}</optgroup></select>`));
@@ -1601,10 +1804,10 @@ function hookupHTML(z, sol, multi) {
   const vDev = byDev(h.video?.from), sDev = byDev(h.speakers?.from);
   let nudge = "";
   if (h.tv && sDev?.type === "avr" && h.video?.from !== sDev.id)
-    nudge = `<button class="addbtn hsame" data-what="video" data-dev="${esc(sDev.id)}">Feed the TV from ${esc(sDev.model || sDev.id)} too</button>`;
+    nudge = `<button class="addbtn hsame sug" data-what="video" data-dev="${esc(sDev.id)}"><span aria-hidden="true">✦</span><span class="t">Feed the TV from ${esc(sDev.model || sDev.id)} too</span><span class="ap">Apply</span></button>`;
   else if (h.spk && vDev?.type === "avr" && h.speakers?.from !== vDev.id)
-    nudge = `<button class="addbtn hsame" data-what="speakers" data-dev="${esc(vDev.id)}">Drive the speakers from ${esc(vDev.model || vDev.id)} too</button>`;
-  return `<div class="sect">HOOKUP <span class="mini">what feeds this zone${multi ? ` · ${esc(sol.name)}` : ""}</span></div>${rows.join("")}${nudge}`;
+    nudge = `<button class="addbtn hsame sug" data-what="speakers" data-dev="${esc(vDev.id)}"><span aria-hidden="true">✦</span><span class="t">Drive the speakers from ${esc(vDev.model || vDev.id)} too</span><span class="ap">Apply</span></button>`;
+  return `<div class="sect">WHAT FEEDS THIS ROOM${multi ? ` <span class="mini">${esc(sol.name)}</span>` : ""}</div>${rows.join("")}${nudge}`;
 }
 
 function gearHTML() {
@@ -1639,7 +1842,7 @@ function gearHTML() {
         ${drifted(d) ? `<div class="mini" style="margin:-2px 0 6px 80px;color:#8a5a00">The drawing says “${esc(d.model || "")}”, the product is “${esc(drifted(d))}”. <a href="#" class="dusecat">Use “${esc(drifted(d))}”</a></div>` : ""}
         <div class="sect">INPUTS${cap.ins ? ` <span class="mini">${esc(cap.ins)}</span>` : ""}</div>
         <div class="ports">${ins.length ? ins.map(([c, i]) => connRowHTML(c, i, sol, d.id, "in")).join("") : `<div class="empty">Nothing plugged in yet.</div>`}
-          <button class="addconn" data-dir="in">＋ Plug something into ${esc(d.model || "this box")}</button></div>
+          <button class="addconn" data-dir="in">＋ Plug something in</button></div>
         <div class="sect">OUTPUTS${cap.outs ? ` <span class="mini">${esc(cap.outs)}</span>` : ""}</div>
         <div class="ports">${outs.length ? outs.map(([c, i]) => connRowHTML(c, i, sol, d.id, "out")).join("") : `<div class="empty">Not feeding anything yet.</div>`}
           <button class="addconn" data-dir="out">＋ Connect an output</button></div>
@@ -1805,7 +2008,7 @@ function portsHTML() {
       <div class="head zhead" data-toggle="${esc(key)}"><div class="zmain"><div class="zt"><span class="t">${esc(p.model)}</span></div>
         <div class="zsum">${esc(NET_ROLE_NAME[p.role] || p.role)} · ${n} of ${p.rows.length} recorded</div>
         ${clash ? `<div class="ziss e">${clash} boxes recorded on the same port</div>` : ""}</div></div>
-      <div class="fields">${[...p.rows].sort((a, b) => a.isSwitch - b.isSwitch || a.rank - b.rank || a.zi - b.zi || a.order - b.order).map(r => `<div class="f"><label title="${esc(r.where)}">${esc(r.what)}</label><input class="swport" data-node="${esc(r.id)}" value="${r.recorded ? esc(r.port) : ""}"
+      <div class="fields">${[...p.rows].sort((a, b) => a.isSwitch - b.isSwitch || a.rank - b.rank || a.zi - b.zi || a.order - b.order).map(r => `<div class="f inline"><label title="${esc(r.where)}">${esc(r.what)}</label><input class="swport" data-node="${esc(r.id)}" value="${r.recorded ? esc(r.port) : ""}"
         placeholder="${esc(r.port == null ? "none free" : String(r.port).replace(" (RJ45 module)", "*"))}" style="width:90px${r.clash ? ";border-color:var(--bad)" : ""}" autocapitalize="characters" autocorrect="off" spellcheck="false">
         <span class="mini">${esc(String(r.where).replace(/ — TV location$/, " TV"))}</span></div>`).join("")}</div></div>`; }).join("")}`;
 }
@@ -2093,6 +2296,16 @@ function wirePanel(body) {
     refresh();
   });
   body.querySelectorAll("details.more").forEach(d => d.ontoggle = () => { d.open ? S.openRows.add(d.dataset.more) : S.openRows.delete(d.dataset.more); });
+  // More / Other: the rarer choices, through the picker
+  body.querySelectorAll('.chip.more[data-more="spkcfg"]').forEach(b => b.onclick = () => {
+    const rest = ZSPK.filter(([v]) => !SPK_MAIN.includes(v));
+    openPicker({ title: "Speaker setup", groups: [{ label: "More setups", items: rest.map(([v, l]) => ({ value: v, label: l, sub: SPEAKER_SETUP[v] || "" })) }],
+      onPick: v => { ZH[".spkcfg"]?.({ value: v, checked: false, closest: q => b.closest(q) }); refresh(); } });
+  });
+  body.querySelectorAll('.chip.more[data-other="tvsize"]').forEach(b => b.onclick = () => {
+    const n = prompt('TV size in inches (24–220):', ""); if (n == null) return;
+    ZH[".tvsize"]?.({ value: n, checked: false, closest: q => b.closest(q) }); refresh();
+  });
   ZH[".hvrun"] = el => { const z = zoneOf(el); const sol = S.job.solutions[S.sol]; if (z) setVideo(S.job, sol, z, readHookup(S.job, sol, z).video?.from, el.value); };
 
   /* zone hookup */

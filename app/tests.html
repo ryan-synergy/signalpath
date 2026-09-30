@@ -3153,6 +3153,30 @@ for (const [name, raw] of Object.entries(fixtures)) {
   }
 }
 
+/* ---------- walkthrough 2026-09-30: Savant whole-home + an Atmos theater, a far pool house, a short den ----------
+   Built through quick-add ("theater 7.1.4 98 sony avr bullet, pool house 5.1 75 avr bullet far, …"). */
+{
+  const W = await (await fetch("./test-fixtures/walk-savant-atmos.json")).json();
+  const CAT = await (await fetch("./catalog.json")).json();
+  const PT = await import("./ports.js"), PG = await import("./pages.js");
+  const { job, ix } = loadJob(structuredClone(W)); const a = advise(job, ix, CAT), cs = job.solutions[0].connections;
+  const map = PT.assignPorts(job, ix, CAT, 0);
+  const tvOuts = cs.map((c, i) => [c, map[i]]).filter(([c]) => c.signal === "video" && /^avr/.test(c.from) && ix.endpointsById[c.to]);
+  t("walkthrough: every receiver's own TV is on its main out (HDMI OUT 1), eARC kit or not",
+    tvOuts.length === 3 && tvOuts.every(([, m]) => /OUT 1/.test(m.from?.label || "")), JSON.stringify(tvOuts.map(([c, m]) => `${c.from} ${m.from?.label}`)));
+  const tvs = (a.setup[0].setup || a.setup[0]).tvs;
+  t("walkthrough: Audio Setup lists TVs whose sound comes back up the HDMI — eARC on the 10 m Bullet Train, ARC on the 40 m one",
+    tvs.some(x => x.name === "Den TV" && /eARC/.test(x.setting)) && tvs.some(x => x.name === "Pool House TV" && /ARC\)/.test(x.setting) && /40 m/.test(x.reason)) && tvs.some(x => x.name === "Theater TV"),
+    JSON.stringify(tvs.map(x => `${x.name}: ${x.setting}`)));
+  t("walkthrough: a surround room whose TV bypasses its receiver says the TV's apps won't reach the surround speakers",
+    a.notes.some(n => n.code === "tv-apps-no-surround" && /Great Room/.test(n.msg)) && !a.notes.some(n => n.code === "tv-apps-no-surround" && /Theater|Den|Pool/.test(n.msg)));
+  t("walkthrough: an audio input module with nothing plugged in is flagged", a.notes.some(n => n.code === "input-module-idle" && /AC-MX-88 audio outs/.test(n.msg)));
+  const p = enginePlace(job, ix), rt = engineRoute(job, ix, p), svg = render(job, ix, p, rt, { wireLabels: PG.wireLabels(job, ix) });
+  const labs = [...svg.matchAll(/class="(wirenum|wiretag)"[^>]*>([^<]*)</g)].map(m => m[2]);
+  t("walkthrough: a trunk wire with a run tag wears one label (V-01 · BULLET 20m, R-01 · eARC KIT)",
+    ["V-01 · BULLET 20m", "V-02 · BULLET 40m", "V-03 · BULLET 10m", "R-01 · eARC KIT"].every(x => labs.includes(x)) && !labs.some(x => /^BULLET|^eARC KIT/.test(x)), JSON.stringify(labs.filter(x => /BULLET|KIT/.test(x))));
+}
+
 /* ---------- input order (user redline 2026-09-28) ----------
    Feeds into a device's left edge land in the order their sources stack —
    ATV 1, ATV 2, cable box into the MXNet switch — so they nest without a hop. */

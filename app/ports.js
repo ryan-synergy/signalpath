@@ -118,7 +118,12 @@ export function assignPorts(job, ix, catalog, solIndex = 0) {
     const byFam = p => fams.indexOf(p.conn);
     const pref = p => {
       const L = p.label.toUpperCase();
-      if (dir === "out" && c.signal === "video" && n.obj?.type === "avr") return (c.earc ? (p.earc ? 0 : 2) : (p.earc ? 1 : 0)) + (/ZONE ?2/.test(L) ? 5 : 0);
+      // a receiver's main out (the eARC one) goes to its TV — even when the TV's sound comes
+      // back some other way (the eARC kit); it's left free only for another feed that needs eARC
+      if (dir === "out" && c.signal === "video" && n.obj?.type === "avr") {
+        const otherNeedsEarc = conns.some(k => k !== c && k.from === c.from && k.signal === "video" && k.earc);
+        return (c.earc || !otherNeedsEarc ? (p.earc ? 0 : 2) : (p.earc ? 1 : 0)) + (/ZONE ?2/.test(L) ? 5 : 0);
+      }
       if (dir === "out" && c.signal === "audio" && n.obj?.type === "avr") return /ZONE ?2/.test(L) ? 0 : 3;
       if (dir === "out" && c.signal === "speaker" && c.channels) {
         const z = Math.ceil(parseInt(c.channels, 10) / 2);

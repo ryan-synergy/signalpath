@@ -1,0 +1,437 @@
+{
+ "generator": "SignalPath",
+ "schemaVersion": 1,
+ "job": {
+  "name": "Walkthrough",
+  "client": {
+   "name": "c"
+  },
+  "revisions": [],
+  "starter": "savant-whole-home"
+ },
+ "house": {
+  "areas": [],
+  "zones": [
+   {
+    "scope": "included",
+    "name": "Theater",
+    "id": "z-theater",
+    "endpoints": [
+     {
+      "id": "z-theater-spk",
+      "type": "speakers",
+      "config": "surround-7.1.4",
+      "status": "new"
+     },
+     {
+      "id": "z-theater-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "Sony",
+      "size": 98,
+      "status": "new"
+     }
+    ]
+   },
+   {
+    "scope": "included",
+    "reach": "far",
+    "name": "Pool House",
+    "id": "z-pool-house",
+    "endpoints": [
+     {
+      "id": "z-pool-house-spk",
+      "type": "speakers",
+      "config": "surround-5.1",
+      "status": "new"
+     },
+     {
+      "id": "z-pool-house-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 75,
+      "status": "new"
+     }
+    ]
+   },
+   {
+    "scope": "included",
+    "reach": "short",
+    "name": "Den",
+    "id": "z-den",
+    "endpoints": [
+     {
+      "id": "z-den-spk",
+      "type": "speakers",
+      "config": "surround-5.1",
+      "status": "new"
+     },
+     {
+      "id": "z-den-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 65,
+      "status": "new"
+     }
+    ]
+   },
+   {
+    "scope": "included",
+    "name": "Great Room",
+    "id": "z-great-room",
+    "endpoints": [
+     {
+      "id": "z-great-room-spk",
+      "type": "speakers",
+      "config": "surround-5.1",
+      "status": "new"
+     },
+     {
+      "id": "z-great-room-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "Samsung",
+      "size": 85,
+      "status": "new"
+     }
+    ]
+   },
+   {
+    "scope": "included",
+    "name": "Kitchen",
+    "id": "z-kitchen",
+    "endpoints": [
+     {
+      "id": "z-kitchen-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-kitchen-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 55,
+      "status": "new"
+     }
+    ]
+   },
+   {
+    "scope": "included",
+    "name": "Primary Suite",
+    "id": "z-primary-suite",
+    "endpoints": [
+     {
+      "id": "z-primary-suite-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-primary-suite-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "LG",
+      "size": 65,
+      "status": "new"
+     }
+    ]
+   },
+   {
+    "scope": "included",
+    "name": "Patio",
+    "id": "z-patio",
+    "endpoints": [
+     {
+      "id": "z-patio-spk",
+      "type": "speakers",
+      "config": "landscape",
+      "satCount": 8,
+      "buriedSub": true,
+      "status": "new"
+     }
+    ]
+   }
+  ]
+ },
+ "solutions": [
+  {
+   "id": "sol-a",
+   "name": "Proposed System",
+   "platforms": [
+    "savant"
+   ],
+   "racks": [
+    {
+     "id": "rack-main",
+     "name": "Equipment Rack",
+     "devices": [
+      {
+       "id": "cablebox",
+       "type": "source",
+       "model": "Cable Box",
+       "status": "new"
+      },
+      {
+       "id": "atv",
+       "type": "source",
+       "model": "Apple TV",
+       "status": "new"
+      },
+      {
+       "id": "music",
+       "type": "source",
+       "catalogRef": "savant-pav-sms2001",
+       "model": "Savant PAV-SMS2001-10",
+       "status": "new"
+      },
+      {
+       "id": "matrix",
+       "type": "videoMatrix",
+       "catalogRef": "avpro-ac-mx-88",
+       "model": "AVPro Edge AC-MX-88",
+       "status": "new"
+      },
+      {
+       "id": "sav-in",
+       "type": "audioInputModule",
+       "catalogRef": "savant-avb-input-module",
+       "model": "Savant Analog Audio Input Module",
+       "status": "new"
+      },
+      {
+       "id": "sav-out",
+       "type": "audioOutputModule",
+       "catalogRef": "savant-avb-output-module",
+       "model": "Savant Analog Audio Output Module",
+       "status": "new"
+      },
+      {
+       "id": "avb",
+       "type": "avbSwitch",
+       "model": "AVB switch (Avnu-certified)",
+       "status": "new"
+      },
+      {
+       "id": "amp",
+       "type": "amp",
+       "catalogRef": "anthem-mdx-16",
+       "model": "Anthem MDX-16",
+       "status": "new",
+       "zones": 8
+      },
+      {
+       "id": "power",
+       "type": "power",
+       "catalogRef": "wattbox-800-ipvm-12",
+       "model": "WattBox WB-800-IPVM-12",
+       "status": "new"
+      },
+      {
+       "id": "avr",
+       "type": "avr",
+       "model": "Anthem MRX 1140",
+       "status": "new",
+       "catalogRef": "anthem-mrx-1140-8k"
+      },
+      {
+       "id": "avr-2",
+       "type": "avr",
+       "model": "Anthem MRX 540",
+       "status": "new",
+       "catalogRef": "anthem-mrx-540-8k"
+      },
+      {
+       "id": "avr-3",
+       "type": "avr",
+       "model": "Anthem MRX 540",
+       "status": "new",
+       "catalogRef": "anthem-mrx-540-8k"
+      },
+      {
+       "id": "avr-4",
+       "type": "avr",
+       "model": "Anthem MRX 540",
+       "status": "new",
+       "catalogRef": "anthem-mrx-540-8k"
+      }
+     ]
+    }
+   ],
+   "localDevices": [],
+   "companions": [
+    {
+     "id": "balun-z-great-room",
+     "type": "balun",
+     "serves": "z-great-room-tv",
+     "auto": true
+    },
+    {
+     "id": "balun-z-kitchen",
+     "type": "balun",
+     "serves": "z-kitchen-tv",
+     "auto": true
+    },
+    {
+     "id": "balun-z-primary-suite",
+     "type": "balun",
+     "serves": "z-primary-suite-tv",
+     "auto": true
+    }
+   ],
+   "connections": [
+    {
+     "from": "cablebox",
+     "to": "matrix",
+     "signal": "video"
+    },
+    {
+     "from": "atv",
+     "to": "matrix",
+     "signal": "video"
+    },
+    {
+     "from": "avb",
+     "to": "music",
+     "signal": "network"
+    },
+    {
+     "from": "avb",
+     "to": "sav-in",
+     "signal": "network"
+    },
+    {
+     "from": "avb",
+     "to": "sav-out",
+     "signal": "network"
+    },
+    {
+     "from": "sav-out",
+     "to": "amp",
+     "signal": "audio"
+    },
+    {
+     "from": "avr",
+     "to": "z-theater-tv",
+     "signal": "video",
+     "run": "bullet"
+    },
+    {
+     "from": "z-theater-tv",
+     "to": "avr",
+     "signal": "audioReturn",
+     "earcKit": true
+    },
+    {
+     "from": "avr",
+     "to": "z-theater-spk",
+     "signal": "speaker"
+    },
+    {
+     "from": "matrix",
+     "to": "avr",
+     "signal": "video"
+    },
+    {
+     "from": "avr-2",
+     "to": "z-pool-house-tv",
+     "signal": "video",
+     "run": "bullet",
+     "earc": true
+    },
+    {
+     "from": "avr-2",
+     "to": "z-pool-house-spk",
+     "signal": "speaker"
+    },
+    {
+     "from": "matrix",
+     "to": "avr-2",
+     "signal": "video"
+    },
+    {
+     "from": "avr-3",
+     "to": "z-den-tv",
+     "signal": "video",
+     "run": "bullet",
+     "earc": true
+    },
+    {
+     "from": "avr-3",
+     "to": "z-den-spk",
+     "signal": "speaker"
+    },
+    {
+     "from": "matrix",
+     "to": "avr-3",
+     "signal": "video"
+    },
+    {
+     "from": "matrix",
+     "to": "balun-z-great-room",
+     "signal": "video"
+    },
+    {
+     "from": "balun-z-great-room",
+     "to": "z-great-room-tv",
+     "signal": "video"
+    },
+    {
+     "from": "avr-4",
+     "to": "z-great-room-spk",
+     "signal": "speaker"
+    },
+    {
+     "from": "matrix",
+     "to": "avr-4",
+     "signal": "video"
+    },
+    {
+     "from": "matrix",
+     "to": "balun-z-kitchen",
+     "signal": "video"
+    },
+    {
+     "from": "balun-z-kitchen",
+     "to": "z-kitchen-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp",
+     "to": "z-kitchen-spk",
+     "signal": "speaker",
+     "channels": "1-2"
+    },
+    {
+     "from": "matrix",
+     "to": "balun-z-primary-suite",
+     "signal": "video"
+    },
+    {
+     "from": "balun-z-primary-suite",
+     "to": "z-primary-suite-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp",
+     "to": "z-primary-suite-spk",
+     "signal": "speaker",
+     "channels": "3-4"
+    },
+    {
+     "from": "amp",
+     "to": "z-patio-spk",
+     "signal": "speaker",
+     "channels": "5-6"
+    }
+   ],
+   "annotations": [],
+   "audioNetwork": "avb"
+  }
+ ]
+}

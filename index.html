@@ -405,24 +405,24 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20260930231256",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20260930231256",
-    "./app/audiochain.js": "./app/audiochain.js?v=20260930231256",
-    "./app/ports.js": "./app/ports.js?v=20260930231256",
-    "./app/commands.js": "./app/commands.js?v=20260930231256",
-    "./app/engine.js": "./app/engine.js?v=20260930231256",
-    "./app/exports.js": "./app/exports.js?v=20260930231256",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260930231256",
-    "./app/hookup.js": "./app/hookup.js?v=20260930231256",
-    "./app/importers.js": "./app/importers.js?v=20260930231256",
-    "./app/names.js": "./app/names.js?v=20260930231256",
-    "./app/network.js": "./app/network.js?v=20260930231256",
-    "./app/pages.js": "./app/pages.js?v=20260930231256",
-    "./app/power.js": "./app/power.js?v=20260930231256",
-    "./app/quickadd.js": "./app/quickadd.js?v=20260930231256",
-    "./app/rack.js": "./app/rack.js?v=20260930231256",
-    "./app/route-audit.js": "./app/route-audit.js?v=20260930231256",
-    "./app/starters.js": "./app/starters.js?v=20260930231256"
+    "./app/ai.js": "./app/ai.js?v=20260930232426",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20260930232426",
+    "./app/audiochain.js": "./app/audiochain.js?v=20260930232426",
+    "./app/ports.js": "./app/ports.js?v=20260930232426",
+    "./app/commands.js": "./app/commands.js?v=20260930232426",
+    "./app/engine.js": "./app/engine.js?v=20260930232426",
+    "./app/exports.js": "./app/exports.js?v=20260930232426",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260930232426",
+    "./app/hookup.js": "./app/hookup.js?v=20260930232426",
+    "./app/importers.js": "./app/importers.js?v=20260930232426",
+    "./app/names.js": "./app/names.js?v=20260930232426",
+    "./app/network.js": "./app/network.js?v=20260930232426",
+    "./app/pages.js": "./app/pages.js?v=20260930232426",
+    "./app/power.js": "./app/power.js?v=20260930232426",
+    "./app/quickadd.js": "./app/quickadd.js?v=20260930232426",
+    "./app/rack.js": "./app/rack.js?v=20260930232426",
+    "./app/route-audit.js": "./app/route-audit.js?v=20260930232426",
+    "./app/starters.js": "./app/starters.js?v=20260930232426"
 } }
 </script>
 <script>
@@ -615,7 +615,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20260930231256").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20260930232426").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -665,7 +665,7 @@ function syncShippedCatalog() {
   return changed;
 }
 // advisor notes that ask for a fix (the rest are reference: setup checklists, budgets)
-const ACTION_NOTES = new Set(["no-port", "bullet-too-far", "bullet-arc", "run-too-long", "downres-surround", "amp-sub-outs", "earc-extender", "mxnet-no-cbox", "dante-no-controller", "mxnet-cbox-per-platform", "net-mismatch", "net-mixed",
+const ACTION_NOTES = new Set(["no-port", "tv-apps-no-surround", "input-module-idle", "bullet-too-far", "bullet-arc", "run-too-long", "downres-surround", "amp-sub-outs", "earc-extender", "mxnet-no-cbox", "dante-no-controller", "mxnet-cbox-per-platform", "net-mismatch", "net-mixed",
   "dante-multicast", "pcm-only", "switch-ports-full", "switch-no-poe", "lan-no-switch", "power-none", "power-short", "power-tight",
   "power-circuit", "power-peak", "rack-full", "rack-unknown-u", "rack-heat"]);
 const saveSettings = () => dbPut({ id: "__settings", updated: Date.now(), settings: SETTINGS });

@@ -17,6 +17,7 @@
    list (per source, per TV) the service packet prints. Pure; catalog-driven. */
 
 import { describeNode } from "./names.js";
+import { bulletFor } from "./hookup.js";
 
 const RANK = { pcm2: 0, lossy51: 1, full: 2 };
 export const FORMAT_NAME = { pcm2: "2ch PCM (stereo)", lossy51: "5.1 Dolby Digital / DTS", full: "full (Atmos / lossless)" };
@@ -113,11 +114,19 @@ export function audioSetup(job, ix, catalog, solIndex = 0) {
   for (const [eid, e] of Object.entries(ix.endpointsById)) {
     if (e.type !== "display") continue;
     const back = conns.filter(c => c.from === eid && c.signal === "audioReturn");
+    // …or back up the HDMI that feeds it: eARC on a direct run or a Bullet Train up to
+    // 10 m; ARC (Dolby Digital 5.1 at most) on a longer Bullet Train. A balun / decoder
+    // run carries no eARC (the advisor says so), so it doesn't count here.
+    const hdmi = conns.find(c => c.to === eid && c.signal === "video" && c.earc && s.devices[c.from]);
+    const arc = hdmi?.run === "bullet" && !bulletFor(ix.zonesById[ix.endpointZone[eid]]).earc;
+    if (hdmi) back.push({ from: eid, to: hdmi.from, signal: "audioReturn", viaHdmi: true });
     if (!back.length) continue;
     const plain = back.filter(c => { const n = node(c.to); return role(n, n.cat) !== "decode"; });
     tvs.push(plain.length
       ? { id: eid, name: name(eid), setting: "PCM / Stereo", how: "TV sound settings › digital / eARC audio out = PCM (Stereo)", reason: `its sound goes to ${plain.map(c => name(c.to)).join(", ")}, which play${plain.length > 1 ? "" : "s"} only 2ch PCM` }
-      : { id: eid, name: name(eid), setting: "Auto (bitstream / eARC)", how: "TV sound settings › eARC on, digital audio out = Auto", reason: `${back.map(c => name(c.to)).join(", ")} decode${back.length > 1 ? "" : "s"} it` });
+      : back.length === 1 && arc
+      ? { id: eid, name: name(eid), setting: "Auto (bitstream / ARC)", how: "TV sound settings › ARC / HDMI audio out on, digital audio out = Auto", reason: `${name(hdmi.from)} decodes it — the ${bulletFor(ix.zonesById[ix.endpointZone[eid]]).m} m Bullet Train carries ARC (Dolby Digital 5.1), not eARC` }
+      : { id: eid, name: name(eid), setting: "Auto (bitstream / eARC)", how: "TV sound settings › eARC on, digital audio out = Auto", reason: `${back.map(c => name(c.to)).join(", ")} decode${back.length > 1 ? "" : "s"} it${hdmi ? " (back up the HDMI)" : ""}` });
   }
   return { sources, tvs, notes };
 }

@@ -3119,7 +3119,8 @@ function drawDanteTags(job, ix, sol, s, P, tags, bw) {
    Each piece gets a white halo, so whatever it passes over reads as crossed
    under. Wire numbers (the Wire Schedule's) sit on each wire's room end. */
 const RIBBON_MAX = 10, RIBBON_PITCH = 4;
-function drawTrunks(list, style, labels) {
+const SPEAKER_SETUP_SHORT = c => ({ "surround-5.1": "5.1", "surround-7.1": "7.1", "surround-7.1.4": "7.1.4" }[c] || "surround");
+function drawTrunks(list, style, labels, extra = {}) {
   const o = [];
   const byNet = new Map();
   for (const t of list) (byNet.get(t.w.net) || byNet.set(t.w.net, []).get(t.w.net)).push(t);
@@ -3191,7 +3192,7 @@ function drawTrunks(list, style, labels) {
     }
     // wire numbers at each room end
     for (const m of members) {
-      const lab = labels[m.w.id]; if (!lab) continue;
+      const lab = labels[m.w.id] && (extra[m.w.id] ? `${labels[m.w.id]} · ${extra[m.w.id]}` : labels[m.w.id]); if (!lab) continue;
       const pts = m.w.pts, inbound = /^(audioReturn)$/.test(m.w.signal) || m.w.dante;
       const [a, b] = inbound ? [pts[1], pts[0]] : [pts[pts.length - 2], pts[pts.length - 1]];
       if (!a || !b) continue;
@@ -3406,7 +3407,7 @@ export function render(job, ix, P, rt, opts = {}) {
   }
 
   /* wires (under chips so badges sit inline on their runs) */
-  const TRK = trunkMode(job, opts), trunkWires = [];
+  const TRK = trunkMode(job, opts), trunkWires = [], mergedTags = {};
   push(`<g fill="none" stroke-width="2.2" stroke-linecap="round">`);
   for (const w of rt.wires) {
     const key = w.scope !== "included" ? "prewire" : w.dante ? "dante" : (w.signal === "speaker" ? "audio" : w.signal);
@@ -3431,7 +3432,9 @@ export function render(job, ix, P, rt, opts = {}) {
     const tag = conn?.run === "bullet" && ix.endpointsById[conn.to]
       ? (() => { const b = bulletFor(ix.zonesById[ix.endpointZone[conn.to]]); return b.m ? `BULLET ${b.m}m` : "BULLET ?"; })()
       : conn?.earcKit ? "eARC KIT" : null;
-    if (tag && w.pts.length > 1) {
+    // a trunk wire that also carries a schedule number wears ONE label: "V-01 · BULLET 20m"
+    if (tag && TRK && w.cls === "trunk" && opts.wireLabels?.[w.id]) mergedTags[w.id] = tag;
+    else if (tag && w.pts.length > 1) {
       // on the first run of real length, walking in from the TV end
       const pts = conn.earcKit ? w.pts : [...w.pts].reverse();
       let k = 1;
@@ -3441,7 +3444,7 @@ export function render(job, ix, P, rt, opts = {}) {
     }
   }
   push(`</g>`);
-  if (trunkWires.length) push(drawTrunks(trunkWires, TRK, opts.wireLabels || {}));
+  if (trunkWires.length) push(drawTrunks(trunkWires, TRK, opts.wireLabels || {}, mergedTags));
   if (rt.danteTags?.length) push(drawDanteTags(job, ix, sol, s, P, rt.danteTags, bw));
   // a tag reads beside its run — on whichever side no other wire runs alongside
   const segsAll = rt.wires.flatMap(w => w.pts.slice(1).map((q, i) => [w.pts[i], q]));
@@ -3789,6 +3792,34 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       if ((sol.connections || []).some(c => ix.endpointsById[c.from] && sonosLineIn(c.to)))
         out.notes.push({ code: "sonos-lipsync", solution: sol.id,
           msg: "TV audio encoded via Sonos line-in buffers ≥75ms when grouped — set Group Audio Delay per room (fw 10.6.2+); expect tuning, not plug-and-play" });
+    }
+
+    /* -- a surround room whose TV bypasses its receiver: the TV fed straight from the
+       matrix, nothing bringing its sound back — the TV's own apps (and antenna) never
+       reach the surround speakers (walkthrough 2026-09-30) -- */
+    for (const z of job.house.zones || []) {
+      if ((z.scope || "included") !== "included") continue;
+      const tv = (z.endpoints || []).find(e => e.type === "display"), spk = (z.endpoints || []).find(e => e.type === "speakers");
+      if (!tv || !/^surround/.test(spk?.config || "")) continue;
+      const drive = (sol.connections || []).find(c => c.to === spk.id && c.signal === "speaker");
+      const rcv = drive && s.devices[drive.from]?.type === "avr" ? drive.from : null;
+      if (!rcv) continue;
+      const vin = (sol.connections || []).find(c => c.signal === "video" && (c.to === tv.id || s.companions[c.to]?.serves === tv.id));
+      const vsrc = vin && s.companions[vin.from] ? (sol.connections || []).find(c => c.to === vin.from && c.signal === "video")?.from : vin?.from;
+      if (vsrc === rcv) continue;
+      if ((sol.connections || []).some(c => c.from === tv.id && c.signal === "audioReturn" && c.to === rcv)) continue;
+      out.notes.push({ code: "tv-apps-no-surround", solution: sol.id, ref: tv.id,
+        msg: `${z.name}: the TV's own apps won't play on the ${SPEAKER_SETUP_SHORT(spk.config)} speakers — the TV is fed from ${describeNode(job, sol, vsrc || "?").short} and nothing brings its sound back to ${describeNode(job, sol, rcv).short}; feed the TV through the receiver, or add TV audio back (eARC kit or optical)` });
+    }
+
+    /* -- an audio input module with nothing plugged in: it's how the video sources' sound
+       (the matrix's audio outs) reaches the audio-only rooms -- */
+    for (const d of Object.values(s.devices)) {
+      if (d.type !== "audioInputModule") continue;
+      if ((sol.connections || []).some(c => c.to === d.id && c.signal !== "network")) continue;
+      const mx = Object.values(s.devices).find(x => x.type === "videoMatrix");
+      out.notes.push({ code: "input-module-idle", solution: sol.id, ref: d.id,
+        msg: `${d.model || d.id}: nothing is plugged into it — it's how the TV sources reach the audio-only rooms${mx ? ` (the ${describeNode(job, sol, mx.id).short} audio outs into its inputs)` : ""}; connect them, or drop the module` });
     }
 
     /* -- eARC through an extender: HDBaseT / AV-over-IP gear often passes ARC at

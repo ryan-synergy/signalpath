@@ -8,6 +8,7 @@
    prints it, the takeoff and exports read the WattBox like any rack gear. */
 
 import { companionRef, specFor } from "./network.js";
+import { describeNode } from "./names.js";
 
 // spare outlets to leave: 20%, never fewer than 2 (the ISP modem and a router always show up)
 export const spareTarget = need => Math.max(2, Math.ceil(need * 0.2));
@@ -54,6 +55,18 @@ export function powerPlan(job, ix, catalog, netPlans = []) {
       const what = `${cat(companionRef(comp, tenG))?.model || "Encoder"} (${host.model || host.id})`;
       if (poeRow(comp.id)) poe.push({ id: comp.id, what });
       else loads.push({ id: comp.id, what, outlets: 1, why: "power supply", ...watts(cat(companionRef(comp, tenG))) });
+    }
+    // HDBaseT baluns fed from the rack: the kit's one PSU powers both ends over the
+    // cable (PoH), so it plugs in at the rack TX — on the WattBox, where it can be rebooted.
+    // Only included rooms (a pre-wire room's balun isn't on this job's rack yet).
+    for (const comp of Object.values(s.companions)) {
+      if (comp.type !== "balun" || !ix.endpointsById[comp.serves]) continue;
+      const zone = ix.zonesById[ix.endpointZone[comp.serves]];
+      if ((zone?.scope || "included") !== "included") continue;
+      if (!(sol.connections || []).some(k => k.to === comp.id && s.devices[k.from])) continue;
+      const c = cat(companionRef(comp));
+      loads.push({ id: comp.id, what: `${c?.model || "HDBaseT balun"} PSU (${describeNode(job, sol, comp.serves).short})`,
+        outlets: 1, why: "at the TX — powers both ends (PoH)", ...watts(c) });
     }
     if (!loads.length && !units.length) continue;
     const need = loads.reduce((n, l) => n + l.outlets, 0);

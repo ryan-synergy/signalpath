@@ -2264,6 +2264,18 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const tiny = structuredClone(job); tiny.solutions[0].racks[0].devices.find(d => d.type === "power").catalogRef = "wattbox-300vb-ip-5";
   { const L = loadJob(tiny), a3 = advise(L.job, L.ix, CAT);
     t("power: too few outlets → power-short with a step-up pick", a3.notes.some(n => n.code === "power-short" && /short/.test(n.msg))); }
+  { // baluns: one PSU per kit at the rack TX (it powers both ends over PoH); none for a pre-wire room
+    const L = loadJob(structuredClone(fixtures.residence)), p = advise(L.job, L.ix, CAT).power[0];
+    const bl = p.loads.filter(l => L.ix.solutions[0].companions[l.id]?.type === "balun");
+    const nb = (fixtures.residence.solutions[0].companions || []).filter(c => c.type === "balun" &&
+      (L.ix.zonesById[L.ix.endpointZone[c.serves]]?.scope || "included") === "included").length;
+    t("power: every rack-fed balun takes one outlet for its PSU, 12 W max, labelled for its TV",
+      nb > 0 && bl.length === nb && bl.every(l => l.outlets === 1 && l.maxW === 12 && /PSU \(/.test(l.what) && /PoH/.test(l.why)), JSON.stringify(bl[0]));
+    const pre = structuredClone(fixtures.residence);
+    for (const z of pre.house.zones) z.scope = "prewire";
+    const L2 = loadJob(pre), p2 = advise(L2.job, L2.ix, CAT).power[0];
+    t("power: a pre-wire room's balun takes no rack outlet", !p2.loads.some(l => L2.ix.solutions[0].companions[l.id]?.type === "balun"));
+  }
   // a full MXNet switch: more boxes than ports
   const full = C.planCommands(S.applyStarter(blank(), S.STARTERS.find(x => x.id === "mxnet"), CAT), 0,
     [{ op: "add_zones", text: "a 55 matrix, b 55 matrix, c 55 matrix, d 55 matrix, e 55 matrix, f 55 matrix, g 55 matrix, h 55 matrix, i 55 matrix" }], CAT).job;

@@ -233,6 +233,8 @@ Print = new window, `@page 17in 11in landscape`, one SVG per page, `print()`. Pa
 
 32. **When a fix is "route them again in a different order", check what else the re-route grabs.** Re-routing a twisted pair freed the first wire's riser, and the second wire took it — a new crossing. The minimal move (swap just the two lanes, or the two risers) fixed what was actually wrong and nothing else.
 
+47. **Count the power bricks that aren't boxes.** The outlet budget walked rack devices and rack-side encoders, but an HDBaseT balun is a companion that *serves a TV*, so its power supply fell through — the residence needed 12 outlets, not 10, which moves the WattBox pick from the 12-outlet to the 18-outlet unit. The AVPro kit ships one 48V PSU that powers both ends over the cable (PoH); put it at the rack TX so it lands on the WattBox and can be power-cycled remotely. Any companion kind with its own brick needs the same question asked: which end is it plugged in at?
+
 ## 10. Order of construction (what to build when)
 
 1. Data model + `loadJob`/`indexJob` + first fixtures — get tests running the same day.

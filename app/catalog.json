@@ -4734,6 +4734,7 @@
         "hdmi": 1
       },
       "lan": 0,
+      "powerMaxW": 12,
       "flags": [],
       "verified": true,
       "desktop": true,

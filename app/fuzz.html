@@ -18,6 +18,8 @@
 <script type="module">
 import { loadJob, validate, advise, place, route, render, effectiveJob, routeAlternates, wireD } from "./engine.js";
 import { renderExtraPages, takeoffCSV, wireRuns } from "./pages.js";
+import { planQueueFiles, aiReviewMarkdown } from "./exports.js";
+import { assignPorts } from "./ports.js";
 import { jobGenerator } from "./fuzz-jobs.js";
 
 const q = new URLSearchParams(location.search);
@@ -131,10 +133,19 @@ function exercise(raw, label, strict = false) {
         }
       }
       const pj = structuredClone(job);
-      pj.job.pages = { channelMap: true, equipment: true, wireSchedule: true, bomCompare: true };
+      pj.job.pages = { channelMap: true, equipment: true, wireSchedule: true, bomCompare: true, audioSetup: true, patchList: true };
       for (const pg of renderExtraPages(pj, ix, a, { solution: si, rawJob: raw })) svgCheck(pg.svg, `page "${pg.title}" sol${si}`);
-      takeoffCSV(job, ix, { solution: si });
-      wireRuns(job, ix, { solution: si });
+      // the text outputs: no "undefined" / "NaN" in anything a person or PlanQueue reads
+      const textCheck = (txt, where) => { const m = String(txt).match(/undefined|NaN|\[object Object\]/); if (m) problems.push(`${where}: "${m[0]}" near …${String(txt).slice(Math.max(0, m.index - 60), m.index + 20).replace(/\s+/g, " ")}…`); };
+      textCheck(takeoffCSV(job, ix, { solution: si }), `takeoff sol${si}`);
+      textCheck(JSON.stringify(wireRuns(job, ix, { solution: si })), `wire runs sol${si}`);
+      textCheck(JSON.stringify(a.notes), `advisor sol${si}`);
+      textCheck(JSON.stringify(assignPorts(job, ix, catalog, 0)), `ports sol${si}`);
+      if (si === 0) {
+        for (const f of planQueueFiles(structuredClone(raw), 0, catalog)) textCheck(f.text, "PlanQueue file");
+        const md = aiReviewMarkdown(structuredClone(raw), 0, catalog);
+        textCheck(md.replace(/```json[\s\S]*$/, ""), "AI review");   // the JSON block is the raw job, junk included
+      }
     }
   } catch (e) {
     problems.push(`THREW ${e.name}: ${e.message} @ ${(e.stack || "").split("\n")[1]?.trim() || "?"}`);
@@ -180,7 +191,7 @@ for (const name of ["residence", "estate", "stress"]) {
 }
 
 /* ---------- seeded random jobs (shared with the route audit) ---------- */
-const randomJob = jobGenerator(SEED);
+const randomJob = jobGenerator(SEED, { extras: true });
 let randFails = 0;
 const t0 = performance.now();
 const jobs = [];

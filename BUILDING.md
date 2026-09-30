@@ -239,6 +239,10 @@ Print = new window, `@page 17in 11in landscape`, one SVG per page, `print()`. Pa
 
 49. **Keep distance rough on purpose.** A Bullet Train's length decides two things — its SKU and whether eARC survives (only up to 10 m) — so the app needed *some* distance, but Ryan's call was that footage belongs to another stage. Three words (Short / Average / Far) with an optional exact-feet override is enough to size the part and pick the audio-back rule, and never pretends to be a survey. It lives on the zone (`reach`, `runFt`), not the connection, because a guest pool house is far no matter what feeds it. The Bullet Train itself is a flag on the video edge (`run: "bullet"`), not an adapter chip: a cable with no box has nothing to draw.
 
+50. **Add fuzz features on a second random stream.** The seeded random jobs are shared with the route audit, whose ceilings were tuned on exactly those jobs. Drawing the new features (distance, Bullet Train, eARC kits) from the same stream would have reshuffled every job and invalidated the baselines; a second generator seeded from the first (`SEED ^ const`) layers them on top and leaves the base jobs bit-identical — the audit and the page-width test didn't move. The fallback metric roughly doubled on the richer jobs, and the tally showed why: mostly plain optical returns crowded out by the extra receiver→TV wires, i.e. capacity, not a new routing bug. Tally *which* wires fall back before assuming either way.
+
+51. **Checks that need a measurement stay quiet without one.** Distance defaults to Average for sizing a Bullet Train, but the length checks (copper HDMI, balun, Cat6, Toslink) only run when someone actually set the room's distance — otherwise every legacy direct run would light up on a guess.
+
 ## 10. Order of construction (what to build when)
 
 1. Data model + `loadJob`/`indexJob` + first fixtures — get tests running the same day.

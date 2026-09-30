@@ -5,7 +5,7 @@
 
 import { expandChannels, effectiveJob, indexJob } from "./engine.js";
 import { TYPE_NAME, PLATFORM_NAME, adapterName, describeNode } from "./names.js";
-import { bulletFor } from "./hookup.js";
+import { bulletFor, knownRunM } from "./hookup.js";
 import { NET_ROLE_NAME, switchSetup } from "./network.js";
 import { isAsBuilt, asBuiltChanges, installRows } from "./asbuilt.js";
 
@@ -450,7 +450,7 @@ export function wireRuns(job, ix, opts = {}) {
         term: `display head → TV HDMI${c.earc ? " (eARC port)" : ""} · source head at the rack`, count: 1, gray });
     } else if (c.signal === "video" && toEp && s.devices[c.from]) {   // direct rack → display (no extender chip drawn)
       runs.push({ prefix: "V", cable: "HDMI / extender", from: rackName, to: `${zoneName(ix, c.to)} — TV location`,
-        carries: `Video (direct)${c.earc ? " + eARC back" : ""}`, color: "#b32017", term: "TV input — verify run length", count: 1, gray });
+        carries: `Video (direct)${c.earc ? " + eARC back" : ""}`, color: "#b32017", term: knownRunM(zoneOf(ix, c.to)) != null && knownRunM(zoneOf(ix, c.to)) <= 10 ? "TV input" : "TV input — verify run length", count: 1, gray });
     } else if (c.signal === "speaker" && toEp) {
       const ep = toEp;
       // "surround-7.1.4" = 7 bed + 4 heights; the ".1" sub rides its own RG6 run

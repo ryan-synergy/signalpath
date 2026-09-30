@@ -25,6 +25,15 @@ export const REACH = { short: "Short", average: "Average", far: "Far" };
 const REACH_M = { short: 10, average: 20, far: 40 };
 export const BULLET_M = [5, 10, 15, 20, 30, 40];
 export const BULLET_EARC_M = 10;
+// the run length when someone said it (Short / Average / Far, or feet) — null when
+// nobody has, so the length checks never nag a room that was never measured
+export function knownRunM(zone) {
+  const ft = +zone?.runFt;
+  if (ft > 0) return ft * 0.3048;
+  return REACH_M[zone?.reach] ?? null;
+}
+// how far each kind of run goes (AVPro specs, 2026-09-29/30; HDMI copper and Toslink: common practice)
+export const RUN_LIMIT_M = { direct: 10, balun: 70, bullet: 40, dec: 100, earcKit: 100, optical: 10 };
 export function bulletFor(zone) {
   const ft = +zone?.runFt;
   const need = ft > 0 ? ft * 0.3048 : REACH_M[zone?.reach] ?? REACH_M.average;

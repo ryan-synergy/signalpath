@@ -3,7 +3,7 @@
    Pure functions, no DOM. Spec: ../DESIGN.md (FROZEN 2026-09-17). */
 
 import { describeNode, adapterName, adapterTag, isOutdoorZone, SIGNAL_SHORT, SCOPE_NAME } from "./names.js";
-import { bulletFor, isAtmosRoom } from "./hookup.js";
+import { bulletFor, isAtmosRoom, knownRunM, RUN_LIMIT_M } from "./hookup.js";
 import { networkPlan, suggestLanSwitch } from "./network.js";
 import { powerPlan } from "./power.js";
 import { rackPlans } from "./rack.js";
@@ -2781,7 +2781,7 @@ export function render(job, ix, P, rt, opts = {}) {
   /* harness underlay: bundled feeds share their root's trunk as one heavier
      run, then break out thin toward their own destinations (electrical-drawing
      convention). The count rides the root segment carrying the most wires. */
-  const busTicks = [];
+  const busTicks = [], wireTags = [];
   const colorOf = w => {
     const key = w.scope !== "included" ? "prewire" : w.dante ? "dante" : (w.signal === "speaker" ? "audio" : w.signal);
     const gs = bw ? (SIGNAL_DASHES[key] || SIGNAL_DASHES.video) : null;
@@ -2835,8 +2835,37 @@ export function render(job, ix, P, rt, opts = {}) {
       const [x1, y1] = w.pts[bi - 1], [x2, y2] = w.pts[bi];
       busTicks.push({ mx: (x1 + x2) / 2, my: (y1 + y2) / 2, vert: x1 === x2, n, color });
     }
+    // what the run IS when no adapter box says it: a Bullet Train (sized) or the eARC kit
+    const tag = conn?.run === "bullet" && ix.endpointsById[conn.to]
+      ? (() => { const b = bulletFor(ix.zonesById[ix.endpointZone[conn.to]]); return b.m ? `BULLET ${b.m}m` : "BULLET ?"; })()
+      : conn?.earcKit ? "eARC KIT" : null;
+    if (tag && w.pts.length > 1) {
+      // on the first run of real length, walking in from the TV end
+      const pts = conn.earcKit ? w.pts : [...w.pts].reverse();
+      let k = 1;
+      while (k < pts.length - 1 && Math.abs(pts[k][0] - pts[k - 1][0]) + Math.abs(pts[k][1] - pts[k - 1][1]) < 44) k++;
+      const [x1, y1] = pts[k - 1], [x2, y2] = pts[k];
+      wireTags.push({ x: (x1 + x2) / 2, y: (y1 + y2) / 2, vert: x1 === x2, text: tag, color });
+    }
   }
   push(`</g>`);
+  // a tag reads beside its run — on whichever side no other wire runs alongside
+  const segsAll = rt.wires.flatMap(w => w.pts.slice(1).map((q, i) => [w.pts[i], q]));
+  const clear = (x0, x1, y0, y1) => !segsAll.some(([[ax, ay], [bx, by]]) =>
+    Math.max(ax, bx) >= x0 && Math.min(ax, bx) <= x1 && Math.max(ay, by) >= y0 && Math.min(ay, by) <= y1);
+  for (const t of wireTags) {
+    const tw = t.text.length * 5.6 + 4;
+    let ax, ay, anchor = "";
+    if (t.vert) {
+      const right = clear(t.x + 3, t.x + 6 + tw, t.y - 6, t.y + 6);
+      const left = !right && clear(t.x - 6 - tw, t.x - 3, t.y - 6, t.y + 6);
+      [ax, ay] = [left ? t.x - 6 : t.x + 6, t.y + 3.5]; if (left) anchor = ' text-anchor="end"';
+    } else {
+      const below = !clear(t.x - tw / 2, t.x + tw / 2, t.y - 14, t.y - 3) && clear(t.x - tw / 2, t.x + tw / 2, t.y + 3, t.y + 14);
+      [ax, ay] = [t.x, below ? t.y + 12 : t.y - 5]; anchor = ' text-anchor="middle"';
+    }
+    push(`<text class="wiretag" x="${ax}" y="${ay}"${anchor} font-size="9" font-weight="700" letter-spacing=".4" fill="${t.color}" paint-order="stroke" stroke="#fff" stroke-width="3">${esc(t.text)}</text>`);
+  }
   for (const b of busTicks) {
     push(`<line x1="${b.mx - 4}" y1="${b.my + (b.vert ? -4 : 5)}" x2="${b.mx + 4}" y2="${b.my + (b.vert ? 4 : -5)}" stroke="${b.color}" stroke-width="1.6"/>`);
     push(`<text class="bustick" x="${b.mx + (b.vert ? 9 : 0)}" y="${b.my + (b.vert ? 4 : -9)}"${b.vert ? "" : ' text-anchor="middle"'} font-size="10.5" font-weight="600" fill="${b.color}" paint-order="stroke" stroke="#fff" stroke-width="3">×${b.n}</text>`);
@@ -3187,6 +3216,27 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       else if (c.earc && !b.earc && isAtmosRoom(z) && !(sol.connections || []).some(r => r.from === c.to && r.signal === "audioReturn"))
         out.notes.push({ code: "bullet-arc", solution: sol.id, ref: c.to,
           msg: `${tv}: a ${b.m} m Bullet Train carries ARC, not eARC (eARC only up to 10 m) — no Atmos from the TV apps; set TV audio back to "eARC extender kit"` });
+    }
+
+    /* -- run length vs what each run can do, only where the room's distance is known:
+       copper HDMI ~10 m at 4K, the AVPro balun 70 m at 4K, Cat6 (MXNet / the eARC kit)
+       100 m; a pulled Toslink past ~10 m is unreliable (reference — it's usually the backup) -- */
+    for (const c of sol.connections || []) {
+      const tvId = c.signal === "video" ? (ix.endpointsById[c.to] ? c.to : s.companions[c.to]?.serves) : c.signal === "audioReturn" ? c.from : null;
+      if (!tvId || !ix.endpointsById[tvId] || !s.devices[c.signal === "video" ? c.from : c.to]) continue;
+      if (c.signal === "video" && c.run === "bullet") continue;            // sized (and checked) above
+      const z = ix.zonesById[ix.endpointZone[tvId]], m = knownRunM(z);
+      if (m == null) continue;
+      const comp = c.signal === "video" ? s.companions[c.to] : null;
+      const kind = c.signal === "audioReturn" ? (c.earcKit ? "earcKit" : "optical") : comp ? comp.type : "direct";
+      const lim = RUN_LIMIT_M[kind];
+      if (!lim || m <= lim + 0.5) continue;
+      const tv = describeNode(job, sol, tvId).short, how = z.runFt ? `${z.runFt} ft` : `${z.reach} (~${Math.round(m)} m)`;
+      const fix = { direct: "use a Bullet Train (to 40 m) or the HDBaseT balun", balun: "the balun is rated 70 m at 4K (1080p to 100 m) — use MXNet, or a switch / repeater midway",
+        dec: "Cat6 stops at 100 m — add a network switch midway or fiber", earcKit: "the eARC kit is rated 100 m on Cat6A — move the kit's RX closer or use MXNet audio",
+        optical: "use the eARC extender kit (Cat6A, 100 m) instead of the optical run" }[kind];
+      out.notes.push({ code: kind === "optical" ? "optical-long" : "run-too-long", solution: sol.id, ref: tvId,
+        msg: `${tv}: ${{ direct: "direct HDMI", balun: "HDBaseT balun", dec: "MXNet Cat6", earcKit: "eARC kit", optical: "optical (Toslink) return" }[kind]} at ${how} is past its ~${lim} m reach — ${fix}` });
     }
 
     /* -- a surround room whose TV sound comes back on optical: optical tops out at

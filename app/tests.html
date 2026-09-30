@@ -1419,6 +1419,28 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t("bullet: …and the ARC note once the length fits", a3b.notes.some(n => n.code === "bullet-arc" && /Pool House/.test(n.msg)));
     const pre = structuredClone(jb); pre.house.zones.find(q => q.name === "Den").scope = "prewire";
     t("bullet: a pre-wire room's Bullet Train run is Synergy's Bullet Train TV pre-wire", /## Den[\s\S]*?Prewire - TV \(Bullet Train\)/.test(X2().planQueueFiles(pre, 0, CAT).map(f => f.text).join("\n")));
+    { // the drawing says what the run is when no adapter box does
+      const jt = structuredClone(jb); H.setAudioBack(jt, jt.solutions[0], jt.house.zones.find(q => q.name === "Pool House"), "earc-kit");
+      const Lr = loadJob(jt), pr = place(Lr.job, Lr.ix), svg = render(Lr.job, Lr.ix, pr, route(Lr.job, Lr.ix, pr));
+      t("bullet: the sheet tags each Bullet Train with its length, and the eARC kit wire",
+        svg.includes(">BULLET 10m</text>") && svg.includes(">BULLET 40m</text>") && svg.includes(">eARC KIT</text>") && svg.includes(">BULLET 20m</text>"));
+    }
+    { // run length vs run type — only when the room's distance is known
+      const jr = structuredClone(jb), sr = jr.solutions[0], zr = jr.house.zones.find(q => q.name === "Den");
+      H.setVideo(jr, sr, zr, H.readHookup(jr, sr, zr).video.from, "direct");
+      const note = () => { const L = loadJob(structuredClone(jr)); return advise(L.job, L.ix, CAT).notes.filter(n => n.ref === H.readHookup(jr, sr, zr).tv.id && /run-too-long|optical-long/.test(n.code)); };
+      t("run length: an unmeasured room never gets a length note", note().length === 0);
+      zr.reach = "average";
+      t("run length: direct HDMI at Average (~20 m) → use a Bullet Train or the balun", note().some(n => n.code === "run-too-long" && /direct HDMI/.test(n.msg) && /Bullet Train/.test(n.msg)));
+      zr.reach = "short";
+      t("run length: …but not at Short", note().length === 0);
+      H.setVideo(jr, sr, zr, H.readHookup(jr, sr, zr).video.from, "balun");
+      zr.runFt = 250;
+      t("run length: a balun at 250 ft is past its 70 m", note().some(n => n.code === "run-too-long" && /balun/.test(n.msg) && /250 ft/.test(n.msg)));
+      zr.runFt = 150; H.setAudioBack(jr, sr, zr, "earc+optical");
+      t("run length: a 150 ft optical backup gets the reference note pointing at the eARC kit; the balun is fine",
+        note().length === 1 && note()[0].code === "optical-long" && /eARC extender kit/.test(note()[0].msg));
+    }
     H.setVideo(jb, sb, qs, hs.video.from, "balun");
     t("bullet: switching back to the balun restores its adapter", H.readHookup(jb, sb, qs).video.run === "balun");
     const hlb = healthy(jb);

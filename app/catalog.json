@@ -2166,10 +2166,11 @@
       },
       "flags": [
         "mxnet",
-        "poe"
+        "poe",
+        "downmix2ch"
       ],
       "verified": true,
-      "notes": "Standard (non-downmixing) MXNet 1G Evolution II encoder. HDMI loop-out + balanced stereo analog de-embed (5-pin Phoenix) + Toslink. GOTCHA: Toslink is currently 'Future Audio Return Support Only' — eARC/ARC not active yet. This is a straight PCM de-embed, not a Dolby/DTS downmixer — use the AC-MXNET-1G-AVDM-EV2 (already in catalog) for Atmos/DTS-HD → 2ch. PoE 802.3af (15.4W). AUDIT 2026-09-27: added 1 unbalanced 3.5mm analog IN (embedded into the stream); network = 1 RJ45 PoE + 1 SFP. CONFLICT: the EV2 datasheet says the 5-pin out is 'downmixed to PCM 2ch' — possibly copied from the AVDM sheet; test on a unit before relying on either. POWER/RU 2026-09-27: 9.7W max, ~7W typical, PoE af — avproglobal.com product page",
+      "notes": "Standard (non-downmixing) MXNet 1G Evolution II encoder. HDMI loop-out + balanced stereo analog de-embed (5-pin Phoenix) + Toslink. GOTCHA: Toslink is currently 'Future Audio Return Support Only' — eARC/ARC not active yet. This is a straight PCM de-embed, not a Dolby/DTS downmixer — use the AC-MXNET-1G-AVDM-EV2 (already in catalog) for Atmos/DTS-HD → 2ch. PoE 802.3af (15.4W). AUDIT 2026-09-27: added 1 unbalanced 3.5mm analog IN (embedded into the stream); network = 1 RJ45 PoE + 1 SFP. CONFLICT: the EV2 datasheet says the 5-pin out is 'downmixed to PCM 2ch' — possibly copied from the AVDM sheet; test on a unit before relying on either. POWER/RU 2026-09-27: 9.7W max, ~7W typical, PoE af — avproglobal.com product page DOWNMIX 2026-09-30 (Ryan: confirm with the AVPro spec sheet): the AC-MXNET-1G-DANTE-EV2 / -DV2 spec sheets (avproglobal.egnyte.com/dl/c4cVNqRwuk, /RTgWcFCvo8) say 'De-Embedded Audio: Balanced Stereo Analog Audio (5-pin phoenix only) (Audio downmixed to PCM 2Ch)' and '5-pin ... Balanced L/R Audio out (downmixed to 2ch)'; end-to-end + HDMI loop-out keep full format (to Atmos). The Dante models are 'identical to the non-Dante in baseline configuration'. The Dante stream's format isn't stated — Dante carries PCM only, so it's taken to be the same 2ch PCM downmix (inferred). Toslink out = 'Future Audio Return Support Only'.",
       "gen": "1g-ev2",
       "partNo": "AC-MXNET-1G-EV2",
       "powerMaxW": 9.7,
@@ -2192,7 +2193,8 @@
           "label": "BALANCED AUDIO (5-pin)",
           "dir": "out",
           "conn": "analog",
-          "audio": "pcm2"
+          "audio": "pcm2",
+          "downmix": true
         },
         {
           "label": "TOSLINK (audio out)",
@@ -2222,10 +2224,11 @@
       },
       "flags": [
         "mxnet",
-        "poe"
+        "poe",
+        "downmix2ch"
       ],
       "verified": true,
-      "notes": "Standard MXNet 1G Evolution II decoder. 1x HDMI out, balanced stereo analog de-embed, Toslink (same 'future ARC support only' caveat as the EV2 encoder — no active downmix/eARC today). PoE 802.3af (15.4W). AUDIT 2026-09-27: the decoder's Toslink is an INPUT (future audio return), not an output. Also 2 USB-A (KVM), 3 IR, RS-232; network = 1 RJ45 PoE + 1 SFP. POWER/RU 2026-09-27: 6.8W max, PoE af — avproglobal.com product page",
+      "notes": "Standard MXNet 1G Evolution II decoder. 1x HDMI out, balanced stereo analog de-embed, Toslink (same 'future ARC support only' caveat as the EV2 encoder — no active downmix/eARC today). PoE 802.3af (15.4W). AUDIT 2026-09-27: the decoder's Toslink is an INPUT (future audio return), not an output. Also 2 USB-A (KVM), 3 IR, RS-232; network = 1 RJ45 PoE + 1 SFP. POWER/RU 2026-09-27: 6.8W max, PoE af — avproglobal.com product page DOWNMIX 2026-09-30 (Ryan: confirm with the AVPro spec sheet): the AC-MXNET-1G-DANTE-EV2 / -DV2 spec sheets (avproglobal.egnyte.com/dl/c4cVNqRwuk, /RTgWcFCvo8) say 'De-Embedded Audio: Balanced Stereo Analog Audio (5-pin phoenix only) (Audio downmixed to PCM 2Ch)' and '5-pin ... Balanced L/R Audio out (downmixed to 2ch)'; end-to-end + HDMI loop-out keep full format (to Atmos). The Dante models are 'identical to the non-Dante in baseline configuration'. The Dante stream's format isn't stated — Dante carries PCM only, so it's taken to be the same 2ch PCM downmix (inferred). Toslink out = 'Future Audio Return Support Only'.",
       "gen": "1g-ev2",
       "partNo": "AC-MXNET-1G-DV2",
       "powerMaxW": 6.8,
@@ -2241,7 +2244,8 @@
           "label": "BALANCED AUDIO (5-pin)",
           "dir": "out",
           "conn": "analog",
-          "audio": "pcm2"
+          "audio": "pcm2",
+          "downmix": true
         },
         {
           "label": "TOSLINK (audio in)",
@@ -3702,10 +3706,11 @@
         "mxnet",
         "poe",
         "dante",
-        "danteOnMxnetVlan"
+        "danteOnMxnetVlan",
+        "downmix2ch"
       ],
       "verified": true,
-      "notes": "MXNet 1G EVO II encoder with Dante built in (software on the main chip, 2x2 channels) — puts the source's audio on Dante (stereo; the 3.5mm analog in overrides HDMI audio). Dante rides the SAME RJ45/SFP as the video, tagged on VLAN 99 (MXNet on VLAN 100): the switch port must be a trunk, and Dante + MXNet share one MAC so they need different subnets. HDMI loop out, 5-pin balanced out (2ch PCM downmix), Toslink out (future audio return only), 1 RJ45 PoE + 1 SFP, USB-B (KVM), IR x3, RS-232; 9.7W. Managed by the 1G-mode CBOX; Dante routing via Dante Controller or the Dante-mode CBOX. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27).",
+      "notes": "MXNet 1G EVO II encoder with Dante built in (software on the main chip, 2x2 channels) — puts the source's audio on Dante (stereo; the 3.5mm analog in overrides HDMI audio). Dante rides the SAME RJ45/SFP as the video, tagged on VLAN 99 (MXNet on VLAN 100): the switch port must be a trunk, and Dante + MXNet share one MAC so they need different subnets. HDMI loop out, 5-pin balanced out (2ch PCM downmix), Toslink out (future audio return only), 1 RJ45 PoE + 1 SFP, USB-B (KVM), IR x3, RS-232; 9.7W. Managed by the 1G-mode CBOX; Dante routing via Dante Controller or the Dante-mode CBOX. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27). DOWNMIX 2026-09-30 (Ryan: confirm with the AVPro spec sheet): the AC-MXNET-1G-DANTE-EV2 / -DV2 spec sheets (avproglobal.egnyte.com/dl/c4cVNqRwuk, /RTgWcFCvo8) say 'De-Embedded Audio: Balanced Stereo Analog Audio (5-pin phoenix only) (Audio downmixed to PCM 2Ch)' and '5-pin ... Balanced L/R Audio out (downmixed to 2ch)'; end-to-end + HDMI loop-out keep full format (to Atmos). The Dante models are 'identical to the non-Dante in baseline configuration'. The Dante stream's format isn't stated — Dante carries PCM only, so it's taken to be the same 2ch PCM downmix (inferred). Toslink out = 'Future Audio Return Support Only'.",
       "partNo": "AC-MXNET-1G-DANTE-EV2",
       "ports": [
         {
@@ -3724,7 +3729,8 @@
           "label": "BALANCED AUDIO (5-pin)",
           "dir": "out",
           "conn": "analog",
-          "audio": "pcm2"
+          "audio": "pcm2",
+          "downmix": true
         },
         {
           "label": "TOSLINK (audio out)",
@@ -3765,10 +3771,11 @@
         "poe",
         "dante",
         "danteOnMxnetVlan",
-        "audioFollowsVideo"
+        "audioFollowsVideo",
+        "downmix2ch"
       ],
       "verified": true,
-      "notes": "MXNet 1G EVO II decoder with Dante (2x2). Its Dante is a break-out of the Dante stream carried from a DANTE-EV2 — i.e. the SOURCE's audio for whatever this TV is watching (audio follows video), NOT the TV's own app audio (Toslink in is ARC-only; no documented TV-audio→Dante path — add an AXIS2 if the client streams on the TV). Needs DANTE-EV2 encoders on the sources. Dante on VLAN 99 over the video cable (trunk port). HDMI out, 5-pin balanced out (2ch PCM), 1 RJ45 PoE + 1 SFP, 2 USB-A, IR x3, RS-232. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27).",
+      "notes": "MXNet 1G EVO II decoder with Dante (2x2). Its Dante is a break-out of the Dante stream carried from a DANTE-EV2 — i.e. the SOURCE's audio for whatever this TV is watching (audio follows video), NOT the TV's own app audio (Toslink in is ARC-only; no documented TV-audio→Dante path — add an AXIS2 if the client streams on the TV). Needs DANTE-EV2 encoders on the sources. Dante on VLAN 99 over the video cable (trunk port). HDMI out, 5-pin balanced out (2ch PCM), 1 RJ45 PoE + 1 SFP, 2 USB-A, IR x3, RS-232. Source: avproglobal.com product pages + datasheets, AVPro KB (2026-09-27). DOWNMIX 2026-09-30 (Ryan: confirm with the AVPro spec sheet): the AC-MXNET-1G-DANTE-EV2 / -DV2 spec sheets (avproglobal.egnyte.com/dl/c4cVNqRwuk, /RTgWcFCvo8) say 'De-Embedded Audio: Balanced Stereo Analog Audio (5-pin phoenix only) (Audio downmixed to PCM 2Ch)' and '5-pin ... Balanced L/R Audio out (downmixed to 2ch)'; end-to-end + HDMI loop-out keep full format (to Atmos). The Dante models are 'identical to the non-Dante in baseline configuration'. The Dante stream's format isn't stated — Dante carries PCM only, so it's taken to be the same 2ch PCM downmix (inferred). Toslink out = 'Future Audio Return Support Only'.",
       "partNo": "AC-MXNET-1G-DANTE-DV2",
       "notInPlanQueue": true,
       "ports": [
@@ -3782,7 +3789,8 @@
           "label": "BALANCED AUDIO (5-pin)",
           "dir": "out",
           "conn": "analog",
-          "audio": "pcm2"
+          "audio": "pcm2",
+          "downmix": true
         },
         {
           "label": "TOSLINK (audio in)",

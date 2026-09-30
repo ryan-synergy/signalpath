@@ -2772,9 +2772,8 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("audio chain: sources into a receiver stay on Auto; a TV into the Savant input module is set to PCM",
     r1.sources.every(x => x.setting.startsWith("Auto")) && r1.tvs.some(x => /Master Bed TV/.test(x.name) && x.setting.startsWith("PCM")));
   const r2 = run(fixtures.estate);
-  t("audio chain: an MXNet decoder into a PCM-only amp downres'es every source it can reach, with the menu path, and warns the surround room",
-    ["Apple TV 1", "Apple TV 2", "Cable Box"].every(n => r2.sources.some(x => x.name === n && x.downres)) &&
-    r2.sources.find(x => x.name === "Apple TV 1").how.includes("Audio Format") && r2.notes.some(n => /MRX-540 also gets stereo/.test(n.msg)), JSON.stringify(r2));
+  t("audio chain: an MXNet decoder's 5-pin out downmixes to 2ch (AVPro spec sheet) — the estate's pool amp needs no source set to stereo",
+    !r2.sources.some(x => x.downres) && !r2.notes.length, JSON.stringify(r2));
   const mk = matrixRef => ({ generator: "SignalPath", schemaVersion: 1, job: { name: "a" }, house: { zones: [{ id: "k", name: "Kitchen", endpoints: [{ id: "k-spk", type: "speakers", config: "stereo" }] }] },
     solutions: [{ id: "s", name: "S", racks: [{ id: "r", name: "Rack", devices: [
       { id: "atv", type: "source", model: "Apple TV", catalogRef: "apple-tv-4k-3gen" }, { id: "cb", type: "source", model: "Cable Box" },
@@ -2784,9 +2783,18 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("audio chain: an Apple TV through an MX-88 (no downmix) into an MDX-16 is set to Stereo", rx.sources.some(x => x.name === "Apple TV" && x.downres), JSON.stringify(rx.sources));
   t("audio chain: through an AXION (audio outs always downmix) it stays on Auto", !ra.sources.some(x => x.downres), JSON.stringify(ra.sources));
   t("audio chain: a cable box's analog out straight into the amp is already stereo — no setting", !rx.sources.some(x => x.name === "Cable Box" && x.downres));
-  const L = loadJob(structuredClone(fixtures.estate)), a = advise(L.job, L.ix, CAT);
+  // the MX-88 job with a surround room on the same Apple TV: downres + the surround warning, on paper
+  const js = mk("avpro-ac-mx-88"); js.solutions[0].racks[0].devices.push({ id: "avr", type: "avr", model: "Anthem MRX 740", catalogRef: "anthem-mrx-740-8k" });
+  js.solutions[0].connections.push({ from: "mx", to: "avr", signal: "video" });
+  const L = loadJob(structuredClone(js)), a = advise(L.job, L.ix, CAT);
   const pg = renderExtraPages(L.job, L.ix, a, {}).find(p => p.title === "Audio Setup");
-  t("audio chain: the Audio Setup sheet prints each setting with where to set it", pg && pg.svg.includes("Stereo (2ch PCM)") && pg.svg.includes("Audio Format") && pg.svg.includes("also gets stereo"));
+  t("audio chain: the Audio Setup sheet prints each setting with where to set it, and warns the surround room", pg && pg.svg.includes("Stereo (2ch PCM)") && pg.svg.includes("Audio Format") && pg.svg.includes("also gets stereo"));
+  // a Dante job: DANTE-DV2 → Director carries a 2ch downmix, so the Apple TVs stay on Auto
+  const { STARTERS, applyStarter } = await import("./starters.js"), H = await import("./hookup.js"), { parseQuickZone } = await import("./quickadd.js");
+  const jd = applyStarter({ generator: "SignalPath", schemaVersion: 1, job: { name: "d" }, house: { zones: [] }, solutions: [{ id: "s", name: "S", racks: [], localDevices: [], companions: [], connections: [] }] }, STARTERS.find(x => x.id === "dante-director"), CAT);
+  for (const q of ["kitchen stereo 55 matrix", "family room 7.1 85 matrix"]) { const z = parseQuickZone(q).zone, h = z._hints; delete z._hints; jd.house.zones.push(z); H.autoHookup(jd, jd.solutions[0], z, h); }
+  const rd = run(jd);
+  t("audio chain: on a Dante job the DANTE-DV2's Dante feed to the Director is a 2ch downmix — no source downres'd", !rd.sources.some(x => x.downres), JSON.stringify(rd.sources));
 }
 
 /* ---------- ports: which jack each wire lands on (2026-09-29 rear-panel audit) ---------- */

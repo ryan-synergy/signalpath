@@ -213,7 +213,7 @@ function channelMapBlocks(job, ix, opts) {
       // TV audio coming home to this receiver: eARC on its own HDMI outs, optical runs in
       const aback = [...outbound.filter(c => c.signal === "video" && c.earc).map(c => { const comp = s.companions[c.to];
           return `${comp && servesEp(s, c.to) ? zoneName(ix, comp.serves) : zoneName(ix, c.to)} TV (eARC)`; }),
-        ...inbound.filter(c => c.signal === "audioReturn").map(c => `${nameOf(job, s, c.from)} (optical${c.backup ? " backup" : ""})`)].join(" · ");
+        ...inbound.filter(c => c.signal === "audioReturn").map(c => `${nameOf(job, s, c.from)} (${c.earcKit ? "eARC extender → HDMI in" : `optical${c.backup ? " backup" : ""}`})`)].join(" · ");
       const zname = outbound.filter(c => c.signal === "speaker").map(c => zoneOf(ix, c.to)?.name).filter(Boolean)[0];
       const platform = (sol.platforms || [])[0];
       blocks.push({ title: `${devName(d)}${zname ? ` — ${zname} Surround` : ""}`,
@@ -470,8 +470,8 @@ export function wireRuns(job, ix, opts = {}) {
           term: `${amp ? devName(amp) : nameOf(job, s, c.from)}${chs.length ? ` ch ${chs[0]}–${chs[chs.length - 1]}` : ""}`, count: 1, gray });
     } else if (c.signal === "audioReturn" && fromEp) {
       if (s.locals[c.to] || ix.endpointsById[c.to]) continue;   // handled at the TV (local encoder / soundbar) — no pull
-      runs.push({ prefix: "R", cable: "Optical (Toslink)", from: `${zoneName(ix, c.from)} — TV location`, to: s.devices[c.to] ? at(c.to, pm.to) : rackName,
-        carries: c.backup ? "Audio return — optical backup to eARC" : "Audio return", color: "#a45a12", term: s.devices[c.to]?.model || nameOf(job, s, c.to), count: 1, gray });
+      runs.push({ prefix: "R", cable: c.earcKit ? "Cat6A" : "Optical (Toslink)", from: `${zoneName(ix, c.from)} — TV location`, to: s.devices[c.to] ? at(c.to, pm.to) : rackName,
+        carries: c.earcKit ? "Audio return — eARC extender (AVPro AC-AEX-DEARC-KIT)" : c.backup ? "Audio return — optical backup to eARC" : "Audio return", color: "#a45a12", term: s.devices[c.to]?.model || nameOf(job, s, c.to), count: 1, gray });
     } else if (c.signal === "network" && (toEp || servesEp(s, c.to))) {
       runs.push({ prefix: "N", cable: "Cat6", from: rackName, to: zoneName(ix, toEp ? c.to : s.companions[c.to].serves), carries: "Network", color: "#2f9e44", term: "RJ45", count: 1, gray });
     }

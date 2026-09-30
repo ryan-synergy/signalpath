@@ -235,6 +235,8 @@ Print = new window, `@page 17in 11in landscape`, one SVG per page, `print()`. Pa
 
 47. **Count the power bricks that aren't boxes.** The outlet budget walked rack devices and rack-side encoders, but an HDBaseT balun is a companion that *serves a TV*, so its power supply fell through — the residence needed 12 outlets, not 10, which moves the WattBox pick from the 12-outlet to the 18-outlet unit. The AVPro kit ships one 48V PSU that powers both ends over the cable (PoH); put it at the rack TX so it lands on the WattBox and can be power-cycled remotely. Any companion kind with its own brick needs the same question asked: which end is it plugged in at?
 
+48. **Read the DIP switches, not the product page.** The eARC extender kit's page says it delivers eARC "to an AVR" — true, but its receiver-end HDMI defaults to eARC OUT mode, which means it pretends to be a TV and wants the receiver's eARC *output*, the very jack the HDBaseT video already uses. Only the manual (p15, RX DIP 2) shows the second mode: a plain audio-only HDMI out into any receiver input. That one switch decides which jack it lands on, the input budget it counts against, and the install note. It was modelled as a flag on the TV's audio-return wire (`earcKit`), not a new adapter chip, so the drawing, router and validator needed no changes — only the places that name cables, jacks, parts and power learned about it.
+
 ## 10. Order of construction (what to build when)
 
 1. Data model + `loadJob`/`indexJob` + first fixtures — get tests running the same day.

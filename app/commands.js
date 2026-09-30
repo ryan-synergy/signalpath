@@ -24,7 +24,7 @@ export const OPS = {
   delete_zone: { args: "zone", eg: `{"op":"delete_zone","zone":"gym"}`, about: "Remove a zone and everything wired to it." },
   hookup:      { args: "zone, tv_from?, run?, speakers_from?, outputs?, audio_back?, audio_back_to?",
                  eg: `{"op":"hookup","zone":"family room","tv_from":"receiver","speakers_from":"receiver","audio_back":"earc"}`,
-                 about: "What feeds a zone. tv_from / speakers_from: a box in the rack (or 'none'). run: balun|decoder|direct. outputs: amp outputs like '5-6' (default: next free). audio_back: earc|earc+optical|optical|none (audio_back_to for optical: a receiver or audio input module)." },
+                 about: "What feeds a zone. tv_from / speakers_from: a box in the rack (or 'none'). run: balun|decoder|direct. outputs: amp outputs like '5-6' (default: next free). audio_back: earc|earc+optical|earc-kit|optical|none (earc-kit = AVPro eARC extender kit, full Atmos back over one Cat6A; audio_back_to for optical: a receiver or audio input module)." },
   connect:     { args: "from, to, signal?, outputs?, scope?", eg: `{"op":"connect","from":"cable box","to":"mrx"}`,
                  about: "Plug one thing into another. from/to: a box, or '<zone> tv' / '<zone> speakers'. signal (guessed if left out): video|audio|speaker|network|audioReturn." },
   disconnect:  { args: "from?, to, signal?", eg: `{"op":"disconnect","from":"mdx16","to":"kitchen speakers"}`,
@@ -279,9 +279,9 @@ const HANDLERS = {
     if (c.audio_back != null) {
       if (!h.tv) throw new Error(`${z.name} has no TV`);
       const mode = norm(c.audio_back).replace(/\s*\+\s*/, "+").replace("earc + optical", "earc+optical");
-      if (!["earc", "earc+optical", "optical", "none"].includes(mode)) throw new Error(`audio_back must be earc, earc+optical, optical or none`);
+      if (!["earc", "earc+optical", "earc-kit", "optical", "none"].includes(mode)) throw new Error(`audio_back must be earc, earc+optical, earc-kit, optical or none`);
       const to = c.audio_back_to != null ? dev(c.audio_back_to) : undefined;
-      if ((mode === "earc" || mode === "earc+optical") && !rackDevices(sol).some(d => d.id === h.video?.from && d.type === "avr"))
+      if ((mode === "earc" || mode === "earc+optical" || (mode === "earc-kit" && !to)) && !rackDevices(sol).some(d => d.id === h.video?.from && d.type === "avr"))
         throw new Error(`eARC needs the TV fed from a receiver — ${z.name}'s isn't`);
       if (mode === "optical" && !to && !h.ret) throw new Error(`say where the optical goes (audio_back_to)`);
       setAudioBack(job, sol, z, mode, to || undefined);
@@ -492,8 +492,9 @@ function parseOne(p, job, sol) {
   }
   // "<zone> [tv] direct hdmi | balun | decoder"
   if ((m = rest.match(/^(?:tv\s+)?(?:run\s+)?(direct hdmi|direct|hdmi|balun|hdbaset|decoder|mxnet)$/))) return each(z => ({ op: "hookup", zone: z, run: m[1] }));
-  // "<zone> optical backup | earc | optical [to X] | no audio back"
+  // "<zone> optical backup | earc | earc kit | optical [to X] | no audio back"
   if (/^(?:with\s+)?(?:an?\s+)?optical backup$|^earc \+ optical$|^add optical backup$/.test(rest)) return each(z => ({ op: "hookup", zone: z, audio_back: "earc+optical" }));
+  if (/^(?:with\s+|add\s+)?(?:an?\s+)?earc (?:extender|kit|extender kit)$/.test(rest)) return each(z => ({ op: "hookup", zone: z, audio_back: "earc-kit" }));
   if (/^(?:audio back )?(?:over )?earc$/.test(rest)) return each(z => ({ op: "hookup", zone: z, audio_back: "earc" }));
   if ((m = rest.match(/^optical(?: only)?(?: (?:back )?to (.+))?$/))) return each(z => ({ op: "hookup", zone: z, audio_back: "optical", ...(m[1] ? { audio_back_to: m[1] } : {}) }));
   if (/^no audio back$|^no optical$/.test(rest)) return each(z => ({ op: "hookup", zone: z, audio_back: "none" }));

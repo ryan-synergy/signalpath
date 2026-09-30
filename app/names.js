@@ -55,7 +55,7 @@ export const SPEAKER_SETUP = {
 };
 export const DISPLAY_NAME = { none: "None", tv: "TV", projector: "Projector" };
 export const REMOTE_NAME = { none: "None", savant: "Savant remote", appletv: "Apple TV remote", josh: "Josh.ai", factory: "Factory remote" };
-export const AUDIO_BACK_NAME = { earc: "eARC over the HDMI", "earc+optical": "eARC + optical backup", optical: "Optical only", none: "None" };
+export const AUDIO_BACK_NAME = { earc: "eARC over the HDMI", "earc+optical": "eARC + optical backup", "earc-kit": "eARC extender kit — full Atmos", optical: "Optical only", none: "None" };
 export const PLATFORM_NAME = { "": "—", savant: "Savant", josh: "Josh.ai", control4: "Control4" };
 
 /* What a connection end IS, in words. Works on a raw or loaded job:

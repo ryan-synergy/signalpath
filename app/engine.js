@@ -3030,7 +3030,8 @@ export function advise(job, ix = indexJob(job), catalog = null) {
         const inbound = (sol.connections || []).filter(c => c.to === d.id);
         // audio edges weigh their real run count (a module→amp trunk = 1 run per zone fed)
         const audioIn = inbound.filter(c => c.signal === "audio").reduce((n, c) => n + trunkCount(c, s), 0);
-        const videoIn = inbound.filter(c => c.signal === "video").length;
+        // an eARC extender kit's RX lands on an HDMI input like a source
+        const videoIn = inbound.filter(c => c.signal === "video" || (c.signal === "audioReturn" && c.earcKit)).length;
         const audioCap = (cat.inputs?.analog || 0) + (cat.inputs?.coax || 0) + (cat.inputs?.optical || 0) + (cat.inputs?.digitalCombo || 0);
         const videoCap = cat.inputs?.hdmi || 0;
         if (audioCap && audioIn > audioCap)
@@ -3049,7 +3050,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
         // audio returns land on DIGITAL inputs (optical/coax/eARC) — budget them
         // (catalog key "earc"; older user-edited catalogs may still say "eArc")
         const earc = cat.inputs?.earc ?? cat.inputs?.eArc ?? 0;
-        const retIn = inbound.filter(c => c.signal === "audioReturn").length;
+        const retIn = inbound.filter(c => c.signal === "audioReturn" && !c.earcKit).length;
         const retCap = (cat.inputs?.optical || 0) + (cat.inputs?.coax || 0) + (cat.inputs?.digitalCombo || 0) + earc;
         if (retIn && retCap)
           out.io.push({ solution: sol.id, device: d.id, kind: "return-in", used: retIn, capacity: retCap,
@@ -3075,7 +3076,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
               : `${d.model || d.id}: ${outRuns}/${outRunCap} outputs used · ${outRunCap - outRuns} spare` });
         if (videoCap && videoIn > videoCap)
           out.io.push({ solution: sol.id, device: d.id, kind: "video-in", used: videoIn, capacity: videoCap, over: true,
-            msg: `${d.model || d.id}: ${videoIn} video feeds into ${videoCap} HDMI inputs (${cat.model})` });
+            msg: `${d.model || d.id}: ${videoIn} HDMI feeds into ${videoCap} HDMI inputs (${cat.model})` });
         const outbound = (sol.connections || []).filter(c => c.from === d.id && c.signal === "video").length;
         const outCap = cat.outputs?.hdmi ?? d.io?.out ?? 0;
         if (outCap && d.type === "videoMatrix" && outbound > outCap)
@@ -3172,6 +3173,18 @@ export function advise(job, ix = indexJob(job), catalog = null) {
           // the default balun (AVPro AC-EX70-444-KIT) carries no audio back at all
           ? `${describeNode(job, sol, comp.serves).short}: the HDBaseT balun (AVPro AC-EX70-444-KIT) doesn't carry ARC/eARC — for the TV's own apps to play through the receiver, set TV audio back to "eARC + optical backup" (an optical run)`
           : `${describeNode(job, sol, comp.serves).short}: eARC comes back through the ${adapterName(comp)} — confirm that model passes eARC (many only pass ARC), or add the optical backup` });
+    }
+
+    /* -- a surround room whose TV sound comes back on optical: optical tops out at
+       Dolby Digital 5.1, so the TV apps' Atmos (DD+ / TrueHD) never reaches the
+       receiver. The AVPro eARC extender kit carries it over one Cat6A (reference) -- */
+    for (const r of sol.connections || []) {
+      if (r.signal !== "audioReturn" || r.earcKit || s.devices[r.to]?.type !== "avr" || !ix.endpointsById[r.from]) continue;
+      const z = ix.zonesById[ix.endpointZone[r.from]];
+      if ((z?.scope || "included") !== "included") continue;
+      if (!(z.endpoints || []).some(e => e.type === "speakers" && /^surround/.test(e.config || ""))) continue;
+      out.notes.push({ code: "earc-kit-option", solution: sol.id, ref: r.from,
+        msg: `${describeNode(job, sol, r.from).short}: its own apps come back on optical — Dolby Digital 5.1 at most, no Atmos. For Atmos from the TV apps, set TV audio back to "eARC extender kit" (AVPro AC-AEX-DEARC-KIT: one Cat6A in place of the optical, into a receiver HDMI input)` });
     }
 
     /* -- licensing advisor per platform -- */

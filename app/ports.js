@@ -111,7 +111,8 @@ export function assignPorts(job, ix, catalog, solIndex = 0) {
 
   // which families a connection may use at each end, in preference order
   const isSw = id => s.devices[id]?.type === "avSwitch";
-  const famsFor = c => c.dante ? ["dante"] : (c.signal === "video" && (isSw(c.from) || isSw(c.to))) ? ["mxnet"] : FAMILIES[c.signal] || [];
+  const famsFor = c => c.dante ? ["dante"] : (c.signal === "video" && (isSw(c.from) || isSw(c.to))) ? ["mxnet"]
+    : c.earcKit ? ["hdmi"] : FAMILIES[c.signal] || [];   // the eARC kit: TV eARC port → … → a receiver HDMI input
   const pickOrder = (n, dir, c, fams) => {
     const list = n.ports.filter(p => (p.dir === dir || p.conn === "dante") && fams.includes(p.conn));
     const byFam = p => fams.indexOf(p.conn);

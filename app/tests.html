@@ -1330,6 +1330,37 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("audio back: with the backup in place the extender note goes quiet", !a3.notes.some(n => n.code === "earc-extender"));
   const cm3 = P2.renderChannelMap(L3.job, L3.ix, {});
   t("audio back: the channel map lists eARC and the optical backup on the receiver", cm3.includes("TV audio back:") && cm3.includes(`${z.name} TV (eARC)`) && cm3.includes("(optical backup)"));
+  t("audio back: a 7.1 room on optical is told the TV apps' Atmos needs the eARC extender kit (reference)",
+    a3.notes.some(n => n.code === "earc-kit-option" && /AC-AEX-DEARC-KIT/.test(n.msg)));
+  { // the AVPro eARC extender kit: TV eARC port → one Cat6A → a receiver HDMI input (AVPro manual, 2026-09-30)
+    const CAT = await (await fetch("./catalog.json")).json();
+    const jk = structuredClone(j2), sk = jk.solutions[0], zk = jk.house.zones.find(q => q.id === z.id);
+    H.setAudioBack(jk, sk, zk, "earc-kit");
+    const hk = H.readHookup(jk, sk, zk);
+    t("eARC kit: one return edge into the receiver feeding the TV, flagged as the kit; the HDMI video no longer claims eARC",
+      hk.audioBack === "earc-kit" && hk.ret?.to === avrId && hk.ret.kit && !hk.ret.backup && !hk.earc &&
+      sk.connections.filter(c => c.from === hk.tv.id && c.signal === "audioReturn").length === 1);
+    const Lk = loadJob(jk), ak = advise(Lk.job, Lk.ix, CAT), runsK = P2.wireRuns(Lk.job, Lk.ix);
+    t("eARC kit: a Cat6A run replaces the optical on the wire schedule",
+      runsK.some(r => r.prefix === "R" && r.cable === "Cat6A" && /DEARC/.test(r.carries) && r.from.startsWith(z.name)) &&
+      !runsK.some(r => r.prefix === "R" && /Toslink/.test(r.cable) && r.from.startsWith(z.name)));
+    t("eARC kit: no extender warning, no Atmos-over-optical note", !ak.notes.some(n => n.code === "earc-extender" || (n.code === "earc-kit-option" && n.ref === hk.tv.id)));
+    const pwk = ak.power[0].loads.find(l => l.id === `earckit-${hk.tv.id}`);
+    t("eARC kit: its PSU takes a rack outlet at the RX (24 W max, PoC)", pwk && pwk.outlets === 1 && pwk.maxW === 24 && /PoC/.test(pwk.why), JSON.stringify(pwk));
+    const PP = await import("./ports.js"), ci = sk.connections.findIndex(c => c.earcKit);
+    const pk = PP.assignPorts(Lk.job, Lk.ix, CAT, 0)[ci];
+    t("eARC kit: lands on a receiver HDMI input, not the optical", /^HDMI/.test(pk.to?.label || "") && !/OPT|TOS/i.test(pk.to?.label || ""), JSON.stringify(pk.to));
+    const XX = await import("./exports.js");
+    t("eARC kit: the PlanQueue file lists AC-AEX-DEARC-KIT in the room", XX.planQueueFiles(jk, 0, CAT)[0].text.includes("| AVPro Edge | AC-AEX-DEARC-KIT"));
+    const hlk = healthy(jk);
+    t("eARC kit: valid and routes clean", !hlk.errs.length && !hlk.bad && !hlk.through, JSON.stringify(hlk));
+    H.setAudioBack(jk, sk, zk, "earc+optical");
+    const hk2 = H.readHookup(jk, sk, zk);
+    t("eARC kit: switching back to eARC + optical drops the kit", hk2.audioBack === "earc+optical" && !hk2.ret.kit);
+    const C2 = await import("./commands.js");
+    const r2 = C2.planCommands(jk, 0, [{ op: "hookup", zone: zk.name, audio_back: "earc-kit" }], CAT);
+    t("eARC kit: the hookup command takes audio_back earc-kit", !r2.errors?.length && H.readHookup(r2.job, r2.job.solutions[0], r2.job.house.zones.find(q => q.id === z.id)).audioBack === "earc-kit", JSON.stringify(r2.errors || r2.error));
+  }
   H.setAudioBack(j2, s2, z, "optical", "sav-in");
   const ho = H.readHookup(j2, s2, z);
   t("audio back: optical only drops eARC and runs to the chosen box", !ho.earc && ho.ret?.to === "sav-in" && !ho.ret.backup && ho.audioBack === "optical");

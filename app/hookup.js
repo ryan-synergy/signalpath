@@ -43,9 +43,9 @@ export function readHookup(job, sol, zone) {
     // the TV's eARC into its own AXIS (Dante) is at the TV, not an audio return to the rack
     const atTv = new Set((sol.companions || []).filter(c => c.serves === tv.id).map(c => c.id));
     const r = conns.find(c => c.from === tv.id && c.signal === "audioReturn" && !atTv.has(c.to) && c.to !== spk?.id);
-    if (r) out.ret = { to: r.to, backup: !!r.backup };
-    // one word for the TV-audio choice: earc | earc+optical | optical | none
-    out.audioBack = out.earc ? (r ? "earc+optical" : "earc") : r ? "optical" : "none";
+    if (r) out.ret = { to: r.to, backup: !!r.backup, ...(r.earcKit ? { kit: true } : {}) };
+    // one word for the TV-audio choice: earc | earc+optical | earc-kit | optical | none
+    out.audioBack = r?.earcKit ? "earc-kit" : out.earc ? (r ? "earc+optical" : "earc") : r ? "optical" : "none";
   }
   if (spk) {
     const c = conns.find(c => c.to === spk.id && c.signal === "speaker");
@@ -100,6 +100,9 @@ export function setVideo(job, sol, zone, from, run, earc) {
 /* the TV's audio back to the rack, as one choice:
    "earc"          — over the HDMI from the receiver (default; no extra run)
    "earc+optical"  — eARC plus an optical (Toslink) backup run to `to`
+   "earc-kit"      — the AVPro AC-AEX-DEARC-KIT: the TV's eARC port → one Cat6A →
+                     an HDMI input on the receiver (its RX DIP 2 = HDMI OUT), full
+                     Atmos / TrueHD back; replaces the optical run (AVPro manual, 2026-09-30)
    "optical"       — an optical run to `to` only (receiver or audio input module)
    "none"                                                                        */
 export const AUDIO_BACK = AUDIO_BACK_NAME;   // one vocabulary (names.js)
@@ -109,6 +112,11 @@ export function setAudioBack(job, sol, zone, mode, to) {
   const viaReceiver = isReceiver(sol, h.video?.from);
   const wantEarc = viaReceiver && (mode === "earc" || mode === "earc+optical");
   if (!!h.earc !== wantEarc && h.video) setVideo(job, sol, zone, h.video.from, h.video.run, wantEarc);
+  if (mode === "earc-kit") {   // the kit carries the eARC itself — into the receiver feeding the TV (or the one named)
+    const rcv = to || (viaReceiver ? h.video.from : null);
+    setReturn(job, sol, zone, rcv, false, !!rcv);
+    return;
+  }
   const optical = mode === "optical" || mode === "earc+optical";
   setReturn(job, sol, zone, optical ? (to || h.ret?.to || (viaReceiver ? h.video.from : null)) : null, mode === "earc+optical" && wantEarc);
 }
@@ -160,12 +168,12 @@ export function setSpeakers(job, sol, zone, from, channels) {
 }
 
 /* the TV's audio back to the rack (eARC / optical into a receiver or input module) */
-export function setReturn(job, sol, zone, to, backup = false) {
+export function setReturn(job, sol, zone, to, backup = false, earcKit = false) {
   const { tv } = endpointsOf(zone); if (!tv) return;
   const atTv = new Set((sol.companions || []).filter(c => c.serves === tv.id).map(c => c.id));   // eARC into its AXIS stays
   const { spk } = endpointsOf(zone);                        // …and so does the TV's own soundbar
   sol.connections = (sol.connections || []).filter(c => !(c.from === tv.id && c.signal === "audioReturn" && !atTv.has(c.to) && c.to !== spk?.id));
-  if (to) sol.connections.push({ from: tv.id, to, signal: "audioReturn", ...(backup ? { backup: true } : {}), ...scopeOf(zone) });
+  if (to) sol.connections.push({ from: tv.id, to, signal: "audioReturn", ...(backup ? { backup: true } : {}), ...(earcKit ? { earcKit: true } : {}), ...scopeOf(zone) });
 }
 
 /* quick-add's receiver for a room: the Anthem that fits its speakers (the

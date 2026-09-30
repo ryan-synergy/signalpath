@@ -4780,6 +4780,58 @@
       "portsSource": "https://www.avproglobal.com/products/ac-ex70-444-kit (medium confidence, rear-panel audit 2026-09-29)",
       "goTo": true
     },
+    "avpro-ac-aex-dearc-kit": {
+      "brand": "AVPro Edge",
+      "model": "AC-AEX-DEARC-KIT",
+      "partNo": "AC-AEX-DEARC-KIT",
+      "type": "earcExtender",
+      "aliases": [
+        "eARC Extender Kit",
+        "AVPro eARC extender",
+        "DEARC kit"
+      ],
+      "inputs": {
+        "hdmi": 1,
+        "optical": 1
+      },
+      "outputs": {
+        "hdmi": 1,
+        "optical": 1
+      },
+      "lan": 0,
+      "powerMaxW": 24,
+      "flags": [],
+      "verified": true,
+      "notes": "TV audio back to the rack, audio only (no video). TX at the TV on its eARC HDMI port (DIP 2-3 = eARC); one Cat6A (Cat5e min, 100m) AP-LINK run; RX in the rack. RX DIP 2: 0 = eARC OUT (acts as a TV on an eARC port \u2014 on an AVR that's the HDMI out the video uses), 1 = HDMI OUT (audio-only HDMI into any receiver HDMI input) \u2014 SignalPath lands it on an HDMI input. eARC: PCM 2.0 / LPCM 5.1 & 7.1 / DD / DD+ / TrueHD / Atmos / DTS / DTS-HD MA / DTS:X; optical/ARC: PCM 2.0 / DD / DTS 5.1; analog 2.0. Does NOT downmix (set the TV to stereo for 2ch use). One 12V 2A PSU powers both ends over the cable (PoC); 24W max total. Bidirectional IR / RS-232 / CEC. avproglobal.com/products/ac-aex-dearc-kit + user manual, 2026-09-30",
+      "ports": [
+        {
+          "label": "TX: eARC IN",
+          "dir": "in",
+          "conn": "hdmi",
+          "earc": true,
+          "audio": "full"
+        },
+        {
+          "label": "TX: L/R + TOSLINK IN",
+          "dir": "in",
+          "conn": "optical",
+          "audio": "lossy51"
+        },
+        {
+          "label": "RX: HDMI OUT (audio)",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "RX: L/R + TOSLINK OUT",
+          "dir": "out",
+          "conn": "optical",
+          "audio": "lossy51"
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/ac-aex-dearc-kit + user manual (rear panels p7-8, DIP settings p13-15), 2026-09-30"
+    },
     "avpro-ac-axion-4": {
       "brand": "AVPro Edge",
       "model": "AC-AXION-4",

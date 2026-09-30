@@ -399,24 +399,24 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20260930134934",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20260930134934",
-    "./app/audiochain.js": "./app/audiochain.js?v=20260930134934",
-    "./app/ports.js": "./app/ports.js?v=20260930134934",
-    "./app/commands.js": "./app/commands.js?v=20260930134934",
-    "./app/engine.js": "./app/engine.js?v=20260930134934",
-    "./app/exports.js": "./app/exports.js?v=20260930134934",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260930134934",
-    "./app/hookup.js": "./app/hookup.js?v=20260930134934",
-    "./app/importers.js": "./app/importers.js?v=20260930134934",
-    "./app/names.js": "./app/names.js?v=20260930134934",
-    "./app/network.js": "./app/network.js?v=20260930134934",
-    "./app/pages.js": "./app/pages.js?v=20260930134934",
-    "./app/power.js": "./app/power.js?v=20260930134934",
-    "./app/quickadd.js": "./app/quickadd.js?v=20260930134934",
-    "./app/rack.js": "./app/rack.js?v=20260930134934",
-    "./app/route-audit.js": "./app/route-audit.js?v=20260930134934",
-    "./app/starters.js": "./app/starters.js?v=20260930134934"
+    "./app/ai.js": "./app/ai.js?v=20260930135821",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20260930135821",
+    "./app/audiochain.js": "./app/audiochain.js?v=20260930135821",
+    "./app/ports.js": "./app/ports.js?v=20260930135821",
+    "./app/commands.js": "./app/commands.js?v=20260930135821",
+    "./app/engine.js": "./app/engine.js?v=20260930135821",
+    "./app/exports.js": "./app/exports.js?v=20260930135821",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260930135821",
+    "./app/hookup.js": "./app/hookup.js?v=20260930135821",
+    "./app/importers.js": "./app/importers.js?v=20260930135821",
+    "./app/names.js": "./app/names.js?v=20260930135821",
+    "./app/network.js": "./app/network.js?v=20260930135821",
+    "./app/pages.js": "./app/pages.js?v=20260930135821",
+    "./app/power.js": "./app/power.js?v=20260930135821",
+    "./app/quickadd.js": "./app/quickadd.js?v=20260930135821",
+    "./app/rack.js": "./app/rack.js?v=20260930135821",
+    "./app/route-audit.js": "./app/route-audit.js?v=20260930135821",
+    "./app/starters.js": "./app/starters.js?v=20260930135821"
 } }
 </script>
 <script>
@@ -602,7 +602,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20260930134934").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20260930135821").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1693,7 +1693,7 @@ function zonesHTML() {
     if (h.video?.from && h.video.from === h.speakers?.from) feed = `${short(h.video.from)} → TV + speakers`;
     else feed = [h.tv && h.video?.from && `TV ← ${short(h.video.from)}`,
                  h.spk && h.speakers?.from && (h.speakers.viaTv ? "soundbar ← the TV (eARC)" : `speakers ← ${short(h.speakers.from)}${h.speakers.channels ? " " + h.speakers.channels : ""}`)].filter(Boolean).join(" · ");
-    if (h.earc) feed += h.ret ? " · eARC + optical backup" : " · eARC"; else if (h.ret) feed += " · optical back";
+    if (h.ret?.kit) feed += " · eARC kit back"; else if (h.earc) feed += h.ret ? " · eARC + optical backup" : " · eARC"; else if (h.ret) feed += " · optical back";
     const issue = found.find(f => f.level === "e") || found[0];
     const head = `<div class="head zhead" data-toggle="${esc(z.id)}">${statusMark(found, wired)}
       <div class="zmain"><div class="zt"><span class="t">${esc(z.name)}</span>
@@ -1784,11 +1784,16 @@ function hookupHTML(z, sol, multi) {
     // alone or as a backup — only offered where it can exist
     const rcv = byDev(h.video?.from)?.type === "avr" ? byDev(h.video.from) : null;
     const cur = h.audioBack === "optical" ? `optical:${h.ret.to}` : h.audioBack;
+    const kitElsewhere = h.audioBack === "earc-kit" && h.ret.to !== rcv?.id;   // the kit into a receiver that no longer feeds the TV
     const optTargets = devs.filter(d => RETURN_TO.includes(d.type));
     rows.push(field("TV audio back", `<select class="hret">
-      ${rcv ? opt("earc", `${AUDIO_BACK.earc} (to ${rcv.model || rcv.id})`, cur) + opt("earc+optical", `${AUDIO_BACK["earc+optical"]} (to ${rcv.model || rcv.id})`, cur) : ""}
+      ${rcv ? opt("earc", `${AUDIO_BACK.earc} (to ${rcv.model || rcv.id})`, cur) + opt("earc+optical", `${AUDIO_BACK["earc+optical"]} (to ${rcv.model || rcv.id})`, cur)
+        + opt("earc-kit", `${AUDIO_BACK["earc-kit"]} (to ${rcv.model || rcv.id})`, cur) : ""}
       ${optTargets.map(d => opt(`optical:${d.id}`, `Optical only → ${nm(d.id)}`, cur)).join("")}
+      ${kitElsewhere ? opt("earc-kit", `${AUDIO_BACK["earc-kit"]} (to ${nm(h.ret.to)})`, cur) : ""}
       ${opt("none", AUDIO_BACK.none, cur)}</select>`));
+    if (h.audioBack === "earc-kit")
+      rows.push(`<div class="mini" style="margin:-2px 0 6px 80px">AVPro AC-AEX-DEARC-KIT: TX on the TV's eARC HDMI port, one Cat6A home, RX into a receiver HDMI input (RX DIP 2 = HDMI OUT). Video goes into another TV input.</div>`);
     if (h.earc && !h.ret && (h.video.run === "balun" || h.video.run === "dec"))
       rows.push(`<div class="mini" style="margin:-2px 0 6px 80px">Confirm the ${h.video.run === "balun" ? "HDBaseT balun" : "MXNet decoder"} passes eARC — many extenders don't. The optical backup covers it.</div>`);
   }
@@ -1881,7 +1886,7 @@ function connRowHTML(c, i, sol, ctx, dir) {
         ${field("To", nodeSel("cto", c.to))}
         ${field("Carries", sel("csig", SIGNALS, c.signal, SIGNAL_LABEL))}
         ${c.signal === "video" && fromRcv ? field("eARC", `<input type="checkbox" class="cearc" ${c.earc ? "checked" : ""}> <span class="mini">the TV's audio comes back over this HDMI</span>`) : ""}
-        ${c.signal === "audioReturn" ? field("Backup", `<input type="checkbox" class="cbackup" ${c.backup ? "checked" : ""}> <span class="mini">optical backup to eARC</span>`) : ""}
+        ${c.signal === "audioReturn" && !c.earcKit ? field("Backup", `<input type="checkbox" class="cbackup" ${c.backup ? "checked" : ""}> <span class="mini">optical backup to eARC</span>`) : ""}
         ${c.signal !== "network" ? field("Outputs", `<input class="cch" placeholder="optional, e.g. 3-4" title="Which outputs this uses — amp channels (3-4) or a matrix output (2). Shows on the channel strip." value="${esc(c.channels || "")}">`) : ""}
         ${field("Scope", sel("cscope", ["included", "prewire", "future"], c.scope || "included", SCOPE_LABEL))}
         <div style="text-align:right"><button class="del cdel">delete connection</button></div>

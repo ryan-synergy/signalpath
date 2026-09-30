@@ -164,6 +164,9 @@ function quoteRooms(job, sol, catalog, adv) {
         : { mfr: "Unspecified", model: comp.type === "balun" ? "HDBaseT Extender Set" : `${adapterName(comp)} Set`, unsure: true };
       add(floor, z.name, scope, p);
     }
+    // the TV's eARC extender kit (audio back to the receiver)
+    for (const c of (sol.connections || []).filter(c => c.earcKit && c.signal === "audioReturn" && z.endpoints?.some(e => e.id === c.from)))
+      add(floor, z.name, scope, cat("avpro-ac-aex-dearc-kit") ? fromCatalog(cat("avpro-ac-aex-dearc-kit")) : { mfr: "AVPro Edge", model: "AC-AEX-DEARC-KIT", unsure: true });
     for (const d of (sol.localDevices || []).filter(d => d.zone === z.id)) {
       const c = cat(d.catalogRef);
       add(floor, z.name, scope, c ? fromCatalog(c) : guessProduct(d), { ofe: d.status === "ofe" });
@@ -321,7 +324,7 @@ export function aiReviewMarkdown(job, solIndex, catalog, { today = new Date().to
 
   o.push("## Connections", "", table(["From", "To", "Signal", "Details"], (sol.connections || []).map(c => [nm(c.from), nm(c.to),
     c.dante ? "Dante audio (network)" : signalName(c.signal),
-    [c.channels && `outputs ${c.channels}`, c.earc && "eARC", c.backup && "optical backup", c.scope && c.scope !== "included" && SCOPE_NAME[c.scope]].filter(Boolean).join(", ")])), "");
+    [c.channels && `outputs ${c.channels}`, c.earc && "eARC", c.backup && "optical backup", c.earcKit && "eARC extender kit", c.scope && c.scope !== "included" && SCOPE_NAME[c.scope]].filter(Boolean).join(", ")])), "");
 
   o.push("## Wire list", "", table(["Run", "Cable", "From", "To", "Carries", "Ends at"],
     wireRuns(J, ix, { solution: solIndex }).map(r => [r.id, r.cable, r.from, r.to, r.carries, r.term])), "");

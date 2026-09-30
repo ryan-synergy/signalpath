@@ -68,6 +68,15 @@ export function powerPlan(job, ix, catalog, netPlans = []) {
       loads.push({ id: comp.id, what: `${c?.model || "HDBaseT balun"} PSU (${describeNode(job, sol, comp.serves).short})`,
         outlets: 1, why: "at the TX — powers both ends (PoH)", ...watts(c) });
     }
+    // eARC extender kits: same idea from the other end — the PSU plugs in at the rack RX (PoC)
+    for (const k of sol.connections || []) {
+      if (!k.earcKit || k.signal !== "audioReturn" || !s.devices[k.to] || !ix.endpointsById[k.from]) continue;
+      const zone = ix.zonesById[ix.endpointZone[k.from]];
+      if ((zone?.scope || "included") !== "included" || (k.scope && k.scope !== "included")) continue;
+      const c = cat("avpro-ac-aex-dearc-kit");
+      loads.push({ id: `earckit-${k.from}`, what: `${c?.model || "eARC extender"} PSU (${describeNode(job, sol, k.from).short})`,
+        outlets: 1, why: "at the RX — powers both ends (PoC)", ...watts(c) });
+    }
     if (!loads.length && !units.length) continue;
     const need = loads.reduce((n, l) => n + l.outlets, 0);
     const supply = units.length && units.every(u => u.outlets != null) ? units.reduce((n, u) => n + u.outlets, 0) : null;

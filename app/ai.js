@@ -59,7 +59,7 @@ export function jobSummary(job, solIndex, catalog) {
   }
   if (!job.house.zones.length) L.push("- (none yet)");
   L.push("", "CONNECTIONS:");
-  for (const c of sol.connections || []) L.push(`- ${name(c.from)} → ${name(c.to)} · ${SIGNAL_NAME[c.signal] || c.signal}${c.channels ? ` · outputs ${c.channels}` : ""}${c.earc ? " · eARC back" : ""}${c.backup ? " · optical backup" : ""}`);
+  for (const c of sol.connections || []) L.push(`- ${name(c.from)} → ${name(c.to)} · ${SIGNAL_NAME[c.signal] || c.signal}${c.channels ? ` · outputs ${c.channels}` : ""}${c.earc ? " · eARC back" : ""}${c.earcKit ? " · eARC extender kit (AVPro AC-AEX-DEARC-KIT)" : ""}${c.backup ? " · optical backup" : ""}`);
   if (!(sol.connections || []).length) L.push("- (none)");
   const f = assess(job, solIndex, catalog);
   L.push("", "ADVISOR:", ...(f.errors.map(e => `- PROBLEM: ${e}`)), ...(f.warnings.map(w => `- warning: ${w}`)));
@@ -79,7 +79,7 @@ Rules:
 - Refer to zones and boxes by the names shown in the job. "<zone> tv" and "<zone> speakers" name a zone's TV and speakers.
 - Make only the changes asked for, plus what they strictly need (e.g. a receiver the request implies). Don't remove or rename anything unless asked.
 - Prefer catalog products for new gear. Speakers on a multi-zone amp get the next free outputs automatically; leave outputs out unless the person names them.
-- A receiver feeding a TV returns the TV's audio by eARC by default; add an optical backup only when asked.
+- A receiver feeding a TV returns the TV's audio by eARC by default; add an optical backup only when asked. For full Atmos from the TV's own apps through an HDBaseT balun, the choice is audio_back "earc-kit" (AVPro AC-AEX-DEARC-KIT, one Cat6A into a receiver HDMI input).
 - If something is genuinely ambiguous, make the most common residential choice and add a short question.
 - Keep the summary short and plain — a tech will read it.
 

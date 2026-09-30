@@ -29,7 +29,9 @@ export const STARTERS = [
       dev("power", "power", "wattbox-800-ipvm-12"),
     ],
     connections: [v("cablebox", "matrix"), v("atv", "matrix"),
-      { from: "music", to: "sav-in", signal: "audio" },
+      // the music server joins the Savant AVB network itself (Ryan 2026-09-30) — it's digital-only,
+      // so never into the analog input module; outside a Savant audio system it goes optical into the amp
+      { from: "avb", to: "music", signal: "network" },
       { from: "avb", to: "sav-in", signal: "network" }, { from: "avb", to: "sav-out", signal: "network" },
       { from: "sav-out", to: "amp", signal: "audio" }],
   },

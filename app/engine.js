@@ -323,7 +323,8 @@ export function validate(job, ix = indexJob(job)) {
       E("orphan-endpoint", `${nm(eid)} has nothing feeding it — add a connection`, eid);
     }
     // sources should feed something
-    const used = new Set((sol.connections || []).map(c => c.from));
+    // (a network link counts from either end: a music server on the AVB / Dante network IS connected)
+    const used = new Set((sol.connections || []).flatMap(c => c.signal === "network" ? [c.from, c.to] : [c.from]));
     for (const d of Object.values(s.devices)) {
       if (d.type === "source" && !used.has(d.id)) W("unused-source", `${d.model || d.id} isn't connected to anything`, d.id);
     }

@@ -2701,6 +2701,15 @@ for (const [name, raw] of Object.entries(fixtures)) {
     for (const c of jj.solutions[0].connections) if (c.scope === "prewire" && /bedroom-2/.test(c.from + c.to)) delete c.scope;
     t("walkthrough: …and clears once the runs are Included too", !errsOf(jj).warnings.some(w => w.code === "scope-mismatch" && /Bedroom 2/.test(w.msg))); }
 
+  // the Savant music server is digital-only: on the Savant starter it rides the AVB network, and every audio wire has a jack
+  { const P = await import("./ports.js"), js = starter("savant-whole-home"), L = loadJob(js);
+    const map = P.assignPorts(L.job, L.ix, CAT, 0), c = js.solutions[0].connections;
+    t("Savant starter: the music server joins the AVB network (not the analog input module) and every patch has a jack",
+      c.some(k => k.from === "avb" && k.to === "music" && k.signal === "network") && !c.some(k => k.from === "music" && k.to === "sav-in") &&
+      map.every(m => !m.fromWhy && !m.toWhy) && !errsOf(js).warnings.some(w => w.code === "unused-source"), JSON.stringify(map.filter(m => m.fromWhy || m.toWhy)));
+    const cands = P.plugCandidates(L.job, L.ix, CAT, 0, "amp", "in");
+    t("plug into: outside AVB, the music server is offered into the amp's optical input", cands.some(k => k.id === "music" && !k.disabled && /OPTICAL/.test(k.other || "")), JSON.stringify(cands.find(k => k.id === "music"))); }
+
   // Savant starter says it's a Savant AVB job
   t("walkthrough: the Savant whole-home starter sets platform Savant + audio network AVB",
     JSON.stringify(j2.solutions[0].platforms) === '["savant"]' && j2.solutions[0].audioNetwork === "avb");

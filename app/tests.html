@@ -3054,8 +3054,14 @@ for (const [name, raw] of Object.entries(fixtures)) {
       JSON.stringify(trunk.filter(w => !((!onBox(w.pts.at(-1)) || touches(w.pts.at(-1), "L")) && (!onBox(w.pts[0]) || touches(w.pts[0], "R")))).map(w => w.id)));
     t(`trunks — ${name}: the rack's network patches ride the network trunk, drawn from the switch`,
       on.rt.wires.filter(w => w.signal === "network" && w.rackPatch).every(w => { const a = touches(w.pts[0], "R"); return a && /switch|gateway/i.test(on.job.solutions[0].racks.flatMap(r => r.devices).find(d => d.id === a.id)?.type || ""); }) &&
-      on.rt.wires.some(w => w.signal === "network" && w.trunk === "net:network"));
-    if (name === "stress") t(`trunks — stress: fewer visible crossings than today's routing (${visCross(off.rt)} → ${visCross(on.rt)})`, visCross(on.rt) <= visCross(off.rt) * 0.75);
+      on.rt.wires.some(w => w.signal === "network" && w.trunk?.startsWith("net:network")));
+    if (name === "stress") t(`trunks — stress: at most half of today's visible crossings (${visCross(off.rt)} → ${visCross(on.rt)})`, visCross(on.rt) <= visCross(off.rt) * 0.5);
+    // in-rack video and single-run audio patches ride trunks too (a module → amp run carrying ×N keeps its line and count)
+    const dev = Object.fromEntries(devs.map(d => [d.id, d]));
+    const patches = on.rt.wires.filter(w => dev[w.from] && dev[w.to] && (w.signal === "video" || w.signal === "audio"));
+    const multi = w => { const c = on.job.solutions[0].connections.find(k => `${k.from}→${k.to}` === w.id); return c && trunkCount(c, on.ix.solutions[0]) > 1; };
+    t(`trunks — ${name}: in-rack video / audio patches on trunks (multi-run audio trunks excepted)`,
+      patches.length > 0 && patches.every(w => w.cls === "trunk" || multi(w) || /fallback/.test(w.cls)), JSON.stringify(patches.filter(w => w.cls !== "trunk" && !multi(w)).map(w => `${w.id} ${w.cls}`)));
     const svgB = render(on.job, on.ix, on.p, on.rt, { trunks: "bundle", wireLabels: PG.wireLabels(on.job, on.ix) });
     const svgR = render(rb.job, rb.ix, rb.p, rb.rt, { trunks: "ribbon", wireLabels: PG.wireLabels(rb.job, rb.ix) });
     t(`trunks — ${name}: bundle draws ×N and schedule numbers; ribbon draws lanes; no NaN`,
@@ -3066,8 +3072,8 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const H = await (await fetch("./test-fixtures/harlow-dante.json")).json();
     const off = draw(H, false), on = draw(H, "bundle");
     const skipped = on.rt.wires.filter(w => (w.signal === "network" || w.dante) && ["cbx→sw", "dante-cbox→dante-sw", "dante-sw→director", "dante-sw→hype", "dante-sw→hype-2", "dante-in→director"].includes(w.id) && w.cls !== "trunk");
-    t(`trunks — Harlow: every rack network / Dante patch on its trunk; visible crossings ${visCross(off.rt)} → ${visCross(on.rt)} (≤ 40)`,
-      !skipped.length && visCross(on.rt) <= 40 && !legal(on.p, on.rt).length, JSON.stringify(skipped.map(w => w.id)));
+    t(`trunks — Harlow: every rack network / Dante patch on its trunk; visible crossings ${visCross(off.rt)} → ${visCross(on.rt)} (≤ 35)`,
+      !skipped.length && visCross(on.rt) <= 35 && !legal(on.p, on.rt).length, JSON.stringify(skipped.map(w => w.id)));
   }
   { // two racks (Estate: a main rack + a pool-house rack): each rack builds its own trunks from its own boxes
     const off = draw(fixtures.estate, false), on = draw(fixtures.estate, "bundle");

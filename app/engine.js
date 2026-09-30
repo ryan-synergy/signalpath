@@ -1503,8 +1503,11 @@ export function route(job, ix, placement, opts = {}) {
   const TRUNK = trunkMode(job, opts);
   const SWITCHY = new Set(["avSwitch", "networkSwitch", "avbSwitch", "gateway"]);
   const rackOfDev = id => P.racks.find(r => r.devices.some(d => d.id === id));
+  // …and so do its video and line-level audio patches — except an analog trunk that
+  // carries several runs (module → amp ×N): its drawn count stays on the classic line
   const rackPatchFam = conn => TRUNK && devById[conn.from] && devById[conn.to] && rackOfDev(conn.from) === rackOfDev(conn.to)
-    ? (conn.dante ? "dante" : conn.signal === "network" ? "network" : null) : null;
+    ? (conn.dante ? "dante" : conn.signal === "network" ? "network" : conn.signal === "video" ? "video"
+      : conn.signal === "audio" && trunkCount(conn, s) === 1 ? "audio" : null) : null;
 
   /* ============ pass 3: rigid non-zone wires FIRST (short structural runs
      claim their channels; zone feeds are flexible and relaxable) ============ */
@@ -1577,7 +1580,7 @@ export function route(job, ix, placement, opts = {}) {
       let a = devById[c.from], b = devById[c.to];
       const typ = d => s.devices[d.id]?.type;
       if (fam === "network" && SWITCHY.has(typ(b)) && !SWITCHY.has(typ(a))) [a, b] = [b, a];
-      members.push({ dir: fam === "dante" ? "in" : "net", rack: true, c, i, src: a, dev: b, fam });
+      members.push({ dir: fam === "dante" ? "in" : fam === "network" ? "net" : "patch", rack: true, c, i, src: a, dev: b, fam });
     });
 
     /* -- rows of the top band, bottom row first; each row's strip under its cards -- */
@@ -1619,7 +1622,9 @@ export function route(job, ix, placement, opts = {}) {
     const fams = {};
     for (const m of members) {
       const rk = rackOfDev(m.dev.id);
-      const key = `${m.dir}:${m.fam}` + (P.racks.length > 1 ? `@${rk.id}` : "");
+      // rack patches rise beside their own source column (a col-A source into the col-B matrix
+      // lands straight across the A|B gap instead of looping back from beyond column B)
+      const key = `${m.dir}:${m.fam}` + (m.dir === "patch" || m.dir === "net" ? `#${m.src.col || "B"}` : "") + (P.racks.length > 1 ? `@${rk.id}` : "");
       (fams[key] ||= { key, dir: m.dir, rack: rk, members: [] }).members.push(m);
     }
     const famList = Object.values(fams).sort((a, b) => b.members.length - a.members.length || (a.dir === "out" ? -1 : 1));
@@ -1630,7 +1635,7 @@ export function route(job, ix, placement, opts = {}) {
       const net = F.net;
       // riser column: right of the rightmost source column (out) / left of the leftmost target column (in)
       // network patches rise beside their switches; everything coming in, beside its targets
-      const cols = F.members.map(m => (F.dir === "net" ? m.src.col : m.dev.col) || "B");
+      const cols = F.members.map(m => (F.dir === "net" || F.dir === "patch" ? m.src.col : m.dev.col) || "B");
       const col = F.dir !== "in" ? cols.reduce((a, b) => colRank[b] > colRank[a] ? b : a) : cols.reduce((a, b) => colRank[b] < colRank[a] ? b : a);
       const rRange = F.dir === "in" ? gapLeftOf(col) : gapRightOf(col);
       const why = (m, r) => { if (opts.debug) (out.trunkSkips ||= []).push(`${F.key} ${m ? wireId(m.c) : "*"}: ${r}`); };
@@ -1741,7 +1746,7 @@ export function route(job, ix, placement, opts = {}) {
         // jack heights to try on the source's right edge (the first free ones round its middle)
         const pys = [...new Set([0, 1, -1, 2, -2, 3, -3].map(k => peekPort(rightPorts, a, a.y + a.h / 2 + k * RT.lane)))];
         let best = null, bestCost = Infinity, bestPy = null, bestTy = null;
-        const fails = [];
+        const fails = [], onCache = new Map();
         const consider = (pts, py, ty) => {
           pts = cleanPts(pts);
           const bl = pathBlocked(pts, null);
@@ -1749,8 +1754,9 @@ export function route(job, ix, placement, opts = {}) {
           const cost = countCrossings(pts) * 100 + segLen(pts);
           if (cost < bestCost) { bestCost = cost; best = pts; bestPy = py; bestTy = ty; }
         };
-        for (const py of pys) {
-        const ty0 = peekPort(leftPorts, b, Math.max(b.y, Math.min(b.y + b.h, py)));
+        // landing heights on the target's left edge: nearest the source jack first, then round it
+        const tyFor = py => [...new Set([0, -1, 1, -2, 2, -3, 3].map(k => peekPort(leftPorts, b, Math.max(b.y, Math.min(b.y + b.h, py)) + k * RT.lane)))];
+        for (const py of pys) for (const ty0 of tyFor(py)) {
         // a box in the switch's own column (or left of it): a local staple — out, down the gap
         // beside the switch, across a free level between boxes, into its left edge
         if (b.x <= sx) {
@@ -1763,7 +1769,9 @@ export function route(job, ix, placement, opts = {}) {
           }
           continue;
         }
-        let on = null;
+        const onKey = `${py}`;
+        let on = onCache.has(onKey) ? onCache.get(onKey) : null;
+        if (!onCache.has(onKey)) {
         const direct = [[sx, py], [rx, py]];
         if (!pathBlocked(direct, null) && pathRegisterable(direct, net)) on = direct;
         else { const g = gapRightOf(a.col || "B");
@@ -1771,6 +1779,8 @@ export function route(job, ix, placement, opts = {}) {
             const gx = alloc(usedV, (g[0] + g[1]) / 2, Math.min(py, ly), Math.max(py, ly), net, 0, xx => !!segBlocked(xx, Math.min(py, ly), xx, Math.max(py, ly), null), g);
             if (gx == null) continue;
             const q = [[sx, py], [gx, py], [gx, ly], [rx, ly]]; if (!pathBlocked(q, null) && pathRegisterable(q, net)) { on = q; break; } } }
+        onCache.set(onKey, on);
+        }
         if (!on) { fails.push(`no on-ramp at y=${py} to riser x=${rx}`); continue; }
         const tails = [];
         if (b.x > rx) tails.push([[rx, ty0], [b.x, ty0]]);

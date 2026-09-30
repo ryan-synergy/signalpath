@@ -3094,6 +3094,23 @@ for (const [name, raw] of Object.entries(fixtures)) {
       illegal.push(...legal(b.p, b.rt).map(x => `#${k} ${x}`)); }
     t(`trunks — ${n} random two-rack jobs: legal, ≤ 50% of today's visible crossings (${x0} → ${x1})`, n >= 50 && !illegal.length && x1 <= x0 * 0.5, illegal.slice(0, 3).join(" | "));
   }
+  { // Dante as labels (job.job.danteStyle = "labels"): no Dante lines; each amp lists its sources, each source names its amp
+    const H = await (await fetch("./test-fixtures/harlow-dante.json")).json();
+    const dante = H.solutions[0].connections.filter(c => c.dante);
+    for (const trunks of [false, "bundle"]) {
+      const { job, ix } = loadJob(structuredClone(H)); const o = { trunks, danteLabels: true };
+      const p = place(job, ix, o), rt = route(job, ix, p, o), svg = render(job, ix, p, rt, o);
+      const tagText = [...svg.matchAll(/class="dantetag"[^>]*>([^<]*)</g)].map(m => m[1].replace(/&amp;/g, "&"));
+      t(`Dante labels (${trunks || "classic"}): no Dante lines drawn; every subscription named at both ends; legend shows the label`,
+        !rt.wires.some(w => w.dante) && rt.danteTags.length === dante.length &&
+        tagText.some(x => /^DANTE ← .*Kitchen DEC·D/.test(x) && /Dante bridge/.test(x)) && tagText.filter(x => /^→ /.test(x)).length === 4 &&
+        svg.includes(">Dante (labels)</text>") && !/NaN|undefined/.test(svg) && !legal(p, rt).length, JSON.stringify(tagText));
+    }
+    const on = draw({ ...H, job: { ...H.job, trunkStyle: "bundle", danteStyle: "labels" } }, "bundle");
+    t(`Dante labels + trunks — Harlow: ${visCross(on.rt)} visible crossings (≤ 20; the hand mockup had 22)`, visCross(on.rt) <= 20);
+    const off = loadJob(structuredClone(H)); const p0 = place(off.job, off.ix), rt0 = route(off.job, off.ix, p0);
+    t("Dante labels: off by default — Dante draws as lines", rt0.wires.some(w => w.dante) && !rt0.danteTags);
+  }
   { // the schedule numbers the sheet prints are the Wire Schedule's own
     const { job, ix } = loadJob(structuredClone(fixtures.residence));
     const L = PG.wireLabels(job, ix), runs = PG.wireRuns(job, ix);

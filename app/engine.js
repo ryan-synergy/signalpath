@@ -582,6 +582,10 @@ export const trunkMode = (job, opts = {}) => {
   const t = opts.trunks !== undefined ? opts.trunks : job.job?.trunkStyle;
   return t === "bundle" || t === "ribbon" ? t : null;
 };
+// Dante as labels (job.job.danteStyle = "labels"; opts.danteLabels overrides): a Dante
+// subscription rides the network — the Cat6 is already drawn — so instead of a dashed
+// line, the receiving box lists its sources and each source names where it goes
+export const danteLabelMode = (job, opts = {}) => opts.danteLabels !== undefined ? !!opts.danteLabels : job.job?.danteStyle === "labels";
 // the box that feeds a room: its speakers' amp / receiver first (the speaker
 // trunk is the one that fans out room by room), then the TV's video source —
 // each as [rack order, output order]
@@ -618,7 +622,8 @@ function placeOnce(job, ix, opts, variant) {
   // view filter (e.g. hideSignals: ["network"]): hidden wires get no corridor
   // capacity, no ports, no legend row — validation still sees the full system
   const hiddenSignals = new Set(opts.hideSignals || []);
-  const visConns = (sol.connections || []).filter(c => !hiddenSignals.has(c.signal));
+  const dLabels = danteLabelMode(job, opts);
+  const visConns = (sol.connections || []).filter(c => !hiddenSignals.has(c.signal) && !(dLabels && c.dante));
   const out = { sheet: SHEET, racks: [], zones: [], chips: [], corridors: [], areaHeaders: [], legend: null, warnings: [] };
 
   /* -- classify zones, preserve input order (layout stability) -- */
@@ -982,7 +987,8 @@ function placeOnce(job, ix, opts, variant) {
 
   /* -- dynamic legend: only signal types present on the sheet -- */
   const present = [...new Set(visConns.map(c => (c.scope || "included") !== "included" ? "prewire" : c.dante ? "dante" : c.signal === "speaker" ? "audio" : c.signal))];
-  const order = ["video", "audio", "dante", "audioReturn", "network", "prewire"];
+  if (dLabels && (sol.connections || []).some(c => c.dante && !hiddenSignals.has(c.signal))) present.push("danteTag");
+  const order = ["video", "audio", "dante", "danteTag", "audioReturn", "network", "prewire"];
   const rows = order.filter(k => present.includes(k));
   // zone annotations ride the legend as numbered keynotes (CAD style): the
   // full sentence lives here, the zone card wears only the circled number
@@ -1039,8 +1045,10 @@ export function route(job, ix, placement, opts = {}) {
   const placedEp = new Set(P.zones.flatMap(z => (z.groups || []).map(g => g.epId)));
   const epOf = id => ix.endpointsById[id] ? id : ix.endpointsById[s.companions[id]?.serves] ? s.companions[id].serves : null;
   const drawable = c => [c.from, c.to].every(id => { const ep = epOf(id); return !ep || placedEp.has(ep); });
+  const dLabels = danteLabelMode(job, opts);
+  if (dLabels) out.danteTags = (sol.connections || []).filter(c => c.dante && !hiddenSignals.has(c.signal)).map(c => ({ from: c.from, to: c.to }));
   const visConns = (sol.connections || []).filter(c => {
-    if (hiddenSignals.has(c.signal)) return false;
+    if (hiddenSignals.has(c.signal) || (dLabels && c.dante)) return false;
     if (drawable(c)) return true;
     out.warnings.push({ code: "unrouted", msg: `no route class for ${c.from}→${c.to}` });
     return false;
@@ -3063,6 +3071,43 @@ const tileName = (model, brand) => {
   return m.split(" ");
 };
 
+/* ---------- Dante as labels ----------
+   The receiving box (an amp) carries "DANTE ← Kitchen · Pool · Dante bridge" over its
+   top edge (names wrap three to a line); each source says where it goes — a room
+   adapter beside its chip ("→ Director"), a rack box over its top edge. */
+function drawDanteTags(job, ix, sol, s, P, tags, bw) {
+  const o = [], color = bw ? "#333" : SIGNAL_COLORS.dante;
+  const tile = id => P.racks.flatMap(r => r.devices).find(d => d.id === id) || null;
+  const chip = id => P.chips.find(c => c.id === id) || null;
+  const nameOf = id => {
+    const comp = s.companions[id];
+    if (comp && ix.endpointsById[comp.serves]) return `${ix.zonesById[ix.endpointZone[comp.serves]]?.name || "Room"} ${adapterTag(comp)}`;
+    const d = s.devices[id];
+    if (d?.type === "danteBridge") return "Dante bridge";
+    return d ? String(d.model || d.id).replace(/^(AudioControl|AVPro Edge|Anthem|Savant|Sonance|Crestron|Snap One)\s+/i, "") : describeNode(job, sol, id).short;
+  };
+  const text = (x, y, str, anchor = "start") => o.push(`<text class="dantetag" x="${x}" y="${y}"${anchor !== "start" ? ` text-anchor="${anchor}"` : ""} font-size="9" font-weight="700" letter-spacing=".3" fill="${color}" paint-order="stroke" stroke="#fff" stroke-width="3">${esc(str)}</text>`);
+  // the receiving side: one block per box, over its top edge
+  const byTo = new Map();
+  for (const t of tags) (byTo.get(t.to) || byTo.set(t.to, []).get(t.to)).push(t.from);
+  for (const [to, froms] of byTo) {
+    const b = tile(to) || chip(to); if (!b) continue;
+    const names = [...new Set(froms.map(nameOf))];
+    const lines = []; for (let i = 0; i < names.length; i += 3) lines.push(names.slice(i, i + 3).join(" · "));
+    lines.forEach((ln, i) => text(b.x, b.y - 5 - (lines.length - 1 - i) * 11, `${i ? "" : "DANTE ← "}${ln}`));
+  }
+  // the sending side
+  const byFrom = new Map();
+  for (const t of tags) (byFrom.get(t.from) || byFrom.set(t.from, []).get(t.from)).push(t.to);
+  for (const [from, tos] of byFrom) {
+    const names = [...new Set(tos.map(nameOf))].join(" · ");
+    const c = chip(from), d = tile(from);
+    if (c) text(c.x + c.w + 4, c.y + c.h / 2 + 3, `→ ${names}`);
+    else if (d && !byTo.has(from)) text(d.x + d.w, d.y - 5, `DANTE → ${names}`, "end");
+  }
+  return o.join("");
+}
+
 /* ---------- trunk drawing (trunk mode) ----------
    A trunk net's members share runs. Split every net into pieces carried by the
    same set of wires, then draw
@@ -3393,6 +3438,7 @@ export function render(job, ix, P, rt, opts = {}) {
   }
   push(`</g>`);
   if (trunkWires.length) push(drawTrunks(trunkWires, TRK, opts.wireLabels || {}));
+  if (rt.danteTags?.length) push(drawDanteTags(job, ix, sol, s, P, rt.danteTags, bw));
   // a tag reads beside its run — on whichever side no other wire runs alongside
   const segsAll = rt.wires.flatMap(w => w.pts.slice(1).map((q, i) => [w.pts[i], q]));
   const clear = (x0, x1, y0, y1) => !segsAll.some(([[ax, ay], [bx, by]]) =>
@@ -3439,6 +3485,11 @@ export function render(job, ix, P, rt, opts = {}) {
   push(`<text x="${lg.x + 12}" y="${lg.y + 16}" font-size="10" font-weight="700" fill="#555" letter-spacing="1">LEGEND</text>`);
   lg.rows.forEach((k, i) => {
     const x = lg.x + 12 + i * 140;
+    if (k === "danteTag") {
+      push(`<text x="${x}" y="${lg.y + 40}" font-size="9" font-weight="700" letter-spacing=".4" fill="${bw ? "#333" : SIGNAL_COLORS.dante}">DANTE ←</text>`);
+      push(`<text x="${x + 50}" y="${lg.y + 40}" font-size="11.5" fill="#333">Dante (labels)</text>`);
+      return;
+    }
     const st = bw ? SIGNAL_DASHES[k] : null;
     const ld = st?.dash || (k === "dante" ? "6 4" : null);
     push(`<path d="M${x} ${lg.y + 36}H${x + 32}" stroke="${st ? st.stroke : SIGNAL_COLORS[k]}" stroke-width="3" fill="none"${ld ? ` stroke-dasharray="${ld}"` : ""}/>`);

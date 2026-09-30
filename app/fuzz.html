@@ -105,7 +105,7 @@ function exercise(raw, label, strict = false) {
       const { job, ix } = loadJob(eff);
       validate(job, ix);
       const a = advise(job, ix, catalog);
-      for (const opts of [{ solution: si }, { solution: si, grayscale: true, hideSignals: ["network"] }, { solution: si, harness: true }, { solution: si, outdoor: true }, { solution: si, trunks: "bundle" }]) {
+      for (const opts of [{ solution: si }, { solution: si, grayscale: true, hideSignals: ["network"] }, { solution: si, harness: true }, { solution: si, outdoor: true, danteLabels: true }, { solution: si, trunks: "bundle" }]) {
         if (!job.house.zones.length) continue;
         // the outdoor variant draws the same job with outdoor zones as their own cluster
         const J = opts.outdoor ? { ...job, job: { ...job.job, zoneGrouping: "type-outdoor" } } : job;

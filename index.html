@@ -403,24 +403,24 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20260930224323",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20260930224323",
-    "./app/audiochain.js": "./app/audiochain.js?v=20260930224323",
-    "./app/ports.js": "./app/ports.js?v=20260930224323",
-    "./app/commands.js": "./app/commands.js?v=20260930224323",
-    "./app/engine.js": "./app/engine.js?v=20260930224323",
-    "./app/exports.js": "./app/exports.js?v=20260930224323",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260930224323",
-    "./app/hookup.js": "./app/hookup.js?v=20260930224323",
-    "./app/importers.js": "./app/importers.js?v=20260930224323",
-    "./app/names.js": "./app/names.js?v=20260930224323",
-    "./app/network.js": "./app/network.js?v=20260930224323",
-    "./app/pages.js": "./app/pages.js?v=20260930224323",
-    "./app/power.js": "./app/power.js?v=20260930224323",
-    "./app/quickadd.js": "./app/quickadd.js?v=20260930224323",
-    "./app/rack.js": "./app/rack.js?v=20260930224323",
-    "./app/route-audit.js": "./app/route-audit.js?v=20260930224323",
-    "./app/starters.js": "./app/starters.js?v=20260930224323"
+    "./app/ai.js": "./app/ai.js?v=20260930225925",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20260930225925",
+    "./app/audiochain.js": "./app/audiochain.js?v=20260930225925",
+    "./app/ports.js": "./app/ports.js?v=20260930225925",
+    "./app/commands.js": "./app/commands.js?v=20260930225925",
+    "./app/engine.js": "./app/engine.js?v=20260930225925",
+    "./app/exports.js": "./app/exports.js?v=20260930225925",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20260930225925",
+    "./app/hookup.js": "./app/hookup.js?v=20260930225925",
+    "./app/importers.js": "./app/importers.js?v=20260930225925",
+    "./app/names.js": "./app/names.js?v=20260930225925",
+    "./app/network.js": "./app/network.js?v=20260930225925",
+    "./app/pages.js": "./app/pages.js?v=20260930225925",
+    "./app/power.js": "./app/power.js?v=20260930225925",
+    "./app/quickadd.js": "./app/quickadd.js?v=20260930225925",
+    "./app/rack.js": "./app/rack.js?v=20260930225925",
+    "./app/route-audit.js": "./app/route-audit.js?v=20260930225925",
+    "./app/starters.js": "./app/starters.js?v=20260930225925"
 } }
 </script>
 <script>
@@ -481,6 +481,7 @@
         <label class="chk"><input type="radio" name="trunkStyle" value="bundle"><span><b>Bundle</b><em>One heavy run with ×N, thin breakouts, wire numbers</em></span></label>
         <label class="chk"><input type="radio" name="trunkStyle" value="ribbon"><span><b>Ribbon</b><em>Same trunks, every wire its own line side by side</em></span></label>
       </div>
+      <label class="chk"><input type="checkbox" id="danteLabels"><span><b>Dante as labels</b><em>Saved with the job: no Dante lines — each amp lists its Dante sources, each source says where it goes</em></span></label>
       <label class="chk"><input type="checkbox" id="harnessMode"><span><b>Harness style</b><em>Saved with the job: runs to 3+ zones share one trunk and break out near each zone, like an electrical drawing</em></span></label>
       <label class="chk"><input type="checkbox" id="bwMode"><span><b>Black &amp; white</b><em>Dash patterns carry each signal, for office laser printers</em></span></label>
     </div></div>
@@ -612,7 +613,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20260930224323").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20260930225925").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -709,6 +710,7 @@ function refresh(save = true) {
   $("#harnessMode").checked = !!S.job.job.harnessStyle;     // a per-job drawing choice: follows job switches
   for (const r of document.querySelectorAll('input[name="trunkStyle"]')) r.checked = r.value === (S.job.job.trunkStyle || "");
   $("#harnessMode").disabled = !!S.job.job.trunkStyle;       // trunks replace the harness
+  $("#danteLabels").checked = S.job.job.danteStyle === "labels";
   try {
     autoLinkCatalog(S.job, effectiveCatalog());                // self-heal: fill missing catalog links by model
     const { job, ix } = loadJob(effectiveJob(S.job, S.sol));   // active solution's overrides applied
@@ -893,6 +895,7 @@ for (const r of document.querySelectorAll('input[name="trunkStyle"]')) r.onchang
   if (r.value) S.job.job.trunkStyle = r.value; else delete S.job.job.trunkStyle;
   refresh();
 };
+$("#danteLabels").onchange = e => { if (e.target.checked) S.job.job.danteStyle = "labels"; else delete S.job.job.danteStyle; refresh(); };
 $("#harnessMode").onchange = e => { if (e.target.checked) S.job.job.harnessStyle = true; else delete S.job.job.harnessStyle; refresh(); };
 $("#solSel").onchange = e => {
   if (e.target.value === "__add") {

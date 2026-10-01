@@ -453,25 +453,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261001171756",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261001171756",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261001171756",
-    "./app/ports.js": "./app/ports.js?v=20261001171756",
-    "./app/commands.js": "./app/commands.js?v=20261001171756",
-    "./app/engine.js": "./app/engine.js?v=20261001171756",
-    "./app/exports.js": "./app/exports.js?v=20261001171756",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261001171756",
-    "./app/hookup.js": "./app/hookup.js?v=20261001171756",
-    "./app/importers.js": "./app/importers.js?v=20261001171756",
-    "./app/library.js": "./app/library.js?v=20261001171756",
-    "./app/names.js": "./app/names.js?v=20261001171756",
-    "./app/network.js": "./app/network.js?v=20261001171756",
-    "./app/pages.js": "./app/pages.js?v=20261001171756",
-    "./app/power.js": "./app/power.js?v=20261001171756",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261001171756",
-    "./app/rack.js": "./app/rack.js?v=20261001171756",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261001171756",
-    "./app/starters.js": "./app/starters.js?v=20261001171756"
+    "./app/ai.js": "./app/ai.js?v=20261001174249",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261001174249",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261001174249",
+    "./app/ports.js": "./app/ports.js?v=20261001174249",
+    "./app/commands.js": "./app/commands.js?v=20261001174249",
+    "./app/engine.js": "./app/engine.js?v=20261001174249",
+    "./app/exports.js": "./app/exports.js?v=20261001174249",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261001174249",
+    "./app/hookup.js": "./app/hookup.js?v=20261001174249",
+    "./app/importers.js": "./app/importers.js?v=20261001174249",
+    "./app/library.js": "./app/library.js?v=20261001174249",
+    "./app/names.js": "./app/names.js?v=20261001174249",
+    "./app/network.js": "./app/network.js?v=20261001174249",
+    "./app/pages.js": "./app/pages.js?v=20261001174249",
+    "./app/power.js": "./app/power.js?v=20261001174249",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261001174249",
+    "./app/rack.js": "./app/rack.js?v=20261001174249",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261001174249",
+    "./app/starters.js": "./app/starters.js?v=20261001174249"
 } }
 </script>
 <script>
@@ -534,6 +534,7 @@
       </div>
       <label class="chk"><input type="checkbox" id="danteLabels"><span><b>Dante as labels</b><em>Saved with the job: no Dante lines — each amp lists its Dante sources, each source says where it goes</em></span></label>
       <label class="chk"><input type="checkbox" id="harnessMode"><span><b>Harness style</b><em>Saved with the job: runs to 3+ zones share one trunk and break out near each zone, like an electrical drawing</em></span></label>
+      <label class="chk"><input type="checkbox" id="kindColor" checked><span><b>Color by kind</b><em>Each kind of rack box wears its own tint and edge (sources stay black); remembered on this computer</em></span></label>
       <label class="chk"><input type="checkbox" id="bwMode"><span><b>Black &amp; white</b><em>Dash patterns carry each signal, for office laser printers</em></span></label>
     </div></div>
   <input type="file" id="importFile" accept=".json,.md" hidden>
@@ -683,7 +684,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261001171756").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261001174249").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -791,7 +792,7 @@ function refresh(save = true) {
     v = validate(job, ix); a = advise(job, ix, effectiveCatalog());
     S.portMap = (a.ports || []).find(p => p.solution === job.solutions[S.sol]?.id)?.map || [];   // which jack each wire lands on
     // "1 of N" counts the continuation sheets a long schedule/map paginates into
-    const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, company: SETTINGS.company,
+    const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, kindColor: $("#kindColor").checked, company: SETTINGS.company,
                    sheet: `1 of ${sheetTotal(job, ix, a, { solution: S.sol, rawJob: S.job })}` };
     if (trunkMode(job)) opts.wireLabels = wireLabels(job, ix, { solution: S.sol, portMap: S.portMap });
     if (S.job.house.zones.length) {
@@ -964,6 +965,9 @@ $("#jobName").onchange = e => { S.job.job.name = e.target.value; refresh(); };
 $("#stageSel").onchange = e => { S.job.job.stage = e.target.value; refresh(); };
 $("#hideNet").onchange = () => refresh(false);
 $("#bwMode").onchange = () => refresh(false);
+// color by kind is a per-computer preference (on unless turned off here)
+try { $("#kindColor").checked = localStorage.getItem("signalpath.kindColor") !== "off"; } catch {}
+$("#kindColor").onchange = () => { try { localStorage.setItem("signalpath.kindColor", $("#kindColor").checked ? "on" : "off"); } catch {} refresh(false); };
 for (const r of document.querySelectorAll('input[name="trunkStyle"]')) r.onchange = () => {
   if (r.value === "bundle") delete S.job.job.trunkStyle; else S.job.job.trunkStyle = r.value;   // bundle is the default
   refresh();
@@ -1238,7 +1242,7 @@ function printPacket(packet = "service") {
   try {
     const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
     const a = advise(job, ix, effectiveCatalog());
-    const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, company: SETTINGS.company,
+    const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, kindColor: $("#kindColor").checked, company: SETTINGS.company,
                    rawJob: S.job, packet, catalog: effectiveCatalog() };   // the takeoff names the real parts
     opts.sheet = `1 of ${sheetTotal(job, ix, a, opts)}`;
     if (trunkMode(job)) opts.wireLabels = wireLabels(job, ix, { solution: S.sol });

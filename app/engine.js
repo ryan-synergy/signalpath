@@ -33,6 +33,59 @@ export const SIGNAL_DASHES = {
   prewire: { stroke: "#9a9a9a", dash: "5 4" },
 };
 
+/* color by kind (Ryan 2026-10-01): a rack box wears a dark tint and a colored left edge
+   for what it does, keyed to the wire colors — video switching red, amps and audio
+   blue, data network green; the receiver (video + audio) purple; MXNet (video over a
+   network) magenta; AVB (audio over a network) teal; control gold; sources stay
+   black. In black & white the edge becomes a pattern that echoes the wire dashes
+   (video solid, audio dashed, network dotted). View → Color by kind turns it off. */
+export const KIND_STYLE = {
+  source:  { label: "Source",          tint: "#1e1e1e", edge: null,      pattern: null },
+  video:   { label: "Video switching", tint: "#3b1b1f", edge: "#d22b1f", pattern: "solid" },
+  mxnet:   { label: "Video network",   tint: "#3a1830", edge: "#c2378a", pattern: "double" },
+  avr:     { label: "Receiver",        tint: "#2d1f3d", edge: "#8a5cc4", pattern: "long" },
+  audio:   { label: "Amp / audio",     tint: "#15253b", edge: "#2b6cb8", pattern: "dash" },
+  avb:     { label: "Audio network",   tint: "#132f30", edge: "#1f9a96", pattern: "rungs" },
+  network: { label: "Data network",    tint: "#173222", edge: "#2f9e44", pattern: "dots" },
+  control: { label: "Control",         tint: "#2e2a20", edge: "#c9a227", pattern: "hatch" },
+  power:   { label: "Power",           tint: "#3a3a3a", edge: "#bdbdbd", pattern: null },
+};
+// the MXNet capability (library checkbox) decides video-network over data-network,
+// so an older MXNet switch filed as a plain network switch still reads magenta
+export function deviceKind(dev, catDev) {
+  const t = dev?.type;
+  const mx = (catDev?.flags || []).includes("mxnet") || /mxnet/i.test(`${dev?.model || ""} ${dev?.catalogRef || ""}`);
+  if (t === "avSwitch" || (t === "networkSwitch" && mx)) return "mxnet";
+  if (t === "videoMatrix" || t === "splitter") return "video";
+  if (t === "avbSwitch") return "avb";
+  if (t === "avr") return "avr";
+  if (t === "amp" || t === "audioInputModule" || t === "audioOutputModule" || t === "danteBridge") return "audio";
+  if (t === "networkSwitch" || t === "gateway") return "network";
+  if (t === "controlBox" || t === "host") return "control";
+  if (t === "power") return "power";
+  return "source";
+}
+// the colored (or, in B&W, patterned) left edge of a box, inside its rounded corners
+function kindEdge(kind, x, y, h, rx, bw) {
+  const k = KIND_STYLE[kind];
+  if (!k?.edge) return "";
+  const w = 5, r = Math.min(rx, 3);
+  const shape = `M${x + r} ${y}H${x + w}V${y + h}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + h - r}V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
+  if (!bw) return `<path d="${shape}" fill="${k.edge}"/>`;
+  const W = "#f0f0f0";
+  let s = "";
+  switch (k.pattern) {
+    case "solid": return `<path d="${shape}" fill="${W}"/>`;
+    case "double": return `<rect x="${x + 0.6}" y="${y + 1}" width="1.6" height="${h - 2}" fill="${W}"/><rect x="${x + 3.4}" y="${y + 1}" width="1.6" height="${h - 2}" fill="${W}"/>`;
+    case "dash": for (let yy = y + 2; yy + 4 <= y + h - 1; yy += 7) s += `<rect x="${x + 0.6}" y="${yy}" width="4.4" height="4" fill="${W}"/>`; return s;
+    case "long": for (let yy = y + 2; yy + 9 <= y + h - 1; yy += 13) s += `<rect x="${x + 0.6}" y="${yy}" width="4.4" height="9" fill="${W}"/>`; return s;
+    case "dots": for (let yy = y + 3; yy + 1.3 <= y + h - 1; yy += 4.5) s += `<circle cx="${x + 2.8}" cy="${yy}" r="1.3" fill="${W}"/>`; return s;
+    case "rungs": for (let yy = y + 2; yy + 1.4 <= y + h - 1; yy += 4) s += `<rect x="${x + 0.6}" y="${yy}" width="4.4" height="1.4" fill="${W}"/>`; return s;
+    case "hatch": for (let yy = y + 5; yy <= y + h - 1; yy += 5) s += `<path d="M${x + 0.6} ${yy}l4.4 -4.4" stroke="${W}" stroke-width="1.2"/>`; return s;
+  }
+  return "";
+}
+
 export const REMOTE_LABELS = { savant: "SAVANT", appletv: "ATV", josh: "JOSH", factory: "OEM" };
 
 // amp zones a speaker feed takes: a stereo pair is one; a surround set on a
@@ -433,7 +486,7 @@ const PL = {
   rackPadTop: 50, rackPadBottom: 30, rackGapY: 30,
   chip: { w: 54, h: 18 },
   lanePitch: 14, corridorQuantum: 56, topCorridorMin: 120, rightCorridorMin: 90,
-  legendRowW: 140, legendH: 56,
+  legendRowW: 140, legendH: 56, legendEqH: 24, legendEqW: 122,
   growMax: 1.6,                                   // how far a small job's drawing may grow to fill the sheet
 };
 
@@ -1029,9 +1082,16 @@ function placeOnce(job, ix, opts, variant) {
   const notes = (sol.annotations || []).filter(a => a && typeof a === "object")
     .map((a, i) => ({ n: i + 1, text: String(a.text ?? ""), near: a.near }));
   const noteW = notes.length ? Math.max(...notes.map(n => n.text.length)) * 5.4 + 58 : 0;
-  const lw = Math.max(90, 24 + rows.length * PL.legendRowW, noteW);   // "LEGEND" must fit even with no signal rows yet
-  const lh = PL.legendH + (notes.length ? notes.length * 15 + 10 : 0);
-  out.legend = { rows, notes, w: lw, h: lh, x: SHEET.content.x + SHEET.content.w - lw - 60, y: SHEET.content.y + SHEET.content.h - lh - 6 };
+  // equipment key (color by kind): one swatch per kind of box actually in the racks
+  const kindsHere = opts.kindColor === false ? [] : (() => {
+    const snap = job.job?.catalogSnapshot?.devices || {};
+    const have = new Set(out.racks.flatMap(r => r.devices).map(d => { const dev = s.devices[d.id] || {}; return deviceKind(dev, snap[dev.catalogRef]); }));
+    return Object.keys(KIND_STYLE).filter(k => have.has(k));
+  })();
+  const eqH = kindsHere.length ? PL.legendEqH : 0;
+  const lw = Math.max(90, 24 + rows.length * PL.legendRowW, noteW, kindsHere.length ? 24 + kindsHere.length * PL.legendEqW : 0);   // "LEGEND" must fit even with no signal rows yet
+  const lh = PL.legendH + eqH + (notes.length ? notes.length * 15 + 10 : 0);
+  out.legend = { rows, kinds: kindsHere, eqH, notes, w: lw, h: lh, x: SHEET.content.x + SHEET.content.w - lw - 60, y: SHEET.content.y + SHEET.content.h - lh - 6 };
 
   /* -- bounds + fit scale (one-page rule: drawing scales, never splits) -- */
   const rects = [...out.zones, ...out.racks, ...out.chips];
@@ -3739,6 +3799,7 @@ function drawTrunks(list, style0, labels, extra = {}, others = [], bodies = []) 
 
 export function render(job, ix, P, rt, opts = {}) {
   const bw = !!opts.grayscale;   // B&W-safe mode: dashes carry signal identity
+  const kindColor = opts.kindColor !== false;   // color by kind (View toggle, on by default)
   const s = ix.solutions[opts.solution ?? 0];
   const sol = s.sol;
   const out = [];
@@ -3776,15 +3837,20 @@ export function render(job, ix, P, rt, opts = {}) {
     push(`<text x="${r.x + 14}" y="${r.y + 24}" font-size="20" font-weight="700" fill="#111">${esc(r.name)}</text>`);
     for (const d of r.devices) {
       const dev = s.devices[d.id] || {};
-      push(`<g class="devtile" data-device="${esc(d.id)}">`);
+      // color by kind: tint + edge (B&W: patterned edge on the usual black)
+      const kind = kindColor ? deviceKind(dev, job.job?.catalogSnapshot?.devices?.[dev.catalogRef]) : null;
+      const tint = (base) => kind && (!bw || kind === "power") ? KIND_STYLE[kind].tint : base;
+      push(`<g class="devtile" data-device="${esc(d.id)}"${kind ? ` data-kind="${kind}"` : ""}>`);
       if (d.kind === "small") {
         const rx = dev.sourceType === "appletv" || dev.sourceType === "streamer" ? 8 : 3;
-        push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="${rx}" fill="#1e1e1e"/>`);
+        push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="${rx}" fill="${tint("#1e1e1e")}"/>`);
+        if (kind) push(kindEdge(kind, d.x, d.y, d.h, rx, bw));
         push(`<circle cx="${d.x + 9}" cy="${d.y + d.h / 2}" r="2.3" fill="#3fbf5a"/>`);
         push(faceGlyph(dev, d.x + d.w - 18, d.y + d.h / 2));
         push(fitText(d.x + d.w / 2, d.y + d.h + 15, d.model, 12, "#333", d.w + 36));
       } else if (d.kind === "amp") {
-        push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="3" fill="#1c1c1c" stroke="#0d0d0d"/>`);
+        push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="3" fill="${tint("#1c1c1c")}" stroke="#0d0d0d"/>`);
+        if (kind) push(kindEdge(kind, d.x, d.y, d.h, 3, bw));
         const [brand, ...restName] = tileName(d.model, job.job?.catalogSnapshot?.devices?.[dev.catalogRef]?.brand);
         push(fitText(d.x + d.w / 2, d.y + 16, brand, 11, "#ddd", d.w - 12));
         // channel strip: used (blue), reserved (gray), spare (outline)
@@ -3815,7 +3881,8 @@ export function render(job, ix, P, rt, opts = {}) {
         push(fitText(d.x + d.w / 2, d.y + d.h - 10, restName.join(" ") || d.model, 11, "#eee", d.w - 40));   // clear of the status light
         push(`<circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 12}" r="2.2" fill="#3fbf5a"/>`);
       } else {
-        push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="3" fill="#262626" stroke="#101010"/>`);
+        push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="3" fill="${tint("#262626")}" stroke="#101010"/>`);
+        if (kind) push(kindEdge(kind, d.x, d.y, d.h, 3, bw));
         const [brand, ...restName] = tileName(d.model, job.job?.catalogSnapshot?.devices?.[dev.catalogRef]?.brand);
         push(fitText(d.x + d.w / 2, d.y + 17, brand, 11, "#ddd", d.w - 12));
         // faceplate identity cues (squint-test assists, never the identifier)
@@ -4036,13 +4103,21 @@ export function render(job, ix, P, rt, opts = {}) {
     push(`<path d="M${x} ${lg.y + 36}H${x + 32}" stroke="${st ? st.stroke : SIGNAL_COLORS[k]}" stroke-width="3" fill="none"${ld ? ` stroke-dasharray="${ld}"` : ""}/>`);
     push(`<text x="${x + 38}" y="${lg.y + 40}" font-size="11.5" fill="#333">${LEGEND_LABELS[k] || k}</text>`);
   });
+  // equipment key: a small box per kind, tinted and edged like the rack tiles
+  (lg.kinds || []).forEach((k, i) => {
+    const x = lg.x + 12 + i * PL.legendEqW, y = lg.y + PL.legendH - 6;
+    push(`<rect x="${x}" y="${y}" width="26" height="14" rx="2" fill="${!bw || k === "power" ? KIND_STYLE[k].tint : "#262626"}"/>`);
+    push(kindEdge(k, x, y, 14, 2, bw));
+    push(`<text x="${x + 32}" y="${y + 11}" font-size="11.5" fill="#333">${esc(KIND_STYLE[k].label)}</text>`);
+  });
+  const ny = lg.y + PL.legendH + (lg.eqH || 0);   // the NOTES block sits under the equipment key
   if (lg.notes?.length) {
     // NOTES block: red caveats stay red (dark in grayscale), numbered to match
     // the circled markers on their zone cards
-    push(`<line x1="${lg.x}" y1="${lg.y + PL.legendH - 4}" x2="${lg.x + lg.w}" y2="${lg.y + PL.legendH - 4}" stroke="#bbb" stroke-width="0.7"/>`);
-    push(`<text x="${lg.x + 12}" y="${lg.y + PL.legendH + 10}" font-size="9" font-weight="700" fill="#555" letter-spacing="1">NOTES</text>`);
+    push(`<line x1="${lg.x}" y1="${ny - 4}" x2="${lg.x + lg.w}" y2="${ny - 4}" stroke="#bbb" stroke-width="0.7"/>`);
+    push(`<text x="${lg.x + 12}" y="${ny + 10}" font-size="9" font-weight="700" fill="#555" letter-spacing="1">NOTES</text>`);
     lg.notes.forEach((a, i) => {
-      push(`<text x="${lg.x + 54}" y="${lg.y + PL.legendH + 10 + i * 15}" font-size="10" fill="${bw ? "#333" : "#b32017"}">${keynote(a.n)}  ${esc(a.text)}</text>`);
+      push(`<text x="${lg.x + 54}" y="${ny + 10 + i * 15}" font-size="10" fill="${bw ? "#333" : "#b32017"}">${keynote(a.n)}  ${esc(a.text)}</text>`);
     });
   }
 

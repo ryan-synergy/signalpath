@@ -15,7 +15,7 @@
 <div id="summary">running…</div>
 <ul id="out"></ul>
 <script type="module">
-import { loadJob, validate, advise, place as enginePlace, route as engineRoute, render, routeAlternates as engineAlternates, expandChannels, effectiveHouse, effectiveJob, trunkCount, ribbonLayout, autoLinkCatalog, indexJob, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
+import { loadJob, validate, advise, place as enginePlace, route as engineRoute, render, routeAlternates as engineAlternates, expandChannels, effectiveHouse, effectiveJob, trunkCount, ribbonLayout, autoLinkCatalog, indexJob, READABILITY_ZONE_CEILING, SHEET, deviceKind, KIND_STYLE } from "./engine.js";
 // Trunks are the app's default (Ryan 2026-09-30). The router regression suite below
 // pins the classic drawing explicitly — it still guards the "Off" choice — and the
 // trunk tests pass trunks: "bundle" / "ribbon" (or call enginePlace/engineRoute bare).
@@ -3483,6 +3483,37 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const plan = LB.planImport(structuredClone(CAT.devices), file, stable, other); LB.applyImport(structuredClone(CAT.devices), file, plan, other);
   t("kits: your kits travel in the library file and land at the end of the other browser's order",
     file.starters?.mine?.[kit.id] && plan.kitsAdded.includes(kit.id) && other.mine[kit.id]?.rooms === kit.rooms && other.order.at(-1) === kit.id);
+}
+
+/* ---------- color by kind (2026-10-01): tint + colored edge per kind of rack box ---------- */
+{
+  const K = (type, flags, model) => deviceKind({ type, model }, flags ? { flags } : null);
+  t("kind: each type lands in its family — matrix/splitter video, MXNet switch magenta, AVB teal, receiver, amps + audio modules + Dante, data switch, control, power, sources",
+    K("videoMatrix") === "video" && K("splitter") === "video" && K("avSwitch") === "mxnet" && K("avbSwitch") === "avb" && K("avr") === "avr" &&
+    ["amp", "audioInputModule", "audioOutputModule", "danteBridge"].every(x => K(x) === "audio") && K("networkSwitch") === "network" && K("gateway") === "network" &&
+    K("host") === "control" && K("controlBox") === "control" && K("power") === "power" && K("source") === "source");
+  t("kind: an MXNet switch filed as a plain network switch still reads as video network (by its MXNet capability, or its name)",
+    K("networkSwitch", ["mxnet", "poe"]) === "mxnet" && K("networkSwitch", null, "AC-MXNET-SW24P") === "mxnet" && K("networkSwitch", ["poe"], "USW-Pro-Max-48-PoE") === "network");
+  const { job, ix } = loadJob(fixtures.residence);
+  const p = place(job, ix), rt = route(job, ix, p);
+  const doc = svg => new DOMParser().parseFromString(svg, "image/svg+xml");
+  const on = doc(render(job, ix, p, rt, {})), tiles = [...on.querySelectorAll("g.devtile")];
+  const kinds = new Set(tiles.map(g => g.getAttribute("data-kind")));
+  t("kind: on by default — every rack box says its kind, and a receiver/matrix/amp wears its tint and edge color",
+    tiles.length && tiles.every(g => g.getAttribute("data-kind")) &&
+    ["avr", "video", "audio"].every(k => kinds.has(k) && [...on.querySelectorAll(`g.devtile[data-kind="${k}"] *`)].some(e => e.getAttribute("fill") === KIND_STYLE[k].edge)), [...kinds].join(","));
+  t("kind: the legend keys exactly the kinds in the rack, under the signal rows",
+    p.legend.kinds.length === kinds.size && p.legend.kinds.every(k => kinds.has(k)) && p.legend.eqH > 0 &&
+    p.legend.kinds.every(k => on.documentElement.textContent.includes(KIND_STYLE[k].label)), p.legend.kinds.join(","));
+  const p0 = place(job, ix, { kindColor: false }), off = doc(render(job, ix, p0, route(job, ix, p0, { kindColor: false }), { kindColor: false }));
+  const edges = Object.values(KIND_STYLE).map(k => k.edge).filter(Boolean), tints = Object.values(KIND_STYLE).map(k => k.tint).filter(c => c !== "#1e1e1e");
+  t("kind: View → Color by kind off is the all-black rack — no tints, no edges, no equipment key",
+    ![...off.querySelectorAll("g.devtile *")].some(e => tints.includes(e.getAttribute("fill")) || edges.includes(e.getAttribute("fill"))) &&
+    !off.querySelector("g.devtile[data-kind]") && p0.legend.kinds.length === 0 && p0.legend.h === p.legend.h - p.legend.eqH);
+  const bw = doc(render(job, ix, p, rt, { grayscale: true }));
+  t("kind: black & white keeps the black boxes and swaps each colored edge for a white pattern",
+    ![...bw.querySelectorAll("g.devtile *")].some(e => edges.includes(e.getAttribute("fill")) || tints.filter(c => c !== KIND_STYLE.power.tint).includes(e.getAttribute("fill"))) &&
+    [...bw.querySelectorAll('g.devtile[data-kind="avr"] *')].some(e => e.getAttribute("fill") === "#f0f0f0"));
 }
 
 document.getElementById("summary").innerHTML =

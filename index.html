@@ -405,24 +405,24 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261001003728",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261001003728",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261001003728",
-    "./app/ports.js": "./app/ports.js?v=20261001003728",
-    "./app/commands.js": "./app/commands.js?v=20261001003728",
-    "./app/engine.js": "./app/engine.js?v=20261001003728",
-    "./app/exports.js": "./app/exports.js?v=20261001003728",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261001003728",
-    "./app/hookup.js": "./app/hookup.js?v=20261001003728",
-    "./app/importers.js": "./app/importers.js?v=20261001003728",
-    "./app/names.js": "./app/names.js?v=20261001003728",
-    "./app/network.js": "./app/network.js?v=20261001003728",
-    "./app/pages.js": "./app/pages.js?v=20261001003728",
-    "./app/power.js": "./app/power.js?v=20261001003728",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261001003728",
-    "./app/rack.js": "./app/rack.js?v=20261001003728",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261001003728",
-    "./app/starters.js": "./app/starters.js?v=20261001003728"
+    "./app/ai.js": "./app/ai.js?v=20261001005158",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261001005158",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261001005158",
+    "./app/ports.js": "./app/ports.js?v=20261001005158",
+    "./app/commands.js": "./app/commands.js?v=20261001005158",
+    "./app/engine.js": "./app/engine.js?v=20261001005158",
+    "./app/exports.js": "./app/exports.js?v=20261001005158",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261001005158",
+    "./app/hookup.js": "./app/hookup.js?v=20261001005158",
+    "./app/importers.js": "./app/importers.js?v=20261001005158",
+    "./app/names.js": "./app/names.js?v=20261001005158",
+    "./app/network.js": "./app/network.js?v=20261001005158",
+    "./app/pages.js": "./app/pages.js?v=20261001005158",
+    "./app/power.js": "./app/power.js?v=20261001005158",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261001005158",
+    "./app/rack.js": "./app/rack.js?v=20261001005158",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261001005158",
+    "./app/starters.js": "./app/starters.js?v=20261001005158"
 } }
 </script>
 <script>
@@ -615,7 +615,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261001003728").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261001005158").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1125,7 +1125,7 @@ $("#exportAi").onclick = () => download(`${fileBase()} — AI review.md`, aiRevi
 $("#exportLabels").onclick = () => { const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
   download(`${fileBase()} — cable labels.csv`, labelsCSV(job, ix, { solution: S.sol, portMap: assignPorts(job, ix, effectiveCatalog(), S.sol) }), "text/csv"); };
 $("#exportInstall").onclick = () => download(`${fileBase()} — install record.csv`, installCSV(S.job, S.sol), "text/csv");
-$("#exportCsv").onclick = () => { const { job, ix } = loadJob(effectiveJob(S.job, S.sol)); download(`${fileBase()} — takeoff.csv`, takeoffCSV(job, ix, { solution: S.sol }), "text/csv"); };
+$("#exportCsv").onclick = () => { const { job, ix } = loadJob(effectiveJob(S.job, S.sol)); download(`${fileBase()} — takeoff.csv`, takeoffCSV(job, ix, { solution: S.sol, catalog: effectiveCatalog() }), "text/csv"); };
 
 /* ---- Field Kit TOOLS switcher (hub manifest, cached; self marked) ---- */
 const KIT_SELF = "signalpath";
@@ -1163,7 +1163,7 @@ function printPacket(packet = "service") {
     const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
     const a = advise(job, ix, effectiveCatalog());
     const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, company: SETTINGS.company,
-                   rawJob: S.job, packet };
+                   rawJob: S.job, packet, catalog: effectiveCatalog() };   // the takeoff names the real parts
     opts.sheet = `1 of ${sheetTotal(job, ix, a, opts)}`;
     if (trunkMode(job)) opts.wireLabels = wireLabels(job, ix, { solution: S.sol });
     const p = place(job, ix, opts);

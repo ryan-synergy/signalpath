@@ -4,9 +4,9 @@
    is not on Sheet 1. Pure string builders, no DOM. */
 
 import { expandChannels, effectiveJob, indexJob } from "./engine.js";
-import { TYPE_NAME, PLATFORM_NAME, adapterName, describeNode } from "./names.js";
+import { TYPE_NAME, PLATFORM_NAME, adapterName, describeNode, productName } from "./names.js";
 import { bulletFor, knownRunM } from "./hookup.js";
-import { NET_ROLE_NAME, switchSetup } from "./network.js";
+import { NET_ROLE_NAME, switchSetup, companionSku } from "./network.js";
 import { isAsBuilt, asBuiltChanges, installRows } from "./asbuilt.js";
 
 const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -279,9 +279,13 @@ export function takeoffItems(job, ix, opts = {}) {
     items.push({ label: devName(d), status: d.status || "new", where: r.name || r.id });
   for (const d of sol.localDevices || [])
     items.push({ label: `${devName(d)} (in-zone)`, status: d.status || "new", where: ix.zonesById[d.zone]?.name || "(zone removed)" });
+  // adapters by the part a quote lists (an AVDM encoder, an AXION-fed balun's RNE receiver) when the
+  // catalog is in hand; the generic adapter name otherwise
+  const cat = id => opts.catalog?.devices?.[id];
+  const partName = (ref, fallback) => cat(ref) ? productName(cat(ref)) : fallback;
   const compGroups = {};
   for (const c of sol.companions || []) {
-    const kind = `${adapterName(c)} (auto-added)`;
+    const kind = `${partName(companionSku(c, sol, opts.catalog), adapterName(c))} (auto-added)`;
     const where = servesEp(s, c.id) ? zoneOf(ix, c.serves)?.name : s.devices[c.serves]?.model;
     (compGroups[kind] ||= []).push(where || "");
   }
@@ -293,6 +297,13 @@ export function takeoffItems(job, ix, opts = {}) {
       if (ep.type === "display") {
         items.push({ label: `${ep.brand || "TBD"} ${ep.size ? `${ep.size}"` : "size TBD"} ${ep.displayType === "projector" ? "Projector" : "TV"}${ep.confirm?.length && ep.size ? " — size unconfirmed" : ""}`,
           status: gray ? "prewire" : ep.status || "new", where: z.name, confirm: !!ep.confirm?.length });
+        // what the run itself costs: a Bullet Train (sized by the room's distance) and the eARC extender kit
+        if ((sol.connections || []).some(c => c.to === ep.id && c.signal === "video" && c.run === "bullet")) {
+          const b = bulletFor(z);
+          items.push({ label: partName(b.ref, `AVPro Bullet Train fiber HDMI${b.m ? ` (${b.m} m)` : " (length?)"}`), status: gray ? "prewire" : "new", where: z.name, confirm: !b.ref });
+        }
+        if (!gray && (sol.connections || []).some(c => c.from === ep.id && c.signal === "audioReturn" && c.earcKit))
+          items.push({ label: partName("avpro-ac-aex-dearc-kit", "AVPro AC-AEX-DEARC-KIT eARC extender"), status: "new", where: z.name });
       } else {
         items.push({ label: `Speakers, ${spkDescr(ep)}`, status: gray ? "prewire" : ep.status || "new", where: z.name });
       }
@@ -635,7 +646,7 @@ function bomComparePages(job, ix, adviseResult, opts, label) {
   const sols = (base.solutions || []).slice(0, 4);         // 4 columns max on 11×17
   const cols = sols.map((sol, i) => {
     const ej = effectiveJob(base, i);
-    return { sol, ej, items: takeoffItems(ej, indexJob(ej), { solution: i }) };
+    return { sol, ej, items: takeoffItems(ej, indexJob(ej), { solution: i, catalog: opts.catalog }) };
   });
   // union of line items, grouped NEW → OFE → PRE-WIRE, in first-appearance order
   const order = { new: 0, ofe: 1, prewire: 2 };

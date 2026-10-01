@@ -3189,6 +3189,13 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t("AXION matrix: a TV off its HDBaseT output is quoted the receiver alone (AC-EX70-444-RNE), powered by the matrix — no rack outlet",
       baluns.length >= 2 && (pq.match(/AC-EX70-444-RNE/g) || []).length === baluns.length && !/AC-EX70-444-KIT/.test(pq) &&
       !a.power[0].loads.some(l => /AC-EX70/.test(l.what)), pq.match(/AC-EX70-\S+/g)?.join(",")); }
+  { // the takeoff page names the same parts the quote does
+    const row = (j, re) => { const L = loadJob(j); return takeoffItems(L.job, L.ix, { catalog: CAT }).find(r => re.test(r.label)); };
+    const sav = build("mxnet-savant"), ax = build("savant-whole-home");
+    const enc = row(sav, /AC-MXNET-1G-AVDM-EV2/), rne = row(ax, /AC-EX70-444-RNE/);
+    t("takeoff: adapters listed by part — 3× AVDM encoders on MXNet + Savant, the RNE receiver per AXION-fed TV (generic name without a catalog)",
+      enc?.qty === 3 && rne?.qty === ax.solutions[0].companions.filter(c => c.type === "balun").length && !row(ax, /AC-EX70-444-KIT/) &&
+      (() => { const L = loadJob(ax); return takeoffItems(L.job, L.ix).some(r => /HDBaseT balun/.test(r.label)); })(), JSON.stringify([enc, rne])); }
 }
 
 /* ---------- walkthrough 2026-09-30: Savant whole-home + an Atmos theater, a far pool house, a short den ----------
@@ -3198,6 +3205,10 @@ for (const [name, raw] of Object.entries(fixtures)) {
 {
   const W = await (await fetch("./test-fixtures/walk-savant-atmos.json")).json();
   const CAT = await (await fetch("./catalog.json")).json();
+  { const L = loadJob(structuredClone(W)), items = takeoffItems(L.job, L.ix, { catalog: CAT });
+    const bt = items.filter(r => /AC-BTSSF-10KUHD/.test(r.label)), kit = items.filter(r => /AC-AEX-DEARC-KIT/.test(r.label));
+    t("walkthrough takeoff: each Bullet Train run listed at its room's length, the theater's eARC extender kit listed with it",
+      bt.reduce((n, r) => n + r.qty, 0) === 3 && kit.length === 1 && kit[0].where === "Theater", JSON.stringify(bt.map(r => [r.label, r.where]))); }
   const PT = await import("./ports.js"), PG = await import("./pages.js");
   const { job, ix } = loadJob(structuredClone(W)); const a = advise(job, ix, CAT), cs = job.solutions[0].connections;
   const map = PT.assignPorts(job, ix, CAT, 0);

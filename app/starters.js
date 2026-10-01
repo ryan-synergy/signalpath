@@ -112,8 +112,8 @@ export const STARTERS = [
       src("cablebox", "Cable Box"), src("atv", "Apple TV"),
       dev("music", "source", "savant-pav-sms2001"),
       dev("matrix", "videoMatrix", "avpro-ac-axion-8"),   // Ryan 2026-09-30: when it's a matrix, it's an AXION
-      dev("sav-in", "audioInputModule", "savant-avb-input-module"),
-      dev("sav-out", "audioOutputModule", "savant-avb-output-module"),
+      dev("sav-in", "audioInputModule", "savant-pav-aim7c"),
+      dev("sav-out", "audioOutputModule", "savant-pav-aom8c"),
       { id: "avb", type: "avbSwitch", model: "AVB switch (Avnu-certified)", status: "new" },
       dev("amp", "amp", "anthem-mdx-16", null, { zones: 8 }),
       dev("power", "power", "wattbox-800-ipvm-12"),

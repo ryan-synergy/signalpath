@@ -40,6 +40,13 @@ export function balunRxOnly(comp, sol, catalog) {
   return !!(d && catalogFor(d, catalog)?.flags?.includes("hdbasetOut"));
 }
 
+// the part a quote or takeoff lists for an adapter: companionRef, with the job's MXNet generation
+// read from its racks and an AXION-fed balun reduced to its receiver (exports and takeoff agree)
+export function companionSku(comp, sol, catalog) {
+  const tenG = (sol.racks || []).flatMap(r => r.devices || []).some(d => catalog?.devices?.[d.catalogRef]?.gen === "10g");
+  return balunRxOnly(comp, sol, catalog) ? "avpro-ac-ex70-444-rne" : companionRef(comp, tenG);
+}
+
 // sizing profile for gear the job names but doesn't link: a catalog entry may carry
 // `match` (a name pattern, e.g. "^apple ?tv") — used for watts, rack height and
 // jacks only; the quote exports still read catalogRef alone

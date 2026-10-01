@@ -21,7 +21,7 @@ import { loadJob, validate, advise, effectiveJob, expandChannels } from "./engin
 import { wireRuns } from "./pages.js";
 import { readHookup, bulletFor } from "./hookup.js";
 import { vocabularyText } from "./commands.js";
-import { NET_ROLE_NAME, balunRxOnly } from "./network.js";
+import { NET_ROLE_NAME, companionSku } from "./network.js";
 import { isAsBuilt, asBuiltChanges } from "./asbuilt.js";
 import { describeNode, adapterName, isOutdoorZone, SPEAKER_SETUP, STATUS_NAME, SCOPE_NAME, PLATFORM_NAME, AUDIO_NET_NAME, signalName } from "./names.js";
 
@@ -104,7 +104,6 @@ function quoteRooms(job, sol, catalog, adv) {
     const L = rooms.get(k).lines;
     if (L.has(key)) L.get(key).qty += qty; else L.set(key, { qty, ...line });
   };
-  const tenG = (sol.racks || []).flatMap(r => r.devices || []).some(d => cat(d.catalogRef)?.gen === "10g");
 
   // the rack(s)
   for (const r of sol.racks || []) {
@@ -115,7 +114,7 @@ function quoteRooms(job, sol, catalog, adv) {
     }
     // encoders ride with their sources in the rack
     for (const e of (sol.companions || []).filter(e => e.type === "enc" && (r.devices || []).some(d => d.id === e.serves))) {
-      const c = cat(e.avdm ? (tenG ? "avpro-mxnet-10g-tcvr-avdm" : "avpro-mxnet-1g-avdm-ev2") : tenG ? "avpro-mxnet-10g-tcvr" : e.dante ? "avpro-mxnet-1g-dante-ev2" : "avpro-mxnet-1g-ev2");
+      const c = cat(companionSku(e, sol, catalog));
       add(floor, room, "included", fromCatalog(c));
     }
   }
@@ -160,9 +159,7 @@ function quoteRooms(job, sol, catalog, adv) {
     if (prewire) continue;
     // what sits at the TV: extenders, decoders, Dante encoders
     for (const comp of (sol.companions || []).filter(c => z.endpoints?.some(e => e.id === c.serves))) {
-      const ref = comp.type === "axis" ? "avpro-acp-axis2" : comp.type === "axis16" ? "avpro-acp-axis16"
-        : comp.type === "dec" ? (tenG ? "avpro-mxnet-10g-tcvr" : comp.dante ? "avpro-mxnet-1g-dante-dv2" : "avpro-mxnet-1g-dv2")
-        : comp.type === "balun" ? (balunRxOnly(comp, sol, catalog) ? "avpro-ac-ex70-444-rne" : "avpro-ac-ex70-444-kit") : null;   // the AVPro kit; off an AXION, just its receiver
+      const ref = companionSku(comp, sol, catalog);   // the AVPro balun kit (off an AXION, just its receiver), decoders, AXIS
       const p = ref && cat(ref) ? fromCatalog(cat(ref))
         : { mfr: "Unspecified", model: comp.type === "balun" ? "HDBaseT Extender Set" : `${adapterName(comp)} Set`, unsure: true };
       add(floor, z.name, scope, p);

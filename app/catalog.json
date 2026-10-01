@@ -4958,6 +4958,43 @@
       "lengthM": 40,
       "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 40 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. ARC only back over the cable (eARC only up to 10 m) \u2014 Atmos from the TV apps needs the AC-AEX-DEARC-KIT. Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5\u201340 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
     },
+    "avpro-ac-ex70-444-rne": {
+      "brand": "AVPro Edge",
+      "model": "AC-EX70-444-RNE",
+      "partNo": "AC-EX70-444-RNE",
+      "type": "balun",
+      "inputs": {},
+      "outputs": {
+        "hdmi": 1,
+        "analog": 1
+      },
+      "lan": 0,
+      "powerMaxW": 12,
+      "flags": [],
+      "verified": true,
+      "notes": "HDBaseT RECEIVER only \u2014 the TV end, for AVPro's HDBaseT matrices (AXION): the matrix's HDBaseT output is the transmitter and powers it over the cable (PoH), so no TX and no PSU in the rack. 18Gbps with ICT, 4K60 4:4:4, HDR10 / HDR10+ / Dolby Vision / HLG; 70 m 4K / 100 m 1080p on Cat6A. HDMI audio passes everything (Atmos / TrueHD / DTS:X); its extracted 2ch port is PCM only, no downmix. No ARC/eARC back. 12 W max. avproglobal.com/products/ac-ex70-444-rne, 2026-09-30",
+      "ports": [
+        {
+          "label": "HDBaseT IN (PoH)",
+          "dir": "in",
+          "conn": "hdbaset",
+          "audio": "full"
+        },
+        {
+          "label": "HDMI OUT",
+          "dir": "out",
+          "conn": "hdmi",
+          "audio": "full"
+        },
+        {
+          "label": "AUDIO OUT (2ch, no downmix)",
+          "dir": "out",
+          "conn": "analog",
+          "audio": "pcm2"
+        }
+      ],
+      "portsSource": "https://www.avproglobal.com/products/ac-ex70-444-rne (rear panel from the spec table, 2026-09-30)"
+    },
     "avpro-ac-axion-4": {
       "brand": "AVPro Edge",
       "model": "AC-AXION-4",
@@ -4978,7 +5015,8 @@
       },
       "flags": [
         "audioMatrix",
-        "downmix2ch"
+        "downmix2ch",
+        "hdbasetOut"
       ],
       "verified": true,
       "notes": "4x4 18G matrix, each output mirrored HDMI + HDBaseT (PoH, ICT above 10.2G; audio unimpeded — Atmos/DTS:X pass). AUDIO 1–4: each block = Toslink + balanced 5-pin, ALWAYS downmixed to 2ch (automatic, incl. Atmos/DTS:X; 7 presets per input) — the matrix to put in front of 2-channel amp zones. No ARC. Ports verified 2026-09-29 from the rear panel / manual — avproglobal.com/products/ac-axion-4",
@@ -5134,7 +5172,8 @@
       },
       "flags": [
         "audioMatrix",
-        "downmix2ch"
+        "downmix2ch",
+        "hdbasetOut"
       ],
       "verified": true,
       "notes": "8x8 18G matrix, each output mirrored HDMI + HDBaseT (PoH, ICT above 10.2G; audio unimpeded — Atmos/DTS:X pass). AUDIO 1–8: each block = Toslink + balanced 5-pin, ALWAYS downmixed to 2ch (automatic, incl. Atmos/DTS:X; 7 presets per input) — the matrix to put in front of 2-channel amp zones. No ARC. Ports verified 2026-09-29 from the rear panel / manual — avproglobal.com/products/ac-axion-8",

@@ -743,7 +743,10 @@ function placeOnce(job, ix, opts, variant) {
     if (s.companions[c.from] && devColOf[s.companions[c.from].serves] === "A") abDemand++; // ENC-chip outputs
     if (fCol === "A" && toZoneSide) abDemand++;   // direct colA→zone feeds rise in the AB gap
   }
-  const gapAB = Math.max(80, abDemand * 12 + 24);
+  // encoder chips sit IN the A|B gap; one with two outputs (an AVDM: video + audio) needs its
+  // risers beside it as well, so the gap grows by a chip's width (only then — no other sheet moves)
+  const twoOutChips = (sol.companions || []).filter(k => devColOf[k.serves] === "A" && visConns.filter(c => c.from === k.id).length > 1).length;
+  const gapAB = Math.max(80, abDemand * 12 + 24) + (twoOutChips ? PL.chip.w + 12 : 0);
   const gapBC = Math.max(60, bcDemand * 12 + 24);
   const colBx = PL.colA + PL.smallTile.w + gapAB;
   const colCx = colBx + PL.chassisTile.w + gapBC;
@@ -2565,11 +2568,25 @@ export function route(job, ix, placement, opts = {}) {
   }
 
   function routeChipToDev(conn, chip, b) {
-    // chip badge output exits toward the device it feeds (badge exemption)
-    const ccy = chip.y + chip.h / 2, skip = new Set([chip.id, b.id]);
+    // chip badge output exits toward the device it feeds (badge exemption). A chip with two
+    // outputs (an AVDM encoder: video to the switch, audio to the Savant input module) has two
+    // jacks: video leaves the top half of its edge, audio the bottom half
+    const outs = visConns.filter(c => c.from === chip.id);
+    const ccy = chip.y + chip.h / 2 + (outs.length > 1 ? (conn.signal === "video" ? -chip.h / 4 : chip.h / 4) : 0), skip = new Set([chip.id, b.id]);
     const chipR = chip.x + chip.w;
     const ty = takeLeftPort(b, leftPlan[wireId(conn)] ?? ccy);
     const cands = [];
+    // a chip's second (audio) output drops right beside the chip, inside its video wire's turn
+    if (outs.length > 1 && conn.signal !== "video" && chipR <= b.x) {
+      // several such drops into one box nest: the lowest chip hugs the chips, the highest
+      // takes the outermost lane — so no drop cuts across a lower chip's exit
+      const sibs = visConns.filter(c => c.to === b.id && c.signal === conn.signal && chipById[c.from] && visConns.filter(k => k.from === c.from).length > 1)
+        .map(c => chipById[c.from]).sort((p, q) => q.y - p.y);
+      const rank = Math.max(0, sibs.findIndex(k => k.id === chip.id));
+      const hx = alloc(usedV, chipR + 6 + rank * RT.lane, Math.min(ccy, ty), Math.max(ccy, ty), nWire, +1,
+        x => segBlocked(x, Math.min(ccy, ty), x, Math.max(ccy, ty), skip), [chipR + 4, b.x - 4]);
+      if (hx != null) cands.push([[chipR, ccy], [hx, ccy], [hx, ty], [b.x, ty]]);
+    }
     if (chipR <= b.x) {
       if (Math.abs(ty - ccy) < 1) cands.push([[chipR, ccy], [b.x, ty]]);
       if (b.x - chipR >= 20) {

@@ -21,11 +21,12 @@ export const ADAPTER = {
   dec: { name: "MXNet decoder", tag: "DEC" },
   ddec: { name: "MXNet Dante decoder", tag: "DEC·D" },     // dec + dante:true (AC-MXNET-1G-DANTE-DV2)
   denc: { name: "MXNet Dante encoder", tag: "ENC·D" },     // enc + dante:true (AC-MXNET-1G-DANTE-EV2)
+  aenc: { name: "MXNet audio-breakout encoder (AVDM)", tag: "ENC·A" },   // enc + avdm:true (AC-MXNET-1G-AVDM-EV2)
   axis: { name: "AXIS2 (TV audio → Dante)", tag: "AXIS" },
   axis16: { name: "AXIS16 (surround → Dante)", tag: "AX16" },
 };
 // takes a type string or the companion itself (a Dante decoder is a dec with dante:true)
-const adapterKey = t => t && typeof t === "object" ? (t.dante && (t.type === "dec" || t.type === "enc") ? "d" + t.type : t.type) : t;
+const adapterKey = t => t && typeof t === "object" ? (t.avdm && t.type === "enc" ? "aenc" : t.dante && (t.type === "dec" || t.type === "enc") ? "d" + t.type : t.type) : t;
 export const adapterName = t => ADAPTER[adapterKey(t)]?.name || String(adapterKey(t) || "adapter");
 export const adapterTag = t => ADAPTER[adapterKey(t)]?.tag || String(adapterKey(t) || "").toUpperCase();
 

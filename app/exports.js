@@ -21,7 +21,7 @@ import { loadJob, validate, advise, effectiveJob, expandChannels } from "./engin
 import { wireRuns } from "./pages.js";
 import { readHookup, bulletFor } from "./hookup.js";
 import { vocabularyText } from "./commands.js";
-import { NET_ROLE_NAME } from "./network.js";
+import { NET_ROLE_NAME, balunRxOnly } from "./network.js";
 import { isAsBuilt, asBuiltChanges } from "./asbuilt.js";
 import { describeNode, adapterName, isOutdoorZone, SPEAKER_SETUP, STATUS_NAME, SCOPE_NAME, PLATFORM_NAME, AUDIO_NET_NAME, signalName } from "./names.js";
 
@@ -115,7 +115,7 @@ function quoteRooms(job, sol, catalog, adv) {
     }
     // encoders ride with their sources in the rack
     for (const e of (sol.companions || []).filter(e => e.type === "enc" && (r.devices || []).some(d => d.id === e.serves))) {
-      const c = cat(tenG ? "avpro-mxnet-10g-tcvr" : e.dante ? "avpro-mxnet-1g-dante-ev2" : "avpro-mxnet-1g-ev2");
+      const c = cat(e.avdm ? (tenG ? "avpro-mxnet-10g-tcvr-avdm" : "avpro-mxnet-1g-avdm-ev2") : tenG ? "avpro-mxnet-10g-tcvr" : e.dante ? "avpro-mxnet-1g-dante-ev2" : "avpro-mxnet-1g-ev2");
       add(floor, room, "included", fromCatalog(c));
     }
   }
@@ -162,7 +162,7 @@ function quoteRooms(job, sol, catalog, adv) {
     for (const comp of (sol.companions || []).filter(c => z.endpoints?.some(e => e.id === c.serves))) {
       const ref = comp.type === "axis" ? "avpro-acp-axis2" : comp.type === "axis16" ? "avpro-acp-axis16"
         : comp.type === "dec" ? (tenG ? "avpro-mxnet-10g-tcvr" : comp.dante ? "avpro-mxnet-1g-dante-dv2" : "avpro-mxnet-1g-dv2")
-        : comp.type === "balun" ? "avpro-ac-ex70-444-kit" : null;   // Ryan 2026-09-29: the balun is an AVPro kit
+        : comp.type === "balun" ? (balunRxOnly(comp, sol, catalog) ? "avpro-ac-ex70-444-rne" : "avpro-ac-ex70-444-kit") : null;   // the AVPro kit; off an AXION, just its receiver
       const p = ref && cat(ref) ? fromCatalog(cat(ref))
         : { mfr: "Unspecified", model: comp.type === "balun" ? "HDBaseT Extender Set" : `${adapterName(comp)} Set`, unsure: true };
       add(floor, z.name, scope, p);

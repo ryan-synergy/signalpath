@@ -83,7 +83,7 @@ const withIds = list => list.map(p => ({ ...p, id: p.label }));
 export function adapterRef(c, tenG = false) {
   if (c.type === "axis") return "avpro-acp-axis2";
   if (c.type === "axis16") return "avpro-acp-axis16";
-  if (c.type === "enc") return tenG ? "avpro-mxnet-10g-tcvr" : c.dante ? "avpro-mxnet-1g-dante-ev2" : "avpro-mxnet-1g-ev2";
+  if (c.type === "enc") return c.avdm ? (tenG ? "avpro-mxnet-10g-tcvr-avdm" : "avpro-mxnet-1g-avdm-ev2") : tenG ? "avpro-mxnet-10g-tcvr" : c.dante ? "avpro-mxnet-1g-dante-ev2" : "avpro-mxnet-1g-ev2";
   if (c.type === "dec") return tenG ? "avpro-mxnet-10g-tcvr" : c.dante ? "avpro-mxnet-1g-dante-dv2" : "avpro-mxnet-1g-dv2";
   if (c.type === "balun") return "avpro-ac-ex70-444-kit";
   return null;

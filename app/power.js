@@ -7,7 +7,7 @@
    Pure: advise() attaches it (advise().power), the Network & Power page
    prints it, the takeoff and exports read the WattBox like any rack gear. */
 
-import { companionRef, specFor } from "./network.js";
+import { companionRef, specFor, balunRxOnly } from "./network.js";
 import { describeNode } from "./names.js";
 
 // spare outlets to leave: 20%, never fewer than 2 (the ISP modem and a router always show up)
@@ -60,7 +60,7 @@ export function powerPlan(job, ix, catalog, netPlans = []) {
     // cable (PoH), so it plugs in at the rack TX — on the WattBox, where it can be rebooted.
     // Only included rooms (a pre-wire room's balun isn't on this job's rack yet).
     for (const comp of Object.values(s.companions)) {
-      if (comp.type !== "balun" || !ix.endpointsById[comp.serves]) continue;
+      if (comp.type !== "balun" || !ix.endpointsById[comp.serves] || balunRxOnly(comp, sol, catalog)) continue;   // an AXION powers its receivers
       const zone = ix.zonesById[ix.endpointZone[comp.serves]];
       if ((zone?.scope || "included") !== "included") continue;
       if (!(sol.connections || []).some(k => k.to === comp.id && s.devices[k.from])) continue;

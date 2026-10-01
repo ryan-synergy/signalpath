@@ -24,9 +24,20 @@ export function companionRef(comp, tenG) {
   if (comp.type === "axis") return "avpro-acp-axis2";
   if (comp.type === "axis16") return "avpro-acp-axis16";
   if (comp.type === "balun") return "avpro-ac-ex70-444-kit";
-  if (comp.type === "enc") return tenG ? "avpro-mxnet-10g-tcvr" : comp.dante ? "avpro-mxnet-1g-dante-ev2" : "avpro-mxnet-1g-ev2";
+  // an AVDM encoder also breaks the source's audio out as downmixed analog stereo (into a Savant input module)
+  if (comp.type === "enc") return comp.avdm ? (tenG ? "avpro-mxnet-10g-tcvr-avdm" : "avpro-mxnet-1g-avdm-ev2") : tenG ? "avpro-mxnet-10g-tcvr" : comp.dante ? "avpro-mxnet-1g-dante-ev2" : "avpro-mxnet-1g-ev2";
   if (comp.type === "dec") return tenG ? "avpro-mxnet-10g-tcvr" : comp.dante ? "avpro-mxnet-1g-dante-dv2" : "avpro-mxnet-1g-dv2";
   return null;
+}
+
+// a balun fed straight from an HDBaseT matrix output (the AXIONs: every output is HDMI + HDBaseT
+// with PoH) — the matrix is the transmitter and powers the receiver over the cable, so the job
+// needs only the receiver (AC-EX70-444-RNE) and no PSU in the rack (Ryan 2026-09-30: AXION matrices)
+export function balunRxOnly(comp, sol, catalog) {
+  if (comp?.type !== "balun") return false;
+  const feed = (sol.connections || []).find(c => c.to === comp.id && c.signal === "video");
+  const d = feed && (sol.racks || []).flatMap(r => r.devices || []).find(x => x.id === feed.from);
+  return !!(d && catalogFor(d, catalog)?.flags?.includes("hdbasetOut"));
 }
 
 // sizing profile for gear the job names but doesn't link: a catalog entry may carry

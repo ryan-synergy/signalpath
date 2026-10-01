@@ -3169,6 +3169,28 @@ for (const [name, raw] of Object.entries(fixtures)) {
   }
 }
 
+/* ---------- Synergy's usual systems (Ryan 2026-09-30): MXNet EV2 video + Savant / Dante / MDX-16 audio; a matrix is an AXION ---------- */
+{
+  const S = await import("./starters.js"), C = await import("./commands.js"), X = await import("./exports.js");
+  const CAT = await (await fetch("./catalog.json")).json();
+  t("starters: MXNet first — MXNet + Savant audio, MXNet + Dante, MXNet + MDX-16 — then the theater, the AXION matrix, blank",
+    S.STARTERS.map(x => x.id).join(",") === "mxnet-savant,dante-director,mxnet,theater-receiver,savant-whole-home,blank");
+  const blank = () => ({ generator: "SignalPath", schemaVersion: 1, job: { name: "n", client: { name: "c" }, revisions: [] }, house: { areas: [], zones: [] },
+    solutions: [{ id: "s", name: "A", platforms: [], racks: [{ id: "rack-main", name: "Rack", devices: [] }], localDevices: [], companions: [], connections: [], annotations: [] }] });
+  const build = id => C.planCommands(S.applyStarter(blank(), S.STARTERS.find(x => x.id === id), CAT), 0, [{ op: "add_zones", text: "family room 5.1 75 sony matrix, theater 7.1 85 avr, kitchen stereo 55 matrix, patio landscape 8" }], CAT).job;
+  { const j = build("mxnet-savant"), pq = X.planQueueFiles(j, 0, CAT)[0].text; const L = loadJob(j), a = advise(L.job, L.ix, CAT), st = a.setup[0].setup || a.setup[0];
+    t("MXNet + Savant: AVDM encoders break each source's audio out (downmixed) into the Savant input module — every source stays on Auto",
+      /3 \| AVPro Edge \| AC-MXNET-1G-AVDM-EV2/.test(pq) && /PAV-AIM7C-20/.test(pq) && j.solutions[0].connections.filter(c => /^enc-/.test(c.from) && c.to === "sav-in").length === 3 &&
+      st.sources.every(x => /Auto/.test(x.setting)) && !st.notes.some(n => n.code === "downres-surround"), JSON.stringify(st.sources.map(x => x.setting))); }
+  { const j = build("savant-whole-home"), pq = X.planQueueFiles(j, 0, CAT)[0].text; const L = loadJob(j), a = advise(L.job, L.ix, CAT), st = a.setup[0].setup || a.setup[0];
+    const baluns = j.solutions[0].companions.filter(c => c.type === "balun");
+    t("AXION matrix: its audio outs downmix, so the input module gets stereo and the receivers keep surround (no downres)",
+      /AC-AXION-8/.test(pq) && !st.notes.some(n => n.code === "downres-surround"));
+    t("AXION matrix: a TV off its HDBaseT output is quoted the receiver alone (AC-EX70-444-RNE), powered by the matrix — no rack outlet",
+      baluns.length >= 2 && (pq.match(/AC-EX70-444-RNE/g) || []).length === baluns.length && !/AC-EX70-444-KIT/.test(pq) &&
+      !a.power[0].loads.some(l => /AC-EX70/.test(l.what)), pq.match(/AC-EX70-\S+/g)?.join(",")); }
+}
+
 /* ---------- walkthrough 2026-09-30: Savant whole-home + an Atmos theater, a far pool house, a short den ----------
    Built through quick-add ("theater 7.1.4 98 sony avr bullet, pool house 5.1 75 avr bullet far, …") the
    same day, before the separate-feeds default — its receivers feed their TVs, so it now stands for the
@@ -3211,7 +3233,12 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const flipped = [], hopped = [];
     for (const l of Object.values(byT)) {
       for (const a of l) for (const b of l) if (a.pts[0][1] < b.pts[0][1] - 1 && a.pts.at(-1)[1] > b.pts.at(-1)[1] + 1) flipped.push(`${a.id} / ${b.id}`);
-      for (const w of l) if (w.hops.length) hopped.push(w.id);
+      // a hop between two feeds into the SAME box is an ordering failure; one against a wire bound
+      // elsewhere (an AVDM encoder's audio dropping past its neighbours' video) is geometry, not order
+      const cross = (a, b) => a.pts.slice(1).some((q, i) => b.pts.slice(1).some((r, k) => { const [p1, p2, p3, p4] = [a.pts[i], q, b.pts[k], r];
+        const [h, v] = p1[1] === p2[1] ? [[p1, p2], [p3, p4]] : [[p3, p4], [p1, p2]]; if (h[0][1] !== h[1][1] || v[0][0] !== v[1][0]) return false;
+        const x = v[0][0], y = h[0][1]; return x > Math.min(h[0][0], h[1][0]) + 1 && x < Math.max(h[0][0], h[1][0]) - 1 && y > Math.min(v[0][1], v[1][1]) + 1 && y < Math.max(v[0][1], v[1][1]) - 1; }));
+      for (const w of l) if (l.some(o => o !== w && cross(w, o))) hopped.push(w.id);
     }
     t(`input order — ${st.id} starter: rack feeds land in source order, no hops on them`, !flipped.length && !hopped.length, flipped.concat(hopped).join(", "));
   }

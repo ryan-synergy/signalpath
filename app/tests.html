@@ -3539,6 +3539,9 @@ for (const [name, raw] of Object.entries(fixtures)) {
     lit(on, "power", KIND_STYLE.power.edge) === U.power.outlets.used && lit(on, "avr", KIND_STYLE.avr.edge) === U.avr.in.used);
   t("lights: a 26-port switch groups its windows (2 ports each) and prints used/cap",
     [...on.querySelectorAll('g.devtile[data-device="sw"] text')].some(x => x.textContent === `${U.sw.ports.used}/${U.sw.ports.cap}`));
+  t("lights: hovering a box's lights says them in words (ports, outlets, inputs, amp zones)",
+    [...on.querySelectorAll('g.devtile[data-device="sw"] g.lights > title')].some(x => x.textContent === `Ports: ${U.sw.ports.used} of ${U.sw.ports.cap} used · ${U.sw.ports.cap - U.sw.ports.used} open`) &&
+    [...on.querySelectorAll("g.lights > title")].some(x => /^Amp zones: \d+ of \d+ used/.test(x.textContent)) && [...on.querySelectorAll("g.lights > title")].some(x => /^Outlets: /.test(x.textContent)));
   const over = doc(render(job, ix, p, rt, { usage: { ...U, power: { outlets: { used: 21, cap: 18 } } } }));
   t("lights: over capacity lights every window, turns the last red and says how far over",
     lit(over, "power", "#e5484d") === 1 && [...over.querySelectorAll('g.devtile[data-device="power"] text')].some(x => x.textContent === "+3"));

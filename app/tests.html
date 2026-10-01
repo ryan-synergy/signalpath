@@ -2374,7 +2374,13 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const blank = () => ({ generator: "SignalPath", schemaVersion: 1, job: { name: "n", client: { name: "c" }, revisions: [] },
     house: { areas: [], zones: [] }, solutions: [{ id: "s", name: "A", platforms: [], racks: [{ id: "rack-main", name: "Rack", devices: [] }], localDevices: [], companions: [], connections: [], annotations: [] }] });
   const j0 = S.applyStarter(blank(), S.STARTERS.find(x => x.id === "dante-director"), CAT);
+  // the starters bring their own house LAN switch since 2026-10-01 — taken out here so the virtual one shows
+  const withLan = C.planCommands(structuredClone(j0), 0, [{ op: "add_zones", text: "kitchen stereo 55 matrix, family room 5.1 75 matrix" }], CAT).job;
+  j0.solutions[0].racks[0].devices = j0.solutions[0].racks[0].devices.filter(d => d.id !== "lan");
   const job = C.planCommands(j0, 0, [{ op: "add_zones", text: "kitchen stereo 55 matrix, family room 5.1 75 matrix, office stereo 43, guest prewire tv 50" }], CAT).job;
+  { const L = loadJob(withLan), aw = advise(L.job, L.ix, CAT);
+    t("network: the MXNet starters bring a house LAN switch (Ubiquiti Pro 24 PoE) — the TVs land on it, the Dante switch keeps the Dante gear",
+      aw.network.some(p => p.switch === "lan" && p.rows.some(r => /TV/.test(r.what || r.where || ""))) && !aw.network.some(p => p.virtual) && aw.network.some(p => p.switch === "dante-sw")); }
   const { job: J, ix } = loadJob(job);
   const a = advise(J, ix, CAT);
   const plan = id => a.network.find(p => p.switch === id);
@@ -2394,8 +2400,9 @@ for (const [name, raw] of Object.entries(fixtures)) {
     lan.rows.some(r => r.id === "cbx" && r.net.includes("control")) && ["atv1", "atv2", "power"].every(id => lan.rows.some(r => r.id === id)));
   t("LAN: no LAN switch → advisor sizes one", a.notes.some(n => n.code === "lan-no-switch" && /USW/.test(n.msg)));
   const pw = a.power.find(p => p.solution === "s");
+  // the starters' WB-800VPS-IPVM-18 since 2026-10-01
   t("power: the starter's WattBox covers the rack; PoE gear takes no outlet",
-    pw.units.length === 1 && pw.supply === 12 && pw.need <= 12 && pw.poe.some(p => p.id === "dante-in") && !pw.loads.some(l => l.id === "enc-atv1"));
+    pw.units.length === 1 && pw.supply === 18 && pw.need <= 18 && pw.poe.some(p => p.id === "dante-in") && !pw.loads.some(l => l.id === "enc-atv1"));
   const noWb = structuredClone(job); noWb.solutions[0].racks[0].devices = noWb.solutions[0].racks[0].devices.filter(d => d.type !== "power");
   { const L = loadJob(noWb), a2 = advise(L.job, L.ix, CAT);
     t("power: no power conditioner → advisor specs the smallest WattBox with 20% spare", a2.notes.some(n => n.code === "power-none" && /WB-800/.test(n.msg))); }
@@ -2466,7 +2473,8 @@ for (const [name, raw] of Object.entries(fixtures)) {
     r.items.filter(i => i.kind === "shelf" && !i.kit).every(i => i.members.length <= 3 && i.u === 2) && r.items.some(i => i.kind === "shelf" && i.members.some(m => /CBOX/.test(m))));
   const tiers = r.items.map(i => i.tier);
   t("rack: build order — network above control above sources above amps, power last",
-    tiers.every((x, i) => !i || x >= tiers[i - 1]) && r.items[r.items.length - 1].type === "power");
+    // power last — or, for the starters' vertical WattBox strip (0U), on the rear rails
+    tiers.every((x, i) => !i || x >= tiers[i - 1]) && (r.items[r.items.length - 1].type === "power" || r.rear.some(n => /WattBox|WB-800VPS/.test(n))));
   t("rack: a 1U vent panel under each amp / receiver",
     r.items.some((it, i) => it.kind === "vent" && r.items[i - 1]?.tier === 4));
   t("rack: U used = sum of items, spare against 42U", r.used === r.items.reduce((n, i) => n + i.u, 0) && r.size === 42 && r.spare === 42 - r.used);

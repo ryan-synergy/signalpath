@@ -63,7 +63,8 @@ export const STARTERS = [
       dev("dante-sw", "networkSwitch", "avpro-mxnet-sw24e", null, { danteSwitch: true }),
       dev("dante-in", "danteBridge", "audiocontrol-acp-dante-e-poe"),
       dev("director", "amp", "audiocontrol-m6800d"),
-      dev("power", "power", "wattbox-800-ipvm-12"),
+      dev("lan", "networkSwitch", "ubiquiti-usw-pro-24-poe"),   // house LAN (the Dante switch stays its own)
+      dev("power", "power", "wattbox-800vps-ipvm-18"),
     ],
     companions: [
       { id: "enc-atv1", type: "enc", serves: "atv1", auto: true },
@@ -86,7 +87,8 @@ export const STARTERS = [
       dev("sw", "avSwitch", "avpro-mxnet-sw12"),
       dev("cbx", "controlBox", "avpro-mxnet-cbox-ha"),
       dev("amp", "amp", "anthem-mdx-16", null, { zones: 8 }),
-      dev("power", "power", "wattbox-800-ipvm-12"),
+      dev("lan", "networkSwitch", "ubiquiti-usw-pro-24-poe"),
+      dev("power", "power", "wattbox-800vps-ipvm-18"),
     ],
     companions: [
       { id: "enc-atv1", type: "enc", serves: "atv1", auto: true },

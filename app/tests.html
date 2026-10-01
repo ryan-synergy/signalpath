@@ -3134,8 +3134,9 @@ for (const [name, raw] of Object.entries(fixtures)) {
         visCross(R.rt) <= visCross(R0.rt) && ret?.cls === "trunk" && ret.pts.at(-1)[0] === sin.x && !legal(R.p, R.rt).length);
       const H = await (await fetch("./test-fixtures/harlow-dante.json")).json();
       const got = { estate: visCross(draw(fixtures.estate, "bundle").rt), stress: visCross(draw(fixtures.stress, "bundle").rt), harlow: visCross(draw(H, "bundle").rt) };
-      t(`trunks — rip-up holds its gains: Estate ${got.estate} (≤ 14, was 15), stress ${got.stress} (≤ 56, was 66), Harlow ${got.harlow} (≤ 30, was 32)`,
-        got.estate <= 14 && got.stress <= 56 && got.harlow <= 30);
+      // Harlow 30 → 31 on 2026-10-01: its amps now stack in room order, which saves 4 lane swaps inside the ribbons for this 1
+      t(`trunks — rip-up holds its gains: Estate ${got.estate} (≤ 14, was 15), stress ${got.stress} (≤ 56, was 66), Harlow ${got.harlow} (≤ 31, was 32)`,
+        got.estate <= 14 && got.stress <= 56 && got.harlow <= 31);
     }
     { // ribbon layout (Ryan 2026-10-01): one lane per wire, corners that meet, every wire on its own jack
       const H = await (await fetch("./test-fixtures/harlow-dante.json")).json(), gen = F.jobGenerator(1, { extras: true });
@@ -3164,6 +3165,15 @@ for (const [name, raw] of Object.entries(fixtures)) {
       const st = draw(fixtures.stress, "ribbon"), svgS = render(st.job, st.ix, st.p, st.rt, { trunks: "ribbon" });
       t("ribbons — stress: the 25-wire amp riser gathers into one bar with its ×N; the rest of that trunk still draws lanes (squeezed past 10)",
         /class="bustick"[^>]*>×2\d</.test(svgS) && /stroke-width="1\.1"/.test(svgS) && /stroke-width="1\.4"/.test(svgS));
+    }
+    { // amps stack in the order of the rooms they feed, so the speaker ribbon fans out without swapping lanes
+      const Hj = await (await fetch("./test-fixtures/harlow-dante.json")).json(), d = draw(Hj, "ribbon");
+      const amps = d.p.racks.flatMap(r => r.devices).filter(x => x.col === "C").sort((a, b) => a.y - b.y).map(x => x.id);
+      const zx = id => d.p.zones.find(z => z.id === id).x;
+      const first = a => Math.min(...d.job.solutions[0].connections.filter(c => c.from === a && c.signal === "speaker").map(c => zx(d.ix.endpointZone[c.to])));
+      const order = d.job.solutions[0].racks[0].devices.filter(x => amps.includes(x.id)).map(x => x.id);
+      t(`trunks — Harlow: the amps column stacks by the rooms each amp feeds (${amps.join(", ")}); the job's own order (${order.join(", ")}) is untouched`,
+        amps.every((a, i) => !i || first(a) >= first(amps[i - 1])) && amps.join() !== order.join() && Hj.solutions[0].racks[0].devices.map(x => x.id).filter(id => amps.includes(id)).join() === order.join());
     }
     t("trunks — Estate: the switch uplink between the racks rides an inter-rack network trunk",
       up?.cls === "trunk" && up.rackLink && up.trunk === "link:network", JSON.stringify(up && [up.cls, up.trunk]));

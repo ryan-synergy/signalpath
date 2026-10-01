@@ -801,6 +801,19 @@ function placeOnce(job, ix, opts, variant) {
       maxTileBottom = Math.max(maxTileBottom, cols[t.col] + t.h + (t.kind === "small" ? PL.captionH : 0));
       cols[t.col] += t.pitch;
     }
+    // trunk mode: the amps stack in the order of the rooms they feed (Ryan 2026-10-01). The speaker
+    // trunk climbs past their jacks top to bottom and fans out to the rooms left to right, so with the
+    // two orders matching no lane has to cross another; the band rules (surround rooms first) stay put.
+    // Only the schematic's column moves — the Rack page elevation keeps the job's order.
+    if (trunkMode(job, opts) && cTiles.length > 1) {
+      const rooms = [...clusters.flatMap(c => [...c.video, ...c.audio])];
+      const midSet = new Set(midZones.map(z => z.id));
+      const ordered = [...rooms.filter(z => !midSet.has(z.id) && clusters[0].video.includes(z)), ...midZones, ...rooms.filter(z => !clusters[0].video.includes(z) && !midSet.has(z.id))];
+      const roomAt = new Map(ordered.map((z, i) => [z.id, i]));
+      const firstRoom = id => Math.min(Infinity, ...visConns.filter(c => c.from === id && c.signal === "speaker" && ix.endpointZone[c.to]).map(c => roomAt.get(ix.endpointZone[c.to]) ?? Infinity));
+      const at = new Map(cTiles.map((x, i) => [x.d.id, i]));
+      cTiles.sort((a, b) => (firstRoom(a.d.id) - firstRoom(b.d.id)) || (at.get(a.d.id) - at.get(b.d.id)));
+    }
     const usedC = cTiles.length > 0;
     const cTotal = cTiles.reduce((n, { t }) => n + t.h, 0) + 20 * Math.max(0, cTiles.length - 1);
     const aTotal = aBottom.reduce((n, { t }) => n + t.h + PL.captionH, 0) + 12 * Math.max(0, aBottom.length - 1);

@@ -269,6 +269,8 @@ Print = new window, `@page 17in 11in landscape`, one SVG per page, `print()`. Pa
 
 63. **Two lists of the same parts drift unless one function names them.** The PlanQueue export had learned AVDM encoders, the RNE-only balun and Bullet Train lengths; the takeoff page still printed "HDBaseT balun" and left the Bullet Trains and eARC kits off entirely. Both now ask `companionSku()` (and `bulletFor()`) — the export lost its private copy of the SKU rules — and a test holds the takeoff to the same parts.
 
+64. **When the corridor matters more than the lane, try every corridor.** Links between racks used to route first (pass 3) as one fixed shape — a staple down beside the switch column — and the Estate's switch uplink crossed four wires doing it; a second rack's sources reached the matrix as four separate staircases. They now route after every room trunk (pass 4T, `linkFam`): each family of links (`link:<signal>`) is routed in full on a riser in each candidate corridor (three x's in each column gap, the east corridor and the west margin), scored by crossings then length, **rolled back** (wires, lane registry and port bookings restored), and only the cheapest is kept. Trial-and-undo is affordable here because a link family is small; it is what lets a riser choice see the sheet it will actually cross. Two-rack jobs: 1,204 → 1,165 visible crossings, fallbacks 7 → 3; the Estate total is unchanged (15) — any route from one stacked rack to the other has to cut the wires running between them.
+
 ## 10. Order of construction (what to build when)
 
 1. Data model + `loadJob`/`indexJob` + first fixtures — get tests running the same day.

@@ -1521,6 +1521,12 @@ export function route(job, ix, placement, opts = {}) {
     ? (conn.dante ? "dante" : conn.signal === "network" ? "network" : conn.signal === "video" ? "video"
       : conn.signal === "audio" && trunkCount(conn, s) === 1 ? "audio" : null) : null;
 
+  // …and a link between two racks rides an inter-rack trunk, one per signal type (routed after the
+  // rooms' trunks, so it can pick the corridor the finished sheet crosses least)
+  const linkFam = conn => TRUNK && devById[conn.from] && devById[conn.to] && rackOfDev(conn.from) !== rackOfDev(conn.to)
+    ? (conn.dante ? "dante" : conn.signal === "network" ? "network" : conn.signal === "video" ? "video"
+      : conn.signal === "audio" && trunkCount(conn, s) === 1 ? "audio" : null) : null;
+
   /* ============ pass 3: rigid non-zone wires FIRST (short structural runs
      claim their channels; zone feeds are flexible and relaxable) ============ */
   visConns.forEach((conn, i) => {
@@ -1530,7 +1536,7 @@ export function route(job, ix, placement, opts = {}) {
     const fromDev = devById[conn.from], toDev = devById[conn.to];
     const fromChip = chipById[conn.from], toChip = chipById[conn.to];
 
-    if (fromDev && toDev) { if (rackPatchFam(conn)) return; routeRackToRack(conn, fromDev, toDev); done.add(i); return; }
+    if (fromDev && toDev) { if (rackPatchFam(conn) || linkFam(conn)) return; routeRackToRack(conn, fromDev, toDev); done.add(i); return; }
     if (fromDev && toChip) { routeDevToChip(conn, fromDev, toChip); done.add(i); return; }
     // a chip parked under a TV sending to the rack (Dante: AXIS/DANTE-DV2 → amp) leaves the zone like a return (pass 4c)
     if (fromChip && toDev && ix.endpointsById[s.companions[conn.from]?.serves]) return;
@@ -1893,7 +1899,92 @@ export function route(job, ix, placement, opts = {}) {
         done.add(m.i);
       }
     }
-    visConns.forEach((c, i) => { if (!done.has(i) && rackPatchFam(c)) { routeRackToRack(c, devById[c.from], devById[c.to]); done.add(i); } });
+    /* -- inter-rack trunks: every link between two racks of one signal type shares a riser that
+          spans both racks. Each corridor (beside each column, the east corridor, the west margin)
+          is tried in full — the family routed, scored by crossings then length, rolled back — and
+          the cheapest is drawn. A link no corridor carries goes to the classic staple below. -- */
+    const links = {};
+    visConns.forEach((c, i) => {
+      if (done.has(i)) return;
+      const fam = linkFam(c); if (!fam) return;
+      let a = devById[c.from], b = devById[c.to];
+      const typ = d => s.devices[d.id]?.type;
+      if (fam === "network" && SWITCHY.has(typ(b)) && !SWITCHY.has(typ(a))) [a, b] = [b, a];
+      const pair = [rackOfDev(a.id).id, rackOfDev(b.id).id].sort().join("+");
+      const key = `link:${fam}` + (P.racks.length > 2 ? `~${pair}` : "");
+      (links[key] ||= { key, members: [] }).members.push({ c, i, src: a, dev: b, fam });
+    });
+    const linkPatch = (m, rx, net) => {
+      const a = m.src, b = m.dev, sx = a.x + a.w;
+      const pys = [...new Set([0, 1, -1, 2, -2].map(k => peekPort(rightPorts, a, a.y + a.h / 2 + k * RT.lane)))];
+      const ok = pts => !pathBlocked(pts, null) && pathRegisterable(pts, net);
+      const vClear = (x, y1, y2) => !segBlocked(x, Math.min(y1, y2), x, Math.max(y1, y2), null);
+      let best = null, bestCost = Infinity, bestPy = null, bestTy = null;
+      for (const py of pys) {
+        // on to the riser: straight across when it lies east of the jack, else down the gap beside the box to a free level
+        let on = null;
+        if (rx > sx && ok([[sx, py], [rx, py]])) on = [[sx, py], [rx, py]];
+        else { const g = gapRightOf(a.col || "B");
+          for (let k = 1; k <= 10 && !on; k++) for (const sgn of [1, -1]) { const ly = py + sgn * k * RT.lane;
+            const gx = alloc(usedV, (g[0] + g[1]) / 2, Math.min(py, ly), Math.max(py, ly), net, 0, xx => !vClear(xx, py, ly), g);
+            if (gx == null) continue;
+            const q = cleanPts([[sx, py], [gx, py], [gx, ly], [rx, ly]]); if (ok(q)) { on = q; break; } } }
+        if (!on) continue;
+        // off the riser into the box's left edge: straight when the riser lies west of it, else round through the gap on its left
+        for (const k0 of [0, -1, 1, -2, 2]) {
+          const ty = peekPort(leftPorts, b, Math.max(b.y, Math.min(b.y + b.h, py)) + k0 * RT.lane);
+          const tails = [];
+          if (rx < b.x) tails.push([[rx, ty], [b.x, ty]]);
+          else { const g = gapLeftOf(b.col || "B");
+            for (let k = 0; k <= 12; k++) for (const sgn of k ? [-1, 1] : [1]) { const gy = ty + sgn * k * RT.lane;
+              const ax = alloc(usedV, (g[0] + g[1]) / 2, Math.min(gy, ty), Math.max(gy, ty), net, 0, xx => !vClear(xx, gy, ty), g);
+              if (ax != null) tails.push([[rx, gy], [ax, gy], [ax, ty], [b.x, ty]]); } }
+          for (const tail of tails) {
+            const pts = cleanPts([...on, ...tail]);
+            if (!ok(pts)) continue;
+            const cost = countCrossings(pts) * 100 + segLen(pts);
+            if (cost < bestCost) { bestCost = cost; best = pts; bestPy = py; bestTy = ty; }
+          }
+        }
+      }
+      if (!best) return null;
+      (rightPorts[a.id] ||= []).push(bestPy); (leftPorts[b.id] ||= []).push(bestTy);
+      return { pts: best, cost: bestCost };
+    };
+    for (const L of Object.values(links)) {
+      const net = nWire++;
+      const jackYs = L.members.flatMap(m => [m.src.y + m.src.h / 2, m.dev.y + m.dev.h / 2]);
+      const y0 = Math.min(...jackYs), y1 = Math.max(...jackYs);
+      const ranges = [gapRightOf("A"), gapRightOf("B"), gapRightOf("C"), [westMarginX[0], westMarginX[1]]].filter(r => r[1] > r[0]);
+      const rxs = [];
+      for (const R of ranges) for (const want of [(R[0] + R[1]) / 2, R[0] + RT.lane, R[1] - RT.lane]) {
+        const x = alloc(usedV, Math.max(R[0], Math.min(R[1], want)), y0, y1, net, 0, xx => !!segBlocked(xx, y0, xx, y1, null), R);
+        if (x != null && !rxs.includes(x)) rxs.push(x);
+      }
+      // a trial: route the family on this riser, score it, undo it
+      const trial = (rx, keep) => {
+        const mark = { w: out.wires.length, h: usedH.length, v: usedV.length };
+        const ports = new Map(L.members.flatMap(m => [[rightPorts, m.src.id], [leftPorts, m.dev.id]]).map(([st, id]) => [`${st === rightPorts ? "r" : "l"}${id}`, [st, id, [...(st[id] || [])]]]));
+        let cost = 0, got = [];
+        for (const m of L.members) {
+          const r = linkPatch(m, rx, net);
+          if (!r) { cost += 1e5; continue; }
+          cost += r.cost;
+          commit(m.c, "trunk", r.pts, { net, group: "trunk-" + L.key, trunk: L.key, rackPatch: true, rackLink: true });
+          got.push(m);
+        }
+        if (!keep) {
+          out.wires.length = mark.w; usedH.length = mark.h; usedV.length = mark.v;
+          for (const [st, id, list] of ports.values()) st[id] = list;
+        } else for (const m of got) done.add(m.i);
+        return cost;
+      };
+      let bestRx = null, bestCost = Infinity;
+      for (const rx of rxs) { const c = trial(rx, false); if (c < bestCost) { bestCost = c; bestRx = rx; } }
+      if (bestRx == null || bestCost >= 1e5 * L.members.length) { if (opts.debug) (out.trunkSkips ||= []).push(`${L.key}: no corridor`); continue; }
+      trial(bestRx, true);
+    }
+    visConns.forEach((c, i) => { if (!done.has(i) && (rackPatchFam(c) || linkFam(c))) { routeRackToRack(c, devById[c.from], devById[c.to]); done.add(i); } });
     // the classic passes see only what the trunks left behind
     for (const plan of plans) { plan.west = plan.west.filter(o => !done.has(o.i)); plan.east = plan.east.filter(o => !done.has(o.i)); }
   }

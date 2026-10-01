@@ -3116,13 +3116,22 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const rackPool = on.p.racks.find(r => r.id === "rack-pool");
     t("trunks — Estate: the pool rack's trunks leave from the pool rack's own height, not up through the main rack",
       pool.length >= 4 && pool.every(w => w.pts.every(q => q[1] >= rackPool.y - 1 || q[0] > rackPool.x + rackPool.w)));
+    const up = on.rt.wires.find(w => w.id === "sw-main→sw-pool");
+    t("trunks — Estate: the switch uplink between the racks rides an inter-rack network trunk",
+      up?.cls === "trunk" && up.rackLink && up.trunk === "link:network", JSON.stringify(up && [up.cls, up.trunk]));
   }
   { // 79 seeded two-rack jobs
-    const g = F.jobGenerator(1, { extras: true }); let x0 = 0, x1 = 0, n = 0, illegal = [];
+    const g = F.jobGenerator(1, { extras: true }); let x0 = 0, x1 = 0, n = 0, illegal = [], nLinks = 0, offLink = [];
     for (let k = 0; k < 325; k++) { const raw = g(k); if (raw.solutions[0].racks.length < 2 || !raw.house.zones.length) continue;
       const a = draw(E2(raw), false), b = draw(E2(raw), "bundle"); x0 += visCross(a.rt); x1 += visCross(b.rt); n++;
-      illegal.push(...legal(b.p, b.rt).map(x => `#${k} ${x}`)); }
+      illegal.push(...legal(b.p, b.rt).map(x => `#${k} ${x}`));
+      // every link between the racks rides an inter-rack trunk — but a multi-run analog trunk (module → amp ×N) keeps its classic line
+      const s0 = b.ix.solutions[0], rk = {}; for (const r of b.job.solutions[0].racks) for (const d of r.devices) rk[d.id] = r.id;
+      for (const w of b.rt.wires) { const c = b.job.solutions[0].connections.find(c => c.from === w.from && c.to === w.to);
+        if (!c || !rk[w.from] || !rk[w.to] || rk[w.from] === rk[w.to]) continue;
+        nLinks++; if (w.cls !== "trunk" && !(c.signal === "audio" && trunkCount(c, s0) > 1)) offLink.push(`#${k} ${w.id}`); } }
     t(`trunks — ${n} random two-rack jobs: legal, ≤ 50% of today's visible crossings (${x0} → ${x1})`, n >= 50 && !illegal.length && x1 <= x0 * 0.5, illegal.slice(0, 3).join(" | "));
+    t(`trunks — two-rack jobs: every link between the racks (${nLinks}) rides an inter-rack trunk, multi-run module → amp lines excepted`, nLinks >= 100 && !offLink.length, offLink.slice(0, 4).join(" | "));
   }
   { // Dante as labels (job.job.danteStyle = "labels"): no Dante lines; each amp lists its sources, each source names its amp
     const H = await (await fetch("./test-fixtures/harlow-dante.json")).json();

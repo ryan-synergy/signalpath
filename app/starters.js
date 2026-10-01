@@ -6,6 +6,7 @@
    Pure data + one function over the raw job — no DOM. */
 
 import { productName } from "./names.js";
+import { zoneToQuick } from "./quickadd.js";
 
 const dev = (id, type, catalogRef, model, extra = {}) => ({ id, type, catalogRef, model, status: "new", ...extra });
 const src = (id, model) => ({ id, type: "source", model, status: "new" });
@@ -161,4 +162,40 @@ export function applyStarter(job, starter, catalog) {
   if (starter.solution?.platforms) sol.platforms = [...starter.solution.platforms];   // a Savant rack is a Savant job: licensing advice follows
   job.job.starter = starter.id;
   return job;
+}
+
+/* ---- starter kits you make (Settings → Starter kits, 2026-10-01) ----
+   A kit is the same shape as a shipped starter: the first rack's gear, the adapters at that gear
+   (encoders on its sources), the patching between them, the audio platform — and, optionally,
+   starting rooms as quick-add text ("family room 5.1 75 sony matrix, …") that a new job adds
+   through the same parser and hookup as a typed line. */
+const kitSlug = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50) || "kit";
+export function starterFromJob(job, solIndex = 0, { name = "My starter", blurb = "", tip = "", includeRooms = false, taken = [] } = {}) {
+  const sol = job.solutions?.[solIndex] || {}, rack = sol.racks?.[0] || { devices: [] };
+  const devices = structuredClone(rack.devices || []);
+  const ids = new Set(devices.map(d => d.id));
+  const companions = structuredClone((sol.companions || []).filter(c => ids.has(c.serves)));
+  for (const c of companions) ids.add(c.id);
+  const connections = structuredClone((sol.connections || []).filter(c => ids.has(c.from) && ids.has(c.to)));
+  const rooms = includeRooms ? (job.house?.zones || []).map(z => zoneToQuick(z, sol)).join(", ") : "";
+  let id = "my-" + kitSlug(name), k = 2; while (taken.includes(id)) id = `my-${kitSlug(name)}-${k++}`;
+  const solution = {};
+  if (sol.platforms?.length) solution.platforms = [...sol.platforms];
+  if (sol.audioNetwork) solution.audioNetwork = sol.audioNetwork;
+  return { id, name, blurb, tip: tip || rooms.split(", ").slice(0, 2).join(", "), solution, devices, companions, connections,
+    ...(rooms ? { rooms } : {}), custom: true, madeFrom: job.job?.name || "", ...(sol.racks?.length > 1 ? { note: "first rack only" } : {}) };
+}
+// the kits the new-job picker offers: shipped ones and yours, in your order, each marked
+export function listStarters(store = {}) {
+  const mine = Object.values(store.mine || {}), order = store.order || [], hidden = new Set(store.hidden || []);
+  const all = [...STARTERS.map(s => ({ ...s, shipped: true })), ...mine];
+  const pos = id => { const i = order.indexOf(id); return i < 0 ? 1e6 : i; };
+  return all.map((s, i) => ({ ...s, hidden: hidden.has(s.id), _i: i })).sort((a, b) => pos(a.id) - pos(b.id) || a._i - b._i).map(({ _i, ...s }) => s);
+}
+// a copy of any kit as yours, to change
+export function duplicateStarter(st, taken = []) {
+  const c = structuredClone(st); delete c.shipped; delete c.hidden;
+  c.name = `${st.name} (copy)`; c.custom = true; c.copiedFrom = st.id;
+  let id = "my-" + kitSlug(c.name), k = 2; while (taken.includes(id)) id = `my-${kitSlug(c.name)}-${k++}`;
+  c.id = id; return c;
 }

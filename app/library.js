@@ -162,23 +162,38 @@ export function checkEntry(e) {
 
 /* ---- the library file: your custom devices and your edits to shipped ones, to carry between
         browsers (Mac ↔ iPad) or keep as a backup. Shipped entries you never touched stay out. ---- */
-export function exportLibrary(devices, shipped, stableStr, today = new Date().toISOString().slice(0, 10)) {
+export function exportLibrary(devices, shipped, stableStr, today = new Date().toISOString().slice(0, 10), starters = null) {
   const out = {};
   for (const [id, e] of Object.entries(devices || {}))
     if (e.custom || !shipped[id] || stableStr(shipped[id]) !== stableStr(e)) out[id] = e;
-  return { kind: "signalpath-library", version: 1, exported: today, devices: out };
+  const file = { kind: "signalpath-library", version: 1, exported: today, devices: out };
+  // your starter kits travel with it (with the order and hidden list of the kit picker)
+  if (starters && (Object.keys(starters.mine || {}).length || (starters.order || []).length || (starters.hidden || []).length))
+    file.starters = { mine: starters.mine || {}, order: starters.order || [], hidden: starters.hidden || [] };
+  return file;
 }
 // what importing a library file would do (added / updated / unchanged), and doing it
-export function planImport(devices, file, stableStr) {
+export function planImport(devices, file, stableStr, starters = null) {
   if (!file || file.kind !== "signalpath-library" || typeof file.devices !== "object") throw new Error("That isn't a SignalPath library file.");
-  const plan = { added: [], updated: [], same: [] };
+  const plan = { added: [], updated: [], same: [], kitsAdded: [], kitsUpdated: [] };
   for (const [id, e] of Object.entries(file.devices)) {
     if (!/^[A-Za-z0-9_.:-]{1,80}$/.test(id) || !e || typeof e !== "object") continue;
     if (!devices[id]) plan.added.push(id); else if (stableStr(devices[id]) !== stableStr(e)) plan.updated.push(id); else plan.same.push(id);
   }
+  const mine = starters?.mine || {};
+  for (const [id, k] of Object.entries(file.starters?.mine || {})) {
+    if (!/^[A-Za-z0-9_.:-]{1,80}$/.test(id) || !k || typeof k !== "object" || !Array.isArray(k.devices)) continue;
+    if (!mine[id]) plan.kitsAdded.push(id); else if (stableStr(mine[id]) !== stableStr(k)) plan.kitsUpdated.push(id);
+  }
   return plan;
 }
-export function applyImport(devices, file, plan) {
+// starters (optional): SETTINGS.starters — kits are added or replaced; new ones join the end of the order
+export function applyImport(devices, file, plan, starters = null) {
   for (const id of [...plan.added, ...plan.updated]) devices[id] = structuredClone(file.devices[id]);
+  if (starters) {
+    starters.mine ||= {}; starters.order ||= [];
+    for (const id of [...(plan.kitsAdded || []), ...(plan.kitsUpdated || [])]) starters.mine[id] = structuredClone(file.starters.mine[id]);
+    for (const id of plan.kitsAdded || []) if (!starters.order.includes(id)) starters.order.push(id);
+  }
   return devices;
 }

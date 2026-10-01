@@ -243,52 +243,52 @@
   #advisor details.ref summary { cursor: pointer; color: #666; padding: 3px 0; font-size: 12px; }
   #advisor details.ref[open] summary { color: #333; }
 
-  /* ---- device library (Settings → Open device library) ---- */
-  #library { position: fixed; inset: 0; background: rgba(10,12,16,.55); display: none; z-index: 55; align-items: center; justify-content: center; }
-  #library.show { display: flex; }
-  #library .card { background: #fff; border-radius: 12px; width: min(1120px, 96vw); height: min(840px, 92vh); display: flex; flex-direction: column;
+  /* ---- device library + starter kits (Settings → Open …): .libov overlays ---- */
+  .libov { position: fixed; inset: 0; background: rgba(10,12,16,.55); display: none; z-index: 55; align-items: center; justify-content: center; }
+  .libov.show { display: flex; }
+  .libov .card { background: #fff; border-radius: 12px; width: min(1120px, 96vw); height: min(840px, 92vh); display: flex; flex-direction: column;
                    box-shadow: 0 12px 40px rgba(0,0,0,.35); overflow: hidden; }
-  #library .hd { display: flex; gap: 8px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-  #library .hd .t { font-size: 16px; font-weight: 700; margin-right: auto; }
-  #library .hd input[type=search], #library .hd select { font: inherit; font-size: 13px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 7px; min-height: var(--hit); }
-  #library .hd input[type=search] { width: 220px; max-width: 100%; }
-  #library button { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--act-line); background: #fff; color: var(--ink); min-height: var(--hit); cursor: pointer; }
-  #library button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-  #library button.danger { color: var(--bad); border-color: #e3b4b0; }
-  #library .bd { flex: 1; display: grid; grid-template-columns: 300px 1fr; min-height: 0; }
-  #library .list { border-right: 1px solid var(--line); overflow-y: auto; background: var(--panel); }
-  #library .grp { font-size: 10.5px; letter-spacing: 1px; color: #888; padding: 12px 12px 4px; text-transform: uppercase; }
-  #library .it { padding: 7px 12px; cursor: pointer; border-left: 3px solid transparent; }
-  #library .it:hover { background: #eef1f5; }
-  #library .it.on { background: #e6eef9; border-left-color: var(--accent); }
-  #library .it .m { font-size: 13px; } #library .it .s { font-size: 11px; color: #888; margin-top: 1px; }
-  #library .badge2 { font-size: 10px; padding: 1px 6px; border-radius: 9px; margin-left: 4px; background: #eef2f8; color: var(--accent); white-space: nowrap; }
-  #library .badge2.ed { background: #fff3dc; color: #8a5b00; } #library .badge2.unv { background: #fdecea; color: var(--bad); }
-  #library .ed { overflow-y: auto; padding: 14px 18px 30px; }
-  #library .ed .ttl { font-size: 19px; font-weight: 700; } #library .ed .sub { font-size: 12px; color: #777; margin: 2px 0 10px; }
-  #library .acts { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 4px; }
-  #library h3 { font-size: 11px; letter-spacing: 1px; color: #888; margin: 18px 0 6px; text-transform: uppercase; font-weight: 600; }
-  #library .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px 14px; }
-  #library .fld label { display: block; font-size: 11px; color: #666; margin-bottom: 2px; }
-  #library .fld input[type=text], #library .fld input[type=number], #library .fld select, #library .fld textarea {
+  .libov .hd { display: flex; gap: 8px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .libov .hd .t { font-size: 16px; font-weight: 700; margin-right: auto; }
+  .libov .hd input[type=search], .libov .hd select { font: inherit; font-size: 13px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 7px; min-height: var(--hit); }
+  .libov .hd input[type=search] { width: 220px; max-width: 100%; }
+  .libov button { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--act-line); background: #fff; color: var(--ink); min-height: var(--hit); cursor: pointer; }
+  .libov button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .libov button.danger { color: var(--bad); border-color: #e3b4b0; }
+  .libov .bd { flex: 1; display: grid; grid-template-columns: 300px 1fr; min-height: 0; }
+  .libov .list { border-right: 1px solid var(--line); overflow-y: auto; background: var(--panel); }
+  .libov .grp { font-size: 10.5px; letter-spacing: 1px; color: #888; padding: 12px 12px 4px; text-transform: uppercase; }
+  .libov .it { padding: 7px 12px; cursor: pointer; border-left: 3px solid transparent; }
+  .libov .it:hover { background: #eef1f5; }
+  .libov .it.on { background: #e6eef9; border-left-color: var(--accent); }
+  .libov .it .m { font-size: 13px; } .libov .it .s { font-size: 11px; color: #888; margin-top: 1px; }
+  .libov .badge2 { font-size: 10px; padding: 1px 6px; border-radius: 9px; margin-left: 4px; background: #eef2f8; color: var(--accent); white-space: nowrap; }
+  .libov .badge2.ed { background: #fff3dc; color: #8a5b00; } .libov .badge2.unv { background: #fdecea; color: var(--bad); }
+  .libov .ed { overflow-y: auto; padding: 14px 18px 30px; }
+  .libov .ed .ttl { font-size: 19px; font-weight: 700; } .libov .ed .sub { font-size: 12px; color: #777; margin: 2px 0 10px; }
+  .libov .acts { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 4px; }
+  .libov h3 { font-size: 11px; letter-spacing: 1px; color: #888; margin: 18px 0 6px; text-transform: uppercase; font-weight: 600; }
+  .libov .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px 14px; }
+  .libov .fld label { display: block; font-size: 11px; color: #666; margin-bottom: 2px; }
+  .libov .fld input[type=text], .libov .fld input[type=number], .libov .fld select, .libov .fld textarea {
     width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; min-height: var(--hit); }
-  #library .fld textarea { min-height: 90px; resize: vertical; }
-  #library .fld.wide { grid-column: 1 / -1; }
-  #library .fld.chk label { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--ink); min-height: var(--hit); }
-  #library .help { font-size: 10.5px; color: #999; margin-top: 2px; line-height: 1.35; }
-  #library .beh { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 6px 16px; }
-  #library .beh label { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; padding: 4px 0; }
-  #library .beh input { margin-top: 3px; }
-  #library .tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  #library .tag { font-size: 12px; background: #f0f1f4; border: 1px solid var(--line); border-radius: 12px; padding: 2px 4px 2px 9px; display: inline-flex; gap: 4px; align-items: center; }
-  #library .tag button { min-height: 0; padding: 0 6px; border: none; background: none; color: #888; }
-  #library .warn { background: #fff7e0; border: 1px solid #f0d58a; color: #6b5000; padding: 8px 10px; border-radius: 6px; font-size: 12.5px; margin: 8px 0; }
-  #library .note { background: #f3f6fb; border: 1px solid #d9e2ef; color: #2c4767; padding: 8px 10px; border-radius: 6px; font-size: 12.5px; margin: 8px 0; }
-  #library .empty { color: #888; padding: 30px; text-align: center; }
+  .libov .fld textarea { min-height: 90px; resize: vertical; }
+  .libov .fld.wide { grid-column: 1 / -1; }
+  .libov .fld.chk label { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--ink); min-height: var(--hit); }
+  .libov .help { font-size: 10.5px; color: #999; margin-top: 2px; line-height: 1.35; }
+  .libov .beh { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 6px 16px; }
+  .libov .beh label { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; padding: 4px 0; }
+  .libov .beh input { margin-top: 3px; }
+  .libov .tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .libov .tag { font-size: 12px; background: #f0f1f4; border: 1px solid var(--line); border-radius: 12px; padding: 2px 4px 2px 9px; display: inline-flex; gap: 4px; align-items: center; }
+  .libov .tag button { min-height: 0; padding: 0 6px; border: none; background: none; color: #888; }
+  .libov .warn { background: #fff7e0; border: 1px solid #f0d58a; color: #6b5000; padding: 8px 10px; border-radius: 6px; font-size: 12.5px; margin: 8px 0; }
+  .libov .note { background: #f3f6fb; border: 1px solid #d9e2ef; color: #2c4767; padding: 8px 10px; border-radius: 6px; font-size: 12.5px; margin: 8px 0; }
+  .libov .empty { color: #888; padding: 30px; text-align: center; }
   @media (max-width: 760px) {
-    #library .card { width: 100vw; height: 100dvh; border-radius: 0; }
-    #library .bd { grid-template-columns: 1fr; grid-template-rows: minmax(140px, 34%) 1fr; }
-    #library .list { border-right: none; border-bottom: 1px solid var(--line); }
+    .libov .card { width: 100vw; height: 100dvh; border-radius: 0; }
+    .libov .bd { grid-template-columns: 1fr; grid-template-rows: minmax(140px, 34%) 1fr; }
+    .libov .list { border-right: none; border-bottom: 1px solid var(--line); }
   }
 
   /* ---- import review overlay ---- */
@@ -453,25 +453,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261001163503",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261001163503",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261001163503",
-    "./app/ports.js": "./app/ports.js?v=20261001163503",
-    "./app/commands.js": "./app/commands.js?v=20261001163503",
-    "./app/engine.js": "./app/engine.js?v=20261001163503",
-    "./app/exports.js": "./app/exports.js?v=20261001163503",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261001163503",
-    "./app/hookup.js": "./app/hookup.js?v=20261001163503",
-    "./app/importers.js": "./app/importers.js?v=20261001163503",
-    "./app/library.js": "./app/library.js?v=20261001163503",
-    "./app/names.js": "./app/names.js?v=20261001163503",
-    "./app/network.js": "./app/network.js?v=20261001163503",
-    "./app/pages.js": "./app/pages.js?v=20261001163503",
-    "./app/power.js": "./app/power.js?v=20261001163503",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261001163503",
-    "./app/rack.js": "./app/rack.js?v=20261001163503",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261001163503",
-    "./app/starters.js": "./app/starters.js?v=20261001163503"
+    "./app/ai.js": "./app/ai.js?v=20261001164522",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261001164522",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261001164522",
+    "./app/ports.js": "./app/ports.js?v=20261001164522",
+    "./app/commands.js": "./app/commands.js?v=20261001164522",
+    "./app/engine.js": "./app/engine.js?v=20261001164522",
+    "./app/exports.js": "./app/exports.js?v=20261001164522",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261001164522",
+    "./app/hookup.js": "./app/hookup.js?v=20261001164522",
+    "./app/importers.js": "./app/importers.js?v=20261001164522",
+    "./app/library.js": "./app/library.js?v=20261001164522",
+    "./app/names.js": "./app/names.js?v=20261001164522",
+    "./app/network.js": "./app/network.js?v=20261001164522",
+    "./app/pages.js": "./app/pages.js?v=20261001164522",
+    "./app/power.js": "./app/power.js?v=20261001164522",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261001164522",
+    "./app/rack.js": "./app/rack.js?v=20261001164522",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261001164522",
+    "./app/starters.js": "./app/starters.js?v=20261001164522"
 } }
 </script>
 <script>
@@ -607,7 +607,7 @@
   <div class="ft"><button id="stCancel">Cancel</button></div>
 </div></div>
 
-<div id="library"><div class="card">
+<div id="library" class="libov"><div class="card">
   <div class="hd"><div class="t">Device library</div>
     <input id="libQ" type="search" placeholder="Search brand, model, part #" autocomplete="off">
     <select id="libType"></select>
@@ -616,6 +616,13 @@
     <input type="file" id="libFile" accept=".json,application/json" hidden>
     <button class="primary" id="libClose">Done</button></div>
   <div class="bd"><div class="list" id="libList"></div><div class="ed" id="libEd"></div></div>
+</div></div>
+
+<div id="kits" class="libov"><div class="card">
+  <div class="hd"><div class="t">Starter kits</div>
+    <button id="kitSave" title="The rack's gear, its source adapters and patching, and (if you want) its rooms">＋ Save this job's rack as a starter</button>
+    <button class="primary" id="kitClose">Done</button></div>
+  <div class="bd"><div class="list" id="kitList"></div><div class="ed" id="kitEd"></div></div>
 </div></div>
 
 <div id="review"><div class="card">
@@ -640,7 +647,7 @@ import { assignPorts, jacksOf, plugCandidates, familyName } from "./app/ports.js
 import { startAsBuilt, asBuiltChanges, changeMarks, isAsBuilt, installRows, installCSV, tidyMac } from "./app/asbuilt.js";
 import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV, labelsCSV, rackFrontSVG, rackData, wireLabels } from "./app/pages.js";
 import { parseQuick } from "./app/quickadd.js";
-import { STARTERS, applyStarter } from "./app/starters.js";
+import { STARTERS, applyStarter, starterFromJob, listStarters, duplicateStarter } from "./app/starters.js";
 import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/commands.js";
 import { askClaude, handoffPrompt, extractProposal, jobSummary, assess, loadConn, saveConn, connReady, MODELS } from "./app/ai.js";
 import { setDanteAudio, danteAmpFor } from "./app/hookup.js";
@@ -676,7 +683,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261001163503").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261001164522").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -696,6 +703,9 @@ let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
       if (!SETTINGS.catalog.licensing[plat]) SETTINGS.catalog.licensing[plat] = structuredClone(tbl);
   }
 }
+// starter kits: yours, plus the picker's order and hidden list (shipped kits stay in starters.js)
+{ const st = SETTINGS.starters; SETTINGS.starters = st && typeof st === "object" ? st : {};
+  const K = SETTINGS.starters; if (!K.mine || typeof K.mine !== "object") K.mine = {}; if (!Array.isArray(K.order)) K.order = []; if (!Array.isArray(K.hidden)) K.hidden = []; }
 /* shipped catalog → this browser's catalog. New entries join; an entry the
    user never edited follows the shipped one (spec corrections must reach
    everyone); an edited entry is kept and listed as "differs from shipped".
@@ -1013,21 +1023,26 @@ menus.forEach(m => {
 document.addEventListener("click", e => { if (!e.target.closest("#topbar .menu")) closeMenus(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenus(); });
 
+// a new job from a kit: its rack, then its starting rooms (quick-add text) if it has any
+async function startJobFrom(st) {
+  await flushSave();
+  S.job = applyStarter(blankJob(), st, SETTINGS.catalog); S.id = uid("job"); S.sol = 0; S.editScope = "house";
+  if (st.rooms) { try { S.job = planCommands(S.job, 0, [{ op: "add_zones", text: st.rooms }], effectiveCatalog()).job; } catch (e) { console.warn("starter rooms", e); } }
+  S.qaHint = st.tip;                               // the quick-add box suggests how to add zones to this rack
+  S.tab = "zones"; switchTab("zones");
+  await persist(); refresh();
+  setTimeout(() => $("#qaInput")?.focus(), 50);
+}
 $("#newJob").onclick = () => {
-  const cat = SETTINGS.catalog;
-  $("#stGrid").innerHTML = STARTERS.map(st => `<button class="opt" data-st="${esc(st.id)}"><b>${esc(st.name)}</b>
+  const cat = SETTINGS.catalog, kits = listStarters(SETTINGS.starters).filter(k => !k.hidden);
+  $("#stGrid").innerHTML = kits.map(st => `<button class="opt" data-st="${esc(st.id)}"><b>${esc(st.name)}${st.custom ? ` <span class="mini">· yours</span>` : ""}</b>
     <span class="bl">${esc(st.blurb)}</span>
-    <span class="gear">${st.devices.length ? esc(st.devices.map(d => d.model || productName(cat.devices?.[d.catalogRef]) || d.id).join(" · ")) : "No gear yet"}</span></button>`).join("");
+    <span class="gear">${st.devices.length ? esc(st.devices.map(d => d.model || productName(cat.devices?.[d.catalogRef]) || d.id).join(" · ")) : "No gear yet"}${st.rooms ? ` <span class="mini">· ${st.rooms.split(",").length} starting rooms</span>` : ""}</span></button>`).join("");
   $("#starter").classList.add("show");
   $("#stGrid").querySelectorAll("[data-st]").forEach(b => b.onclick = async () => {
-    const st = STARTERS.find(x => x.id === b.dataset.st);
+    const st = kits.find(x => x.id === b.dataset.st);
     $("#starter").classList.remove("show");
-    await flushSave();
-    S.job = applyStarter(blankJob(), st, SETTINGS.catalog); S.id = uid("job"); S.sol = 0; S.editScope = "house";
-    S.qaHint = st.tip;                               // the quick-add box suggests how to add zones to this rack
-    S.tab = "zones"; switchTab("zones");
-    await persist(); refresh();
-    setTimeout(() => $("#qaInput")?.focus(), 50);
+    await startJobFrom(st);
   });
 };
 $("#stCancel").onclick = () => $("#starter").classList.remove("show");
@@ -2224,6 +2239,10 @@ function settingsHTML() {
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       <div class="mini" style="line-height:1.45">Every product's inputs and outputs, capabilities, rack height, power and part number — edit them, add new ones, or copy one (an MDX-16 → an MDX-18). ${Object.values(SETTINGS.catalog.devices || {}).filter(d => d.custom).length} of yours.</div>
       <button class="addbtn" id="openLib" style="margin-top:8px">Open device library</button></div></div>
+    <div class="sect">STARTER KITS <span class="mini">what ＋ New job offers</span></div>
+    <div class="row open"><div class="fields" style="display:block;border-top:none">
+      <div class="mini" style="line-height:1.45">Save any job's rack as a kit (with its rooms if you like), reorder or hide kits, copy a shipped one to change it. ${Object.keys(SETTINGS.starters?.mine || {}).length} of yours.</div>
+      <button class="addbtn" id="openKits" style="margin-top:8px">Open starter kits</button></div></div>
     <button class="addbtn" id="resetCat" style="margin-top:8px;border-color:#d99;color:#b55">Reset licensing &amp; catalog to shipped defaults</button>`;
 }
 
@@ -2280,6 +2299,7 @@ function wireSettings(body) {
     S.openRows.add("cat-" + id); save(); renderPanel();
   };
   body.querySelector("#openLib")?.addEventListener("click", () => openLibrary());
+  body.querySelector("#openKits")?.addEventListener("click", () => openKits());
   const resetCat = body.querySelector("#resetCat");
   if (resetCat) resetCat.onclick = () => {
     if (!confirm("Replace licensing rules and device catalog with the shipped defaults?")) return;
@@ -2414,9 +2434,9 @@ $("#libNew").onclick = () => {
   setTimeout(() => $("#libEd [data-k=brand]")?.focus(), 0);
 };
 $("#libExport").onclick = () => {
-  const file = exportLibrary(SETTINGS.catalog.devices, SHIPPED.devices || {}, stableStr);
+  const file = exportLibrary(SETTINGS.catalog.devices, SHIPPED.devices || {}, stableStr, undefined, SETTINGS.starters);
   const n = Object.keys(file.devices).length;
-  if (!n) { alert("Nothing to export yet — the library matches what SignalPath ships. Edit or add a device first."); return; }
+  if (!n && !file.starters) { alert("Nothing to export yet — the library matches what SignalPath ships and there are no kits of yours. Edit or add a device, or save a kit, first."); return; }
   download(`SignalPath library ${file.exported}.json`, JSON.stringify(file, null, 1), "application/json");
 };
 $("#libImport").onclick = () => $("#libFile").click();
@@ -2424,12 +2444,100 @@ $("#libFile").onchange = async () => {
   const f = $("#libFile").files[0]; $("#libFile").value = ""; if (!f) return;
   try {
     const file = stripUnsafe(JSON.parse(await f.text()));
-    const plan = planImport(SETTINGS.catalog.devices, file, stableStr);
-    if (!plan.added.length && !plan.updated.length) { alert(`Nothing new in that file (${plan.same.length} device${plan.same.length === 1 ? "" : "s"} already match).`); return; }
-    if (!confirm(`Import ${f.name}?\n\n${plan.added.length} new device${plan.added.length === 1 ? "" : "s"}\n${plan.updated.length} replace${plan.updated.length === 1 ? "s" : ""} your current version\n${plan.same.length} unchanged`)) return;
-    applyImport(SETTINGS.catalog.devices, file, plan);
+    const plan = planImport(SETTINGS.catalog.devices, file, stableStr, SETTINGS.starters);
+    const kits = plan.kitsAdded.length + plan.kitsUpdated.length;
+    if (!plan.added.length && !plan.updated.length && !kits) { alert(`Nothing new in that file (${plan.same.length} device${plan.same.length === 1 ? "" : "s"} already match).`); return; }
+    if (!confirm(`Import ${f.name}?\n\n${plan.added.length} new device${plan.added.length === 1 ? "" : "s"}\n${plan.updated.length} replace${plan.updated.length === 1 ? "s" : ""} your current version\n${plan.same.length} unchanged${kits ? `\n${plan.kitsAdded.length} new starter kit${plan.kitsAdded.length === 1 ? "" : "s"}, ${plan.kitsUpdated.length} updated` : ""}`)) return;
+    applyImport(SETTINGS.catalog.devices, file, plan, SETTINGS.starters);
     LIB.sel = plan.added[0] || plan.updated[0]; libSaved(true);
   } catch (err) { alert(`Couldn't import that file: ${err.message}`); }
+};
+
+/* ---- starter kits (2026-10-01): save a job's rack as a kit, reorder / hide / copy kits ----
+   Shipped kits (app/starters.js) can be reordered, hidden or copied; your kits (SETTINGS.starters.mine)
+   can also be renamed, given starting rooms, updated from the open job, and deleted. */
+const KIT = { sel: null };
+function openKits(id) { if (id) KIT.sel = id; $("#kits").classList.add("show"); renderKits(); }
+function kitsSaved() { saveSettings(); renderKits(); }
+const kitTaken = () => listStarters(SETTINGS.starters).map(k => k.id);
+function renderKits() {
+  const kits = listStarters(SETTINGS.starters);
+  if (!kits.some(k => k.id === KIT.sel)) KIT.sel = kits[0]?.id || null;
+  $("#kitList").innerHTML = `<div class="grp">New-job picker order · ${kits.filter(k => !k.hidden).length} shown</div>` + kits.map(k =>
+    `<div class="it${k.id === KIT.sel ? " on" : ""}" data-id="${esc(k.id)}" style="${k.hidden ? "opacity:.5" : ""}"><div class="m">${esc(k.name)}${k.custom ? `<span class="badge2">yours</span>` : ""}${k.hidden ? `<span class="badge2 ed">hidden</span>` : ""}</div>
+     <div class="s">${k.devices.length} boxes${k.rooms ? ` · ${k.rooms.split(",").length} rooms` : ""}</div></div>`).join("");
+  $("#kitList").querySelectorAll(".it").forEach(el => el.onclick = () => { KIT.sel = el.dataset.id; renderKits(); });
+  renderKitEditor(kits);
+}
+function renderKitEditor(kits) {
+  const k = kits.find(x => x.id === KIT.sel), ed = $("#kitEd");
+  if (!k) { ed.innerHTML = `<div class="empty">No kits.</div>`; return; }
+  const mine = SETTINGS.starters.mine[k.id], cat = SETTINGS.catalog.devices || {}, idx = kits.indexOf(k);
+  const ro = !mine;
+  const fld = (key, label, val, kind = "text", help = "") => `<div class="fld${kind === "area" ? " wide" : ""}"><label>${esc(label)}</label>${
+    kind === "area" ? `<textarea data-kk="${key}"${ro ? " disabled" : ""}>${esc(val || "")}</textarea>` : `<input type="text" data-kk="${key}" value="${esc(val || "")}"${ro ? " disabled" : ""}>`}${help ? `<div class="help">${esc(help)}</div>` : ""}</div>`;
+  const gear = k.devices.map(d => `<div>${esc(d.model || productName(cat[d.catalogRef]) || d.id)} <span class="mini">· ${esc(typeLabel(d.type))}${d.catalogRef && !cat[d.catalogRef] ? " · ⚠ not in your library" : ""}</span></div>`).join("");
+  const jobRooms = (S.job?.house?.zones || []).length;
+  ed.innerHTML = `
+    <div class="ttl">${esc(k.name)}</div>
+    <div class="sub">${k.custom ? "Yours" : "Ships with SignalPath"}${k.hidden ? " · hidden from ＋ New job" : ""}${k.madeFrom ? ` · saved from ${esc(k.madeFrom)}` : ""}${k.copiedFrom ? ` · copied from ${esc(k.copiedFrom)}` : ""}${k.note ? ` · ${esc(k.note)}` : ""}</div>
+    <div class="acts">
+      <button class="primary" data-ka="start">Start a new job from it</button>
+      <button data-ka="up"${idx === 0 ? " disabled" : ""}>↑</button><button data-ka="down"${idx === kits.length - 1 ? " disabled" : ""}>↓</button>
+      <button data-ka="hide">${k.hidden ? "Show in ＋ New job" : "Hide from ＋ New job"}</button>
+      <button data-ka="dup">Duplicate</button>
+      ${mine ? `<button data-ka="update" title="Replace this kit's rack with the open job's (its rooms too, if it has rooms)">Update from this job</button><button class="danger" data-ka="del">Delete</button>` : ""}
+    </div>
+    ${ro ? `<div class="note">Ships with SignalPath — reorder or hide it here; Duplicate it to change it.</div>` : ""}
+    <h3>Kit</h3><div class="grid">
+      ${fld("name", "Name", k.name)}
+      ${fld("tip", "Quick-add hint", k.tip, "text", "shown in the quick-add box after starting, e.g. family room 5.1 75 matrix")}
+      ${fld("blurb", "Description", k.blurb, "area")}
+    </div>
+    <h3>Starting rooms <span class="mini" style="text-transform:none;letter-spacing:0">optional · quick-add text, comma between rooms</span></h3>
+    <div class="grid">${fld("rooms", "Rooms a new job starts with", k.rooms, "area", "e.g. family room 5.1 75 sony matrix, kitchen stereo 55 matrix, patio landscape 8 — wired to this kit's rack the same way as typing them")}</div>
+    ${mine && jobRooms ? `<button data-ka="fillrooms" style="margin-top:6px">Use this job's ${jobRooms} rooms</button>` : ""}
+    <h3>Audio</h3><div class="grid">
+      <div class="fld"><label>Audio network</label><select data-kk="audioNetwork"${ro ? " disabled" : ""}>${[["", "—"], ["avb", "Savant AVB"], ["dante", "Dante"]].map(([v, l]) => `<option value="${v}"${(k.solution?.audioNetwork || "") === v ? " selected" : ""}>${l}</option>`).join("")}</select></div>
+      ${fld("platforms", "Control platform", (k.solution?.platforms || []).join(", "), "text", "savant, josh, control4 — sets the licensing advice")}
+    </div>
+    <h3>Rack · ${k.devices.length} boxes, ${k.companions?.length || 0} adapters, ${k.connections?.length || 0} patches</h3>
+    <div style="font-size:13px;line-height:1.7">${gear || `<span class="mini">No gear — a blank rack.</span>`}</div>`;
+  ed.querySelectorAll("[data-kk]").forEach(el => el.onchange = () => {
+    const m = SETTINGS.starters.mine[k.id]; if (!m) return;
+    const key = el.dataset.kk, v = el.value.trim();
+    if (key === "audioNetwork") { m.solution ||= {}; if (v) m.solution.audioNetwork = v; else delete m.solution.audioNetwork; }
+    else if (key === "platforms") { m.solution ||= {}; const a = v.split(",").map(x => x.trim().toLowerCase()).filter(Boolean); if (a.length) m.solution.platforms = a; else delete m.solution.platforms; }
+    else if (key === "name") m.name = v || m.name;
+    else { if (v) m[key] = v; else delete m[key]; }
+    kitsSaved();
+  });
+  ed.querySelectorAll("[data-ka]").forEach(el => el.onclick = async () => {
+    const a = el.dataset.ka, K = SETTINGS.starters, ids = kits.map(x => x.id);
+    if (a === "start") { $("#kits").classList.remove("show"); await startJobFrom(k); return; }
+    if (a === "up" || a === "down") { const j = idx + (a === "up" ? -1 : 1); [ids[idx], ids[j]] = [ids[j], ids[idx]]; K.order = ids; }
+    if (a === "hide") K.hidden = k.hidden ? K.hidden.filter(x => x !== k.id) : [...K.hidden, k.id];
+    if (a === "dup") { const c = duplicateStarter(k, kitTaken()); K.mine[c.id] = c; K.order = [...ids.slice(0, idx + 1), c.id, ...ids.slice(idx + 1)]; KIT.sel = c.id; }
+    if (a === "del" && confirm(`Delete the kit "${k.name}"? Jobs started from it are unaffected.`)) { delete K.mine[k.id]; K.order = K.order.filter(x => x !== k.id); K.hidden = K.hidden.filter(x => x !== k.id); KIT.sel = null; }
+    if (a === "update" && confirm(`Replace "${k.name}"'s rack with this job's (${(S.job.solutions[S.sol]?.racks?.[0]?.devices || []).length} boxes)?`)) {
+      const n = starterFromJob(S.job, S.sol, { name: k.name, blurb: k.blurb, tip: k.tip, includeRooms: !!k.rooms, taken: [] });
+      K.mine[k.id] = { ...n, id: k.id, name: k.name, ...(k.blurb ? { blurb: k.blurb } : {}), ...(k.tip ? { tip: k.tip } : {}) };
+    }
+    if (a === "fillrooms") { const n = starterFromJob(S.job, S.sol, { includeRooms: true }); if (n.rooms) K.mine[k.id].rooms = n.rooms; }
+    kitsSaved();
+  });
+}
+$("#kitClose").onclick = () => { $("#kits").classList.remove("show"); renderPanel(); };
+$("#kits").addEventListener("click", ev => { if (ev.target.id === "kits") $("#kitClose").click(); });
+$("#kitSave").onclick = () => {
+  const sol = S.job?.solutions?.[S.sol], rack = sol?.racks?.[0];
+  if (!rack?.devices?.length) { alert("This job's rack is empty — add gear first, then save it as a kit."); return; }
+  const name = (prompt("Name this starter kit:", `${S.job.job?.name || "My"} rack`) || "").trim(); if (!name) return;
+  const rooms = (S.job.house.zones || []).length;
+  const includeRooms = rooms ? confirm(`Include this job's ${rooms} rooms as the kit's starting rooms?\n\nOK = rack + rooms · Cancel = rack only`) : false;
+  const k = starterFromJob(S.job, S.sol, { name, includeRooms, taken: kitTaken() });
+  SETTINGS.starters.mine[k.id] = k; SETTINGS.starters.order = [...listStarters(SETTINGS.starters).map(x => x.id).filter(x => x !== k.id), k.id];
+  KIT.sel = k.id; kitsSaved();
 };
 
 /* ---- panel event wiring (delegated per render) ---- */

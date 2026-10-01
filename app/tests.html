@@ -3421,6 +3421,40 @@ for (const [name, raw] of Object.entries(fixtures)) {
     ["poe", "mxnet", "dante", "avb", "downmix2ch", "pcmOnlyDigital", "pcmOnly2ch", "ultimo", "atmosDecode", "controlLanOnly", "danteController", "hdbasetOut", "sonos", "wattboxPick", "legacy"].every(f => LB.BEHAVIOURS.some(b => b[0] === f)));
 }
 
+/* ---------- starter kits you make (2026-10-01) ---------- */
+{
+  const S = await import("./starters.js"), C = await import("./commands.js"), Q = await import("./quickadd.js"), LB = await import("./library.js");
+  const CAT = await (await fetch("./catalog.json")).json();
+  const D = await (await fetch("./test-fixtures/dogfood-mxnet-savant.json")).json();
+  const kit = S.starterFromJob(D, 0, { name: "Dogfood kit", includeRooms: true });
+  const blank = () => ({ generator: "SignalPath", schemaVersion: 1, job: { name: "n", client: { name: "c" }, revisions: [] }, house: { areas: [], zones: [] },
+    solutions: [{ id: "s", name: "A", platforms: [], racks: [{ id: "rack-main", name: "Rack", devices: [] }], localDevices: [], companions: [], connections: [], annotations: [] }] });
+  const j2 = C.planCommands(S.applyStarter(blank(), kit, CAT), 0, [{ op: "add_zones", text: kit.rooms }], CAT).job;
+  const sig = j => j.house.zones.map(z => `${z.name}:${z.endpoints.map(e => e.type === "display" ? `tv${e.size}` : e.config).join("+")}`).sort().join("|");
+  const tvFeed = j => { const s = j.solutions[0]; return j.house.zones.map(z => { const tv = z.endpoints.find(e => e.type === "display"), c = tv && s.connections.find(c => c.to === tv.id && c.signal === "video");
+    const from = c && (s.companions.find(k => k.id === c.from) ? s.connections.find(k => k.to === c.from)?.from : c.from); return `${z.name}:${s.racks[0].devices.find(d => d.id === from)?.type || "-"}`; }).sort().join("|"); };
+  t("kits: a job saved as a kit (rack + rooms) starts a new job with the same rooms, the same TV feeds and the same rack — receivers reused, not added again",
+    kit.custom && kit.devices.length === D.solutions[0].racks[0].devices.length && kit.companions.every(c => kit.devices.some(d => d.id === c.serves)) &&
+    sig(j2) === sig(D) && tvFeed(j2) === tvFeed(D) && j2.solutions[0].racks[0].devices.length === kit.devices.length, kit.rooms);
+  t("kits: a surround room on the separate-feeds default is written \"matrix\" (\"avr\" would mean the receiver feeds the TV)",
+    /Theater 7\.1\.4 98 sony matrix/.test(kit.rooms) && !/\bavr\b/.test(kit.rooms));
+  const store = { mine: { [kit.id]: kit }, order: ["mxnet", kit.id], hidden: ["blank"] }, L = S.listStarters(store);
+  t("kits: the picker list is shipped + yours, in your order, hidden ones marked",
+    L[0].id === "mxnet" && L[1].id === kit.id && L.find(k => k.id === "blank").hidden && L.length === S.STARTERS.length + 1);
+  const dup = S.duplicateStarter(L.find(k => k.id === "mxnet"), L.map(k => k.id));
+  t("kits: copying a shipped kit gives you an editable one with its own id", dup.custom && dup.id !== "mxnet" && /copy/.test(dup.name) && dup.devices.length === S.STARTERS.find(k => k.id === "mxnet").devices.length);
+  const rt = ["patio stereo sony local", "den tv", "theater 7.1.4 98 sony far savant remote", "guest prewire 50", "pool house 5.1 65 120ft", "porch landscape 8 no tv", "bonus room 4 speakers 55"].every(tx => {
+    const z = Q.parseQuickZone(tx).zone, z2 = Q.parseQuickZone(Q.zoneToQuick(z, {})).zone;
+    const g = z => `${z.name}|${z.scope}|${z.reach || ""}${z.runFt || ""}|${z.remote || ""}|` + z.endpoints.map(e => `${e.type}:${e.config || ""}:${e.count || e.satCount || ""}:${e.size || ""}:${e.brand || ""}`).join(",");
+    return g(z) === g(z2); });
+  t("kits: a room written back as quick-add text parses to the same room (name, setup, TV, scope, distance, remote)", rt);
+  const stable = v => Array.isArray(v) ? "[" + v.map(stable).join(",") + "]" : v && typeof v === "object" ? "{" + Object.keys(v).sort().map(k => JSON.stringify(k) + ":" + stable(v[k])).join(",") + "}" : JSON.stringify(v);
+  const file = LB.exportLibrary(CAT.devices, CAT.devices, stable, "2026-10-01", store), other = { mine: {}, order: [], hidden: [] };
+  const plan = LB.planImport(structuredClone(CAT.devices), file, stable, other); LB.applyImport(structuredClone(CAT.devices), file, plan, other);
+  t("kits: your kits travel in the library file and land at the end of the other browser's order",
+    file.starters?.mine?.[kit.id] && plan.kitsAdded.includes(kit.id) && other.mine[kit.id]?.rooms === kit.rooms && other.order.at(-1) === kit.id);
+}
+
 document.getElementById("summary").innerHTML =
   fail === 0 ? `<span class="pass">ALL ${pass} TESTS PASS</span>` : `<span class="fail">${fail} FAILED</span> · ${pass} passed`;
 document.title = fail === 0 ? `✓ ${pass} pass` : `✗ ${fail} fail`;

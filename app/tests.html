@@ -15,7 +15,7 @@
 <div id="summary">running…</div>
 <ul id="out"></ul>
 <script type="module">
-import { loadJob, validate, advise, place as enginePlace, route as engineRoute, render, routeAlternates as engineAlternates, expandChannels, effectiveHouse, effectiveJob, trunkCount, ribbonLayout, autoLinkCatalog, indexJob, READABILITY_ZONE_CEILING, SHEET, deviceKind, KIND_STYLE } from "./engine.js";
+import { loadJob, validate, advise, place as enginePlace, route as engineRoute, render, routeAlternates as engineAlternates, expandChannels, effectiveHouse, effectiveJob, trunkCount, ribbonLayout, autoLinkCatalog, indexJob, READABILITY_ZONE_CEILING, SHEET, deviceKind, KIND_STYLE, boxUsage, lockCatalog } from "./engine.js";
 // Trunks are the app's default (Ryan 2026-09-30). The router regression suite below
 // pins the classic drawing explicitly — it still guards the "Off" choice — and the
 // trunk tests pass trunks: "bundle" / "ribbon" (or call enginePlace/engineRoute bare).
@@ -3514,6 +3514,43 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("kind: black & white keeps the black boxes and swaps each colored edge for a white pattern",
     ![...bw.querySelectorAll("g.devtile *")].some(e => edges.includes(e.getAttribute("fill")) || tints.filter(c => c !== KIND_STYLE.power.tint).includes(e.getAttribute("fill"))) &&
     [...bw.querySelectorAll('g.devtile[data-kind="avr"] *')].some(e => e.getAttribute("fill") === "#f0f0f0"));
+}
+
+/* ---------- status lights + faces (2026-10-01): every box shows what's used and what's open ---------- */
+{
+  const CAT = await (await fetch("./catalog.json")).json();
+  const St = await import("./starters.js"), Cm = await import("./commands.js");
+  const blank = () => ({ generator: "SignalPath", schemaVersion: 1, job: { name: "n", client: { name: "c" }, revisions: [] }, house: { areas: [], zones: [] },
+    solutions: [{ id: "s", name: "A", platforms: [], racks: [{ id: "rack-main", name: "Rack", devices: [] }], localDevices: [], companions: [], connections: [], annotations: [] }] });
+  const build = id => { const st = St.STARTERS.find(k => k.id === id); let j = St.applyStarter(blank(), st, CAT);
+    if (st.rooms) j = Cm.planCommands(j, 0, [{ op: "add_zones", text: st.rooms }], CAT).job; lockCatalog(j, CAT); return loadJob(j); };
+  const { job, ix } = build("mxnet-10g-estate"), a = advise(job, ix, CAT), U = boxUsage(job, ix, CAT, a, 0);
+  const sw = a.network.find(p => p.switch === "sw"), pw = a.power[0];
+  t("lights: switch ports come from the port plan, outlets from the power plan — split across both WattBoxes, not piled on the first",
+    U.sw?.ports.used === sw.used && U.sw.ports.cap === sw.copper + sw.sfp && U.power.outlets.used + U.power2.outlets.used === pw.need &&
+    Math.abs(U.power.outlets.used - U.power2.outlets.used) <= 1, JSON.stringify([U.sw, U.power, U.power2]));
+  t("lights: receivers count their HDMI inputs, Savant modules their jacks (an output module's trunk = one run per zone)",
+    U.avr?.in.cap === 7 && U.avr.in.used >= 1 && U["sav-out"]?.jacks.cap === 8 && U["sav-out"].jacks.used === 8 && U["sav-in"]?.jacks.used >= 1, JSON.stringify([U.avr, U["sav-out"], U["sav-in"]]));
+  const p = place(job, ix), rt = route(job, ix, p);
+  const doc = svg => new DOMParser().parseFromString(svg, "image/svg+xml");
+  const lit = (d, id, color) => [...d.querySelectorAll(`g.devtile[data-device="${id}"] rect`)].filter(r => r.getAttribute("fill") === color).length;
+  const on = doc(render(job, ix, p, rt, { usage: U }));
+  t("lights: a box lights one window per jack in use in its kind's color — the WattBox's outlets, the receiver's inputs",
+    lit(on, "power", KIND_STYLE.power.edge) === U.power.outlets.used && lit(on, "avr", KIND_STYLE.avr.edge) === U.avr.in.used);
+  t("lights: a 26-port switch groups its windows (2 ports each) and prints used/cap",
+    [...on.querySelectorAll('g.devtile[data-device="sw"] text')].some(x => x.textContent === `${U.sw.ports.used}/${U.sw.ports.cap}`));
+  const over = doc(render(job, ix, p, rt, { usage: { ...U, power: { outlets: { used: 21, cap: 18 } } } }));
+  t("lights: over capacity lights every window, turns the last red and says how far over",
+    lit(over, "power", "#e5484d") === 1 && [...over.querySelectorAll('g.devtile[data-device="power"] text')].some(x => x.textContent === "+3"));
+  t("faces: the control box wears a brain; sources from a kit get their faces from their names (Apple TV badge, Kaleidescape play mark)",
+    on.querySelector('g.devtile[data-kind="control"] path[d*="C"]') && [...on.querySelectorAll("g.devtile text")].some(x => x.textContent === "tv") &&
+    [...on.querySelectorAll('g.devtile[data-kind="source"] path')].some(x => /Z$/.test(x.getAttribute("d") || "")));
+  const bw = doc(render(job, ix, p, rt, { usage: U, grayscale: true }));
+  t("lights: black & white lights windows light gray on the black box — an amp's used channels too (they were near-black)",
+    lit(bw, "power", "#e6e6e6") === U.power.outlets.used && [...bw.querySelectorAll('g.devtile rect')].filter(r => r.getAttribute("fill") === "#16181c").length === 0);
+  const { job: j2, ix: i2 } = build("theater-receiver"), p2 = place(j2, i2), off = doc(render(j2, i2, p2, route(j2, i2, p2), { kindColor: false, usage: boxUsage(j2, i2, CAT, advise(j2, i2, CAT), 0) }));
+  t("lights: with Color by kind off the faces and lights stay (lit in the neutral blue)",
+    [...off.querySelectorAll("g.devtile rect")].some(r => r.getAttribute("fill") === "#3b82c4"));
 }
 
 document.getElementById("summary").innerHTML =

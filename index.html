@@ -453,25 +453,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261001174249",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261001174249",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261001174249",
-    "./app/ports.js": "./app/ports.js?v=20261001174249",
-    "./app/commands.js": "./app/commands.js?v=20261001174249",
-    "./app/engine.js": "./app/engine.js?v=20261001174249",
-    "./app/exports.js": "./app/exports.js?v=20261001174249",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261001174249",
-    "./app/hookup.js": "./app/hookup.js?v=20261001174249",
-    "./app/importers.js": "./app/importers.js?v=20261001174249",
-    "./app/library.js": "./app/library.js?v=20261001174249",
-    "./app/names.js": "./app/names.js?v=20261001174249",
-    "./app/network.js": "./app/network.js?v=20261001174249",
-    "./app/pages.js": "./app/pages.js?v=20261001174249",
-    "./app/power.js": "./app/power.js?v=20261001174249",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261001174249",
-    "./app/rack.js": "./app/rack.js?v=20261001174249",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261001174249",
-    "./app/starters.js": "./app/starters.js?v=20261001174249"
+    "./app/ai.js": "./app/ai.js?v=20261001175219",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261001175219",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261001175219",
+    "./app/ports.js": "./app/ports.js?v=20261001175219",
+    "./app/commands.js": "./app/commands.js?v=20261001175219",
+    "./app/engine.js": "./app/engine.js?v=20261001175219",
+    "./app/exports.js": "./app/exports.js?v=20261001175219",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261001175219",
+    "./app/hookup.js": "./app/hookup.js?v=20261001175219",
+    "./app/importers.js": "./app/importers.js?v=20261001175219",
+    "./app/library.js": "./app/library.js?v=20261001175219",
+    "./app/names.js": "./app/names.js?v=20261001175219",
+    "./app/network.js": "./app/network.js?v=20261001175219",
+    "./app/pages.js": "./app/pages.js?v=20261001175219",
+    "./app/power.js": "./app/power.js?v=20261001175219",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261001175219",
+    "./app/rack.js": "./app/rack.js?v=20261001175219",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261001175219",
+    "./app/starters.js": "./app/starters.js?v=20261001175219"
 } }
 </script>
 <script>
@@ -638,7 +638,7 @@
 </div></div>
 
 <script type="module">
-import { loadJob, normalizeJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock, trunkMode } from "./app/engine.js";
+import { loadJob, normalizeJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock, trunkMode, boxUsage } from "./app/engine.js";
 import { importAny, mergeHouse, drawFromWalk, decodeHandoff, stripUnsafe } from "./app/importers.js";
 import { LIB_TYPES, typeLabel, SIGNALS as LIB_SIGNALS, TYPE_IO, LIB_SECTIONS, SELECTS, BEHAVIOURS, tagsOf, newId, blankDevice, duplicateDevice, checkEntry, exportLibrary, planImport, applyImport } from "./app/library.js";
 import { planQueueFiles, aiReviewMarkdown } from "./app/exports.js";
@@ -684,7 +684,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261001174249").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261001175219").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -793,6 +793,7 @@ function refresh(save = true) {
     S.portMap = (a.ports || []).find(p => p.solution === job.solutions[S.sol]?.id)?.map || [];   // which jack each wire lands on
     // "1 of N" counts the continuation sheets a long schedule/map paginates into
     const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, kindColor: $("#kindColor").checked, company: SETTINGS.company,
+                   usage: boxUsage(job, ix, effectiveCatalog(), a, S.sol),   // the lit windows on every box
                    sheet: `1 of ${sheetTotal(job, ix, a, { solution: S.sol, rawJob: S.job })}` };
     if (trunkMode(job)) opts.wireLabels = wireLabels(job, ix, { solution: S.sol, portMap: S.portMap });
     if (S.job.house.zones.length) {
@@ -1242,7 +1243,7 @@ function printPacket(packet = "service") {
   try {
     const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
     const a = advise(job, ix, effectiveCatalog());
-    const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, kindColor: $("#kindColor").checked, company: SETTINGS.company,
+    const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, kindColor: $("#kindColor").checked, company: SETTINGS.company, usage: boxUsage(job, ix, effectiveCatalog(), a, S.sol),
                    rawJob: S.job, packet, catalog: effectiveCatalog() };   // the takeoff names the real parts
     opts.sheet = `1 of ${sheetTotal(job, ix, a, opts)}`;
     if (trunkMode(job)) opts.wireLabels = wireLabels(job, ix, { solution: S.sol });

@@ -86,6 +86,79 @@ function kindEdge(kind, x, y, h, rx, bw) {
   return "";
 }
 
+/* status lights (Ryan 2026-10-01: the amp's lit channel windows, "across the board"):
+   a row of small windows, one per jack — lit in the box's color when used, hollow when
+   open, gray when reserved; past the cap the last window goes red and "+N" says how far
+   over. A big box groups its windows (each one = 2+ jacks) and prints "used/cap". */
+const LIGHT_OVER = "#e5484d";
+const pipWidth = (cap, rows, maxPer, pitch, w) => { const per = Math.max(1, Math.ceil(cap / (maxPer * rows))); return Math.ceil(Math.ceil(cap / per) / rows) * pitch - (pitch - w); };
+function pipField(cx, y, { used = 0, cap, res = 0 }, { lit = "#3b82c4", bw = false, rows = 1, maxPer = 12, w = 5, h = 6, pitch = 7, label = "", shape = "rect" } = {}) {
+  if (!(cap > 0)) return "";
+  const per = Math.max(1, Math.ceil(cap / (maxPer * rows)));
+  const n = Math.ceil(cap / per), perRow = Math.ceil(n / rows);
+  const litN = Math.min(n, Math.ceil(used / per)), resN = Math.min(n - litN, Math.ceil(res / per));
+  const fw = pipWidth(cap, rows, maxPer, pitch, w), x0 = cx - fw / 2;
+  const on = bw ? "#e6e6e6" : lit, over = used > cap;
+  let s = "";
+  for (let i = 0; i < n; i++) {
+    const x = x0 + (i % perRow) * pitch, yy = y + Math.floor(i / perRow) * (h + 2);
+    const st = i < litN ? (over && i === n - 1 ? "over" : "on") : i < litN + resN ? "res" : "open";
+    const fill = st === "over" ? (bw ? "#fff" : LIGHT_OVER) : st === "on" ? on : st === "res" ? "#8c8c8c" : "none";
+    const stroke = st === "open" ? ` stroke="#6e6e6e" stroke-width="0.8"` : "";
+    s += shape === "jack" ? `<circle cx="${x + w / 2}" cy="${yy + h / 2}" r="${w / 2}" fill="${fill}"${stroke}/>`
+       : `<rect x="${x}" y="${yy}" width="${w}" height="${h}" rx="${shape === "outlet" ? 1.2 : 0.6}" fill="${fill}"${stroke}/>`;
+  }
+  const tail = over ? `+${used - cap}` : per > 1 ? `${used}/${cap}` : "";
+  if (tail) s += `<text x="${x0 + fw + 3}" y="${y + h - 0.5}" font-size="7" fill="${over && !bw ? LIGHT_OVER : "#aab"}">${tail}</text>`;
+  if (label) s += `<text x="${x0 - 3}" y="${y + h - 0.5}" text-anchor="end" font-size="6.5" letter-spacing=".3" fill="#8a8f98">${label}</text>`;
+  return s;
+}
+
+/* what each rack box has in use against what it has (the lights above) — the advisor's own
+   counts: switch ports from the port plan, outlets from the power plan (filled WattBox by
+   WattBox in rack order), HDMI ins/outs on matrices and receivers, jacks on Savant modules */
+export function boxUsage(job, ix, catalog, advice, solIndex = 0) {
+  const s = ix.solutions[solIndex], out = {};
+  if (!s) return out;
+  const sol = s.sol, conns = sol.connections || [];
+  const catOf = d => catalog?.devices?.[d.catalogRef] || job.job?.catalogSnapshot?.devices?.[d.catalogRef] || null;
+  const runs = list => list.reduce((n, c) => n + trunkCount(c, s), 0);
+  for (const d of Object.values(s.devices)) {
+    const c = catOf(d) || {}, u = {};
+    const inb = conns.filter(k => k.to === d.id && !k.dante), outb = conns.filter(k => k.from === d.id && !k.dante);
+    const videoIn = inb.filter(k => k.signal === "video" || (k.signal === "audioReturn" && k.earcKit)).length;
+    if (d.type === "videoMatrix" || d.type === "splitter") {
+      if (c.inputs?.hdmi) u.in = { used: videoIn, cap: c.inputs.hdmi };
+      const co = c.outputs?.hdmi ?? d.io?.out;
+      if (co) u.out = { used: outb.filter(k => k.signal === "video").length, cap: co };
+    } else if (d.type === "avr") {
+      if (c.inputs?.hdmi) u.in = { used: videoIn, cap: c.inputs.hdmi };
+    } else if (d.type === "audioInputModule") {
+      const cap = (c.inputs?.analog || 0) + (c.inputs?.coax || 0) + (c.inputs?.optical || 0) + (c.inputs?.digitalCombo || 0);
+      if (cap) u.jacks = { used: runs(inb.filter(k => k.signal === "audio")) + inb.filter(k => k.signal === "audioReturn" && !k.earcKit).length, cap };
+    } else if (d.type === "audioOutputModule") {
+      if (c.outputs?.analog) u.jacks = { used: runs(outb.filter(k => k.signal === "audio")), cap: c.outputs.analog };
+    }
+    if (Object.keys(u).length) out[d.id] = u;
+  }
+  for (const p of advice?.network || []) {
+    if (p.solution !== sol.id || !s.devices[p.switch] || !p.known) continue;
+    (out[p.switch] ||= {}).ports = { used: p.used, cap: (p.copper || 0) + (p.sfp || 0) };
+  }
+  const pw = (advice?.power || []).find(p => p.solution === sol.id);
+  const units = (pw?.units || []).filter(u => u.outlets > 0 && s.devices[u.id]);
+  // the load splits across the WattBoxes the way an installer balances circuits (by size);
+  // a shortfall lands on the last one and lights red
+  const need = pw?.need || 0, supply = units.reduce((n, u) => n + u.outlets, 0);
+  let left = need;
+  units.forEach((u, i) => {
+    const n = i === units.length - 1 ? left : Math.min(left, Math.round(Math.min(need, supply) * u.outlets / supply));
+    (out[u.id] ||= {}).outlets = { used: n, cap: u.outlets };
+    left -= n;
+  });
+  return out;
+}
+
 export const REMOTE_LABELS = { savant: "SAVANT", appletv: "ATV", josh: "JOSH", factory: "OEM" };
 
 // amp zones a speaker feed takes: a stereo pair is one; a surround set on a
@@ -3800,6 +3873,7 @@ function drawTrunks(list, style0, labels, extra = {}, others = [], bodies = []) 
 export function render(job, ix, P, rt, opts = {}) {
   const bw = !!opts.grayscale;   // B&W-safe mode: dashes carry signal identity
   const kindColor = opts.kindColor !== false;   // color by kind (View toggle, on by default)
+  const usage = opts.usage || {};                // status lights: boxUsage(job, ix, catalog, advice)
   const s = ix.solutions[opts.solution ?? 0];
   const sol = s.sol;
   const out = [];
@@ -3838,15 +3912,23 @@ export function render(job, ix, P, rt, opts = {}) {
     for (const d of r.devices) {
       const dev = s.devices[d.id] || {};
       // color by kind: tint + edge (B&W: patterned edge on the usual black)
-      const kind = kindColor ? deviceKind(dev, job.job?.catalogSnapshot?.devices?.[dev.catalogRef]) : null;
+      const fk = deviceKind(dev, job.job?.catalogSnapshot?.devices?.[dev.catalogRef]);   // the face follows the kind even with color off
+      const kind = kindColor ? fk : null;
       const tint = (base) => kind && (!bw || kind === "power") ? KIND_STYLE[kind].tint : base;
       push(`<g class="devtile" data-device="${esc(d.id)}"${kind ? ` data-kind="${kind}"` : ""}>`);
       if (d.kind === "small") {
-        const rx = dev.sourceType === "appletv" || dev.sourceType === "streamer" ? 8 : 3;
+        const rx = ["appletv", "streamer"].includes(sourceFace(dev)) ? 8 : 3;
         push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="${rx}" fill="${tint("#1e1e1e")}"/>`);
         if (kind) push(kindEdge(kind, d.x, d.y, d.h, rx, bw));
         push(`<circle cx="${d.x + 9}" cy="${d.y + d.h / 2}" r="2.3" fill="#3fbf5a"/>`);
-        push(faceGlyph(dev, d.x + d.w - 18, d.y + d.h / 2));
+        const u = usage[d.id] || {}, L = { lit: kind && KIND_STYLE[kind].edge ? KIND_STYLE[kind].edge : "#3b82c4", bw };
+        if (dev.type === "power") {
+          // WattBox: its outlets, lit for every box plugged in (two rows)
+          const o = u.outlets || { used: 0, cap: 0 };
+          if (o.cap) push(pipField(d.x + d.w - 34, d.y + d.h / 2 - 6, o, { ...L, rows: 2, maxPer: 9, w: 4.5, h: 5, pitch: 6.5, shape: "outlet" }));
+          else push([0, 1].map(i => `<rect x="${d.x + d.w - 34 + i * 12}" y="${d.y + d.h / 2 - 5}" width="9" height="10" rx="2" fill="none" stroke="#8f8f8f" stroke-width="0.9"/>`).join(""));
+        } else if (dev.type === "avbSwitch" && u.ports) push(pipField(d.x + d.w - 30, d.y + d.h / 2 - 6, u.ports, { ...L, rows: 2, maxPer: 8, w: 4.5, h: 5, pitch: 6 }));
+        else push(faceGlyph(dev, d.x + d.w - 18, d.y + d.h / 2));
         push(fitText(d.x + d.w / 2, d.y + d.h + 15, d.model, 12, "#333", d.w + 36));
       } else if (d.kind === "amp") {
         push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="3" fill="${tint("#1c1c1c")}" stroke="#0d0d0d"/>`);
@@ -3873,7 +3955,7 @@ export function render(job, ix, P, rt, opts = {}) {
         for (let k = 1; k <= zones; k++) {
           const x = x0 + (k - 1) * pitch;
           const st = slot[k];
-          push(st === "used" ? `<rect x="${x}" y="${d.y + 26}" width="7" height="11" fill="${bw ? "#16181c" : "#3b82c4"}"/>` :
+          push(st === "used" ? `<rect x="${x}" y="${d.y + 26}" width="7" height="11" fill="${bw ? "#e6e6e6" : "#3b82c4"}"/>` :
                st === "res" ? `<rect x="${x}" y="${d.y + 26}" width="7" height="11" fill="#8c8c8c"/>` :
                               `<rect x="${x}" y="${d.y + 26}" width="7" height="11" fill="none" stroke="#666"/>`);
           push(`<text x="${x + 3.5}" y="${d.y + 48}" text-anchor="middle" font-size="8" fill="#9aa">${k}</text>`);
@@ -3887,27 +3969,56 @@ export function render(job, ix, P, rt, opts = {}) {
         push(fitText(d.x + d.w / 2, d.y + 17, brand, 11, "#ddd", d.w - 12));
         // faceplate identity cues (squint-test assists, never the identifier)
         const my = d.y + d.h / 2 + 3;
+        const u = usage[d.id] || {}, lit = kind && KIND_STYLE[kind].edge ? KIND_STYLE[kind].edge : "#3b82c4", dim = "#8f8f8f";
+        const L = { lit, bw };
         if (dev.type === "avr") {
-          push(`<rect x="${d.x + 14}" y="${my - 5}" width="34" height="10" rx="2" fill="#0d1116" stroke="#3a3f46" stroke-width="0.8"/>`);
+          // display window: one light per HDMI input (a plain slot when the inputs aren't known)
+          push(`<rect x="${d.x + 14}" y="${my - 6}" width="${u.in ? Math.max(34, u.in.cap * 6 + 8) : 34}" height="12" rx="2" fill="#0d1116" stroke="#3a3f46" stroke-width="0.8"/>`);
+          if (u.in) push(pipField(d.x + 18 + (u.in.cap * 6 - 2) / 2, my - 3, u.in, { ...L, w: 4, pitch: 6, maxPer: 12 }));
           push(`<circle cx="${d.x + d.w - 24}" cy="${my}" r="8" fill="#161616" stroke="#7a7a7a" stroke-width="1.3"/>`);
           push(`<line x1="${d.x + d.w - 24}" y1="${my - 2}" x2="${d.x + d.w - 24}" y2="${my - 7}" stroke="#9a9a9a" stroke-width="1.3"/>`);
-        } else if (dev.type === "videoMatrix") {
-          for (let gi = 0; gi < 3; gi++) for (let gj = 0; gj < 3; gj++)
-            push(`<circle cx="${d.x + d.w / 2 - 6 + gj * 6}" cy="${my - 6 + gi * 6}" r="1.3" fill="#8f8f8f"/>`);
-        } else if (dev.type === "avSwitch") {
-          for (let gi = 0; gi < 6; gi++)
-            push(`<rect x="${d.x + d.w / 2 - 19 + gi * 6.5}" y="${my - 2}" width="4" height="4" fill="none" stroke="#8f8f8f" stroke-width="0.9"/>`);
+        } else if (fk === "video") {
+          // matrix: a row of input lights over a row of output lights
+          if (u.in || u.out) {
+            if (u.in) push(pipField(d.x + d.w / 2 + 6, my - 9, u.in, { ...L, label: "IN" }));
+            if (u.out) push(pipField(d.x + d.w / 2 + 6, my + 1, u.out, { ...L, label: "OUT" }));
+          } else for (let gi = 0; gi < 3; gi++) for (let gj = 0; gj < 3; gj++)
+            push(`<circle cx="${d.x + d.w / 2 - 6 + gj * 6}" cy="${my - 6 + gi * 6}" r="1.3" fill="${dim}"/>`);
+        } else if (fk === "mxnet" || fk === "network" || fk === "avb") {
+          // switch: its ports (two rows); MXNet adds a play mark — ports carrying video
+          const cx = d.x + d.w / 2 + (fk === "mxnet" ? 6 : 0);
+          if (u.ports) push(pipField(cx, my - 8, u.ports, { ...L, rows: 2, maxPer: 12 }));
+          else for (let gi = 0; gi < 2; gi++) for (let gj = 0; gj < 6; gj++)
+            push(`<rect x="${cx - 19 + gj * 7}" y="${my - 8 + gi * 8}" width="5" height="6" rx="0.6" fill="none" stroke="${dim}" stroke-width="0.8"/>`);
+          if (fk === "mxnet") {
+            const fw = u.ports ? pipWidth(u.ports.cap, 2, 12, 7, 5) : 40;
+            const tx = cx - fw / 2 - 12;
+            push(`<path d="M${tx} ${my - 6}l7 4.5-7 4.5z" fill="${bw ? "#e6e6e6" : lit}"/>`);
+          }
+        } else if (fk === "control") {
+          // the brains of the job
+          const c = bw || !kind ? "#cfcfcf" : lit, bx = d.x + d.w / 2, by = my - 1;
+          push(`<g fill="none" stroke="${c}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">` +
+            `<path d="M${bx - 0.8} ${by - 7}C${bx - 5} ${by - 9} ${bx - 9.5} ${by - 6} ${bx - 8.5} ${by - 2.5}C${bx - 11} ${by} ${bx - 9.5} ${by + 5} ${bx - 6} ${by + 5.5}C${bx - 5} ${by + 8} ${bx - 1.5} ${by + 8.5} ${bx - 0.8} ${by + 6}Z"/>` +
+            `<path d="M${bx + 0.8} ${by - 7}C${bx + 5} ${by - 9} ${bx + 9.5} ${by - 6} ${bx + 8.5} ${by - 2.5}C${bx + 11} ${by} ${bx + 9.5} ${by + 5} ${bx + 6} ${by + 5.5}C${bx + 5} ${by + 8} ${bx + 1.5} ${by + 8.5} ${bx + 0.8} ${by + 6}Z"/>` +
+            `<path d="M${bx - 6} ${by - 3}q2.5 0.5 2.5 3M${bx - 4.5} ${by + 2.5}q2 -0.5 3.2 1.5M${bx + 6} ${by - 3}q-2.5 0.5 -2.5 3M${bx + 4.5} ${by + 2.5}q-2 -0.5 -3.2 1.5"/></g>`);
         } else if (dev.type === "audioInputModule" || dev.type === "audioOutputModule") {
           // mirrored module cues: jack field sits on the side the signals live —
           // input = left cluster with an arrow flowing IN, output = right
-          // cluster with the arrow flowing OUT (matches where wires attach)
+          // cluster with the arrow flowing OUT (matches where wires attach);
+          // each jack lights when a run lands on it
           const inMod = dev.type === "audioInputModule";
-          const jx = inMod ? d.x + 26 : d.x + d.w - 44;
-          for (let gi = 0; gi < 2; gi++) for (let gj = 0; gj < 4; gj++)
-            push(`<circle cx="${jx + gj * 6}" cy="${my - 3 + gi * 6}" r="1.4" fill="#8f8f8f"/>`);
+          if (u.jacks) {
+            const per = Math.ceil(Math.min(u.jacks.cap, 16) / 2), fw = per * 6 - 1.8;
+            push(pipField(inMod ? d.x + 26 + fw / 2 : d.x + d.w - 26 - fw / 2, my - 6, u.jacks, { ...L, rows: 2, maxPer: 8, w: 4.2, h: 4.2, pitch: 6, shape: "jack" }));
+          } else {
+            const jx = inMod ? d.x + 26 : d.x + d.w - 44;
+            for (let gi = 0; gi < 2; gi++) for (let gj = 0; gj < 4; gj++)
+              push(`<circle cx="${jx + gj * 6}" cy="${my - 3 + gi * 6}" r="1.4" fill="${dim}"/>`);
+          }
           const ax = inMod ? d.x + 10 : d.x + d.w - 20;
-          push(`<line x1="${ax}" y1="${my}" x2="${ax + 9}" y2="${my}" stroke="#8f8f8f" stroke-width="1.1"/>`);
-          push(`<path d="M${ax + 9} ${my}l-3.2 -2.4v4.8z" fill="#8f8f8f"/>`);
+          push(`<line x1="${ax}" y1="${my}" x2="${ax + 9}" y2="${my}" stroke="${dim}" stroke-width="1.1"/>`);
+          push(`<path d="M${ax + 9} ${my}l-3.2 -2.4v4.8z" fill="${dim}"/>`);
         }
         push(fitText(d.x + d.w / 2, d.y + d.h - 10, restName.join(" "), 10.5, "#eee", d.w - 40));   // clear of the status light
         push(`<circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 10}" r="2.2" fill="#3fbf5a"/>`);
@@ -4177,8 +4288,18 @@ export function render(job, ix, P, rt, opts = {}) {
 /* icon layouts per speaker config (positions relative to the group rect) */
 /* small-tile faceplate cue, centered at (cx, cy) — one quiet glyph per source
    type so a rack of black boxes passes the squint test */
+// a source's face: its stored sourceType, else read off its name (kit and library boxes
+// carry a model, not a sourceType — an Apple TV from a kit still gets its badge)
+function sourceFace(dev) {
+  if (dev.sourceType) return dev.sourceType;
+  if (dev.type !== "source") return null;
+  const n = `${dev.model || ""} ${dev.catalogRef || ""}`;
+  return /apple\s*-?tv/i.test(n) ? "appletv" : /kaleidescape|strato/i.test(n) ? "kaleidescape"
+    : /cable|directv|dish|xfinity|tivo|u-?verse|satellite/i.test(n) ? "cable" : /turn\s*table|record player/i.test(n) ? "turntable"
+    : /sonos|\bport\b|music|stream|sms\d|bluesound|heos|wiim|\bconnect\b/i.test(n) ? "streamer" : null;
+}
 function faceGlyph(dev, cx, cy) {
-  switch (dev.sourceType) {
+  switch (sourceFace(dev)) {
     case "appletv":
       return `<rect x="${cx - 8}" y="${cy - 5.5}" width="16" height="11" rx="3" fill="none" stroke="#fff" stroke-width="1"/>` +
              `<text x="${cx}" y="${cy + 3}" text-anchor="middle" font-size="7.5" font-weight="600" fill="#fff">tv</text>`;

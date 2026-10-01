@@ -3577,6 +3577,24 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t(`glyphs: 60 random jobs in Bundle route no worse with the bigger glyphs (best-effort wires ${fb1} → ${fbA})`, n > 50 && fbA <= fb1);
 }
 
+/* ---------- ×N counts clear the boxes (2026-10-01: 11 of 481 bundle counts sat on a box or chip) ---------- */
+{
+  const F = await import("./fuzz-jobs.js"), Pg = await import("./pages.js"), g = F.jobGenerator(1);
+  let total = 0; const hits = [];
+  const jobs = [["residence", fixtures.residence], ["estate", fixtures.estate], ["stress", fixtures.stress]];
+  for (let k = 0; k < 40; k++) { try { jobs.push(["rand" + k, g(k)]); } catch {} }
+  for (const [name, raw] of jobs) for (const trunks of ["bundle", "ribbon"]) {
+    let job, ix; try { ({ job, ix } = loadJob(structuredClone(raw))); } catch { continue; }
+    const o = { trunks, wireLabels: Pg.wireLabels(job, ix, { solution: 0 }) }, p = enginePlace(job, ix, o), svg = render(job, ix, p, engineRoute(job, ix, p, o), o);
+    const boxes = [...p.racks.flatMap(r => r.devices), ...p.chips, ...p.zones.flatMap(z => z.groups.map(gr => ({ x: z.x + gr.x, y: z.y + gr.y, w: gr.w, h: gr.h })))];
+    for (const m of svg.matchAll(/<text class="bustick" x="([\d.-]+)" y="([\d.-]+)"( text-anchor="(middle|end)")?[^>]*>×(\d+)</g)) {
+      total++; const x = +m[1], y = +m[2], w = 6.5 * (m[5].length + 1), x0 = m[4] === "middle" ? x - w / 2 : m[4] === "end" ? x - w : x;
+      if (boxes.some(b => x0 < b.x + b.w && x0 + w > b.x && y - 9 < b.y + b.h && y + 2 > b.y)) hits.push(`${name}/${trunks} ×${m[5]}`);
+    }
+  }
+  t(`trunks: no ×N count sits on a box, chip or room glyph (${total} counts on 43 jobs, Bundle + Ribbon)`, total > 100 && !hits.length, hits.slice(0, 5).join(", "));
+}
+
 document.getElementById("summary").innerHTML =
   fail === 0 ? `<span class="pass">ALL ${pass} TESTS PASS</span>` : `<span class="fail">${fail} FAILED</span> · ${pass} passed`;
 document.title = fail === 0 ? `✓ ${pass} pass` : `✗ ${fail} fail`;

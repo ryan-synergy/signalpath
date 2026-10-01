@@ -922,6 +922,9 @@ function placeOnce(job, ix, opts, variant) {
     else crossings.right++;
     if (cl && cl !== primary) clusterInbound[cl.areaId] = (clusterInbound[cl.areaId] || 0) + 1;
   }
+  // one lane per feed, in every style: trunk drawings use far less of it, but the spare lanes are
+  // what the rip-up pass untangles with — sizing by trunks (2026-10-01, 200 random jobs) printed
+  // 1–2.6% bigger for 1–2% more crossings, so the room stays
   const topCorridorH = quant(crossings.top * PL.lanePitch + 40, PL.topCorridorMin);
   // the right corridor's VERTICAL lanes serve col-C risers bound for the top
   // band (east-bound feeds only cross it horizontally)
@@ -3738,6 +3741,31 @@ const polyD = pts => pts.map((q, i) => `${i ? "L" : "M"}${+q[0].toFixed(2)} ${+q
 
 function drawTrunks(list, style0, labels, extra = {}, others = [], bodies = []) {
   const o = [], labelReqs = [];
+  // ×N counts: the middle of the run unless a box or another count is there — then slide along
+  // the run, then try its other side (2026-10-01: 11 of 481 bundle counts sat on a box or chip)
+  const tickBoxes = [];
+  // segs: [{dir, lo, hi, at}] — the run first, then other stretches of the same wire to fall back on
+  const tickAt = (segs, n, color) => {
+    const txt = `×${n}`, w = 6.5 * txt.length, h = 11;
+    const free = r => !bodies.some(q => r.x < q.x + q.w + 1 && r.x + r.w > q.x - 1 && r.y < q.y + q.h + 1 && r.y + r.h > q.y - 1) &&
+      !tickBoxes.some(q => r.x < q.x + q.w && r.x + r.w > q.x && r.y < q.y + q.h && r.y + r.h > q.y);
+    let pick = null;
+    for (const { dir, lo, hi, at } of segs) {
+      for (const t of [0.5, 0.38, 0.62, 0.26, 0.74, 0.14, 0.86]) {
+        const c = lo + (hi - lo) * t;
+        const opts = dir === "h"
+          ? [{ x: c, y: at - 7, anchor: "middle", r: { x: c - w / 2, y: at - 16, w, h } }, { x: c, y: at + 15, anchor: "middle", r: { x: c - w / 2, y: at + 6, w, h } }]
+          : [{ x: at + 7, y: c + 4, anchor: "", r: { x: at + 7, y: c - 5, w, h } }, { x: at - 7, y: c + 4, anchor: "end", r: { x: at - 7 - w, y: c - 5, w, h } }];
+        pick = opts.find(q => free(q.r));
+        if (pick) break;
+      }
+      if (pick) break;
+    }
+    const { dir, lo, hi, at } = segs[0];
+    pick ||= dir === "h" ? { x: (lo + hi) / 2, y: at - 7, anchor: "middle", r: null } : { x: at + 7, y: (lo + hi) / 2 + 4, anchor: "", r: null };
+    if (pick.r) tickBoxes.push(pick.r);
+    o.push(`<text class="bustick" x="${+pick.x.toFixed(1)}" y="${+pick.y.toFixed(1)}"${pick.anchor ? ` text-anchor="${pick.anchor}"` : ""} font-size="10.5" font-weight="700" fill="${color}" paint-order="stroke" stroke="#fff" stroke-width="3">${txt}</text>`);
+  };
   const byNet = new Map();
   for (const t of list) (byNet.get(t.w.net) || byNet.set(t.w.net, []).get(t.w.net)).push(t);
   const tags = [];
@@ -3757,8 +3785,7 @@ function drawTrunks(list, style0, labels, extra = {}, others = [], bodies = []) 
       for (const b of bars) {
         o.push(`<path d="${barD(b)}" stroke="${color}" stroke-width="5.2" stroke-linecap="round"${dashA}/>`);
         if (b.hi - b.lo < 70) continue;
-        const mx = b.dir === "h" ? (b.lo + b.hi) / 2 : b.at, my = b.dir === "h" ? b.at : (b.lo + b.hi) / 2;
-        o.push(`<text class="bustick" x="${b.dir === "v" ? mx + 7 : mx}" y="${b.dir === "v" ? my + 4 : my - 7}"${b.dir === "v" ? "" : ' text-anchor="middle"'} font-size="10.5" font-weight="700" fill="${color}" paint-order="stroke" stroke="#fff" stroke-width="3">×${b.n}</text>`);
+        tickAt([{ dir: b.dir, lo: b.lo, hi: b.hi, at: b.at }], b.n, color);
       }
       R.forEach((polys, mi) => ownPts.set(members[mi].w, polys[Math.floor((polys.length - 1) / 2)]));
     } else {
@@ -3824,13 +3851,16 @@ function drawTrunks(list, style0, labels, extra = {}, others = [], bodies = []) 
     // ×N on the longer shared runs (bundle look)
     const longestOnLine = new Map();
     for (const p of pieces) if (p.dir === "h" && p.n > 1) { const k = p.at, b = longestOnLine.get(k); if (!b || p.hi - p.lo > b.hi - b.lo) longestOnLine.set(k, p); }
-    const tick = p => { const [[x1, y1], [x2, y2]] = xy(p), mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
-      o.push(`<text class="bustick" x="${p.dir === "v" ? mx + 7 : mx}" y="${p.dir === "v" ? my + 4 : my - 7}"${p.dir === "v" ? "" : ' text-anchor="middle"'} font-size="10.5" font-weight="700" fill="${color}" paint-order="stroke" stroke="#fff" stroke-width="3">×${p.n}</text>`); };
+    const seg = p => { const [[x1, y1], [x2, y2]] = xy(p);
+      return p.dir === "h" ? { dir: "h", lo: Math.min(x1, x2), hi: Math.max(x1, x2), at: y1 } : { dir: "v", lo: Math.min(y1, y2), hi: Math.max(y1, y2), at: x1 }; };
+    const tick = (p, alts = []) => tickAt([p, ...alts.filter(q => q !== p && q.hi - q.lo >= 12)].map(seg), p.n, color);
     const ticked = new Set();
     for (const p of pieces) {
       if (p.n < 2 || p.hi - p.lo < 70 || ribbon(p)) continue;
       if (p.dir === "h" && longestOnLine.get(p.at) !== p) continue;
-      tick(p); ticked.add(p);
+      // fallback stretches: other pieces carrying exactly the same wires (the count still reads true there)
+      const key = q => q.on.map(v => v.mi).sort((a, b) => a - b).join(",");
+      tick(p, pieces.filter(q => q.n === p.n && key(q) === key(p)).sort((a, b) => (b.hi - b.lo) - (a.hi - a.lo))); ticked.add(p);
     }
     // a multi-run wire always shows its own count: on its longest stretch alone, when no tick already says it
     members.forEach((m, mi) => {
@@ -3838,7 +3868,7 @@ function drawTrunks(list, style0, labels, extra = {}, others = [], bodies = []) 
       const solo = pieces.filter(p => p.on.length === 1 && p.on[0].mi === mi);
       if (solo.some(p => ticked.has(p)) || style === "ribbon" && m.runs <= RIBBON_MAX) return;   // a ribbon draws its runs
       const p = solo.sort((a, b) => (b.hi - b.lo) - (a.hi - a.lo))[0];
-      if (p && p.hi - p.lo >= 16) { tick(p); ticked.add(p); }
+      if (p && p.hi - p.lo >= 16) { tick(p, solo); ticked.add(p); }
     });
     }
     // wire numbers at each room end — placed below, once every line is drawn

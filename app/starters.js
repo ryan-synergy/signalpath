@@ -134,6 +134,158 @@ export const STARTERS = [
       { from: "matrix", to: "sav-in", signal: "audio", count: 2 },
       { from: "sav-out", to: "amp", signal: "audio" }],
   },
+  /* ---- drafted 2026-10-01 for Ryan to refine (Settings → Starter kits: hide, reorder, duplicate to
+          change). Each carries starting rooms so it shows what it's for; quick-add wires them. ---- */
+  {
+    id: "mxnet-10g-estate",
+    name: "MXNet 10G estate + Savant audio",
+    blurb: "A large house: MXNet 10G (encoders become 10G transceivers), Kaleidescape, Savant AVB audio through two output modules into two MDX-16s, a 48-port house switch.",
+    tip: "bedroom 4 stereo 55 matrix, wine room stereo",
+    solution: { platforms: ["savant"], audioNetwork: "avb" },
+    devices: [
+      src("atv1", "Apple TV 1"), src("atv2", "Apple TV 2"), src("cablebox", "Cable Box"),
+      dev("kscape", "source", "kaleidescape-strato-v"),
+      dev("music", "source", "savant-pav-sms2001"),
+      dev("sw", "avSwitch", "avpro-mxnet-10g-sw24c"),
+      dev("cbx", "controlBox", "avpro-mxnet-cbox-ha"),
+      dev("sav-in", "audioInputModule", "savant-pav-aim7c"),
+      dev("sav-out", "audioOutputModule", "savant-pav-aom8c"),
+      dev("sav-out2", "audioOutputModule", "savant-pav-aom8c"),
+      { id: "avb", type: "avbSwitch", model: "AVB switch (Avnu-certified)", status: "new" },
+      dev("amp", "amp", "anthem-mdx-16", null, { zones: 8 }),
+      dev("amp2", "amp", "anthem-mdx-16", null, { zones: 8 }),
+      dev("lan", "networkSwitch", "ubiquiti-usw-pro-max-48-poe"),
+      dev("power", "power", "wattbox-800vps-ipvm-18"),
+      dev("power2", "power", "wattbox-800vps-ipvm-18"),
+    ],
+    companions: [
+      { id: "enc-atv1", type: "enc", serves: "atv1", auto: true, avdm: true },
+      { id: "enc-atv2", type: "enc", serves: "atv2", auto: true, avdm: true },
+      { id: "enc-cable", type: "enc", serves: "cablebox", auto: true, avdm: true },
+      { id: "enc-kscape", type: "enc", serves: "kscape", auto: true },
+    ],
+    connections: [v("atv1", "enc-atv1"), v("enc-atv1", "sw"), v("atv2", "enc-atv2"), v("enc-atv2", "sw"),
+      v("cablebox", "enc-cable"), v("enc-cable", "sw"), v("kscape", "enc-kscape"), v("enc-kscape", "sw"),
+      { from: "cbx", to: "sw", signal: "network" },
+      { from: "enc-atv1", to: "sav-in", signal: "audio" }, { from: "enc-atv2", to: "sav-in", signal: "audio" }, { from: "enc-cable", to: "sav-in", signal: "audio" },
+      { from: "avb", to: "music", signal: "network" }, { from: "avb", to: "sav-in", signal: "network" },
+      { from: "avb", to: "sav-out", signal: "network" }, { from: "avb", to: "sav-out2", signal: "network" },
+      { from: "sav-out", to: "amp", signal: "audio" }, { from: "sav-out2", to: "amp2", signal: "audio" }],
+    rooms: "family room 7.1.4 85 sony matrix, primary suite 5.1 77 lg matrix, theater 7.1.4 projector 135 matrix, kitchen stereo 65 matrix, office stereo 50 matrix, " +
+      "gym 65 matrix, bedroom 2 stereo 55 matrix, bedroom 3 stereo 55 matrix, dining room stereo, primary bath stereo, patio landscape 8, pool landscape 12",
+  },
+  {
+    id: "condo",
+    name: "Condo — MXNet + MDX-8",
+    blurb: "A small system: two sources on MXNet EV2 into an 8-port switch, a Sonos Port streaming into an MDX-8 for the speaker rooms, a receiver for the living room's surround.",
+    tip: "guest room 50 matrix, balcony stereo",
+    devices: [
+      src("atv1", "Apple TV"), src("cablebox", "Cable Box"),
+      dev("music", "source", "sonos-port"),   // streaming into the MDX-8
+      dev("sw", "avSwitch", "avpro-mxnet-sw12"),
+      dev("cbx", "controlBox", "avpro-mxnet-cbox-ha"),
+      dev("amp", "amp", "anthem-mdx-8", null, { zones: 4 }),
+      dev("lan", "networkSwitch", "ubiquiti-usw-pro-24-poe"),
+      dev("power", "power", "wattbox-800-ipvm-12"),
+    ],
+    companions: [
+      { id: "enc-atv1", type: "enc", serves: "atv1", auto: true },
+      { id: "enc-cable", type: "enc", serves: "cablebox", auto: true },
+    ],
+    connections: [v("atv1", "enc-atv1"), v("enc-atv1", "sw"), v("cablebox", "enc-cable"), v("enc-cable", "sw"), { from: "cbx", to: "sw", signal: "network" },
+      { from: "music", to: "amp", signal: "audio" }],
+    rooms: "living room 5.1 75 sony matrix, primary bedroom stereo 55 matrix, kitchen stereo, office 43 matrix",
+  },
+  {
+    id: "sonos",
+    name: "Sonos — streaming, local TVs",
+    blurb: "No video distribution: each TV has its own source; Sonos Amps in the rack drive the speaker rooms over the network, a Sonos soundbar in the family room.",
+    tip: "office stereo, primary bath stereo",
+    devices: [
+      dev("amp1", "amp", "sonos-amp"), dev("amp2", "amp", "sonos-amp"), dev("amp3", "amp", "sonos-amp"),
+      dev("lan", "networkSwitch", "ubiquiti-usw-pro-24-poe"),
+      dev("power", "power", "wattbox-800-ipvm-6"),
+    ],
+    connections: [],
+    rooms: "family room soundbar 75 sony local, kitchen stereo, primary bedroom stereo 55 local, patio stereo",
+  },
+  {
+    id: "josh-dante",
+    name: "Josh.ai + MXNet + Dante",
+    blurb: "Josh.ai control with Josh remotes; MXNet EV2 video, Dante audio into a Director amp, Dante decoders at the TVs, Dante CBOX on its own switch.",
+    tip: "guest room stereo 50 matrix josh remote",
+    solution: { audioNetwork: "dante", platforms: ["josh"] },
+    devices: [
+      src("atv1", "Apple TV 1"), src("atv2", "Apple TV 2"), src("cablebox", "Cable Box"),
+      dev("music", "source", "savant-pav-sms2001"),
+      dev("sw", "avSwitch", "avpro-mxnet-sw24e"),
+      dev("cbx", "controlBox", "avpro-mxnet-cbox-ha"),
+      dev("dante-cbox", "controlBox", "avpro-mxnet-dante-cbox"),
+      dev("dante-sw", "networkSwitch", "avpro-mxnet-sw24e", null, { danteSwitch: true }),
+      dev("dante-in", "danteBridge", "audiocontrol-acp-dante-e-poe"),
+      dev("director", "amp", "audiocontrol-m6800d"),
+      dev("lan", "networkSwitch", "ubiquiti-usw-pro-24-poe"),
+      dev("power", "power", "wattbox-800vps-ipvm-18"),
+    ],
+    companions: [
+      { id: "enc-atv1", type: "enc", serves: "atv1", auto: true },
+      { id: "enc-atv2", type: "enc", serves: "atv2", auto: true },
+      { id: "enc-cable", type: "enc", serves: "cablebox", auto: true },
+    ],
+    connections: [v("atv1", "enc-atv1"), v("enc-atv1", "sw"), v("atv2", "enc-atv2"), v("enc-atv2", "sw"),
+      v("cablebox", "enc-cable"), v("enc-cable", "sw"), { from: "cbx", to: "sw", signal: "network" },
+      { from: "music", to: "dante-in", signal: "audio" },
+      { from: "dante-in", to: "director", signal: "audio", dante: true },
+      { from: "dante-cbox", to: "dante-sw", signal: "network" }, { from: "dante-sw", to: "director", signal: "network" }],
+    rooms: "family room 5.1 75 sony matrix josh remote, kitchen stereo 55 matrix josh remote, primary suite stereo 65 matrix josh remote, office stereo 43 matrix josh remote",
+  },
+  {
+    id: "outdoor",
+    name: "Outdoor living — landscape + Sunbrite",
+    blurb: "Outdoor-heavy: Sonance landscape sets on a Sonance amp, an MDX-8 for the stereo areas (a Sonos Port streaming into each), patio and outdoor kitchen Sunbrite TVs on MXNet.",
+    tip: "side yard landscape 6, cabana stereo",
+    devices: [
+      src("atv1", "Apple TV"), src("cablebox", "Cable Box"),
+      dev("sw", "avSwitch", "avpro-mxnet-sw12"),
+      dev("cbx", "controlBox", "avpro-mxnet-cbox-ha"),
+      dev("music", "source", "sonos-port"), dev("music2", "source", "sonos-port"),   // one streaming into each amp
+      dev("land", "amp", "sonance-blaze-pzc-504"),   // 2 zones: the two landscape areas
+      dev("amp", "amp", "anthem-mdx-8", null, { zones: 4 }),
+      dev("lan", "networkSwitch", "ubiquiti-usw-pro-24-poe"),
+      dev("power", "power", "wattbox-800vps-ipvm-18"),
+    ],
+    companions: [
+      { id: "enc-atv1", type: "enc", serves: "atv1", auto: true },
+      { id: "enc-cable", type: "enc", serves: "cablebox", auto: true },
+    ],
+    connections: [v("atv1", "enc-atv1"), v("enc-atv1", "sw"), v("cablebox", "enc-cable"), v("enc-cable", "sw"), { from: "cbx", to: "sw", signal: "network" },
+      { from: "music", to: "land", signal: "audio" }, { from: "music2", to: "amp", signal: "audio" }],
+    // landscapes first: quick-add fills amps in rack order, so the Sonance takes them and the MDX-8 the stereo areas
+    rooms: "pool landscape 12, front yard landscape 6, patio stereo 65 sunbrite matrix, outdoor kitchen stereo 55 sunbrite matrix, fire pit stereo",
+  },
+  {
+    id: "dedicated-theater",
+    name: "Dedicated theater — Kaleidescape + MRX 1140",
+    blurb: "A room of its own: Kaleidescape, Apple TV and cable into an Anthem MRX 1140, the projector on an AVPro Bullet Train.",
+    tip: "theater 7.1.4 projector 135 avr bullet",
+    devices: [
+      dev("kscape", "source", "kaleidescape-strato-v"), src("atv", "Apple TV"), src("cablebox", "Cable Box"),
+      dev("avr", "avr", "anthem-mrx-1140-8k"),
+      dev("lan", "networkSwitch", "ubiquiti-usw-pro-24-poe"),
+      dev("power", "power", "wattbox-800-ipvm-12"),
+    ],
+    connections: [v("kscape", "avr"), v("atv", "avr"), v("cablebox", "avr")],
+    rooms: "theater 7.1.4 projector 135 avr bullet",
+  },
+  {
+    id: "prewire",
+    name: "Prewire only — rough-in",
+    blurb: "Rough-in before the gear is chosen: every room pre-wired, no rack gear yet. The quote carries Synergy's prewire items.",
+    tip: "bedroom 2 prewire stereo 55",
+    devices: [],
+    connections: [],
+    rooms: "family room prewire 7.1.4 85, primary suite prewire 5.1 75, kitchen prewire stereo 55, office prewire tv 43, patio prewire landscape 8, gym prewire tv 55",
+  },
   {
     id: "blank",
     name: "Blank rack",
@@ -187,10 +339,18 @@ export function starterFromJob(job, solIndex = 0, { name = "My starter", blurb =
 }
 // the kits the new-job picker offers: shipped ones and yours, in your order, each marked
 export function listStarters(store = {}) {
-  const mine = Object.values(store.mine || {}), order = store.order || [], hidden = new Set(store.hidden || []);
-  const all = [...STARTERS.map(s => ({ ...s, shipped: true })), ...mine];
-  const pos = id => { const i = order.indexOf(id); return i < 0 ? 1e6 : i; };
-  return all.map((s, i) => ({ ...s, hidden: hidden.has(s.id), _i: i })).sort((a, b) => pos(a.id) - pos(b.id) || a._i - b._i).map(({ _i, ...s }) => s);
+  const mine = Object.values(store.mine || {}), hidden = new Set(store.hidden || []);
+  const all = [...STARTERS.map(s => ({ ...s, shipped: true })), ...mine], byId = new Map(all.map(s => [s.id, s]));
+  // your order first; a kit it doesn't mention (a kit added to the app later, or a new one of yours)
+  // slots in right after the kit that comes before it in the natural order, so it doesn't sink below Blank
+  const ids = (store.order || []).filter(id => byId.has(id));
+  all.forEach((s, i) => {
+    if (ids.includes(s.id)) return;
+    let at = -1;
+    for (let k = i - 1; k >= 0 && at < 0; k--) at = ids.indexOf(all[k].id);
+    ids.splice(at + 1, 0, s.id);
+  });
+  return ids.map(id => ({ ...byId.get(id), hidden: hidden.has(id) }));
 }
 // a copy of any kit as yours, to change
 export function duplicateStarter(st, taken = []) {

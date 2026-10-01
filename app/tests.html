@@ -3272,11 +3272,38 @@ for (const [name, raw] of Object.entries(fixtures)) {
 {
   const S = await import("./starters.js"), C = await import("./commands.js"), X = await import("./exports.js");
   const CAT = await (await fetch("./catalog.json")).json();
-  t("starters: MXNet first — MXNet + Savant audio, MXNet + Dante, MXNet + MDX-16 — then the theater, the AXION matrix, blank",
-    S.STARTERS.map(x => x.id).join(",") === "mxnet-savant,dante-director,mxnet,theater-receiver,savant-whole-home,blank");
+  t("starters: MXNet first — MXNet + Savant audio, MXNet + Dante, MXNet + MDX-16 — then the theater, the AXION matrix, the drafted kits, blank",
+    S.STARTERS.map(x => x.id).join(",") === "mxnet-savant,dante-director,mxnet,theater-receiver,savant-whole-home,mxnet-10g-estate,condo,sonos,josh-dante,outdoor,dedicated-theater,prewire,blank");
+
   const blank = () => ({ generator: "SignalPath", schemaVersion: 1, job: { name: "n", client: { name: "c" }, revisions: [] }, house: { areas: [], zones: [] },
     solutions: [{ id: "s", name: "A", platforms: [], racks: [{ id: "rack-main", name: "Rack", devices: [] }], localDevices: [], companions: [], connections: [], annotations: [] }] });
   const build = id => C.planCommands(S.applyStarter(blank(), S.STARTERS.find(x => x.id === id), CAT), 0, [{ op: "add_zones", text: "family room 5.1 75 sony matrix, theater 7.1 85 avr, kitchen stereo 55 matrix, patio landscape 8" }], CAT).job;
+  { // the drafted kits (2026-10-01) come with starting rooms: each one, built with them, validates and routes clean in every style
+    const bad = [];
+    for (const st of S.STARTERS.filter(k => k.rooms)) {
+      const j = C.planCommands(S.applyStarter(blank(), st, CAT), 0, [{ op: "add_zones", text: st.rooms }], CAT).job;
+      const L = loadJob(j), v = validate(L.job, L.ix);
+      if (v.errors.length || v.warnings.length) bad.push(`${st.id}: ${[...v.errors, ...v.warnings].map(e => e.code).join(",")}`);
+      if (st.devices.some(d => d.catalogRef && !CAT.devices[d.catalogRef])) bad.push(`${st.id}: unknown product`);
+      for (const tr of [false, "bundle", "ribbon"]) { const p = enginePlace(L.job, L.ix, { trunks: tr }), rt = engineRoute(L.job, L.ix, p, { trunks: tr });
+        const n = rt.wires.filter(w => /fallback/.test(w.cls)).length + rt.warnings.filter(w => w.code === "unrouted").length; if (n) bad.push(`${st.id}/${tr}: ${n} fallback`); }
+    }
+    t("kits: the seven drafted kits, built with their starting rooms, validate without a note and route clean (Off, Bundle, Ribbon)", !bad.length, bad.join(" | "));
+    { // a projector sends no sound back: no eARC kit, no optical, no eARC flag — on the separate-feeds default or fed by a receiver
+      const ret = id => { const st = S.STARTERS.find(k => k.id === id), j = C.planCommands(S.applyStarter(blank(), st, CAT), 0, [{ op: "add_zones", text: st.rooms }], CAT).job, sol = j.solutions[0];
+        const th = j.house.zones.find(z => z.name === "Theater"), pj = th.endpoints.find(e => e.type === "display");
+        return { back: sol.connections.filter(c => c.from === pj.id && c.signal === "audioReturn").length, earc: sol.connections.some(c => c.to === pj.id && c.earc), others: sol.connections.filter(c => c.signal === "audioReturn").length }; };
+      const e = ret("mxnet-10g-estate"), d = ret("dedicated-theater");
+      t("kits: a projector gets no audio return (10G estate theater, dedicated theater) — the TVs still do", !e.back && !e.earc && e.others >= 2 && !d.back && !d.earc, JSON.stringify({ e, d }));
+    }
+    const tvFed = S.STARTERS.find(k => k.id === "outdoor");
+    { const j = C.planCommands(S.applyStarter(blank(), tvFed, CAT), 0, [{ op: "add_zones", text: tvFed.rooms }], CAT).job, sol = j.solutions[0];
+      const by = amp => sol.connections.filter(c => c.from === amp && c.signal === "speaker").map(c => j.house.zones.find(z => z.endpoints.some(e => e.id === c.to)).name).sort().join(",");
+      t("kits: outdoor — the Sonance takes the two landscape areas, the MDX-8 the stereo ones", by("land") === "Front Yard,Pool" && by("amp") === "Fire Pit,Outdoor Kitchen,Patio", `${by("land")} / ${by("amp")}`); }
+    { const j = S.applyStarter(blank(), S.STARTERS.find(k => k.id === "mxnet-10g-estate"), CAT), sol = j.solutions[0], X2 = await import("./exports.js");
+      const pq = X2.planQueueFiles(C.planCommands(j, 0, [{ op: "add_zones", text: "kitchen stereo 55 matrix" }], CAT).job, 0, CAT)[0].text;
+      t("kits: the 10G estate quotes 10G transceivers (AVDM for the Savant sources), not 1G encoders", /AC-MXNET-10G-TCVR-AVDM/.test(pq) && /AC-MXNET-10G-TCVR\b/.test(pq) && !/AC-MXNET-1G-/.test(pq)); }
+  }
   { const j = build("mxnet-savant"), pq = X.planQueueFiles(j, 0, CAT)[0].text; const L = loadJob(j), a = advise(L.job, L.ix, CAT), st = a.setup[0].setup || a.setup[0];
     t("MXNet + Savant: AVDM encoders break each source's audio out (downmixed) into the Savant input module — every source stays on Auto",
       /3 \| AVPro Edge \| AC-MXNET-1G-AVDM-EV2/.test(pq) && /PAV-AIM7C-20/.test(pq) && j.solutions[0].connections.filter(c => /^enc-/.test(c.from) && c.to === "sav-in").length === 3 &&
@@ -3438,9 +3465,12 @@ for (const [name, raw] of Object.entries(fixtures)) {
     sig(j2) === sig(D) && tvFeed(j2) === tvFeed(D) && j2.solutions[0].racks[0].devices.length === kit.devices.length, kit.rooms);
   t("kits: a surround room on the separate-feeds default is written \"matrix\" (\"avr\" would mean the receiver feeds the TV)",
     /Theater 7\.1\.4 98 sony matrix/.test(kit.rooms) && !/\bavr\b/.test(kit.rooms));
-  const store = { mine: { [kit.id]: kit }, order: ["mxnet", kit.id], hidden: ["blank"] }, L = S.listStarters(store);
-  t("kits: the picker list is shipped + yours, in your order, hidden ones marked",
-    L[0].id === "mxnet" && L[1].id === kit.id && L.find(k => k.id === "blank").hidden && L.length === S.STARTERS.length + 1);
+  // an order saved before the drafted kits existed: yours moved to the top, Blank hidden
+  const store = { mine: { [kit.id]: kit }, order: [kit.id, "mxnet-savant", "dante-director", "mxnet", "theater-receiver", "savant-whole-home", "blank"], hidden: ["blank"] }, L = S.listStarters(store);
+  const ix = id => L.findIndex(k => k.id === id);
+  t("kits: the picker list is yours + shipped, in your order, hidden ones marked — kits added to the app later slot in before Blank, not below it",
+    L[0].id === kit.id && L.find(k => k.id === "blank").hidden && L.length === S.STARTERS.length + 1 &&
+    ix("mxnet-10g-estate") === ix("savant-whole-home") + 1 && ix("prewire") < ix("blank"), L.map(k => k.id).join(","));
   const dup = S.duplicateStarter(L.find(k => k.id === "mxnet"), L.map(k => k.id));
   t("kits: copying a shipped kit gives you an editable one with its own id", dup.custom && dup.id !== "mxnet" && /copy/.test(dup.name) && dup.devices.length === S.STARTERS.find(k => k.id === "mxnet").devices.length);
   const rt = ["patio stereo sony local", "den tv", "theater 7.1.4 98 sony far savant remote", "guest prewire 50", "pool house 5.1 65 120ft", "porch landscape 8 no tv", "bonus room 4 speakers 55"].every(tx => {

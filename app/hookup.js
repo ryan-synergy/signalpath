@@ -117,6 +117,7 @@ export function setVideo(job, sol, zone, from, run, earc) {
   // re-picking the same feed keeps it.
   // A Bullet Train brings eARC back itself up to 10 m; a longer one carries ARC
   // (Dolby Digital 5.1 — what optical would), so only an Atmos room adds the kit.
+  if (tv.displayType === "projector") earc = false;   // a projector returns no audio — no eARC, no kit, no optical
   const fresh = prev.video?.from !== from || prev.video?.run !== run;
   const autoBack = (run === "balun" || (run === "bullet" && !bulletFor(zone).earc)) && earc && fresh && !prev.ret;
   const kit = autoBack && isAtmosRoom(zone);
@@ -324,7 +325,8 @@ export function setDanteAudio(job, sol, zone, ampId) {
 // or the eARC kit where Atmos matters or the run is too long for Toslink. Skipped when the TV already sends it somewhere.
 function tvBackToReceiver(job, sol, zone, avr) {
   const { tv } = endpointsOf(zone);
-  if (!tv || readHookup(job, sol, zone).ret || readHookup(job, sol, zone).video?.from === avr) return;
+  // a projector has no apps and sends no sound back: nothing to return
+  if (!tv || tv.displayType === "projector" || readHookup(job, sol, zone).ret || readHookup(job, sol, zone).video?.from === avr) return;
   // Toslink past ~10 m is unreliable: a far room gets the kit (Cat6A, 100 m) as well
   const far = (knownRunM(zone) ?? 0) > RUN_LIMIT_M.optical + 0.5;
   setReturn(job, sol, zone, avr, false, isAtmosRoom(zone) || far);

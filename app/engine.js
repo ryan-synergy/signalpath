@@ -318,9 +318,15 @@ export function validate(job, ix = indexJob(job)) {
     const fed = new Set((sol.connections || []).map(c => c.to));
     const localFedZones = new Set(Object.values(s.locals)
       .filter(d => d.type === "source" && d.location === "at-display").map(d => d.zone));
+    // a future room needs nothing yet; a pre-wire room is rough-in — fine with no gear on the job yet
+    // (the "Prewire only" kit), a warning once there is gear its cables could home-run to
+    const rackGear = Object.keys(s.devices).length > 0;
     for (const eid of Object.keys(ix.endpointsById)) {
       if (fed.has(eid)) continue;
       if (ix.endpointsById[eid].type === "display" && localFedZones.has(ix.endpointZone[eid])) continue;
+      const scope = ix.zonesById[ix.endpointZone[eid]]?.scope || "included";
+      if (scope === "future" || (scope === "prewire" && !rackGear)) continue;
+      if (scope === "prewire") { W("orphan-endpoint", `${nm(eid)} (pre-wire) isn't wired to the rack yet — its cable has no home run`, eid); continue; }
       E("orphan-endpoint", `${nm(eid)} has nothing feeding it — add a connection`, eid);
     }
     // sources should feed something
@@ -334,6 +340,7 @@ export function validate(job, ix = indexJob(job)) {
     const fedIn = new Set((sol.connections || []).filter(c => c.signal !== "network").map(c => c.to));
     for (const d of Object.values(s.devices)) {
       if (!["amp", "avr", "videoMatrix", "splitter"].includes(d.type) || fedIn.has(d.id)) continue;
+      if (/sonos/i.test(`${d.catalogRef || ""} ${d.model || ""}`)) continue;   // a Sonos Amp streams its own music over the network
       const drives = (sol.connections || []).filter(c => c.from === d.id && c.signal !== "network");
       if (drives.length) W("no-input", `${d.model || d.id} drives ${drives.length === 1 ? nm(drives[0].to) : `${drives.length} things`} but nothing is plugged into it — connect a source${d.type === "amp" ? " (or a Savant/Dante audio feed)" : ""}`, d.id);
     }
@@ -2894,8 +2901,15 @@ function routeOnce(job, ix, placement, opts = {}) {
     const outs = visConns.filter(c => c.from === chip.id);
     const ccy = chip.y + chip.h / 2 + (outs.length > 1 ? (conn.signal === "video" ? -chip.h / 4 : chip.h / 4) : 0), skip = new Set([chip.id, b.id]);
     const chipR = chip.x + chip.w;
-    const ty = takeLeftPort(b, leftPlan[wireId(conn)] ?? ccy);
+    // landing heights on the target's left edge: the planned one first, then the other free ones
+    // nearest it — a single height walled off by a neighbouring staple used to mean a fallback
+    const ty0 = takeLeftPort(b, leftPlan[wireId(conn)] ?? ccy);
+    const [tmin, tmax] = portSpan(b), tys = [ty0];
+    for (let yy = tmin; yy <= tmax; yy += RT.lane)
+      if (Math.abs(yy - ty0) >= 10 && !(leftPorts[b.id] || []).some(u => Math.abs(u - yy) < 10)) tys.push(yy);
+    tys.splice(1, tys.length, ...tys.slice(1).sort((m, n) => Math.abs(m - ty0) - Math.abs(n - ty0)).slice(0, 6));
     const cands = [];
+    for (const ty of tys) {
     // a chip's second (audio) output drops right beside the chip, inside its video wire's turn
     if (outs.length > 1 && conn.signal !== "video" && chipR <= b.x) {
       // several such drops into one box nest: the lowest chip hugs the chips, the highest
@@ -2909,7 +2923,7 @@ function routeOnce(job, ix, placement, opts = {}) {
     }
     if (chipR <= b.x) {
       if (Math.abs(ty - ccy) < 1) cands.push([[chipR, ccy], [b.x, ty]]);
-      if (b.x - chipR >= 20) {
+      if (b.x - chipR >= 10) {
         const rr = riserRangeFor(wireId(conn), [chipR + 4, b.x - 4]);
         const mx = rr[0] > rr[1] ? null : alloc(usedV, riserWant(wireId(conn), rr), Math.min(ccy, ty), Math.max(ccy, ty), nWire, 0,
           x => segBlocked(x, Math.min(ccy, ty), x, Math.max(ccy, ty), skip), rr);
@@ -2928,12 +2942,17 @@ function routeOnce(job, ix, placement, opts = {}) {
       if (wx != null) cands.push([[chip.x, ccy], [wx, ccy], [wx, ty], [b.x, ty]]);
     }
     // order never beats routable: the unranked riser is the last resort before a fallback
-    if (riserPlan[wireId(conn)] && chipR <= b.x && b.x - chipR >= 20) {
+    if (riserPlan[wireId(conn)] && chipR <= b.x && b.x - chipR >= 10) {
       const mx = alloc(usedV, (chipR + b.x) / 2, Math.min(ccy, ty), Math.max(ccy, ty), nWire, 0,
         x => segBlocked(x, Math.min(ccy, ty), x, Math.max(ccy, ty), skip), [chipR + 4, b.x - 4]);
       if (mx != null) cands.push([[chipR, ccy], [mx, ccy], [mx, ty], [b.x, ty]]);
     }
-    riserClaim(wireId(conn), tryCommit(conn, "chip-out", cands, skip));
+    }
+    const won = tryCommit(conn, "chip-out", cands, skip);
+    // the winner may land at another height: that one is booked, the planned one goes back
+    const ly = won && !/fallback/.test(won.cls) ? won.pts.at(-1)[1] : ty0;
+    if (ly !== ty0) { release(leftPorts, b.id, ty0); (leftPorts[b.id] ||= []).push(ly); }
+    riserClaim(wireId(conn), won);
   }
 
   function routeReturn(conn, b, origin = conn.from) {

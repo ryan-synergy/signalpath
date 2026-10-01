@@ -3175,6 +3175,19 @@ for (const [name, raw] of Object.entries(fixtures)) {
       t(`trunks — Harlow: the amps column stacks by the rooms each amp feeds (${amps.join(", ")}); the job's own order (${order.join(", ")}) is untouched`,
         amps.every((a, i) => !i || first(a) >= first(amps[i - 1])) && amps.join() !== order.join() && Hj.solutions[0].racks[0].devices.map(x => x.id).filter(id => amps.includes(id)).join() === order.join());
     }
+    { // dogfood 2026-10-01: MXNet + Savant starter + ten rooms by quick-add (three receivers appended to the rack)
+      const D = await (await fetch("./test-fixtures/dogfood-mxnet-savant.json")).json();
+      const b = draw(D, "bundle"), r = draw(D, "ribbon"), devs = b.p.racks.flatMap(k => k.devices);
+      const out = devs.find(d => d.id === "sav-out"), colB = devs.filter(d => d.col === "B"), patch = b.rt.wires.find(w => w.from === "sav-out" && w.to === "amp");
+      t("dogfood — the Savant output module sinks to the bottom of its column, beside the amps: one straight line to the MDX-16",
+        out && colB.every(d => d.y <= out.y) && patch?.pts.length === 2, JSON.stringify(patch?.pts));
+      t("dogfood — in Ribbon the theater's video still lands on its decoder (the speaker ribbon's band no longer walls it off)",
+        r.rt.wires.filter(w => /fallback/.test(w.cls)).length === 0 && r.rt.wires.find(w => w.id === "sw→dec-z-theater")?.cls === "trunk");
+      const caps = devs.filter(d => d.kind === "small").map(d => ({ x: d.x - 18, y: d.y + d.h + 3, w: d.w + 36, h: 15 }));
+      const through = [b, r].flatMap(x => x.rt.wires.filter(w => w.cls === "trunk" && w.pts.some((q, i) => i && caps.some(c => {
+        const a = w.pts[i - 1]; return Math.min(a[0], q[0]) < c.x + c.w - 2 && Math.max(a[0], q[0]) > c.x + 2 && Math.min(a[1], q[1]) < c.y + c.h - 2 && Math.max(a[1], q[1]) > c.y + 2; }))).map(w => w.id));
+      t("dogfood — no trunk wire runs through a rack tile's caption", !through.length, through.join(", "));
+    }
     t("trunks — Estate: the switch uplink between the racks rides an inter-rack network trunk",
       up?.cls === "trunk" && up.rackLink && up.trunk === "link:network", JSON.stringify(up && [up.cls, up.trunk]));
   }

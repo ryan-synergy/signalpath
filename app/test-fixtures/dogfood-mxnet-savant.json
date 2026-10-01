@@ -1,0 +1,642 @@
+{
+ "generator": "SignalPath",
+ "schemaVersion": 1,
+ "job": {
+  "name": "Dogfood Residence",
+  "client": {
+   "name": "Test Client"
+  },
+  "revisions": [],
+  "starter": "mxnet-savant"
+ },
+ "house": {
+  "areas": [],
+  "zones": [
+   {
+    "scope": "included",
+    "name": "Family Room",
+    "id": "z-family-room",
+    "endpoints": [
+     {
+      "id": "z-family-room-spk",
+      "type": "speakers",
+      "config": "surround-7.1.4",
+      "status": "new"
+     },
+     {
+      "id": "z-family-room-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "Sony",
+      "size": 85,
+      "status": "new"
+     }
+    ]
+   },
+   {
+    "scope": "included",
+    "name": "Primary Suite",
+    "id": "z-primary-suite",
+    "endpoints": [
+     {
+      "id": "z-primary-suite-spk",
+      "type": "speakers",
+      "config": "surround-5.1",
+      "status": "new"
+     },
+     {
+      "id": "z-primary-suite-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "LG",
+      "size": 75,
+      "status": "new"
+     }
+    ]
+   },
+   {
+    "scope": "included",
+    "name": "Kitchen",
+    "id": "z-kitchen",
+    "endpoints": [
+     {
+      "id": "z-kitchen-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-kitchen-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 55,
+      "status": "new"
+     }
+    ]
+   },
+   {
+    "scope": "included",
+    "name": "Office",
+    "id": "z-office",
+    "endpoints": [
+     {
+      "id": "z-office-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-office-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 43,
+      "status": "new"
+     }
+    ]
+   },
+   {
+    "scope": "included",
+    "name": "Guest Room",
+    "id": "z-guest-room",
+    "endpoints": [
+     {
+      "id": "z-guest-room-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-guest-room-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 50,
+      "status": "new"
+     }
+    ]
+   },
+   {
+    "scope": "included",
+    "name": "Gym",
+    "id": "z-gym",
+    "endpoints": [
+     {
+      "id": "z-gym-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 55,
+      "status": "new"
+     }
+    ]
+   },
+   {
+    "scope": "included",
+    "name": "Theater",
+    "id": "z-theater",
+    "endpoints": [
+     {
+      "id": "z-theater-spk",
+      "type": "speakers",
+      "config": "surround-7.1.4",
+      "status": "new"
+     },
+     {
+      "id": "z-theater-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "Sony",
+      "size": 98,
+      "status": "new"
+     }
+    ]
+   },
+   {
+    "scope": "included",
+    "name": "Patio",
+    "id": "z-patio",
+    "endpoints": [
+     {
+      "id": "z-patio-spk",
+      "type": "speakers",
+      "config": "landscape",
+      "satCount": 8,
+      "buriedSub": true,
+      "status": "new"
+     }
+    ]
+   },
+   {
+    "scope": "included",
+    "name": "Pool Deck",
+    "id": "z-pool-deck",
+    "endpoints": [
+     {
+      "id": "z-pool-deck-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     }
+    ]
+   },
+   {
+    "scope": "included",
+    "name": "Dining Room",
+    "id": "z-dining-room",
+    "endpoints": [
+     {
+      "id": "z-dining-room-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     }
+    ]
+   }
+  ]
+ },
+ "solutions": [
+  {
+   "id": "s",
+   "name": "A",
+   "platforms": [
+    "savant"
+   ],
+   "racks": [
+    {
+     "id": "rack-main",
+     "name": "Equipment Rack",
+     "devices": [
+      {
+       "id": "atv1",
+       "type": "source",
+       "model": "Apple TV 1",
+       "status": "new"
+      },
+      {
+       "id": "atv2",
+       "type": "source",
+       "model": "Apple TV 2",
+       "status": "new"
+      },
+      {
+       "id": "cablebox",
+       "type": "source",
+       "model": "Cable Box",
+       "status": "new"
+      },
+      {
+       "id": "music",
+       "type": "source",
+       "catalogRef": "savant-pav-sms2001",
+       "model": "Savant PAV-SMS2001-10",
+       "status": "new"
+      },
+      {
+       "id": "sw",
+       "type": "avSwitch",
+       "catalogRef": "avpro-mxnet-sw24e",
+       "model": "AVPro Edge AC-MXNET-SW24E",
+       "status": "new"
+      },
+      {
+       "id": "cbx",
+       "type": "controlBox",
+       "catalogRef": "avpro-mxnet-cbox-ha",
+       "model": "AVPro Edge AC-MXNET-CBOX-HA",
+       "status": "new"
+      },
+      {
+       "id": "sav-in",
+       "type": "audioInputModule",
+       "catalogRef": "savant-pav-aim7c",
+       "model": "Savant PAV-AIM7C-20",
+       "status": "new"
+      },
+      {
+       "id": "sav-out",
+       "type": "audioOutputModule",
+       "catalogRef": "savant-pav-aom8c",
+       "model": "Savant PAV-AOM8C-00",
+       "status": "new"
+      },
+      {
+       "id": "avb",
+       "type": "avbSwitch",
+       "model": "AVB switch (Avnu-certified)",
+       "status": "new"
+      },
+      {
+       "id": "amp",
+       "type": "amp",
+       "catalogRef": "anthem-mdx-16",
+       "model": "Anthem MDX-16",
+       "status": "new",
+       "zones": 8
+      },
+      {
+       "id": "power",
+       "type": "power",
+       "catalogRef": "wattbox-800-ipvm-12",
+       "model": "WattBox WB-800-IPVM-12",
+       "status": "new"
+      },
+      {
+       "id": "avr",
+       "type": "avr",
+       "model": "Anthem MRX 1140",
+       "status": "new",
+       "catalogRef": "anthem-mrx-1140-8k"
+      },
+      {
+       "id": "avr-2",
+       "type": "avr",
+       "model": "Anthem MRX 540",
+       "status": "new",
+       "catalogRef": "anthem-mrx-540-8k"
+      },
+      {
+       "id": "avr-3",
+       "type": "avr",
+       "model": "Anthem MRX 1140",
+       "status": "new",
+       "catalogRef": "anthem-mrx-1140-8k"
+      }
+     ]
+    }
+   ],
+   "localDevices": [],
+   "companions": [
+    {
+     "id": "enc-atv1",
+     "type": "enc",
+     "serves": "atv1",
+     "auto": true,
+     "avdm": true
+    },
+    {
+     "id": "enc-atv2",
+     "type": "enc",
+     "serves": "atv2",
+     "auto": true,
+     "avdm": true
+    },
+    {
+     "id": "enc-cable",
+     "type": "enc",
+     "serves": "cablebox",
+     "auto": true,
+     "avdm": true
+    },
+    {
+     "id": "dec-z-family-room",
+     "type": "dec",
+     "serves": "z-family-room-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-avr",
+     "type": "dec",
+     "serves": "avr",
+     "auto": true
+    },
+    {
+     "id": "dec-z-primary-suite",
+     "type": "dec",
+     "serves": "z-primary-suite-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-avr-2",
+     "type": "dec",
+     "serves": "avr-2",
+     "auto": true
+    },
+    {
+     "id": "dec-z-kitchen",
+     "type": "dec",
+     "serves": "z-kitchen-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-z-office",
+     "type": "dec",
+     "serves": "z-office-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-z-guest-room",
+     "type": "dec",
+     "serves": "z-guest-room-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-z-gym",
+     "type": "dec",
+     "serves": "z-gym-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-z-theater",
+     "type": "dec",
+     "serves": "z-theater-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-avr-3",
+     "type": "dec",
+     "serves": "avr-3",
+     "auto": true
+    }
+   ],
+   "connections": [
+    {
+     "from": "atv1",
+     "to": "enc-atv1",
+     "signal": "video"
+    },
+    {
+     "from": "enc-atv1",
+     "to": "sw",
+     "signal": "video"
+    },
+    {
+     "from": "atv2",
+     "to": "enc-atv2",
+     "signal": "video"
+    },
+    {
+     "from": "enc-atv2",
+     "to": "sw",
+     "signal": "video"
+    },
+    {
+     "from": "cablebox",
+     "to": "enc-cable",
+     "signal": "video"
+    },
+    {
+     "from": "enc-cable",
+     "to": "sw",
+     "signal": "video"
+    },
+    {
+     "from": "cbx",
+     "to": "sw",
+     "signal": "network"
+    },
+    {
+     "from": "enc-atv1",
+     "to": "sav-in",
+     "signal": "audio"
+    },
+    {
+     "from": "enc-atv2",
+     "to": "sav-in",
+     "signal": "audio"
+    },
+    {
+     "from": "enc-cable",
+     "to": "sav-in",
+     "signal": "audio"
+    },
+    {
+     "from": "avb",
+     "to": "music",
+     "signal": "network"
+    },
+    {
+     "from": "avb",
+     "to": "sav-in",
+     "signal": "network"
+    },
+    {
+     "from": "avb",
+     "to": "sav-out",
+     "signal": "network"
+    },
+    {
+     "from": "sav-out",
+     "to": "amp",
+     "signal": "audio"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-family-room",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-family-room",
+     "to": "z-family-room-tv",
+     "signal": "video"
+    },
+    {
+     "from": "avr",
+     "to": "z-family-room-spk",
+     "signal": "speaker"
+    },
+    {
+     "from": "sw",
+     "to": "dec-avr",
+     "signal": "video"
+    },
+    {
+     "from": "dec-avr",
+     "to": "avr",
+     "signal": "video"
+    },
+    {
+     "from": "z-family-room-tv",
+     "to": "avr",
+     "signal": "audioReturn",
+     "earcKit": true
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-primary-suite",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-primary-suite",
+     "to": "z-primary-suite-tv",
+     "signal": "video"
+    },
+    {
+     "from": "avr-2",
+     "to": "z-primary-suite-spk",
+     "signal": "speaker"
+    },
+    {
+     "from": "sw",
+     "to": "dec-avr-2",
+     "signal": "video"
+    },
+    {
+     "from": "dec-avr-2",
+     "to": "avr-2",
+     "signal": "video"
+    },
+    {
+     "from": "z-primary-suite-tv",
+     "to": "avr-2",
+     "signal": "audioReturn"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-kitchen",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-kitchen",
+     "to": "z-kitchen-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp",
+     "to": "z-kitchen-spk",
+     "signal": "speaker",
+     "channels": "1-2"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-office",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-office",
+     "to": "z-office-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp",
+     "to": "z-office-spk",
+     "signal": "speaker",
+     "channels": "3-4"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-guest-room",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-guest-room",
+     "to": "z-guest-room-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp",
+     "to": "z-guest-room-spk",
+     "signal": "speaker",
+     "channels": "5-6"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-gym",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-gym",
+     "to": "z-gym-tv",
+     "signal": "video"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-theater",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-theater",
+     "to": "z-theater-tv",
+     "signal": "video"
+    },
+    {
+     "from": "avr-3",
+     "to": "z-theater-spk",
+     "signal": "speaker"
+    },
+    {
+     "from": "sw",
+     "to": "dec-avr-3",
+     "signal": "video"
+    },
+    {
+     "from": "dec-avr-3",
+     "to": "avr-3",
+     "signal": "video"
+    },
+    {
+     "from": "z-theater-tv",
+     "to": "avr-3",
+     "signal": "audioReturn",
+     "earcKit": true
+    },
+    {
+     "from": "amp",
+     "to": "z-patio-spk",
+     "signal": "speaker",
+     "channels": "7-8"
+    },
+    {
+     "from": "amp",
+     "to": "z-pool-deck-spk",
+     "signal": "speaker",
+     "channels": "9-10"
+    },
+    {
+     "from": "amp",
+     "to": "z-dining-room-spk",
+     "signal": "speaker",
+     "channels": "11-12"
+    }
+   ],
+   "annotations": [],
+   "audioNetwork": "avb"
+  }
+ ]
+}

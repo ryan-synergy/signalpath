@@ -787,7 +787,17 @@ function placeOnce(job, ix, opts, variant) {
     const cols = { A: rackY + PL.rackPadTop, B: rackY + PL.rackPadTop };
     const placed = [], cTiles = [], aBottom = [];
     let maxTileBottom = rackY + PL.rackPadTop;
-    for (const d of r.devices || []) {
+    // trunk mode: a box whose audio feeds the amps (a Savant output module, a Dante bridge) sinks to the
+    // bottom of its column, beside the bottom-anchored amps — receivers added later otherwise stack
+    // between them and the patch has to loop round or cut across all their wiring (dogfood 2026-10-01).
+    // Sources stay at the top; only the schematic's column moves, the Rack page keeps the job's order.
+    let rdevs = r.devices || [];
+    if (trunkMode(job, opts)) {
+      const typeOf = id => rdevs.find(x => x.id === id)?.type;
+      const feedsAmp = d => d.type !== "source" && d.type !== "amp" && visConns.some(c => c.from === d.id && c.signal === "audio" && typeOf(c.to) === "amp");
+      rdevs = [...rdevs.filter(d => !feedsAmp(d)), ...rdevs.filter(feedsAmp)];
+    }
+    for (const d of rdevs) {
       const t = deviceTileSpec(d, Math.max(inCount[d.id] || 0, inCount["out:" + d.id] || 0), inCount["rack:" + d.id] || 0);
       // amps (col C) anchor to the rack BOTTOM (mock rule: distribution exits
       // high toward the top band, speaker audio exits low toward the audio band)
@@ -1051,6 +1061,18 @@ function placeZone(out, zone, card, x, y, band) {
 const RT = { lane: 12, pad: 2, clear: 9, portPitch: 12, portInset: 8, hopR: 6, hopMerge: 20 };
 
 export function route(job, ix, placement, opts = {}) {
+  const r = routeOnce(job, ix, placement, opts);
+  // the trunk repair frees a stuck wire by moving a neighbour — but the wires the classic passes
+  // route afterwards can't be foreseen; if one of them vanished, route again without the repair
+  // and keep the better sheet (fewer vanished wires, then fewer fallbacks)
+  if (r.repaired && !opts.noRepair && r.warnings.some(w => w.code === "unrouted")) {
+    const r2 = routeOnce(job, ix, placement, { ...opts, noRepair: true });
+    const bad = x => x.warnings.filter(w => w.code === "unrouted").length * 1000 + x.wires.filter(w => /fallback/.test(w.cls)).length;
+    if (bad(r2) < bad(r)) return r2;
+  }
+  return r;
+}
+function routeOnce(job, ix, placement, opts = {}) {
   const s = ix.solutions[opts.solution ?? 0];
   const sol = s.sol;
   const P = placement;
@@ -1117,6 +1139,9 @@ export function route(job, ix, placement, opts = {}) {
   /* --- obstacles (wires terminate ON edges; interiors shrink by pad) --- */
   const obstacles = [
     ...P.racks.flatMap(r => r.devices.map(d => ({ id: d.id, x: d.x, y: d.y, w: d.w, h: d.h }))),
+    // a small tile's caption (its model, up to 18 px wider than the tile each side) — a wire through it cuts the
+    // text. Trunk drawings only: the classic router has less room to move and lost routes to it (2 → 5 fallbacks)
+    ...(trunkMode(job, opts) ? P.racks.flatMap(r => r.devices.filter(d => d.kind === "small").map(d => ({ id: d.id + ":caption", x: d.x - 18, y: d.y + d.h + 3, w: d.w + 36, h: 15 }))) : []),
     ...P.chips.map(c => ({ id: c.id, x: c.x, y: c.y, w: c.w, h: c.h })),
     ...P.zones.map(z => ({ id: z.id, x: z.x, y: z.y, w: z.w, h: z.h })),
   ];
@@ -1161,6 +1186,24 @@ export function route(job, ix, placement, opts = {}) {
       if (y1 === y2) usedH.push({ c: y1, a1: Math.min(x1, x2), a2: Math.max(x1, x2), net });
       else usedV.push({ c: x1, a1: Math.min(y1, y2), a2: Math.max(y1, y2), net });
     }
+  };
+  // the net whose lane a path runs along (first one found), or null
+  const blockingNet = (pts, net) => {
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [x1, y1] = pts[i], [x2, y2] = pts[i + 1], h = y1 === y2, used = h ? usedH : usedV, c = h ? y1 : x1, a1 = h ? Math.min(x1, x2) : Math.min(y1, y2), a2 = h ? Math.max(x1, x2) : Math.max(y1, y2);
+      const u = used.find(u => u.net !== net && Math.abs(u.c - c) < RT.clear && Math.min(u.a2, a2) - Math.max(u.a1, a1) > -2);
+      if (u) return u.net;
+    }
+    return null;
+  };
+  // debug: which stretch of a path is taken, and by which net
+  const takenBy = (pts, net) => {
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [x1, y1] = pts[i], [x2, y2] = pts[i + 1], h = y1 === y2, used = h ? usedH : usedV, c = h ? y1 : x1, a1 = h ? Math.min(x1, x2) : Math.min(y1, y2), a2 = h ? Math.max(x1, x2) : Math.max(y1, y2);
+      const u = used.find(u => u.net !== net && Math.abs(u.c - c) < RT.clear && Math.min(u.a2, a2) - Math.max(u.a1, a1) > -2);
+      if (u) return `${h ? "h" : "v"}@${c} [${a1},${a2}] vs net ${u.net} ${out.wires.find(w => w.net === u.net)?.id || "(reserved)"} @${u.c}`;
+    }
+    return "";
   };
   const pathRegisterable = (pts, net) => {
     for (let i = 0; i < pts.length - 1; i++) {
@@ -1699,6 +1742,7 @@ export function route(job, ix, placement, opts = {}) {
       const net = F.net;
       F.cfg = cfg;
       F.ports = [];
+      F.blockers = null; F.repairable = false;
       // a trial with a bound to beat stops as soon as what it has drawn already costs more — crossing
       // points and length only grow as wires are added, so a stopped trial could never have won
       F.aborted = false;
@@ -1876,7 +1920,7 @@ export function route(job, ix, placement, opts = {}) {
       for (const m of F.members) {
         if (m.rack) {
           const pts = rackPatch(m);
-          if (!pts) { why(m, `rack patch: ${m.whyNot}`); if (missed()) return; continue; }
+          if (!pts) { F.repairable = true; why(m, `rack patch: ${m.whyNot}`); if (missed()) return; continue; }
           const cw = commit(m.c, "trunk", pts, { net, group: "trunk-" + F.key, trunk: F.key, rackPatch: true });
           done.add(m.i);
           if (over(cw)) return;
@@ -1920,7 +1964,7 @@ export function route(job, ix, placement, opts = {}) {
           }
           m.ty = ty;
         }
-        if (!rackEnd) { why(m, "no on-ramp"); if (missed()) return; continue; }
+        if (!rackEnd) { F.repairable = true; why(m, "no on-ramp"); if (missed()) return; continue; }
         const join = rackEnd[rackEnd.length - 1];
         // room end candidates, each written spine→room, starting on the spine
         const land = t.landY ?? (t.cardBot);
@@ -1933,7 +1977,22 @@ export function route(job, ix, placement, opts = {}) {
         } else if (row && F.bus.has(row)) {
           const by = F.bus.get(row);
           const viaRow = row === lowRow ? [[rx, busY]] : up.has(row) ? [[rx, busY], [up.get(row), busY], [up.get(row), by]] : null;
-          if (viaRow) cands.push([...viaRow, [t.tx, by], [t.tx, land]]);
+          if (viaRow) {
+            cands.push([...viaRow, [t.tx, by], [t.tx, land]]);
+            // the straight drop can land in a neighbouring ribbon's band: step aside on the bus, rise,
+            // and come across to the landing just below it
+            // …or land off-centre: anywhere along an adapter chip's bottom edge is still its jack side
+            const ch = t.chipId && chipById[t.chipId];
+            if (ch) for (const k of [1, -1, 2, -2, 3, -3, 4, -4, 5, -5]) {
+              const xl = t.tx + k * RT.lane;
+              if (xl > ch.x + 6 && xl < ch.x + ch.w - 6) cands.push([...viaRow, [xl, by], [xl, land]]);
+            }
+            const yj = land + (by > land ? 8 : -8);
+            if (Math.abs(by - land) > 14) for (const k of [1, -1, 2, -2, 3, -3, 4, -4]) {
+              const xj = t.tx + k * RT.lane * 2;
+              cands.push([...viaRow, [xj, by], [xj, yj], [t.tx, yj], [t.tx, land]]);
+            }
+          }
         } else {
           // beside/below the rack: break out of the riser or the lowest bus
           const picks = [];
@@ -1962,9 +2021,13 @@ export function route(job, ix, placement, opts = {}) {
           if (cost < bestCost) { bestCost = cost; best = fwd; }
         }
         if (!best) {
+          if (cands.length) F.repairable = true;   // it had routes to try — a neighbour may be in the way
+          // which nets' lanes walled it off (the repair pass below tries moving just those families)
+          for (const c of cands.slice(0, 12)) { const f = cleanPts([...rackEnd.slice(0, -1), join, ...c]); const n = blockingNet(f, net); if (n != null) (F.blockers ||= new Set()).add(n); }
           const c0 = cands[0] && cleanPts([...rackEnd.slice(0, -1), join, ...cands[0]]);
           why(m, `no legal room end (${cands.length} tried, row ${row ? (F.bus.has(row) ? "bus ok" : "no bus") : "none"}, up ${row && up.has(row)})` +
-            (c0 ? ` first ${JSON.stringify(c0)}: ${pathBlocked(c0.slice(0, -1), null) || pathBlocked(c0.slice(-2), skipLand) || (!pathRegisterable(c0, net) ? "lane taken" : "?")}` : ""));
+            (c0 ? ` first ${JSON.stringify(c0)}: ${pathBlocked(c0.slice(0, -1), null) || pathBlocked(c0.slice(-2), skipLand) || (!pathRegisterable(c0, net) ? "lane taken " + takenBy(c0, net) : "?")}` : "") +
+            (opts.debug ? " | " + cands.slice(1, 9).map(c => { const f = cleanPts([...rackEnd.slice(0, -1), join, ...c]); return pathBlocked(f.slice(0, -1), null) || pathBlocked(f.slice(-2), skipLand) || takenBy(f, net) || "ok?"; }).join(" | ") : ""));
           if (missed()) return;
           continue;
         }
@@ -2109,6 +2172,45 @@ export function route(job, ix, placement, opts = {}) {
       if (opts.debug) (out.ripLog ||= []).push(`${pass} ${F.key} ${JSON.stringify(best.cfg)} → ${Math.round(famCost(F))}`);
       if (best.cfg !== was) moved = true;
     }
+    }
+
+    /* -- repair: a family left with a wire it couldn't place is usually walled off by a neighbour's
+          band (in Ribbon a trunk reserves its full width — a speaker riser ending right under a TV's
+          decoder leaves the video drop nowhere to land). The rip-up above only scores a family's own
+          crossings, so it can't see that; here each other family is moved through the same corridor
+          options and the stuck one re-routed; a move is kept only if the pair gets better (fewer
+          unplaced wires first, then crossings), otherwise both go back exactly as they were. -- */
+    const missingOf = F => F.members.filter(m => !done.has(m.i)).length;
+    let repairBudget = opts.noRepair ? 0 : 24;   // trials per route: a wire nothing can place shouldn't cost every redraw a second
+    const snapFam = F => ({ F, wires: out.wires.filter(w => w.net === F.net), h: usedH.filter(u => u.net === F.net), v: usedV.filter(u => u.net === F.net),
+      ports: [...(F.ports || [])], done: F.members.filter(m => done.has(m.i)).map(m => m.i), cfg: F.cfg });
+    const restoreFam = S => { ripUp(S.F); out.wires.push(...S.wires); usedH.push(...S.h); usedV.push(...S.v);
+      for (const [st, id, y] of S.ports) (st[id] ||= []).push(y); S.F.ports = S.ports; for (const i of S.done) done.add(i); S.F.cfg = S.cfg; };
+    for (const F of famList) {
+      if (!missingOf(F) || !F.repairable) continue;   // no route was even possible (no bus lane under that row…): nothing to free
+      // the families whose lanes walled it off first, then the rest while the budget lasts
+      const blockers = new Set(F.blockers || []);
+      const order = [...famList.filter(G => blockers.has(G.net)), ...famList.filter(G => !blockers.has(G.net))];
+      for (const G of order) {
+        if (G === F || !famWires(G).length || !missingOf(F) || repairBudget <= 0) continue;
+        const sF = snapFam(F), sG = snapFam(G), base = famCost(F) + famCost(G);
+        const opts2 = [{ ...sG.cfg, busFar: !sG.cfg?.busFar }, ...corridors.flatMap(R => [0.5, 0.15, 0.85].map(f => ({ range: R, want: Math.round(R[0] + (R[1] - R[0]) * f) })))];
+        let best = null;
+        trialMode = true;
+        for (const cfg of opts2) {
+          if (repairBudget-- <= 0) break;
+          // bounded like the rip-up: G alone past the pair's best can't win; then F gets what's left
+          const bar = best ? best.cost : base;
+          ripUp(F); ripUp(G); routeFam(G, { ...cfg, bound: bar });
+          if (!G.aborted) { const cg = famCost(G); routeFam(F, { ...(sF.cfg || {}), bound: bar - cg });
+            const c = F.aborted ? Infinity : cg + famCost(F);
+            if (c < bar - 1e-6) best = { cfg, cost: c }; }
+        }
+        trialMode = false;
+        ripUp(F); ripUp(G);
+        if (best) { routeFam(G, best.cfg); routeFam(F, sF.cfg || {}); out.repaired = true; if (opts.debug) (out.ripLog ||= []).push(`repair ${F.key} by moving ${G.key} ${JSON.stringify(best.cfg)}`); }
+        else { restoreFam(sG); restoreFam(sF); }
+      }
     }
 
     visConns.forEach((c, i) => { if (!done.has(i) && (rackPatchFam(c) || linkFam(c))) { routeRackToRack(c, devById[c.from], devById[c.to]); done.add(i); } });

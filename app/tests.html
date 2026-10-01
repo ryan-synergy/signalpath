@@ -15,7 +15,7 @@
 <div id="summary">running…</div>
 <ul id="out"></ul>
 <script type="module">
-import { loadJob, validate, advise, place as enginePlace, route as engineRoute, render, routeAlternates as engineAlternates, expandChannels, effectiveHouse, effectiveJob, trunkCount, autoLinkCatalog, indexJob, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
+import { loadJob, validate, advise, place as enginePlace, route as engineRoute, render, routeAlternates as engineAlternates, expandChannels, effectiveHouse, effectiveJob, trunkCount, ribbonLayout, autoLinkCatalog, indexJob, READABILITY_ZONE_CEILING, SHEET } from "./engine.js";
 // Trunks are the app's default (Ryan 2026-09-30). The router regression suite below
 // pins the classic drawing explicitly — it still guards the "Off" choice — and the
 // trunk tests pass trunks: "bundle" / "ribbon" (or call enginePlace/engineRoute bare).
@@ -3136,6 +3136,34 @@ for (const [name, raw] of Object.entries(fixtures)) {
       const got = { estate: visCross(draw(fixtures.estate, "bundle").rt), stress: visCross(draw(fixtures.stress, "bundle").rt), harlow: visCross(draw(H, "bundle").rt) };
       t(`trunks — rip-up holds its gains: Estate ${got.estate} (≤ 14, was 15), stress ${got.stress} (≤ 56, was 66), Harlow ${got.harlow} (≤ 30, was 32)`,
         got.estate <= 14 && got.stress <= 56 && got.harlow <= 30);
+    }
+    { // ribbon layout (Ryan 2026-10-01): one lane per wire, corners that meet, every wire on its own jack
+      const H = await (await fetch("./test-fixtures/harlow-dante.json")).json(), gen = F.jobGenerator(1, { extras: true });
+      const jobs = [fixtures.residence, fixtures.estate, fixtures.stress, H]; for (let k = 0; k < 60; k++) { const r = gen(k); if (r.house.zones.length) jobs.push(E2(r)); }
+      const segs = pts => pts.slice(1).map((q, i) => [pts[i], q]);
+      let nets = 0, diag = 0, ends = 0, overlap = [];
+      jobs.forEach((raw, ji) => { const d = draw(raw, "ribbon"), s0 = d.ix.solutions[0], byNet = new Map();
+        for (const w of d.rt.wires.filter(w => w.cls === "trunk")) (byNet.get(w.net) || byNet.set(w.net, []).get(w.net)).push(w);
+        for (const ws of byNet.values()) {
+          const members = ws.map(w => { const c = d.job.solutions[0].connections.find(c => c.from === w.from && c.to === w.to && c.signal === w.signal); return { w, runs: c ? trunkCount(c, s0) : 1 }; });
+          const R = ribbonLayout(members); if (!R) continue; nets++;
+          const polys = R.flatMap((ps, mi) => ps.map(pts => ({ pts, mi })));
+          for (const { pts } of polys) for (const [a, b] of segs(pts)) if (a[0] !== b[0] && a[1] !== b[1]) diag++;
+          R.forEach((ps, mi) => { const w = members[mi].w; if (members[mi].runs === 1 && (ps[0][0] + "" !== w.pts[0] + "" || ps[0].at(-1) + "" !== w.pts.at(-1) + "")) ends++; });
+          const inBar = (a, b) => R[0].bars.some(B => B.dir === (a[1] === b[1] ? "h" : "v") && Math.abs(B.at - (a[1] === b[1] ? a[1] : a[0])) < 0.01);
+          // (two wires out of one jack leave it as one line — a fork — and split at the next turn)
+          const fork = (P1, P2, a, c) => (a === P1[0] && c === P2[0] && a + "" === c + "") || (P1.at(-1) + "" === P2.at(-1) + "" && (a + "" === P1.at(-1) + "" || a + "" === P1.at(-2) + ""));
+          for (let i = 0; i < polys.length; i++) for (let j = i + 1; j < polys.length; j++) for (const [a, b] of segs(polys[i].pts)) for (const [c, e] of segs(polys[j].pts)) {
+            const h = a[1] === b[1]; if (h !== (c[1] === e[1]) || Math.abs((h ? a[1] - c[1] : a[0] - c[0])) > 0.01 || inBar(a, b) || fork(polys[i].pts, polys[j].pts, a, c)) continue;
+            const ax = h ? 0 : 1, ov = Math.min(Math.max(a[ax], b[ax]), Math.max(c[ax], e[ax])) - Math.max(Math.min(a[ax], b[ax]), Math.min(c[ax], e[ax]));
+            if (ov > 6.5) overlap.push(`job ${ji} ${ws[0].trunk} ${members[polys[i].mi].w.id} / ${members[polys[j].mi].w.id} ${ov.toFixed(1)}px`); }
+        } });
+      t(`ribbons — ${jobs.length} sheets, ${nets} ribbons: every corner square, every wire starts and ends on its own jack, no two lanes on one line (wires out of one jack fork from it)`,
+        nets > 300 && !diag && !ends && !overlap.length, `diag ${diag} ends ${ends} ${overlap.slice(0, 3).join(" | ")}`);
+      // a stretch too full even at the tightest pitch gathers into a bundle bar, and the rest stays a ribbon
+      const st = draw(fixtures.stress, "ribbon"), svgS = render(st.job, st.ix, st.p, st.rt, { trunks: "ribbon" });
+      t("ribbons — stress: the 25-wire amp riser gathers into one bar with its ×N; the rest of that trunk still draws lanes (squeezed past 10)",
+        /class="bustick"[^>]*>×2\d</.test(svgS) && /stroke-width="1\.1"/.test(svgS) && /stroke-width="1\.4"/.test(svgS));
     }
     t("trunks — Estate: the switch uplink between the racks rides an inter-rack network trunk",
       up?.cls === "trunk" && up.rackLink && up.trunk === "link:network", JSON.stringify(up && [up.cls, up.trunk]));

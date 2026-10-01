@@ -3312,15 +3312,142 @@ function drawDanteTags(job, ix, sol, s, P, tags, bw) {
              past RIBBON_MAX wires a piece falls back to the bundle look.
    Each piece gets a white halo, so whatever it passes over reads as crossed
    under. Wire numbers (the Wire Schedule's) sit on each wire's room end. */
-const RIBBON_MAX = 10, RIBBON_PITCH = 4;
+const RIBBON_MAX = 10, RIBBON_PITCH = 4, RIBBON_MIN_PITCH = 3, RIBBON_MERGE = 10;   // 10 lanes at 4 px; up to 13 squeezed into the same 36 px (tighter blurs on screen)
 const SPEAKER_SETUP_SHORT = c => ({ "surround-5.1": "5.1", "surround-7.1": "7.1", "surround-7.1.4": "7.1.4" }[c] || "surround");
-function drawTrunks(list, style, labels, extra = {}) {
+/* Ribbon layout (Ryan 2026-10-01: "make the ribbons as clean as possible"). Every wire keeps ONE
+   lane for the whole of each shared run — no re-centring as wires join or leave — and is drawn as
+   one continuous offset line, so its corners meet. A run is the stretch of one axis line its wires
+   overlap; lanes across it are ordered by where each wire peels off at either end (whoever turns
+   off first sits outermost on that side), using the neighbouring run's lanes as the turn point —
+   iterated, that makes corners concentric. A lone stretch (a jack's stub, a room drop) sits on
+   the centre line, so a wire leaves its jack straight and turns into its lane. Returns null when
+   a run would be wider than RIBBON_MAX lanes (that trunk draws in the bundle look instead). */
+export function ribbonLayout(members) {
+  const runsOf = mi => members[mi].runs || 1;
+  let P = RIBBON_PITCH;
+  const wsegs = members.map((m, mi) => {
+    const out = [], p = m.w.pts;
+    for (let i = 1; i < p.length; i++) {
+      const a = p[i - 1], b = p[i]; if (a[0] === b[0] && a[1] === b[1]) continue;
+      const h = a[1] === b[1];
+      out.push({ mi, a, b, dir: h ? "h" : "v", at: h ? a[1] : a[0], lo: Math.min(h ? a[0] : a[1], h ? b[0] : b[1]), hi: Math.max(h ? a[0] : a[1], h ? b[0] : b[1]), base: -(runsOf(mi) - 1) / 2 * P });
+    }
+    out.forEach((g, k) => { g.prev = out[k - 1] || null; g.next = out[k + 1] || null; });
+    return out;
+  });
+  // runs: stretches of one direction that overlap along their axis and lie on the same line — or
+  // on parallel tracks of this trunk closer than RIBBON_MERGE (the router may give one family two
+  // tracks a few px apart; drawn separately, one track's lanes would land on the other's)
+  const all = wsegs.flat(), up = all.map((_, i) => i);
+  const find = i => up[i] === i ? i : (up[i] = find(up[i]));
+  // first the stretches on one line that overlap — or that meet end to end, for two wires (an on-ramp
+  // and a breakout at the same riser: once the riser spreads into lanes, both would reach into the gap)
+  for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
+    const a = all[i], b = all[j];
+    if (a.dir === b.dir && a.at === b.at && Math.min(a.hi, b.hi) - Math.max(a.lo, b.lo) > (a.mi !== b.mi ? -0.5 : 0.5)) up[find(i)] = find(j);
+  }
+  // then parallel tracks closer than RIBBON_MERGE (or whose bands would touch: a ×7 line doubling back
+  // 12 px apart lays its legs side by side) — but never a run holding a wire's first or last stretch:
+  // its jack stub or room drop stays on its own line (pulled into a neighbour's run, it leaves its jack sideways)
+  const end = g => !g.prev || !g.next, pinned = new Set();
+  all.forEach((g, i) => { if (end(g) && runsOf(g.mi) === 1) pinned.add(find(i)); });
+  for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
+    const a = all[i], b = all[j];
+    if (a.dir !== b.dir || a.at === b.at || pinned.has(find(i)) || pinned.has(find(j))) continue;
+    const reach = Math.max(RIBBON_MERGE, ((runsOf(a.mi) - 1) + (runsOf(b.mi) - 1)) / 2 * RIBBON_PITCH + RIBBON_PITCH);
+    // (touching counts: a ×5 line's two legs either side of a 12 px jog draw as straight lanes, not a shear)
+    if (Math.abs(a.at - b.at) <= reach && Math.min(a.hi, b.hi) - Math.max(a.lo, b.lo) > -0.5) up[find(i)] = find(j);
+  }
+  const groups = new Map();
+  all.forEach((g, i) => { const r = find(i); (groups.get(r) || groups.set(r, []).get(r)).push(g); });
+  const runs = [...groups.values()];
+  // a merged run's lanes sit around one axis; `base` stays relative to each stretch's own line
+  for (const r of runs) r.axis = r.length > 1 ? Math.round(r.reduce((n, g) => n + g.at, 0) / r.length * 2) / 2 : r[0].at;
+  const shared = runs.filter(r => r.length > 1);
+  // past RIBBON_MAX lanes the pitch tightens to keep the band as wide as the router keeps clear
+  // ((RIBBON_MAX − 1) × pitch). A stretch too full even for that (its lines would merge) is
+  // gathered into a bundle bar with its ×N — the lanes run into it and fan back out, like a loom
+  const maxLanes = Math.floor((RIBBON_MAX - 1) * RIBBON_PITCH / RIBBON_MIN_PITCH) + 1;
+  const width = r => r.reduce((n, g) => n + runsOf(g.mi), 0);
+  const bars = [...shared.filter(r => width(r) > maxLanes), ...runs.filter(r => r.length === 1 && runsOf(r[0].mi) > maxLanes)];
+  for (const r of bars) for (const g of r) g.bar = true;
+  const lanes = runs.filter(r => !r[0].bar).map(width);
+  const widest = Math.max(1, ...lanes);
+  if (widest > RIBBON_MAX) P = (RIBBON_MAX - 1) * RIBBON_PITCH / (widest - 1);
+  for (const r of runs) for (const g of r) g.base = (r[0].bar ? 0 : -(runsOf(g.mi) - 1) / 2 * P) + (r.length > 1 ? r.axis - g.at : 0);
+  const centre = g => g.base + (runsOf(g.mi) - 1) / 2 * P;
+  const along = (g, pt) => g.dir === "h" ? pt[0] : pt[1], across = (g, pt) => g.dir === "h" ? pt[1] : pt[0];
+  // how a stretch leaves the run at one end: which side it turns to, and where (its neighbour's lane)
+  const endOf = (g, atLo) => {
+    const pt = along(g, g.a) === (atLo ? g.lo : g.hi) ? g.a : g.b;
+    const n = pt === g.a ? g.prev : g.next;
+    if (!n || n.dir === g.dir) return { side: 0, t: atLo ? g.lo : g.hi };
+    const other = n.a === pt ? n.b : n.a;
+    return { side: Math.sign(across(g, other) - across(g, pt)), t: (atLo ? g.lo : g.hi) + centre(n) };
+  };
+  const BIG = 1e7;
+  const keyLo = e => e.side < 0 ? -BIG - e.t : e.side > 0 ? BIG + e.t : 0;
+  const keyHi = e => e.side < 0 ? -BIG + e.t : e.side > 0 ? BIG - e.t : 0;
+  // wires that leave (or reach) one jack together stay one line there and split into lanes at the
+  // next turn — the way one cable fans out — instead of spreading onto a neighbouring jack's line
+  const jackPt = g => !g.prev && runsOf(g.mi) === 1 ? g.a + "" : !g.next && runsOf(g.mi) === 1 ? g.b + "" : null;
+  for (const r of shared) if (r.every(g => jackPt(g) && jackPt(g) === jackPt(r[0]))) r.fork = true;
+  for (let it = 0; it < 6; it++) {
+    for (const r of shared) {
+      if (r[0].bar || r.fork) continue;
+      const info = r.map(g => ({ g, lo: keyLo(endOf(g, true)), hi: keyHi(endOf(g, false)) }));
+      info.sort((x, y) => (x.lo - y.lo) || (x.hi - y.hi) || (x.g.mi - y.g.mi));
+      const N = r.reduce((n, g) => n + runsOf(g.mi), 0);
+      let k = 0;
+      for (const { g } of info) { g.base = r.axis - g.at + (k - (N - 1) / 2) * P; k += runsOf(g.mi); }
+    }
+  }
+  // each wire, each of its runs: one offset polyline
+  const shift = (g, pt, o) => g.dir === "h" ? [pt[0], pt[1] + o] : [pt[0] + o, pt[1]];
+  return wsegs.map((gs, mi) => Array.from({ length: runsOf(mi) }, (_, r) => {
+    if (!gs.length) return members[mi].w.pts;
+    const off = g => g.bar ? g.base : g.base + r * P, pts = [shift(gs[0], gs[0].a, off(gs[0]))];
+    for (let k = 1; k < gs.length; k++) {
+      const g0 = gs[k - 1], g1 = gs[k], c = g1.a;
+      if (g0.dir === g1.dir) { pts.push(shift(g0, c, off(g0)), shift(g1, c, off(g1))); continue; }
+      pts.push(g0.dir === "h" ? [c[0] + off(g1), c[1] + off(g0)] : [c[0] + off(g0), c[1] + off(g1)]);
+    }
+    const gl = gs[gs.length - 1]; pts.push(shift(gl, gl.b, off(gl)));
+    // a single wire starts and ends ON its jack (two wires out of one jack step into their lanes from it);
+    // a multi-run line lands as its N cables side by side
+    if (runsOf(mi) === 1) { pts.unshift(gs[0].a); pts.push(gl.b); }
+    return pts.filter((q, k) => !k || q[0] !== pts[k - 1][0] || q[1] !== pts[k - 1][1]);
+  })).map(polys => Object.assign(polys, { pitch: P,
+    bars: bars.map(r => ({ dir: r[0].dir, at: r.axis, lo: Math.min(...r.map(g => g.lo)), hi: Math.max(...r.map(g => g.hi)), n: width(r) })) }));
+}
+const polyD = pts => pts.map((q, i) => `${i ? "L" : "M"}${+q[0].toFixed(2)} ${+q[1].toFixed(2)}`).join("");
+
+function drawTrunks(list, style0, labels, extra = {}) {
   const o = [];
   const byNet = new Map();
   for (const t of list) (byNet.get(t.w.net) || byNet.set(t.w.net, []).get(t.w.net)).push(t);
   const tags = [];
+  const ownPts = new Map();   // ribbon: a wire's own (offset) line, so tapping it lights its lane
   for (const members of byNet.values()) {
     const { color, dash } = members[0];
+    const R = style0 === "ribbon" ? ribbonLayout(members) : null;
+    const style = style0 === "ribbon" && !R ? "bundle" : style0;   // a run past RIBBON_MAX lanes draws bundled
+    if (R) {
+      const dashA = dash ? ` stroke-dasharray="${dash}"` : "";
+      const all = R.flatMap((polys, mi) => polys.map(pts => ({ pts, mi })));
+      for (const { pts } of all) o.push(`<path d="${polyD(pts)}" stroke="#fff" stroke-width="4.2" stroke-linejoin="round" stroke-linecap="butt"/>`);
+      const sw = R[0]?.pitch < RIBBON_PITCH ? 1.1 : 1.4;   // a squeezed ribbon draws finer lines
+      const bars = R[0]?.bars || [], barD = b => b.dir === "h" ? `M${b.lo} ${b.at}L${b.hi} ${b.at}` : `M${b.at} ${b.lo}L${b.at} ${b.hi}`;
+      for (const b of bars) o.push(`<path d="${barD(b)}" stroke="#fff" stroke-width="9.2" stroke-linecap="butt"/>`);
+      for (const { pts } of all) o.push(`<path d="${polyD(pts)}" stroke="${color}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="butt"${dashA}/>`);
+      for (const b of bars) {
+        o.push(`<path d="${barD(b)}" stroke="${color}" stroke-width="5.2" stroke-linecap="round"${dashA}/>`);
+        if (b.hi - b.lo < 70) continue;
+        const mx = b.dir === "h" ? (b.lo + b.hi) / 2 : b.at, my = b.dir === "h" ? b.at : (b.lo + b.hi) / 2;
+        o.push(`<text class="bustick" x="${b.dir === "v" ? mx + 7 : mx}" y="${b.dir === "v" ? my + 4 : my - 7}"${b.dir === "v" ? "" : ' text-anchor="middle"'} font-size="10.5" font-weight="700" fill="${color}" paint-order="stroke" stroke="#fff" stroke-width="3">×${b.n}</text>`);
+      }
+      R.forEach((polys, mi) => ownPts.set(members[mi].w, polys[Math.floor((polys.length - 1) / 2)]));
+    } else {
     // pieces: per axis line, elementary intervals with the set of wires on them
     const lines = new Map();
     members.forEach((m, mi) => m.w.pts.forEach((q, i) => {
@@ -3399,6 +3526,7 @@ function drawTrunks(list, style, labels, extra = {}) {
       const p = solo.sort((a, b) => (b.hi - b.lo) - (a.hi - a.lo))[0];
       if (p && p.hi - p.lo >= 16) { tick(p); ticked.add(p); }
     });
+    }
     // wire numbers at each room end
     for (const m of members) {
       const lab = labels[m.w.id] && (extra[m.w.id] ? `${labels[m.w.id]} · ${extra[m.w.id]}` : labels[m.w.id]); if (!lab) continue;
@@ -3412,7 +3540,7 @@ function drawTrunks(list, style, labels, extra = {}) {
   }
   // each trunk wire keeps a path of its own, invisible until selected: tapping a trunk picks
   // one wire, and the selection shows that wire's whole route through its trunk
-  const own = list.map(({ w, color }) => `<path class="wire trunkwire${w.dante ? " dante" : ""}" data-wire="${esc(w.id)}" data-from="${esc(w.from)}" data-to="${esc(w.to)}" data-signal="${esc(w.signal)}" d="${wireD(w)}" stroke="${color}" stroke-opacity="0" fill="none"/>`);
+  const own = list.map(({ w, color }) => `<path class="wire trunkwire${w.dante ? " dante" : ""}" data-wire="${esc(w.id)}" data-from="${esc(w.from)}" data-to="${esc(w.to)}" data-signal="${esc(w.signal)}" d="${ownPts.has(w) ? polyD(ownPts.get(w)) : wireD(w)}" stroke="${color}" stroke-opacity="0" fill="none"/>`);
   return `<g class="trunks" fill="none">${o.join("")}</g>${tags.join("")}${own.join("")}`;
 }
 

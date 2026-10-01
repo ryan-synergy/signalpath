@@ -3127,6 +3127,16 @@ for (const [name, raw] of Object.entries(fixtures)) {
       t(`trunks — residence: the output module → amp line (×${n} runs) rides the audio trunk; bundle says ×${n}, ribbon draws ${n} lines`,
         n > 1 && w?.cls === "trunk" && new RegExp(`class="bustick"[^>]*>×${n}<`).test(svgB) && lanes >= n, `cls ${w?.cls} lanes ${lanes}`);
     }
+    { // rip-up and reroute: each family retried in every corridor, the fewest crossings kept
+      const R = draw(fixtures.residence, "bundle"), R0 = draw(fixtures.residence, false);
+      const ret = R.rt.wires.find(w => w.from === "master-tv" && w.to === "sav-in"), sin = R.p.racks.flatMap(r => r.devices).find(d => d.id === "sav-in");
+      t(`trunks — residence: no more crossings than the classic drawing (${visCross(R0.rt)} → ${visCross(R.rt)}); the TV's sound back still lands on the input module's input side`,
+        visCross(R.rt) <= visCross(R0.rt) && ret?.cls === "trunk" && ret.pts.at(-1)[0] === sin.x && !legal(R.p, R.rt).length);
+      const H = await (await fetch("./test-fixtures/harlow-dante.json")).json();
+      const got = { estate: visCross(draw(fixtures.estate, "bundle").rt), stress: visCross(draw(fixtures.stress, "bundle").rt), harlow: visCross(draw(H, "bundle").rt) };
+      t(`trunks — rip-up holds its gains: Estate ${got.estate} (≤ 14, was 15), stress ${got.stress} (≤ 56, was 66), Harlow ${got.harlow} (≤ 30, was 32)`,
+        got.estate <= 14 && got.stress <= 56 && got.harlow <= 30);
+    }
     t("trunks — Estate: the switch uplink between the racks rides an inter-rack network trunk",
       up?.cls === "trunk" && up.rackLink && up.trunk === "link:network", JSON.stringify(up && [up.cls, up.trunk]));
   }

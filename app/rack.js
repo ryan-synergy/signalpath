@@ -32,7 +32,7 @@ export function rackPlans(job, ix, catalog) {
     (sol.racks || []).forEach((r, ri) => {
       // 1–60U: a typo'd 4200 would draw 4,200 rows and stall the page
       const size = Math.min(60, Math.max(1, Math.floor(+r.units || +job.job?.rackUnits || DEFAULT_RACK_U) || DEFAULT_RACK_U));
-      const items = [], unknown = [], rear = [], small = [];
+      const items = [], unknown = [], rear = [], small = [], cboxes = [];
       if (ri === 0 && cat6) for (let k = 0; k < Math.ceil(cat6 / PATCH_PORTS); k++)
         items.push({ kind: "patch", tier: 0, u: 1, label: `Cat6 patch panel ${PATCH_PORTS}-port${Math.ceil(cat6 / PATCH_PORTS) > 1 ? ` (${k + 1})` : ""}` });
       for (const d of r.devices || []) {
@@ -41,6 +41,8 @@ export function rackPlans(job, ix, catalog) {
         if (c?.mount === "vertical") { rear.push(name); continue; }
         const u = typeof c?.rackUnits === "number" ? c.rackUnits : null;
         const tier = TIER[d.type] ?? 2;
+        // an MXNet control box rides the platform's rack kit when there is one (placed below)
+        if (u == null && d.type === "controlBox" && /CBOX/i.test(`${d.model || ""} ${c?.model || ""}`)) { cboxes.push(name); continue; }
         if (u == null && (d.type === "source" || c?.desktop)) { small.push(name); continue; }
         // no height in the catalog, or one the catalog marks to confirm (Ryan 2026-10-01: Savant PAV
         // modules drawn 1U, flagged "need to confirm") — either way the elevation shows it and the advisor asks
@@ -73,8 +75,20 @@ export function rackPlans(job, ix, catalog) {
           const cost = ([, c]) => Math.ceil(rest.length / c.rackKit.holds) * c.rackUnits;
           const [, k] = [...fit].sort((x, y) => cost(x) - cost(y) || y[1].rackKit.holds - x[1].rackKit.holds)[0];
           const take = rest.splice(0, k.rackKit.holds);
-          items.push({ kind: "shelf", tier: 3, u: k.rackUnits, label: `${k.model} (${take.length}/${k.rackKit.holds}): ${take.join(", ")}`, members: take, kit: k.model });
+          items.push({ kind: "shelf", tier: 3, u: k.rackUnits, label: `${k.model} (${take.length}/${k.rackKit.holds}): ${take.join(", ")}`, members: take, kit: k.model, kitSpec: { holds: k.rackKit.holds, cbox: k.rackKit.cbox || null } });
         }
+      }
+      // the control box goes in a kit already in the rack (AVPro: the R15 and 10G-HDRACK have a CBOX
+      // place beyond their slots; the R2 takes it in a slot) — else it rides a shelf like before
+      for (const cb of cboxes) {
+        const kitItems = items.filter(i => i.kitSpec);
+        const extra = kitItems.find(i => i.kitSpec.cbox === "extra" && !i.cbox);
+        const slot = kitItems.find(i => i.kitSpec.cbox === "slot" && i.members.length < i.kitSpec.holds);
+        const home = extra || slot;
+        if (!home) { small.push(cb); continue; }
+        home.members.push(cb); if (home === extra) home.cbox = cb;
+        const n = home.members.length - (home.cbox ? 1 : 0);
+        home.label = `${home.kit} (${n}/${home.kitSpec.holds}${home.cbox ? " + control box" : ""}): ${home.members.join(", ")}`;
       }
       for (let k = 0; k < small.length; k += PER_SHELF)
         items.push({ kind: "shelf", tier: 3, u: SHELF_U, label: `Shelf: ${small.slice(k, k + PER_SHELF).join(", ")}`, members: small.slice(k, k + PER_SHELF) });

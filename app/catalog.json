@@ -4457,7 +4457,7 @@
         "gen": "1g",
         "holds": 2,
         "excludes": "DANTE"
-      },
+      , "cbox": "slot"},
       "partNo": "AC-MXNET-1G-R2",
       "notes": "1U kit, 2 MXNet 1G/USP endpoints (or a CBOX-HA) side by side; passive — no PSU (AVPro). Not for AC-MXNET-1G-DANTE-E. avproglobal.com/products/ac-mxnet-1g-r2",
       "notInPlanQueue": true
@@ -4475,7 +4475,7 @@
         "gen": "1g",
         "holds": 15,
         "excludes": "DANTE"
-      },
+      , "cbox": "extra"},
       "partNo": "AC-MXNET-1G-R15",
       "notes": "6U heavy-duty rack, 15 vertical numbered slots for MXNet 1G/USP endpoints + CBOX; 2 blanks included; passive (no PSU mentioned). AC-MXNET-1G-DANTE-E does NOT fit (AC-EZRACK-15). avproglobal.com/products/ac-mxnet-1g-r15"
     },
@@ -4491,7 +4491,7 @@
       "rackKit": {
         "gen": "10g",
         "holds": 12
-      },
+      , "cbox": "extra"},
       "partNo": "AC-MXNET-10G-HDRACK",
       "notes": "6U heavy-duty rack, 12 MXNet 10G transceivers + control box; passive (power not mentioned). avproglobal.com/products/ac-mxnet-10g-hdrack"
     },

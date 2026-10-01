@@ -3607,6 +3607,21 @@ for (const [name, raw] of Object.entries(fixtures)) {
     !svgBw.includes(`fill="${KIND_STYLE.audio.edge}"`) && svgBw.includes('fill="#555"'));
 }
 
+/* ---------- the MXNet control box rides the platform's rack kit (AVPro: R15 / 10G-HDRACK have a CBOX place, R2 a slot) ---------- */
+{
+  const CAT = await (await fetch("./catalog.json")).json(), St = await import("./starters.js"), Cm = await import("./commands.js");
+  const blank = () => ({ generator: "SignalPath", schemaVersion: 1, job: { name: "n", client: { name: "c" }, revisions: [] }, house: { areas: [], zones: [] },
+    solutions: [{ id: "s", name: "A", platforms: [], racks: [{ id: "rack-main", name: "Rack", devices: [] }], localDevices: [], companions: [], connections: [], annotations: [] }] });
+  const rackOf = id => { const st = St.STARTERS.find(k => k.id === id); let j = St.applyStarter(blank(), st, CAT);
+    if (st.rooms) j = Cm.planCommands(j, 0, [{ op: "add_zones", text: st.rooms }], CAT).job; const { job, ix } = loadJob(j); return advise(job, ix, CAT).racks[0]; };
+  const est = rackOf("mxnet-10g-estate"), mx = rackOf("mxnet");
+  const shelfCbox = r => r.items.some(i => /^Shelf/.test(i.label) && /CBOX/.test(i.label));
+  t("rack: the 10G estate's control box sits in its HDRACK's control-box place (7/12 + control box), not on a shelf",
+    est.items.some(i => /HDRACK \(7\/12 \+ control box\)/.test(i.label) && /CBOX/.test(i.label)) && !shelfCbox(est), est.items.map(i => i.label).join(" | "));
+  t("rack: on a 1G job the control box fills a half-empty R2's spare slot (2/2)",
+    mx.items.some(i => /R2 \(2\/2\)/.test(i.label) && /CBOX/.test(i.label)) && !shelfCbox(mx) && !mx.items.some(i => /R2 \(1\/2\)/.test(i.label)));
+}
+
 document.getElementById("summary").innerHTML =
   fail === 0 ? `<span class="pass">ALL ${pass} TESTS PASS</span>` : `<span class="fail">${fail} FAILED</span> · ${pass} passed`;
 document.title = fail === 0 ? `✓ ${pass} pass` : `✗ ${fail} fail`;

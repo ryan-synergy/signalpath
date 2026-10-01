@@ -3187,6 +3187,18 @@ for (const [name, raw] of Object.entries(fixtures)) {
       const through = [b, r].flatMap(x => x.rt.wires.filter(w => w.cls === "trunk" && w.pts.some((q, i) => i && caps.some(c => {
         const a = w.pts[i - 1]; return Math.min(a[0], q[0]) < c.x + c.w - 2 && Math.max(a[0], q[0]) > c.x + 2 && Math.min(a[1], q[1]) < c.y + c.h - 2 && Math.max(a[1], q[1]) > c.y + 2; }))).map(w => w.id));
       t("dogfood — no trunk wire runs through a rack tile's caption", !through.length, through.join(", "));
+      // wire labels (V-01, "R-03 · eARC KIT"…) sit clear of each other, of room cards and of chips
+      const Hl = await (await fetch("./test-fixtures/harlow-dante.json")).json(), bad = [];
+      for (const [nm, raw] of [["dogfood", D], ["Harlow", Hl]]) for (const sty of ["bundle", "ribbon"]) {
+        const d = draw(raw, sty), svg = render(d.job, d.ix, d.p, d.rt, { trunks: sty, wireLabels: PG.wireLabels(d.job, d.ix) });
+        const boxes = [...svg.matchAll(/<text class="wirenum" x="([\d.]+)" y="([\d.]+)"(?: text-anchor="(\w+)")?[^>]*>([^<]*)</g)].map(m => {
+          const x = +m[1], y = +m[2], w = m[4].length * 5.5 + 4, x0 = m[3] === "middle" ? x - w / 2 : m[3] === "end" ? x - w : x;
+          return { t: m[4], b: [x0 + 1, y - 7, x0 + w - 1, y + 1] }; });
+        const ov = (a, q) => a[0] < q[2] && a[2] > q[0] && a[1] < q[3] && a[3] > q[1];
+        boxes.forEach((B, i) => { if (boxes.some((C, j) => j > i && ov(B.b, C.b))) bad.push(`${nm}/${sty} ${B.t} on a label`);
+          if ([...d.p.zones, ...d.p.chips].some(z => ov(B.b, [z.x, z.y, z.x + z.w, z.y + z.h]))) bad.push(`${nm}/${sty} ${B.t} on a card/chip`); });
+      }
+      t("labels — wire numbers and run tags sit clear of each other, room cards and chips (dogfood + Harlow, bundle + ribbon)", !bad.length, bad.slice(0, 4).join(" | "));
     }
     t("trunks — Estate: the switch uplink between the racks rides an inter-rack network trunk",
       up?.cls === "trunk" && up.rackLink && up.trunk === "link:network", JSON.stringify(up && [up.cls, up.trunk]));

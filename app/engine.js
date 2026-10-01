@@ -3565,8 +3565,8 @@ export function ribbonLayout(members) {
 }
 const polyD = pts => pts.map((q, i) => `${i ? "L" : "M"}${+q[0].toFixed(2)} ${+q[1].toFixed(2)}`).join("");
 
-function drawTrunks(list, style0, labels, extra = {}) {
-  const o = [];
+function drawTrunks(list, style0, labels, extra = {}, others = [], bodies = []) {
+  const o = [], labelReqs = [];
   const byNet = new Map();
   for (const t of list) (byNet.get(t.w.net) || byNet.set(t.w.net, []).get(t.w.net)).push(t);
   const tags = [];
@@ -3670,16 +3670,47 @@ function drawTrunks(list, style0, labels, extra = {}) {
       if (p && p.hi - p.lo >= 16) { tick(p); ticked.add(p); }
     });
     }
-    // wire numbers at each room end
+    // wire numbers at each room end — placed below, once every line is drawn
     for (const m of members) {
       const lab = labels[m.w.id] && (extra[m.w.id] ? `${labels[m.w.id]} · ${extra[m.w.id]}` : labels[m.w.id]); if (!lab) continue;
-      const pts = m.w.pts, inbound = /^(audioReturn)$/.test(m.w.signal) || m.w.dante;
-      const [a, b] = inbound ? [pts[1], pts[0]] : [pts[pts.length - 2], pts[pts.length - 1]];
-      if (!a || !b) continue;
-      const vert = a[0] === b[0];
-      const mx = vert ? a[0] : (a[0] + b[0]) / 2, my = vert ? (a[1] + b[1]) / 2 : a[1];
-      tags.push(`<text class="wirenum" x="${vert ? mx + 6 : mx}" y="${vert ? my + 3.5 : my - 5}"${vert ? "" : ' text-anchor="middle"'} font-size="9" font-weight="700" letter-spacing=".3" fill="${color}" paint-order="stroke" stroke="#fff" stroke-width="3">${esc(lab)}</text>`);
+      const pts = ownPts.get(m.w) || m.w.pts, inbound = /^(audioReturn)$/.test(m.w.signal) || m.w.dante;
+      if (pts.length < 2) continue;
+      labelReqs.push({ lab, color, pts: inbound ? [...pts].reverse() : pts, w: m.w });
     }
+  }
+  /* label placement (dogfood 2026-10-01: "R-01 · eARC KIT" sat on a neighbouring ribbon): each label tries
+     spots along its wire's room-end stretch, either side, then the stretch before it, and takes the one
+     touching the fewest drawn lines and no other label */
+  const drawn = [...list.flatMap(({ w }) => { const p = ownPts.get(w) || w.pts; return p.slice(1).map((q, i) => [p[i], q]); }),
+    ...others.flatMap(w => w.pts.slice(1).map((q, i) => [w.pts[i], q]))];
+  const placedBoxes = [];
+  const hitsSeg = (bx, [a, b]) => Math.max(a[0], b[0]) >= bx[0] && Math.min(a[0], b[0]) <= bx[2] && Math.max(a[1], b[1]) >= bx[1] && Math.min(a[1], b[1]) <= bx[3];
+  for (const L of labelReqs) {
+    const tw = L.lab.length * 5.5 + 4, n = L.pts.length;
+    let best = null;
+    for (const [si, pen] of [[n - 2, 0], [n - 3, 3], [n - 4, 6], [n - 5, 9]]) {
+      if (si < 0) continue;
+      const a = L.pts[si], b = L.pts[si + 1], vert = a[0] === b[0];
+      const len = vert ? Math.abs(b[1] - a[1]) : Math.abs(b[0] - a[0]);
+      if (len < 12) continue;
+      for (const f of [0.5, 0.3, 0.7, 0.15, 0.85]) {
+        const x0 = a[0] + (b[0] - a[0]) * f, y0 = a[1] + (b[1] - a[1]) * f;
+        const spots = vert
+          ? [{ x: x0 + 6, y: y0 + 3.5, anchor: "", box: [x0 + 5, y0 - 5, x0 + 6 + tw, y0 + 5] }, { x: x0 - 6, y: y0 + 3.5, anchor: "end", box: [x0 - 6 - tw, y0 - 5, x0 - 5, y0 + 5] }]
+          : [{ x: x0, y: y0 - 5, anchor: "middle", box: [x0 - tw / 2, y0 - 13, x0 + tw / 2, y0 - 3] }, { x: x0, y: y0 + 12, anchor: "middle", box: [x0 - tw / 2, y0 + 3, x0 + tw / 2, y0 + 13] }];
+        for (const sp of spots) {
+          const segHits = drawn.filter(sg => hitsSeg(sp.box, sg)).length;
+          const lblHits = placedBoxes.filter(q => q[0] < sp.box[2] && q[2] > sp.box[0] && q[1] < sp.box[3] && q[3] > sp.box[1]).length;
+          // a room card, chip or rack box under the label (its border, its glyphs) reads as badly as a line
+          const bodyHits = bodies.filter(q => q.x < sp.box[2] && q.x + q.w > sp.box[0] && q.y < sp.box[3] && q.y + q.h > sp.box[1]).length;
+          const cost = lblHits * 100 + bodyHits * 30 + segHits * 10 + pen + Math.abs(f - 0.5) * 2;
+          if (!best || cost < best.cost) best = { ...sp, cost };
+        }
+      }
+    }
+    if (!best) continue;
+    placedBoxes.push(best.box);
+    tags.push(`<text class="wirenum" x="${+best.x.toFixed(1)}" y="${+best.y.toFixed(1)}"${best.anchor ? ` text-anchor="${best.anchor}"` : ""} font-size="9" font-weight="700" letter-spacing=".3" fill="${L.color}" paint-order="stroke" stroke="#fff" stroke-width="3">${esc(L.lab)}</text>`);
   }
   // each trunk wire keeps a path of its own, invisible until selected: tapping a trunk picks
   // one wire, and the selection shows that wire's whole route through its trunk
@@ -3925,7 +3956,8 @@ export function render(job, ix, P, rt, opts = {}) {
     }
   }
   push(`</g>`);
-  if (trunkWires.length) push(drawTrunks(trunkWires, TRK, opts.wireLabels || {}, mergedTags));
+  if (trunkWires.length) push(drawTrunks(trunkWires, TRK, opts.wireLabels || {}, mergedTags, rt.wires.filter(w => !(TRK && w.cls === "trunk")),
+    [...P.zones, ...P.chips, ...P.racks.flatMap(r => r.devices)]));
   // rack titles again, over the wiring with a white halo: a riser climbing out of the rack top can't cut them
   for (const r of P.racks) push(`<text x="${r.x + 14}" y="${r.y + 24}" font-size="20" font-weight="700" fill="#111" paint-order="stroke" stroke="#fff" stroke-width="5" stroke-linejoin="round">${esc(r.name)}</text>`);
   if (rt.danteTags?.length) push(drawDanteTags(job, ix, sol, s, P, rt.danteTags, bw));
@@ -4431,7 +4463,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
     if (r.over) out.notes.push({ code: "rack-full", solution: r.solution, ref: r.rack,
       msg: `${r.name}: ${r.used}U of gear, shelves, vents and patch panels in a ${r.size}U rack — ${r.over}U over; a bigger rack or a second one` });
     if (r.unknown.length) out.notes.push({ code: "rack-unknown-u", solution: r.solution, ref: r.rack,
-      msg: `${r.name}: rack height unknown for ${r.unknown.join(", ")} — drawn as 1U on the elevation; confirm` });
+      msg: `${r.name}: rack height needs to be confirmed for ${r.unknown.join(", ")} — drawn as 1U on the elevation` });
   }
 
   /* -- rack outlets: every box needs one on the WattBox unless PoE powers it -- */

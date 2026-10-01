@@ -29,7 +29,10 @@ export const STARTERS = [
       dev("sav-out", "audioOutputModule", "savant-pav-aom8c"),
       { id: "avb", type: "avbSwitch", model: "AVB switch (Avnu-certified)", status: "new" },
       dev("amp", "amp", "anthem-mdx-16", null, { zones: 8 }),
-      dev("power", "power", "wattbox-800-ipvm-12"),
+      // sized for a whole house (Ryan 2026-10-01): the 18-outlet WattBox and a house LAN switch
+      // (every TV, the networked rack gear and the AV switch uplinks land on it)
+      dev("lan", "networkSwitch", "ubiquiti-usw-pro-24-poe"),
+      dev("power", "power", "wattbox-800vps-ipvm-18"),
     ],
     // AVDM encoders (AC-MXNET-1G-AVDM-EV2): video onto MXNet, and each source's sound — downmixed
     // to stereo — out of its balanced analog jack into the Savant input module (Ryan 2026-09-30)

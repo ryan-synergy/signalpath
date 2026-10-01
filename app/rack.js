@@ -41,8 +41,11 @@ export function rackPlans(job, ix, catalog) {
         const u = typeof c?.rackUnits === "number" ? c.rackUnits : null;
         const tier = TIER[d.type] ?? 2;
         if (u == null && (d.type === "source" || c?.desktop)) { small.push(name); continue; }
-        if (u == null) unknown.push(name);
-        items.push({ kind: "device", id: d.id, tier, u: u ?? 1, label: name, type: d.type, guess: u == null, half: !!c?.halfRack });
+        // no height in the catalog, or one the catalog marks to confirm (Ryan 2026-10-01: Savant PAV
+        // modules drawn 1U, flagged "need to confirm") — either way the elevation shows it and the advisor asks
+        const confirm = u == null || !!c?.rackUnitsConfirm;
+        if (confirm) unknown.push(name);
+        items.push({ kind: "device", id: d.id, tier, u: u ?? 1, label: name, type: d.type, guess: confirm, half: !!c?.halfRack });
         if (d.type === "amp" || d.type === "avr") items.push({ kind: "vent", tier, u: 1, label: "Vent panel" });
       }
       // rack-side adapters (MXNet encoders/decoders on rack gear) go in AVPro's own rack

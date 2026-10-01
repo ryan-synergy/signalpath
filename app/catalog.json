@@ -2712,6 +2712,8 @@
     "savant-pav-aim7c": {
       "brand": "Savant",
       "model": "PAV-AIM7C-20",
+      "rackUnits": 1,
+      "rackUnitsConfirm": true,
       "type": "audioInputModule",
       "inputs": {
         "analog": 3,
@@ -2735,6 +2737,8 @@
     "savant-pav-aom8c": {
       "brand": "Savant",
       "model": "PAV-AOM8C-00",
+      "rackUnits": 1,
+      "rackUnitsConfirm": true,
       "type": "audioOutputModule",
       "inputs": {},
       "outputs": {

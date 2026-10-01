@@ -3926,6 +3926,8 @@ export function render(job, ix, P, rt, opts = {}) {
   }
   push(`</g>`);
   if (trunkWires.length) push(drawTrunks(trunkWires, TRK, opts.wireLabels || {}, mergedTags));
+  // rack titles again, over the wiring with a white halo: a riser climbing out of the rack top can't cut them
+  for (const r of P.racks) push(`<text x="${r.x + 14}" y="${r.y + 24}" font-size="20" font-weight="700" fill="#111" paint-order="stroke" stroke="#fff" stroke-width="5" stroke-linejoin="round">${esc(r.name)}</text>`);
   if (rt.danteTags?.length) push(drawDanteTags(job, ix, sol, s, P, rt.danteTags, bw));
   // a tag reads beside its run — on whichever side no other wire runs alongside
   const segsAll = rt.wires.flatMap(w => w.pts.slice(1).map((q, i) => [w.pts[i], q]));

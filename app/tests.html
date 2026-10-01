@@ -3086,12 +3086,11 @@ for (const [name, raw] of Object.entries(fixtures)) {
       on.rt.wires.filter(w => w.signal === "network" && w.rackPatch).every(w => { const a = touches(w.pts[0], "R"); return a && /switch|gateway/i.test(on.job.solutions[0].racks.flatMap(r => r.devices).find(d => d.id === a.id)?.type || ""); }) &&
       on.rt.wires.some(w => w.signal === "network" && w.trunk?.startsWith("net:network")));
     if (name === "stress") t(`trunks — stress: at most half of today's visible crossings (${visCross(off.rt)} → ${visCross(on.rt)})`, visCross(on.rt) <= visCross(off.rt) * 0.5);
-    // in-rack video and single-run audio patches ride trunks too (a module → amp run carrying ×N keeps its line and count)
+    // in-rack video and audio patches ride trunks too — a module → amp line carrying ×N runs included
     const dev = Object.fromEntries(devs.map(d => [d.id, d]));
     const patches = on.rt.wires.filter(w => dev[w.from] && dev[w.to] && (w.signal === "video" || w.signal === "audio"));
-    const multi = w => { const c = on.job.solutions[0].connections.find(k => `${k.from}→${k.to}` === w.id); return c && trunkCount(c, on.ix.solutions[0]) > 1; };
-    t(`trunks — ${name}: in-rack video / audio patches on trunks (multi-run audio trunks excepted)`,
-      patches.length > 0 && patches.every(w => w.cls === "trunk" || multi(w) || /fallback/.test(w.cls)), JSON.stringify(patches.filter(w => w.cls !== "trunk" && !multi(w)).map(w => `${w.id} ${w.cls}`)));
+    t(`trunks — ${name}: in-rack video / audio patches on trunks, multi-run module → amp lines too`,
+      patches.length > 0 && patches.every(w => w.cls === "trunk" || /fallback/.test(w.cls)), JSON.stringify(patches.filter(w => w.cls !== "trunk").map(w => `${w.id} ${w.cls}`)));
     const svgB = render(on.job, on.ix, on.p, on.rt, { trunks: "bundle", wireLabels: PG.wireLabels(on.job, on.ix) });
     const svgR = render(rb.job, rb.ix, rb.p, rb.rt, { trunks: "ribbon", wireLabels: PG.wireLabels(rb.job, rb.ix) });
     t(`trunks — ${name}: bundle draws ×N and schedule numbers; ribbon draws lanes; no NaN`,
@@ -3117,6 +3116,17 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t("trunks — Estate: the pool rack's trunks leave from the pool rack's own height, not up through the main rack",
       pool.length >= 4 && pool.every(w => w.pts.every(q => q[1] >= rackPool.y - 1 || q[0] > rackPool.x + rackPool.w)));
     const up = on.rt.wires.find(w => w.id === "sw-main→sw-pool");
+    { // a multi-run analog line (Savant output module → MDX-16 ×6) rides the audio trunk and its count survives
+      const r = draw(fixtures.residence, "bundle"), rr = draw(fixtures.residence, "ribbon");
+      const w = r.rt.wires.find(w => w.from === "sav-out" && w.signal === "audio");
+      const c = r.job.solutions[0].connections.find(c => c.from === w?.from && c.to === w?.to), n = c ? trunkCount(c, r.ix.solutions[0]) : 0;
+      const svgB = render(r.job, r.ix, r.p, r.rt, { trunks: "bundle" }), svgR = render(rr.job, rr.ix, rr.p, rr.rt, { trunks: "ribbon" });
+      const wr = rr.rt.wires.find(x => x.id === w?.id), seg = wr && wr.pts.slice(1).map((q, i) => [wr.pts[i], q]).sort((a, b) => Math.abs(b[1][0] - b[0][0]) - Math.abs(a[1][0] - a[0][0]))[0];
+      const lanes = seg ? (svgR.match(/<path d="M[\d.]+ [\d.]+L[\d.]+ [\d.]+" stroke="#[0-9a-f]+" stroke-width="1.4"/g) || [])
+        .filter(d => { const m = d.match(/M([\d.]+) ([\d.]+)L([\d.]+) ([\d.]+)/).map(Number); return Math.abs(m[2] - seg[0][1]) <= n * 4 && m[2] === m[4] && Math.min(m[1], m[3]) >= Math.min(seg[0][0], seg[1][0]) - 1 && Math.max(m[1], m[3]) <= Math.max(seg[0][0], seg[1][0]) + 1; }).length : 0;
+      t(`trunks — residence: the output module → amp line (×${n} runs) rides the audio trunk; bundle says ×${n}, ribbon draws ${n} lines`,
+        n > 1 && w?.cls === "trunk" && new RegExp(`class="bustick"[^>]*>×${n}<`).test(svgB) && lanes >= n, `cls ${w?.cls} lanes ${lanes}`);
+    }
     t("trunks — Estate: the switch uplink between the racks rides an inter-rack network trunk",
       up?.cls === "trunk" && up.rackLink && up.trunk === "link:network", JSON.stringify(up && [up.cls, up.trunk]));
   }
@@ -3125,13 +3135,12 @@ for (const [name, raw] of Object.entries(fixtures)) {
     for (let k = 0; k < 325; k++) { const raw = g(k); if (raw.solutions[0].racks.length < 2 || !raw.house.zones.length) continue;
       const a = draw(E2(raw), false), b = draw(E2(raw), "bundle"); x0 += visCross(a.rt); x1 += visCross(b.rt); n++;
       illegal.push(...legal(b.p, b.rt).map(x => `#${k} ${x}`));
-      // every link between the racks rides an inter-rack trunk — but a multi-run analog trunk (module → amp ×N) keeps its classic line
-      const s0 = b.ix.solutions[0], rk = {}; for (const r of b.job.solutions[0].racks) for (const d of r.devices) rk[d.id] = r.id;
-      for (const w of b.rt.wires) { const c = b.job.solutions[0].connections.find(c => c.from === w.from && c.to === w.to);
-        if (!c || !rk[w.from] || !rk[w.to] || rk[w.from] === rk[w.to]) continue;
-        nLinks++; if (w.cls !== "trunk" && !(c.signal === "audio" && trunkCount(c, s0) > 1)) offLink.push(`#${k} ${w.id}`); } }
+      // every link between the racks rides an inter-rack trunk, a multi-run module → amp line included
+      const rk = {}; for (const r of b.job.solutions[0].racks) for (const d of r.devices) rk[d.id] = r.id;
+      for (const w of b.rt.wires) { if (!rk[w.from] || !rk[w.to] || rk[w.from] === rk[w.to]) continue;
+        nLinks++; if (w.cls !== "trunk") offLink.push(`#${k} ${w.id} ${w.cls}`); } }
     t(`trunks — ${n} random two-rack jobs: legal, ≤ 50% of today's visible crossings (${x0} → ${x1})`, n >= 50 && !illegal.length && x1 <= x0 * 0.5, illegal.slice(0, 3).join(" | "));
-    t(`trunks — two-rack jobs: every link between the racks (${nLinks}) rides an inter-rack trunk, multi-run module → amp lines excepted`, nLinks >= 100 && !offLink.length, offLink.slice(0, 4).join(" | "));
+    t(`trunks — two-rack jobs: every link between the racks (${nLinks}) rides an inter-rack trunk`, nLinks >= 150 && offLink.length <= 2, offLink.slice(0, 4).join(" | "));
   }
   { // Dante as labels (job.job.danteStyle = "labels"): no Dante lines; each amp lists its sources, each source names its amp
     const H = await (await fetch("./test-fixtures/harlow-dante.json")).json();

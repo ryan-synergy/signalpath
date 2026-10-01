@@ -1515,17 +1515,17 @@ export function route(job, ix, placement, opts = {}) {
   const TRUNK = trunkMode(job, opts);
   const SWITCHY = new Set(["avSwitch", "networkSwitch", "avbSwitch", "gateway"]);
   const rackOfDev = id => P.racks.find(r => r.devices.some(d => d.id === id));
-  // …and so do its video and line-level audio patches — except an analog trunk that
-  // carries several runs (module → amp ×N): its drawn count stays on the classic line
+  // …and so do its video and line-level audio patches — an analog line that carries several
+  // runs (module → amp ×N) too: the trunk drawing counts its runs, not its one wire
   const rackPatchFam = conn => TRUNK && devById[conn.from] && devById[conn.to] && rackOfDev(conn.from) === rackOfDev(conn.to)
     ? (conn.dante ? "dante" : conn.signal === "network" ? "network" : conn.signal === "video" ? "video"
-      : conn.signal === "audio" && trunkCount(conn, s) === 1 ? "audio" : null) : null;
+      : conn.signal === "audio" ? "audio" : null) : null;
 
   // …and a link between two racks rides an inter-rack trunk, one per signal type (routed after the
   // rooms' trunks, so it can pick the corridor the finished sheet crosses least)
   const linkFam = conn => TRUNK && devById[conn.from] && devById[conn.to] && rackOfDev(conn.from) !== rackOfDev(conn.to)
     ? (conn.dante ? "dante" : conn.signal === "network" ? "network" : conn.signal === "video" ? "video"
-      : conn.signal === "audio" && trunkCount(conn, s) === 1 ? "audio" : null) : null;
+      : conn.signal === "audio" ? "audio" : null) : null;
 
   /* ============ pass 3: rigid non-zone wires FIRST (short structural runs
      claim their channels; zone feeds are flexible and relaxable) ============ */
@@ -3254,11 +3254,14 @@ function drawTrunks(list, style, labels, extra = {}) {
       }
     }
     const xy = p => p.dir === "h" ? [[p.lo, p.at], [p.hi, p.at]] : [[p.at, p.lo], [p.at, p.hi]];
-    const W = p => p.on.length > 1 && (style === "bundle" || p.on.length > RIBBON_MAX) ? 5.2 : 2.2;
-    const ribbon = p => style === "ribbon" && p.on.length > 1 && p.on.length <= RIBBON_MAX;
+    // a piece counts cable runs, not wires: an analog module → amp line is ×N runs on its own
+    const runsOf = v => members[v.mi].runs || 1;
+    for (const p of pieces) p.n = p.on.reduce((n, v) => n + runsOf(v), 0);
+    const W = p => p.n > 1 && (style === "bundle" || p.n > RIBBON_MAX) ? 5.2 : 2.2;
+    const ribbon = p => style === "ribbon" && p.n > 1 && p.n <= RIBBON_MAX;
     // halos first, then the lines
     for (const p of pieces) {
-      const [[x1, y1], [x2, y2]] = xy(p), wd = ribbon(p) ? (p.on.length - 1) * RIBBON_PITCH + 2 : W(p);
+      const [[x1, y1], [x2, y2]] = xy(p), wd = ribbon(p) ? (p.n - 1) * RIBBON_PITCH + 2 : W(p);
       o.push(`<path d="M${x1} ${y1}L${x2} ${y2}" stroke="#fff" stroke-width="${wd + 4}" stroke-linecap="butt"/>`);
     }
     const dashA = dash ? ` stroke-dasharray="${dash}"` : "";
@@ -3277,27 +3280,39 @@ function drawTrunks(list, style, labels, extra = {}) {
       const plus = info.filter(i => i.turn > 0).sort((a, b) => a.t - b.t);
       const zero = info.filter(i => i.turn === 0);
       const minus = info.filter(i => i.turn < 0).sort((a, b) => b.t - a.t);
-      const ordered = [...plus, ...zero, ...minus], n = ordered.length;
-      ordered.forEach((i, k) => laneOf.set(`${i.v.mi}|${i.v.si}|${p.lo}|${p.dir}`, ((n - 1) / 2 - k) * RIBBON_PITCH));
+      // each wire takes as many lanes as it has runs; laneOf holds its first lane
+      const ordered = [...plus, ...zero, ...minus], n = p.n;
+      let k = 0;
+      for (const i of ordered) { laneOf.set(`${i.v.mi}|${i.v.si}|${p.lo}|${p.dir}`, ((n - 1) / 2 - k) * RIBBON_PITCH); k += runsOf(i.v); }
     }
     for (const p of pieces) {
       const [[x1, y1], [x2, y2]] = xy(p);
       if (!ribbon(p)) { o.push(`<path d="M${x1} ${y1}L${x2} ${y2}" stroke="${color}" stroke-width="${W(p)}" stroke-linecap="round"${dashA}/>`); continue; }
-      for (const v of p.on) {
-        const off = laneOf.get(`${v.mi}|${v.si}|${p.lo}|${p.dir}`) || 0;
+      for (const v of p.on) for (let r = 0; r < runsOf(v); r++) {
+        const off = (laneOf.get(`${v.mi}|${v.si}|${p.lo}|${p.dir}`) ?? ((p.n - 1) / 2) * RIBBON_PITCH) - r * RIBBON_PITCH;
         const [a, b] = p.dir === "h" ? [[x1, y1 + off], [x2, y2 + off]] : [[x1 + off, y1], [x2 + off, y2]];
         o.push(`<path d="M${a[0]} ${a[1]}L${b[0]} ${b[1]}" stroke="${color}" stroke-width="1.4" stroke-linecap="square"${dashA}/>`);
       }
     }
     // ×N on the longer shared runs (bundle look)
     const longestOnLine = new Map();
-    for (const p of pieces) if (p.dir === "h" && p.on.length > 1) { const k = p.at, b = longestOnLine.get(k); if (!b || p.hi - p.lo > b.hi - b.lo) longestOnLine.set(k, p); }
+    for (const p of pieces) if (p.dir === "h" && p.n > 1) { const k = p.at, b = longestOnLine.get(k); if (!b || p.hi - p.lo > b.hi - b.lo) longestOnLine.set(k, p); }
+    const tick = p => { const [[x1, y1], [x2, y2]] = xy(p), mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+      o.push(`<text class="bustick" x="${p.dir === "v" ? mx + 7 : mx}" y="${p.dir === "v" ? my + 4 : my - 7}"${p.dir === "v" ? "" : ' text-anchor="middle"'} font-size="10.5" font-weight="700" fill="${color}" paint-order="stroke" stroke="#fff" stroke-width="3">×${p.n}</text>`); };
+    const ticked = new Set();
     for (const p of pieces) {
-      if (p.on.length < 2 || p.hi - p.lo < 70 || ribbon(p)) continue;
+      if (p.n < 2 || p.hi - p.lo < 70 || ribbon(p)) continue;
       if (p.dir === "h" && longestOnLine.get(p.at) !== p) continue;
-      const [[x1, y1], [x2, y2]] = xy(p), mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
-      o.push(`<text class="bustick" x="${p.dir === "v" ? mx + 7 : mx}" y="${p.dir === "v" ? my + 4 : my - 7}"${p.dir === "v" ? "" : ' text-anchor="middle"'} font-size="10.5" font-weight="700" fill="${color}" paint-order="stroke" stroke="#fff" stroke-width="3">×${p.on.length}</text>`);
+      tick(p); ticked.add(p);
     }
+    // a multi-run wire always shows its own count: on its longest stretch alone, when no tick already says it
+    members.forEach((m, mi) => {
+      if ((m.runs || 1) < 2) return;
+      const solo = pieces.filter(p => p.on.length === 1 && p.on[0].mi === mi);
+      if (solo.some(p => ticked.has(p)) || style === "ribbon" && m.runs <= RIBBON_MAX) return;   // a ribbon draws its runs
+      const p = solo.sort((a, b) => (b.hi - b.lo) - (a.hi - a.lo))[0];
+      if (p && p.hi - p.lo >= 16) { tick(p); ticked.add(p); }
+    });
     // wire numbers at each room end
     for (const m of members) {
       const lab = labels[m.w.id] && (extra[m.w.id] ? `${labels[m.w.id]} · ${extra[m.w.id]}` : labels[m.w.id]); if (!lab) continue;
@@ -3522,12 +3537,13 @@ export function render(job, ix, P, rt, opts = {}) {
     const gs = bw ? (SIGNAL_DASHES[key] || SIGNAL_DASHES.video) : null;
     const color = gs ? gs.stroke : SIGNAL_COLORS[key] || "#555";
     const dash = gs?.dash || (key === "dante" ? "6 4" : null);
-    if (TRK && w.cls === "trunk") trunkWires.push({ w, color, dash });   // drawn as trunks below
-    else push(`<path class="wire${w.dante ? " dante" : ""}" data-wire="${esc(w.id)}" data-from="${esc(w.from)}" data-to="${esc(w.to)}" data-signal="${esc(w.signal)}" d="${wireD(w)}" stroke="${color}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`);
-    // one-line bus notation: a trunk drawn once carries its real run count
+    // one-line bus notation: a line drawn once carries its real run count
     const conn = (sol.connections || []).find(c => c.from === w.from && c.to === w.to && c.signal === w.signal);
     const n = conn ? trunkCount(conn, s) : 1;
-    if (n > 1) {
+    const onTrunk = TRK && w.cls === "trunk";
+    if (onTrunk) trunkWires.push({ w, color, dash, runs: n });   // drawn as trunks below (they count the runs)
+    else push(`<path class="wire${w.dante ? " dante" : ""}" data-wire="${esc(w.id)}" data-from="${esc(w.from)}" data-to="${esc(w.to)}" data-signal="${esc(w.signal)}" d="${wireD(w)}" stroke="${color}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`);
+    if (n > 1 && !onTrunk) {
       let bi = 1, bl = -1;
       for (let i = 1; i < w.pts.length; i++) {
         const L = Math.abs(w.pts[i][0] - w.pts[i - 1][0]) + Math.abs(w.pts[i][1] - w.pts[i - 1][1]);

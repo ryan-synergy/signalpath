@@ -568,31 +568,32 @@ const gridCell = ws => { const a = [...ws].sort((x, y) => x - y); return a.lengt
 
 const SPK = 32, SPK_PITCH = 34; // speaker icon diameter / center pitch
 
-function speakerGroupSize(ep) {
+function speakerGroupSize(ep, gs = 1) {
+  const sz = r => ({ ...r, w: Math.round(r.w * gs), h: Math.round(r.h * gs) });   // glyph scale (TVs + speakers 25% bigger, 2026-10-01)
   const cfg = ep.config || "stereo";
   const cap = s => (ep.status === "ofe" ? "OFE " : "") + s;
-  if (cfg === "mono") return { w: SPK, h: SPK, caption: cap("1 Speaker") };
-  if (cfg === "2.1" || cfg === "stereo-2.1") return { w: SPK_PITCH * 3 - 2, h: SPK, caption: cap("2.1 Speakers") };
-  if (cfg === "surround-5.1") return { w: SPK_PITCH * 3 - 2, h: 70, caption: cap("5.1 Surround") };
-  if (cfg === "surround-7.1" || cfg === "surround-7.1.4") return { w: SPK_PITCH * 4 - 2, h: 70, caption: cap(cfg.slice(9) + " Surround") };
-  if (cfg.startsWith("soundbar")) return { w: 90, h: SPK, caption: cap(cfg === "soundbar-sub" ? "Soundbar + Sub" : "Soundbar") };
+  if (cfg === "mono") return sz({ w: SPK, h: SPK, caption: cap("1 Speaker") });
+  if (cfg === "2.1" || cfg === "stereo-2.1") return sz({ w: SPK_PITCH * 3 - 2, h: SPK, caption: cap("2.1 Speakers") });
+  if (cfg === "surround-5.1") return sz({ w: SPK_PITCH * 3 - 2, h: 70, caption: cap("5.1 Surround") });
+  if (cfg === "surround-7.1" || cfg === "surround-7.1.4") return sz({ w: SPK_PITCH * 4 - 2, h: 70, caption: cap(cfg.slice(9) + " Surround") });
+  if (cfg.startsWith("soundbar")) return sz({ w: 90, h: SPK, caption: cap(cfg === "soundbar-sub" ? "Soundbar + Sub" : "Soundbar") });
   if (cfg === "landscape") {
     const sats = satCount(ep), subs = ep.buriedSub ? 1 : 0;
-    return { w: sats * 26 + subs * 34, h: SPK, caption: cap(`Landscape ${sats}${subs ? "+" + subs : ""}`) };
+    return sz({ w: sats * 26 + subs * 34, h: SPK, caption: cap(`Landscape ${sats}${subs ? "+" + subs : ""}`) });
   }
   const n = spkCount(ep);
-  return { w: SPK_PITCH * n - 2, h: SPK, caption: cap(`${n} Speakers`) };
+  return sz({ w: SPK_PITCH * n - 2, h: SPK, caption: cap(`${n} Speakers`) });
 }
 // a typed "-1" or "1.5" in the Count field must not become Array(-1)
 const spkCount = ep => Math.min(24, Math.max(1, Math.floor(+ep?.count) || 2));
 const satCount = ep => Math.min(24, Math.max(1, Math.floor(+ep?.satCount) || 4));
 
-function displaySize(ep) {
+function displaySize(ep, gs = 1) {
   // the card draws a sane size whatever was typed or imported: a "6500" typo
   // once drew a 10,000-unit card and the router ran the tab out of memory
   const typed = +ep.size, inches = Number.isFinite(typed) && typed > 0 ? typed : 55;
   const drawn = Math.min(220, Math.max(24, inches));
-  const w = Math.round(drawn * 1.6), h = Math.round(w * 0.567);
+  const w = Math.round(drawn * 1.6 * gs), h = Math.round(w * 0.567);
   const brand = [ep.status === "ofe" ? "OFE" : "New", ep.brand].filter(Boolean).join(" ");
   return { w, h, caption: ep.displayType === "projector" ? "Projector" : "TV", brand, sizeText: `${inches}"` };
 }
@@ -600,13 +601,13 @@ function displaySize(ep) {
 /* Card geometry: groups run left→right [speakers, display]; a local
    "at-display" source sits under the display footprint (the touch-the-TV
    exception renders from this slot). Card sizes to contents (compactness rule). */
-function zoneCard(zone, localsInZone, hasNote = false) {
+function zoneCard(zone, localsInZone, hasNote = false, gs = 1) {
   const groups = [];
   for (const ep of zone.endpoints || []) {
-    if (ep.type === "speakers") groups.push({ epId: ep.id, kind: "speakers", ...speakerGroupSize(ep) });
+    if (ep.type === "speakers") groups.push({ epId: ep.id, kind: "speakers", ...speakerGroupSize(ep, gs) });
   }
   for (const ep of zone.endpoints || []) {
-    if (ep.type === "display") groups.push({ epId: ep.id, kind: "display", ...displaySize(ep) });
+    if (ep.type === "display") groups.push({ epId: ep.id, kind: "display", ...displaySize(ep, gs) });
   }
   // audio-only cards (speaker pair, no display, no pucks) size to content —
   // the TV-card minimums left them mostly air (user redline). They grow back
@@ -689,8 +690,26 @@ const quant = (need, min) => Math.max(min, Math.ceil(need / PL.corridorQuantum) 
    the rack), and speaker rows allowed to run to the page edge. The layout that
    prints biggest (highest fitScale) wins, but only by a clear margin (3%), so
    a job that already fills the width keeps its tuned classic layout. */
+/* TVs and speakers draw 25% bigger (Ryan 2026-10-01) unless that costs the drawing: when the
+   bigger room cards shrink the whole sheet by more than 3%, step down (1.12, then today's 1.0) —
+   a condo gets big icons for free, a 30-room estate keeps its rack and captions legible.
+   opts.glyphScale pins it. The Off (classic) drawing keeps today's sizes: its gutter feeds
+   route worse around taller cards (200 random jobs: 11 → 16 best-effort wires), while Bundle
+   and Ribbon route as well or better with them (2 → 1, 5 → 4; estate 14 → 12 crossings). */
+export const GLYPH_SCALES = [1.25, 1.12, 1];
 export function place(job, ix = indexJob(job), opts = {}) {
-  const base = placeOnce(job, ix, opts, {});
+  if (opts.glyphScale != null) return placeAt(job, ix, opts, opts.glyphScale);
+  if (!trunkMode(job, opts)) return placeAt(job, ix, opts, 1);
+  const tries = GLYPH_SCALES.map(gs => [gs, null]);
+  const at = i => tries[i][1] ||= placeAt(job, ix, opts, tries[i][0]);
+  const floor = () => at(tries.length - 1).fitScale;
+  for (let i = 0; i < tries.length - 1; i++) {
+    if (at(i).fitScale >= PL.growMax - 1e-9 || at(i).fitScale >= floor() * 0.97) return at(i);   // grown to the cap = free
+  }
+  return at(tries.length - 1);
+}
+function placeAt(job, ix, opts, gs) {
+  const base = placeOnce(job, ix, opts, { gs });
   if (opts.classicLayout) return base;
   let best = base;
   // a wider virtual page (wrap) lets the top row run long when the drawing will
@@ -702,7 +721,7 @@ export function place(job, ix = indexJob(job), opts = {}) {
   const variants = [...[1.35, 1.7, 2.1].map(wrap => ({ wrap })),
     ...[1.15, 1.35, 1.7, 2.1].map(wrap => ({ wrap, sideBySide: true, audioWide: true }))];
   for (const v of opts.layoutVariants || variants) {
-    const p = placeOnce(job, ix, opts, v);
+    const p = placeOnce(job, ix, opts, { ...v, gs });
     if (p.fitScale > best.fitScale * 1.03) best = p;
   }
   return best;
@@ -758,7 +777,7 @@ function placeOnce(job, ix, opts, variant) {
   const hiddenSignals = new Set(opts.hideSignals || []);
   const dLabels = danteLabelMode(job, opts);
   const visConns = (sol.connections || []).filter(c => !hiddenSignals.has(c.signal) && !(dLabels && c.dante));
-  const out = { sheet: SHEET, racks: [], zones: [], chips: [], corridors: [], areaHeaders: [], legend: null, warnings: [] };
+  const out = { sheet: SHEET, racks: [], zones: [], chips: [], corridors: [], areaHeaders: [], legend: null, warnings: [], glyphScale: variant.gs || 1 };
 
   /* -- classify zones, preserve input order (layout stability) -- */
   // grouping: by type (default) — within the TV band, surround+TV rooms, then TV
@@ -829,7 +848,7 @@ function placeOnce(job, ix, opts, variant) {
   const notedZones = new Set((sol.annotations || []).map(a => a?.near));
   for (const z of job.house.zones) {
     const locals = Object.values(s.locals).filter(d => d.zone === z.id && d.location === "at-display");
-    cardOf[z.id] = zoneCard(z, locals, notedZones.has(z.id));
+    cardOf[z.id] = zoneCard(z, locals, notedZones.has(z.id), variant.gs || 1);
   }
 
   /* -- primary top band: video zones of cluster 0, rows wrapping at content right --
@@ -3873,7 +3892,8 @@ function drawTrunks(list, style0, labels, extra = {}, others = [], bodies = []) 
 export function render(job, ix, P, rt, opts = {}) {
   const bw = !!opts.grayscale;   // B&W-safe mode: dashes carry signal identity
   const kindColor = opts.kindColor !== false;   // color by kind (View toggle, on by default)
-  const usage = opts.usage || {};                // status lights: boxUsage(job, ix, catalog, advice)
+  const usage = opts.usage || {};
+  const gls = P.glyphScale || 1;                 // TV + speaker glyph scale place() chose                // status lights: boxUsage(job, ix, catalog, advice)
   const s = ix.solutions[opts.solution ?? 0];
   const sol = s.sol;
   const out = [];
@@ -4048,11 +4068,14 @@ export function render(job, ix, P, rt, opts = {}) {
     for (const g of z.groups) {
       const gx = z.x + g.x, gy = z.y + g.y;
       if (g.kind === "display") {
+        const f = Math.min(gls, 1.15);   // the TV's words grow a little with it
         push(`<rect x="${gx}" y="${gy}" width="${g.w}" height="${g.h}" fill="url(#tvg)" stroke="#556" stroke-width="1.2"/>`);
-        push(`<text x="${gx + g.w / 2}" y="${gy + g.h / 2 - 3}" text-anchor="middle" font-size="11" fill="#233">${esc(g.brand)}</text>`);
-        push(`<text x="${gx + g.w / 2}" y="${gy + g.h / 2 + 13}" text-anchor="middle" font-size="12" font-weight="600" fill="#233">${esc(g.sizeText)}</text>`);
+        push(`<text x="${gx + g.w / 2}" y="${gy + g.h / 2 - 3 * f}" text-anchor="middle" font-size="${+(11 * f).toFixed(1)}" fill="#233">${esc(g.brand)}</text>`);
+        push(`<text x="${gx + g.w / 2}" y="${gy + g.h / 2 + 13 * f}" text-anchor="middle" font-size="${+(12 * f).toFixed(1)}" font-weight="600" fill="#233">${esc(g.sizeText)}</text>`);
       } else if (g.kind === "speakers") {
-        push(speakerGlyphs(ix.endpointsById[g.epId], gx, gy, g.w));
+        // the glyphs are drawn at 1× and scaled with their group (TVs + speakers 25% bigger)
+        const sg = speakerGlyphs(ix.endpointsById[g.epId], gx, gy, g.w / gls);
+        push(gls === 1 ? sg : `<g transform="translate(${gx} ${gy}) scale(${gls}) translate(${-gx} ${-gy})">${sg}</g>`);
       }
       for (const l of g.locals || (g.local ? [g.local] : [])) {
         const ldev = s.locals[l.deviceId] || {};

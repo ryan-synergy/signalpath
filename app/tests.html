@@ -15,7 +15,7 @@
 <div id="summary">running…</div>
 <ul id="out"></ul>
 <script type="module">
-import { loadJob, validate, advise, place as enginePlace, route as engineRoute, render, routeAlternates as engineAlternates, expandChannels, effectiveHouse, effectiveJob, trunkCount, ribbonLayout, autoLinkCatalog, indexJob, READABILITY_ZONE_CEILING, SHEET, deviceKind, KIND_STYLE, boxUsage, lockCatalog } from "./engine.js";
+import { loadJob, validate, advise, place as enginePlace, route as engineRoute, render, routeAlternates as engineAlternates, expandChannels, effectiveHouse, effectiveJob, trunkCount, ribbonLayout, autoLinkCatalog, indexJob, READABILITY_ZONE_CEILING, SHEET, deviceKind, KIND_STYLE, boxUsage, lockCatalog, GLYPH_SCALES } from "./engine.js";
 // Trunks are the app's default (Ryan 2026-09-30). The router regression suite below
 // pins the classic drawing explicitly — it still guards the "Off" choice — and the
 // trunk tests pass trunks: "bundle" / "ribbon" (or call enginePlace/engineRoute bare).
@@ -3551,6 +3551,30 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const { job: j2, ix: i2 } = build("theater-receiver"), p2 = place(j2, i2), off = doc(render(j2, i2, p2, route(j2, i2, p2), { kindColor: false, usage: boxUsage(j2, i2, CAT, advise(j2, i2, CAT), 0) }));
   t("lights: with Color by kind off the faces and lights stay (lit in the neutral blue)",
     [...off.querySelectorAll("g.devtile rect")].some(r => r.getAttribute("fill") === "#3b82c4"));
+}
+
+/* ---------- bigger TVs + speakers (2026-10-01): 25% up, stepping down on crowded jobs ---------- */
+{
+  const at = (raw, o) => { const { job, ix } = loadJob(structuredClone(raw)); const p = enginePlace(job, ix, o); return { job, ix, p }; };
+  const grp = (p, zid, kind) => p.zones.find(z => z.id === zid)?.groups.find(g => g.kind === kind);
+  const R = at(fixtures.residence, { trunks: "bundle" }), R1 = at(fixtures.residence, { trunks: "bundle", glyphScale: 1 });
+  const s0 = grp(R1.p, "z-family", "speakers"), s1 = grp(R.p, "z-family", "speakers"), t0 = grp(R1.p, "z-family", "display"), t1 = grp(R.p, "z-family", "display");
+  t("glyphs: a small job draws its TVs and speakers 25% bigger (the sheet doesn't shrink for it)",
+    R.p.glyphScale === 1.25 && Math.abs(s1.w / s0.w - 1.25) < 0.03 && Math.abs(t1.w / t0.w - 1.25) < 0.03 && R.p.fitScale >= R1.p.fitScale * 0.97,
+    `${R.p.glyphScale} ${s0.w}→${s1.w} ${t0.w}→${t1.w}`);
+  const X = at(fixtures.stress, { trunks: "bundle" }), X1 = at(fixtures.stress, { trunks: "bundle", glyphScale: 1 }), X2 = at(fixtures.stress, { trunks: "bundle", glyphScale: 1.25 });
+  t("glyphs: a crowded job steps down instead of shrinking the whole drawing more than 3%",
+    X2.p.fitScale < X1.p.fitScale * 0.97 && X.p.glyphScale < 1.25 && X.p.fitScale >= X1.p.fitScale * 0.97 || X.p.glyphScale === 1, `${X.p.glyphScale} fit ${X.p.fitScale.toFixed(3)} vs ${X1.p.fitScale.toFixed(3)}`);
+  t("glyphs: the Off (classic) drawing keeps today's sizes; a pinned glyphScale wins",
+    at(fixtures.residence, { trunks: false }).p.glyphScale === 1 && at(fixtures.residence, { trunks: "bundle", glyphScale: 1.12 }).p.glyphScale === 1.12 && GLYPH_SCALES[0] === 1.25);
+  const svg = render(R.job, R.ix, R.p, engineRoute(R.job, R.ix, R.p, { trunks: "bundle" }), { trunks: "bundle" });
+  t("glyphs: the speaker glyphs scale with their group and the TV's box is the bigger size",
+    /<g transform="translate\([\d.]+ [\d.]+\) scale\(1\.25\)/.test(svg) && svg.includes(`width="${t1.w}" height="${t1.h}" fill="url(#tvg)"`));
+  const F = await import("./fuzz-jobs.js"), g = F.jobGenerator(1); let fb1 = 0, fbA = 0, n = 0;
+  for (let k = 0; k < 60; k++) { let job, ix; try { ({ job, ix } = loadJob(g(k))); } catch { continue; } n++;
+    for (const [o, add] of [[{ trunks: "bundle", glyphScale: 1 }, v => fb1 += v], [{ trunks: "bundle" }, v => fbA += v]]) {
+      const p = enginePlace(job, ix, o), rt = engineRoute(job, ix, p, o); add(rt.wires.filter(w => /fallback/.test(w.cls)).length); } }
+  t(`glyphs: 60 random jobs in Bundle route no worse with the bigger glyphs (best-effort wires ${fb1} → ${fbA})`, n > 50 && fbA <= fb1);
 }
 
 document.getElementById("summary").innerHTML =

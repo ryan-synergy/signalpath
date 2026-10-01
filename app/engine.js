@@ -1680,11 +1680,36 @@ export function route(job, ix, placement, opts = {}) {
 
     // a family's whole route, re-runnable: cfg can move its riser (range / want) or stack its
     // buses farthest from the rooms; every port it books is recorded so it can be ripped up
+    // the points where wire w crosses wires of any other net (a family's crossings are the union)
+    function crossPointsInto(w, net, pts) {
+      const c = wireSegs(w);
+      for (const o of out.wires) {
+        if (o.net === net) continue;
+        const d = wireSegs(o);
+        if (d.x1 < c.x0 || d.x0 > c.x1 || d.y1 < c.y0 || d.y0 > c.y1) continue;
+        for (const s of c.segs) for (const t of d.segs) {
+          if (s.vert === t.vert) continue;
+          const v = s.vert ? s : t, h = s.vert ? t : s;
+          if (v.x1 > Math.min(h.x1, h.x2) + 1 && v.x1 < Math.max(h.x1, h.x2) - 1 && h.y1 > Math.min(v.y1, v.y2) + 1 && h.y1 < Math.max(v.y1, v.y2) - 1) pts.add(`${v.x1},${h.y1}`);
+        }
+      }
+    }
     let trialMode = false;
     const routeFam = (F, cfg = {}) => {
       const net = F.net;
       F.cfg = cfg;
       F.ports = [];
+      // a trial with a bound to beat stops as soon as what it has drawn already costs more — crossing
+      // points and length only grow as wires are added, so a stopped trial could never have won
+      F.aborted = false;
+      const tally = cfg.bound != null ? { pts: new Set(), len: 0 } : null;
+      const over = w => {
+        if (!tally || !w) return false;
+        crossPointsInto(w, F.net, tally.pts); tally.len += segLen(w.pts);
+        return (F.aborted = tally.pts.size * 100 + tally.len / 10 >= cfg.bound);
+      };
+      // a member the trial can't place costs 1e5 (famCost's price) — usually more than the bound already
+      const missed = () => { if (!tally) return false; tally.len += 1e6; return (F.aborted = tally.pts.size * 100 + tally.len / 10 >= cfg.bound); };
       const book = (store, id, y) => { (store[id] ||= []).push(y); F.ports.push([store, id, y]); };
       // riser column: right of the rightmost source column (out) / left of the leftmost target column (in)
       // network patches rise beside their switches; everything coming in, beside its targets
@@ -1851,9 +1876,10 @@ export function route(job, ix, placement, opts = {}) {
       for (const m of F.members) {
         if (m.rack) {
           const pts = rackPatch(m);
-          if (!pts) { why(m, `rack patch: ${m.whyNot}`); continue; }
-          commit(m.c, "trunk", pts, { net, group: "trunk-" + F.key, trunk: F.key, rackPatch: true });
+          if (!pts) { why(m, `rack patch: ${m.whyNot}`); if (missed()) return; continue; }
+          const cw = commit(m.c, "trunk", pts, { net, group: "trunk-" + F.key, trunk: F.key, rackPatch: true });
           done.add(m.i);
+          if (over(cw)) return;
           continue;
         }
         const dev = m.dev, t = m.t;
@@ -1894,7 +1920,7 @@ export function route(job, ix, placement, opts = {}) {
           }
           m.ty = ty;
         }
-        if (!rackEnd) { why(m, "no on-ramp"); continue; }
+        if (!rackEnd) { why(m, "no on-ramp"); if (missed()) return; continue; }
         const join = rackEnd[rackEnd.length - 1];
         // room end candidates, each written spine→room, starting on the spine
         const land = t.landY ?? (t.cardBot);
@@ -1939,12 +1965,14 @@ export function route(job, ix, placement, opts = {}) {
           const c0 = cands[0] && cleanPts([...rackEnd.slice(0, -1), join, ...cands[0]]);
           why(m, `no legal room end (${cands.length} tried, row ${row ? (F.bus.has(row) ? "bus ok" : "no bus") : "none"}, up ${row && up.has(row)})` +
             (c0 ? ` first ${JSON.stringify(c0)}: ${pathBlocked(c0.slice(0, -1), null) || pathBlocked(c0.slice(-2), skipLand) || (!pathRegisterable(c0, net) ? "lane taken" : "?")}` : ""));
+          if (missed()) return;
           continue;
         }
         const pts = m.dir === "out" ? best : [...best].reverse();
         if (m.dir === "in") book(leftPorts, dev.id, m.ty);
-        commit(m.c, "trunk", pts, { net, group: "trunk-" + F.key, trunk: F.key });
+        const cw = commit(m.c, "trunk", pts, { net, group: "trunk-" + F.key, trunk: F.key });
         done.add(m.i);
+        if (over(cw)) return;
       }
     };
     for (const F of famList) { F.net = nWire++; routeFam(F); }
@@ -2048,13 +2076,8 @@ export function route(job, ix, placement, opts = {}) {
       for (const m of F.members) done.delete(m.i);
     };
     const famCost = F => {
-      const mine = famWires(F), others = out.wires.filter(w => w.net !== F.net);
-      const pts = new Set();
-      for (const w of mine) for (const s of wireSegs(w).segs) for (const o of others) for (const t of wireSegs(o).segs) {
-        if (s.vert === t.vert) continue;
-        const v = s.vert ? s : t, h = s.vert ? t : s;
-        if (v.x1 > Math.min(h.x1, h.x2) + 1 && v.x1 < Math.max(h.x1, h.x2) - 1 && h.y1 > Math.min(v.y1, v.y2) + 1 && h.y1 < Math.max(v.y1, v.y2) - 1) pts.add(`${v.x1},${h.y1}`);
-      }
+      const pts = new Set(), mine = famWires(F);
+      for (const w of mine) crossPointsInto(w, F.net, pts);
       const missing = F.members.filter(m => !done.has(m.i)).length;
       return missing * 1e5 + pts.size * 100 + mine.reduce((n, w) => n + segLen(w.pts), 0) / 10;
     };
@@ -2069,7 +2092,12 @@ export function route(job, ix, placement, opts = {}) {
       // coarse to fine: each corridor's middle, then the best corridor's edges and the far bus stack
       trialMode = true;
       ripUp(F);
-      const trial = cfg => { routeFam(F, cfg); const c = famCost(F); if (c < best.cost - 1e-6) best = { cfg, cost: c }; ripUp(F); };
+      const trial = cfg => {
+        routeFam(F, { ...cfg, bound: best.cost });
+        const c = F.aborted ? Infinity : famCost(F);
+        if (c < best.cost - 1e-6) best = { cfg, cost: c };
+        ripUp(F);
+      };
       trial({ ...was, busFar: !was.busFar });
       for (const R of corridors) for (const f of [0.5, 0.15, 0.85]) trial({ range: R, want: Math.round(R[0] + (R[1] - R[0]) * f) });
       const R = best.cfg.range;

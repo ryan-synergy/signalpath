@@ -8,6 +8,7 @@ import { TYPE_NAME, PLATFORM_NAME, adapterName, describeNode, productName } from
 import { bulletFor, knownRunM } from "./hookup.js";
 import { NET_ROLE_NAME, switchSetup, companionSku } from "./network.js";
 import { isAsBuilt, asBuiltChanges, installRows } from "./asbuilt.js";
+import { KIND_STYLE } from "./kinds.js";
 
 const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const W = 1632, H = 1056;
@@ -739,7 +740,7 @@ const RACK_FILL = { patch: "#e8f0fb", vent: "#eceef1", shelf: "#f7f3e8" };
 const TIER_FILL = ["#e8f0fb", "#e6f4ea", "#ecebf8", "#f7f3e8", "#f6e9e7", "#fdf0d2"];
 const Q = { text: "?", color: "#a45a12" };
 // the rack body: frame, U numbers, gear top-down, amps/power on the floor
-function drawRack(r, rx, top, rw, uPx) {
+function drawRack(r, rx, top, rw, uPx, { kindColor = true, bw = false } = {}) {
   const out = [];
   const rows = Math.max(r.size, r.used), h = rows * uPx;
   out.push(`<rect x="${rx}" y="${top}" width="${rw}" height="${h}" fill="#f4f5f7" stroke="#333" stroke-width="2"/>`);
@@ -759,21 +760,24 @@ function drawRack(r, rx, top, rw, uPx) {
     if (it === low[0]) y = lowStart;
     const ih = it.u * uPx;
     const fill = RACK_FILL[it.kind] || TIER_FILL[it.tier] || "#fff";
+    const edge = kindColor && it.boxKind && KIND_STYLE[it.boxKind]?.edge ? (bw ? "#555" : KIND_STYLE[it.boxKind].edge) : null;
     const fs = Math.max(7, Math.min(12, ih * 0.62));
     const maxCh = Math.floor((rw - 40) / (fs * 0.56));
     const text = it.label.length > maxCh ? it.label.slice(0, maxCh - 1) + "…" : it.label;
     out.push(`<rect x="${rx + 2}" y="${y + 1}" width="${rw - 4}" height="${ih - 2}" rx="2" fill="${fill}" stroke="${it.guess ? "#a45a12" : "#8a93a3"}"${it.guess ? ' stroke-dasharray="4 3"' : ""}/>` +
       (it.kind === "vent" ? `<g stroke="#b9bec7">${Array.from({ length: Math.floor((rw - 90) / 30) }, (_, i) => `<line x1="${rx + 60 + i * 30}" y1="${y + 4}" x2="${rx + 60 + i * 30}" y2="${y + ih - 4}"/>`).join("")}</g>` : "") +
-      `<text x="${rx + 12}" y="${y + ih / 2 + fs * 0.36}" font-size="${fs}" fill="${it.kind === "vent" ? "#888" : "#222"}"${it.kind === "device" ? ' font-weight="600"' : ""}>${esc(text)}</text>` +
+      // color by kind: the same edge the box wears on the schematic (gray in black & white)
+      (edge ? `<rect x="${rx + 2}" y="${y + 1}" width="6" height="${ih - 2}" rx="1" fill="${edge}"/>` : "") +
+      `<text x="${rx + (edge ? 16 : 12)}" y="${y + ih / 2 + fs * 0.36}" font-size="${fs}" fill="${it.kind === "vent" ? "#888" : "#222"}"${it.kind === "device" ? ' font-weight="600"' : ""}>${esc(text)}</text>` +
       `<text x="${rx + rw - 10}" y="${y + ih / 2 + 4}" text-anchor="end" font-size="${Math.min(10, fs)}" fill="${it.guess ? "#a45a12" : "#888"}">${it.guess ? "?U" : `${it.u}U`}</text>`);
     y += ih;
   }
   return out;
 }
 // a standalone front view for the editor's RACK tab
-export function rackFrontSVG(r, rw = 300) {
+export function rackFrontSVG(r, rw = 300, look = {}) {
   const uPx = 14, top = 6, rows = Math.max(r.size, r.used);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${rw + 40} ${rows * uPx + 12}" width="100%" font-family="'Avenir Next', Avenir, 'Helvetica Neue', sans-serif">${drawRack(r, 30, top, rw, uPx).join("")}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${rw + 40} ${rows * uPx + 12}" width="100%" font-family="'Avenir Next', Avenir, 'Helvetica Neue', sans-serif">${drawRack(r, 30, top, rw, uPx, look).join("")}</svg>`;
 }
 export function rackData(adviseResult, solId) {
   return { racks: (adviseResult?.racks || []).filter(r => r.solution === solId && (r.items.length || r.rear.length)),
@@ -790,7 +794,7 @@ function rackPages(job, ix, adviseResult, opts, label) {
     let body = []; bodies.push(body);
     const top = TOP + 34, rw = 380;
     const uPx = Math.min(20, Math.floor((LIMIT - top - 10) / Math.max(r.size, r.used)));
-    body.push(heading(40, TOP + 8, `${r.name} — ${r.size}U`), ...drawRack(r, 80, top, rw, uPx));
+    body.push(heading(40, TOP + 8, `${r.name} — ${r.size}U`), ...drawRack(r, 80, top, rw, uPx, { kindColor: opts.kindColor !== false, bw: !!opts.grayscale }));
     let y = TOP;
     const more = () => { body = []; bodies.push(body); y = TOP; };
     const text = (lines) => {

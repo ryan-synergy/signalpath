@@ -10,6 +10,7 @@
 
 import { wireRuns } from "./pages.js";
 import { companionRef, specFor } from "./network.js";
+import { deviceKind } from "./kinds.js";
 
 export const DEFAULT_RACK_U = 42;
 export const RACK_SIZES = [12, 16, 20, 24, 27, 32, 36, 38, 40, 42, 44, 45];
@@ -45,7 +46,7 @@ export function rackPlans(job, ix, catalog) {
         // modules drawn 1U, flagged "need to confirm") — either way the elevation shows it and the advisor asks
         const confirm = u == null || !!c?.rackUnitsConfirm;
         if (confirm) unknown.push(name);
-        items.push({ kind: "device", id: d.id, tier, u: u ?? 1, label: name, type: d.type, guess: confirm, half: !!c?.halfRack });
+        items.push({ kind: "device", id: d.id, tier, u: u ?? 1, label: name, type: d.type, guess: confirm, half: !!c?.halfRack, boxKind: deviceKind(d, c) });
         if (d.type === "amp" || d.type === "avr") items.push({ kind: "vent", tier, u: 1, label: "Vent panel" });
       }
       // rack-side adapters (MXNet encoders/decoders on rack gear) go in AVPro's own rack

@@ -3595,6 +3595,18 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t(`trunks: no ×N count sits on a box, chip or room glyph (${total} counts on 43 jobs, Bundle + Ribbon)`, total > 100 && !hits.length, hits.slice(0, 5).join(", "));
 }
 
+/* ---------- the rack elevation wears the same kind edges as the schematic ---------- */
+{
+  const CAT = await (await fetch("./catalog.json")).json(), Pg = await import("./pages.js");
+  const { job, ix } = loadJob(structuredClone(fixtures.residence)); autoLinkCatalog(job, CAT);
+  const a = advise(job, ix, CAT), r = a.racks.find(x => x.items.length);
+  const svgOn = Pg.rackFrontSVG(r), svgOff = Pg.rackFrontSVG(r, 300, { kindColor: false }), svgBw = Pg.rackFrontSVG(r, 300, { bw: true });
+  const amp = r.items.find(i => i.type === "amp");
+  t("rack page: each device on the elevation carries its kind, and wears the schematic's edge color (off with Color by kind off, gray in B&W)",
+    amp?.boxKind === "audio" && svgOn.includes(`width="6"`) && svgOn.includes(`fill="${KIND_STYLE.audio.edge}"`) && !svgOff.includes(`fill="${KIND_STYLE.audio.edge}"`) &&
+    !svgBw.includes(`fill="${KIND_STYLE.audio.edge}"`) && svgBw.includes('fill="#555"'));
+}
+
 document.getElementById("summary").innerHTML =
   fail === 0 ? `<span class="pass">ALL ${pass} TESTS PASS</span>` : `<span class="fail">${fail} FAILED</span> · ${pass} passed`;
 document.title = fail === 0 ? `✓ ${pass} pass` : `✗ ${fail} fail`;

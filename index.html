@@ -453,25 +453,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261001170552",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261001170552",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261001170552",
-    "./app/ports.js": "./app/ports.js?v=20261001170552",
-    "./app/commands.js": "./app/commands.js?v=20261001170552",
-    "./app/engine.js": "./app/engine.js?v=20261001170552",
-    "./app/exports.js": "./app/exports.js?v=20261001170552",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261001170552",
-    "./app/hookup.js": "./app/hookup.js?v=20261001170552",
-    "./app/importers.js": "./app/importers.js?v=20261001170552",
-    "./app/library.js": "./app/library.js?v=20261001170552",
-    "./app/names.js": "./app/names.js?v=20261001170552",
-    "./app/network.js": "./app/network.js?v=20261001170552",
-    "./app/pages.js": "./app/pages.js?v=20261001170552",
-    "./app/power.js": "./app/power.js?v=20261001170552",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261001170552",
-    "./app/rack.js": "./app/rack.js?v=20261001170552",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261001170552",
-    "./app/starters.js": "./app/starters.js?v=20261001170552"
+    "./app/ai.js": "./app/ai.js?v=20261001171756",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261001171756",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261001171756",
+    "./app/ports.js": "./app/ports.js?v=20261001171756",
+    "./app/commands.js": "./app/commands.js?v=20261001171756",
+    "./app/engine.js": "./app/engine.js?v=20261001171756",
+    "./app/exports.js": "./app/exports.js?v=20261001171756",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261001171756",
+    "./app/hookup.js": "./app/hookup.js?v=20261001171756",
+    "./app/importers.js": "./app/importers.js?v=20261001171756",
+    "./app/library.js": "./app/library.js?v=20261001171756",
+    "./app/names.js": "./app/names.js?v=20261001171756",
+    "./app/network.js": "./app/network.js?v=20261001171756",
+    "./app/pages.js": "./app/pages.js?v=20261001171756",
+    "./app/power.js": "./app/power.js?v=20261001171756",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261001171756",
+    "./app/rack.js": "./app/rack.js?v=20261001171756",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261001171756",
+    "./app/starters.js": "./app/starters.js?v=20261001171756"
 } }
 </script>
 <script>
@@ -564,7 +564,7 @@
       <button data-tab="gear"><span class="lbl">Gear</span></button>
       <button data-tab="rack"><span class="lbl">Rack</span></button>
       <button data-tab="job"><span class="lbl">Job</span></button>
-      <button data-tab="settings"><span class="lbl">⚙</span></button>
+      <button data-tab="settings" aria-label="Settings" title="Settings"><span class="lbl">⚙</span></button>
       <button id="collapse" title="Collapse">⟨⟨</button>
     </div>
     <div class="body" id="panelBody"></div>
@@ -683,7 +683,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261001170552").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261001171756").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1660,6 +1660,25 @@ function productGroups(d) {
     { label: "Legacy", searchOnly: true, items: all.filter(([, c]) => c.type === d.type && (c.flags || []).includes("legacy")).sort(byName).map(item) },
     { label: "Other kinds of box", searchOnly: true, items: all.filter(([, c]) => c.type !== d.type).sort(byName).map(item) },
   ];
+}
+
+/* picker groups for a new box: products you made, then the go-to list, then every kind of box
+   in the library's order; legacy gear only while searching, a free-typed name last */
+function addDeviceGroups() {
+  const all = Object.entries(effectiveCatalog().devices || {}).filter(([, c]) => !(c.flags || []).includes("legacy"));
+  const byName = (a, b) => String((a[1].brand || "") + a[1].model).localeCompare(String((b[1].brand || "") + b[1].model));
+  const item = ([id, c]) => ({ value: id, label: productName(c),
+    sub: [DEV_TYPE_LABEL[c.type] || c.type, productSku(c) && productSku(c) !== c.model ? productSku(c) : "", c.zones ? `${c.zones} zones` : "",
+          c.verified === false ? "⚠ unverified" : ""].filter(Boolean).join(" · "),
+    keys: `${c.brand || ""} ${c.model} ${(c.aliases || []).join(" ")} ${c.partNo || ""} ${DEV_TYPE_LABEL[c.type] || ""}` });
+  const kinds = [...LIB_TYPES.map(([t, l]) => [t, l]), ...[...new Set(all.map(([, c]) => c.type))].filter(t => !LIB_TYPES.some(([x]) => x === t)).map(t => [t, DEV_TYPE_LABEL[t] || t])];
+  return [
+    { label: "Yours", items: all.filter(([, c]) => c.custom).sort(byName).map(item) },
+    { label: "Our go-to", items: all.filter(([, c]) => c.goTo && !c.custom).sort(byName).map(item) },
+    ...kinds.map(([t, l]) => ({ label: l, items: all.filter(([, c]) => c.type === t && !c.custom && !c.goTo).sort(byName).map(item) })),
+    { label: "Legacy", searchOnly: true, items: Object.entries(effectiveCatalog().devices || {}).filter(([, c]) => (c.flags || []).includes("legacy")).sort(byName).map(item) },
+    { label: "Not in the library", items: [{ value: "__free", label: "Type a name instead…", sub: "an unlinked box — no specs, SKU or jacks (add it to the library later)" }] },
+  ].filter(g => g.items.length);
 }
 
 function field(label, inner) { return `<div class="f"><label>${label}</label>${inner}</div>`; }
@@ -2828,13 +2847,23 @@ function wirePanel(body) {
     S.openRows.delete(d.id);
     refresh();
   });
+  // adding a box starts from the library (2026-10-01): the product you pick — a shipped one or
+  // one you made (an MDX-16 copied into an MDX-18) — arrives linked, typed and named
   body.querySelectorAll(".adddev").forEach(el => el.onclick = () => {
-    const model = prompt("Device model:", "New Device"); if (!model) return;
     const sol = S.job.solutions[S.sol];
-    const r = sol.racks.find(r => r.id === el.dataset.rid);
-    const d = { id: uid("dev"), type: "source", model, status: "new" };
-    r.devices.push(d); S.openRows.add(d.id);
-    refresh();
+    const r = sol.racks.find(r => r.id === el.dataset.rid); if (!r) return;
+    openPicker({ title: `Add to ${r.name || r.id}`, groups: addDeviceGroups(), onPick: v => {
+      let d;
+      if (v === "__free") {
+        const model = prompt("What's the box called?", ""); if (!model) return;
+        d = { id: uid("dev"), type: "source", model, status: "new" };
+      } else {
+        d = { id: uid("dev"), type: "source", status: "new" };
+        linkProduct(d, v);
+      }
+      r.devices.push(d); S.openRows.add(d.id);
+      refresh();
+    } });
   });
   const connOf = el => S.job.solutions[S.sol].connections[+el.closest("[data-ci]")?.dataset.ci];
   // re-pointing a connection re-guesses what it carries (TV → video, speakers → speaker wire)

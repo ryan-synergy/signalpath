@@ -3390,6 +3390,37 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("lanes: harness untwist keeps every bundled member (random #20/#33/#68/#152)", !lost.length, lost.join(" | "));
 }
 
+/* ---------- device library (2026-10-01): edit, add or copy products ---------- */
+{
+  const LB = await import("./library.js");
+  const CAT = await (await fetch("./catalog.json")).json();
+  const stable = v => Array.isArray(v) ? "[" + v.map(stable).join(",") + "]" : v && typeof v === "object" ? "{" + Object.keys(v).sort().map(k => JSON.stringify(k) + ":" + stable(v[k])).join(",") + "}" : JSON.stringify(v);
+  const devs = structuredClone(CAT.devices);
+  const r = LB.duplicateDevice(devs, "anthem-mdx-16", "2026-10-01");
+  t("library: a copy is yours, unverified, without the original's part number, and doesn't overwrite anything",
+    r && !CAT.devices[r.id] && r.entry.custom && r.entry.copiedFrom === "anthem-mdx-16" && r.entry.verified === false && !r.entry.partNo && r.entry.notInPlanQueue &&
+    r.entry.inputs.analog === 8 && r.entry.flags.includes("pcmOnlyDigital") && /Copied from Anthem MDX-16/.test(r.entry.notes));
+  devs[r.id] = r.entry; r.entry.model = "MDX-18"; r.entry.inputs.analog = 9; r.entry.zones = 9; r.entry.ampCh = 18;
+  t("library: changing the counts flags an audited jack list that no longer matches (drop it and the app derives one)",
+    LB.checkEntry(r.entry).some(w => /Jack list has 8 Analog/.test(w)) && (delete r.entry.ports, !LB.checkEntry(r.entry).some(w => /Jack list/.test(w))));
+  t("library: the checks catch a missing brand, too few amp channels and a missing part number",
+    (() => { const w = LB.checkEntry({ brand: "", model: "X", type: "amp", zones: 8, ampCh: 8, inputs: {}, outputs: {} }); return w.some(x => /No brand/.test(x)) && w.some(x => /16 amp channels/.test(x)) && w.some(x => /No part number/.test(x)); })());
+  t("library: new ids are unique and readable", LB.newId(devs, "Anthem", "MDX-16") === "anthem-mdx-16-2" && LB.newId(devs, "Acme", "Amp 1") === "acme-amp-1");
+  const file = LB.exportLibrary(devs, CAT.devices, stable, "2026-10-01");
+  t("library file: exports your devices and edits only — not the untouched shipped catalog",
+    file.kind === "signalpath-library" && Object.keys(file.devices).length === 1 && file.devices[r.id]?.model === "MDX-18");
+  const other = structuredClone(CAT.devices); other["anthem-mdx-8"].notes = "my note";
+  const plan = LB.planImport(other, file, stable);
+  LB.applyImport(other, file, plan);
+  t("library file: importing it on another browser adds the MDX-18 and leaves that browser's own edits alone",
+    plan.added.length === 1 && !plan.updated.length && other[r.id]?.zones === 9 && other["anthem-mdx-8"].notes === "my note");
+  let threw = false; try { LB.planImport(other, { devices: {} }, stable); } catch { threw = true; }
+  t("library file: something that isn't a SignalPath library file is refused", threw);
+  t("library: every catalog type has a name and every behaviour flag the app reads has a checkbox",
+    Object.values(CAT.devices).every(d => LB.LIB_TYPES.some(x => x[0] === d.type)) &&
+    ["poe", "mxnet", "dante", "avb", "downmix2ch", "pcmOnlyDigital", "pcmOnly2ch", "ultimo", "atmosDecode", "controlLanOnly", "danteController", "hdbasetOut", "sonos", "wattboxPick", "legacy"].every(f => LB.BEHAVIOURS.some(b => b[0] === f)));
+}
+
 document.getElementById("summary").innerHTML =
   fail === 0 ? `<span class="pass">ALL ${pass} TESTS PASS</span>` : `<span class="fail">${fail} FAILED</span> · ${pass} passed`;
 document.title = fail === 0 ? `✓ ${pass} pass` : `✗ ${fail} fail`;

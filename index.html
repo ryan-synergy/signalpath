@@ -243,6 +243,54 @@
   #advisor details.ref summary { cursor: pointer; color: #666; padding: 3px 0; font-size: 12px; }
   #advisor details.ref[open] summary { color: #333; }
 
+  /* ---- device library (Settings → Open device library) ---- */
+  #library { position: fixed; inset: 0; background: rgba(10,12,16,.55); display: none; z-index: 55; align-items: center; justify-content: center; }
+  #library.show { display: flex; }
+  #library .card { background: #fff; border-radius: 12px; width: min(1120px, 96vw); height: min(840px, 92vh); display: flex; flex-direction: column;
+                   box-shadow: 0 12px 40px rgba(0,0,0,.35); overflow: hidden; }
+  #library .hd { display: flex; gap: 8px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  #library .hd .t { font-size: 16px; font-weight: 700; margin-right: auto; }
+  #library .hd input[type=search], #library .hd select { font: inherit; font-size: 13px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 7px; min-height: var(--hit); }
+  #library .hd input[type=search] { width: 220px; max-width: 100%; }
+  #library button { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--act-line); background: #fff; color: var(--ink); min-height: var(--hit); cursor: pointer; }
+  #library button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  #library button.danger { color: var(--bad); border-color: #e3b4b0; }
+  #library .bd { flex: 1; display: grid; grid-template-columns: 300px 1fr; min-height: 0; }
+  #library .list { border-right: 1px solid var(--line); overflow-y: auto; background: var(--panel); }
+  #library .grp { font-size: 10.5px; letter-spacing: 1px; color: #888; padding: 12px 12px 4px; text-transform: uppercase; }
+  #library .it { padding: 7px 12px; cursor: pointer; border-left: 3px solid transparent; }
+  #library .it:hover { background: #eef1f5; }
+  #library .it.on { background: #e6eef9; border-left-color: var(--accent); }
+  #library .it .m { font-size: 13px; } #library .it .s { font-size: 11px; color: #888; margin-top: 1px; }
+  #library .badge2 { font-size: 10px; padding: 1px 6px; border-radius: 9px; margin-left: 4px; background: #eef2f8; color: var(--accent); white-space: nowrap; }
+  #library .badge2.ed { background: #fff3dc; color: #8a5b00; } #library .badge2.unv { background: #fdecea; color: var(--bad); }
+  #library .ed { overflow-y: auto; padding: 14px 18px 30px; }
+  #library .ed .ttl { font-size: 19px; font-weight: 700; } #library .ed .sub { font-size: 12px; color: #777; margin: 2px 0 10px; }
+  #library .acts { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 4px; }
+  #library h3 { font-size: 11px; letter-spacing: 1px; color: #888; margin: 18px 0 6px; text-transform: uppercase; font-weight: 600; }
+  #library .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px 14px; }
+  #library .fld label { display: block; font-size: 11px; color: #666; margin-bottom: 2px; }
+  #library .fld input[type=text], #library .fld input[type=number], #library .fld select, #library .fld textarea {
+    width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; min-height: var(--hit); }
+  #library .fld textarea { min-height: 90px; resize: vertical; }
+  #library .fld.wide { grid-column: 1 / -1; }
+  #library .fld.chk label { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--ink); min-height: var(--hit); }
+  #library .help { font-size: 10.5px; color: #999; margin-top: 2px; line-height: 1.35; }
+  #library .beh { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 6px 16px; }
+  #library .beh label { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; padding: 4px 0; }
+  #library .beh input { margin-top: 3px; }
+  #library .tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  #library .tag { font-size: 12px; background: #f0f1f4; border: 1px solid var(--line); border-radius: 12px; padding: 2px 4px 2px 9px; display: inline-flex; gap: 4px; align-items: center; }
+  #library .tag button { min-height: 0; padding: 0 6px; border: none; background: none; color: #888; }
+  #library .warn { background: #fff7e0; border: 1px solid #f0d58a; color: #6b5000; padding: 8px 10px; border-radius: 6px; font-size: 12.5px; margin: 8px 0; }
+  #library .note { background: #f3f6fb; border: 1px solid #d9e2ef; color: #2c4767; padding: 8px 10px; border-radius: 6px; font-size: 12.5px; margin: 8px 0; }
+  #library .empty { color: #888; padding: 30px; text-align: center; }
+  @media (max-width: 760px) {
+    #library .card { width: 100vw; height: 100dvh; border-radius: 0; }
+    #library .bd { grid-template-columns: 1fr; grid-template-rows: minmax(140px, 34%) 1fr; }
+    #library .list { border-right: none; border-bottom: 1px solid var(--line); }
+  }
+
   /* ---- import review overlay ---- */
   #review { position: fixed; inset: 0; background: rgba(10,12,16,.55); display: none; z-index: 50;
             align-items: center; justify-content: center; }
@@ -405,24 +453,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261001161142",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261001161142",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261001161142",
-    "./app/ports.js": "./app/ports.js?v=20261001161142",
-    "./app/commands.js": "./app/commands.js?v=20261001161142",
-    "./app/engine.js": "./app/engine.js?v=20261001161142",
-    "./app/exports.js": "./app/exports.js?v=20261001161142",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261001161142",
-    "./app/hookup.js": "./app/hookup.js?v=20261001161142",
-    "./app/importers.js": "./app/importers.js?v=20261001161142",
-    "./app/names.js": "./app/names.js?v=20261001161142",
-    "./app/network.js": "./app/network.js?v=20261001161142",
-    "./app/pages.js": "./app/pages.js?v=20261001161142",
-    "./app/power.js": "./app/power.js?v=20261001161142",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261001161142",
-    "./app/rack.js": "./app/rack.js?v=20261001161142",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261001161142",
-    "./app/starters.js": "./app/starters.js?v=20261001161142"
+    "./app/ai.js": "./app/ai.js?v=20261001163503",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261001163503",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261001163503",
+    "./app/ports.js": "./app/ports.js?v=20261001163503",
+    "./app/commands.js": "./app/commands.js?v=20261001163503",
+    "./app/engine.js": "./app/engine.js?v=20261001163503",
+    "./app/exports.js": "./app/exports.js?v=20261001163503",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261001163503",
+    "./app/hookup.js": "./app/hookup.js?v=20261001163503",
+    "./app/importers.js": "./app/importers.js?v=20261001163503",
+    "./app/library.js": "./app/library.js?v=20261001163503",
+    "./app/names.js": "./app/names.js?v=20261001163503",
+    "./app/network.js": "./app/network.js?v=20261001163503",
+    "./app/pages.js": "./app/pages.js?v=20261001163503",
+    "./app/power.js": "./app/power.js?v=20261001163503",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261001163503",
+    "./app/rack.js": "./app/rack.js?v=20261001163503",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261001163503",
+    "./app/starters.js": "./app/starters.js?v=20261001163503"
 } }
 </script>
 <script>
@@ -558,6 +607,17 @@
   <div class="ft"><button id="stCancel">Cancel</button></div>
 </div></div>
 
+<div id="library"><div class="card">
+  <div class="hd"><div class="t">Device library</div>
+    <input id="libQ" type="search" placeholder="Search brand, model, part #" autocomplete="off">
+    <select id="libType"></select>
+    <button id="libNew">＋ New device</button><button id="libExport" title="Your devices and edits, as a file to carry to another browser or keep as a backup">Export</button>
+    <button id="libImport" title="Bring in a library file exported from SignalPath">Import</button>
+    <input type="file" id="libFile" accept=".json,application/json" hidden>
+    <button class="primary" id="libClose">Done</button></div>
+  <div class="bd"><div class="list" id="libList"></div><div class="ed" id="libEd"></div></div>
+</div></div>
+
 <div id="review"><div class="card">
   <div class="hd"><div class="t" id="rvTitle"></div><div class="s" id="rvSub"></div></div>
   <div class="bd" id="rvBody"></div>
@@ -571,7 +631,8 @@
 
 <script type="module">
 import { loadJob, normalizeJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock, trunkMode } from "./app/engine.js";
-import { importAny, mergeHouse, drawFromWalk, decodeHandoff } from "./app/importers.js";
+import { importAny, mergeHouse, drawFromWalk, decodeHandoff, stripUnsafe } from "./app/importers.js";
+import { LIB_TYPES, typeLabel, SIGNALS as LIB_SIGNALS, TYPE_IO, LIB_SECTIONS, SELECTS, BEHAVIOURS, tagsOf, newId, blankDevice, duplicateDevice, checkEntry, exportLibrary, planImport, applyImport } from "./app/library.js";
 import { planQueueFiles, aiReviewMarkdown } from "./app/exports.js";
 import { RACK_SIZES, DEFAULT_RACK_U } from "./app/rack.js";
 import { specFor, specNum, tidyPort, NET_ROLE_NAME } from "./app/network.js";
@@ -615,7 +676,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261001161142").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261001163503").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1878,6 +1939,7 @@ function gearHTML() {
       <div class="fields">
         ${found.length ? `<div class="zissues">${found.map(f => `<div class="${f.level}">${esc(f.msg)}</div>`).join("")}</div>` : ""}
         ${field("Product", `<button class="pickbtn dcatbtn">${catOf(d) ? `${esc(productName(catOf(d)))}${productSku(catOf(d)) ? ` <span class="mini">· ${esc(productSku(catOf(d)))}</span>` : ""}` : `<span class="mini">Pick a product…</span>`} ▾</button>`)}
+        ${catOf(d) && SETTINGS.catalog.devices[d.catalogRef] ? `<div style="text-align:right;margin:-4px 0 4px"><button class="libedit" data-cat="${esc(d.catalogRef)}" style="font-size:11.5px;padding:3px 8px;border:none;background:none;color:var(--accent);cursor:pointer">Edit this product in the library →</button></div>` : ""}
         ${field("Name", `<input class="dmodel" value="${esc(d.model || "")}" title="What the drawing and paperwork call this box — follows the product you pick">`)}
         ${drifted(d) ? `<div class="mini" style="margin:-2px 0 6px 80px;color:#8a5a00">The drawing says “${esc(d.model || "")}”, the product is “${esc(drifted(d))}”. <a href="#" class="dusecat">Use “${esc(drifted(d))}”</a></div>` : ""}
         <div class="sect">INPUTS${cap.ins ? ` <span class="mini">${esc(cap.ins)}</span>` : ""}</div>
@@ -2113,7 +2175,7 @@ function settingsHTML() {
       <input class="jpplan" value="${esc(p.plan || "")}" style="flex:1.4"></div>`).join("");
   const c4 = (L.control4?.controllers || []).map((c, i) => `<div class="f" data-c4="${i}">
       <input class="c4name" value="${esc(c.name)}" style="flex:2">${numf("c4dev", c.maxDevices)}${numf("c4rooms", c.rooms)}</div>`).join("");
-  const devs = Object.entries(SETTINGS.catalog.devices || {}).map(([id, d]) => {
+  const devs = [].map(([id, d]) => {   // the per-device rows moved to the device library (2026-10-01)
     const open = S.openRows.has("cat-" + id);
     const io = d.inputs || {};
     return `<div class="row ${open ? "open" : ""}" data-cat="${esc(id)}">
@@ -2159,8 +2221,9 @@ function settingsHTML() {
     ${CAT_STALE.length ? `<div class="drift">⚠ ${CAT_STALE.length} entr${CAT_STALE.length === 1 ? "y differs" : "ies differ"} from the latest shipped specs — your edits, or specs saved before a correction:
       ${CAT_STALE.map(id => esc(`${SETTINGS.catalog.devices[id]?.brand || ""} ${SETTINGS.catalog.devices[id]?.model || id}`.trim())).join(", ")}.
       <button class="addbtn" id="catTakeAll" style="margin-top:6px">Update all to the shipped specs</button></div>` : ""}
-    ${devs}
-    <button class="addbtn" id="addCat">＋ Add catalog device</button>
+    <div class="row open"><div class="fields" style="display:block;border-top:none">
+      <div class="mini" style="line-height:1.45">Every product's inputs and outputs, capabilities, rack height, power and part number — edit them, add new ones, or copy one (an MDX-16 → an MDX-18). ${Object.values(SETTINGS.catalog.devices || {}).filter(d => d.custom).length} of yours.</div>
+      <button class="addbtn" id="openLib" style="margin-top:8px">Open device library</button></div></div>
     <button class="addbtn" id="resetCat" style="margin-top:8px;border-color:#d99;color:#b55">Reset licensing &amp; catalog to shipped defaults</button>`;
 }
 
@@ -2216,12 +2279,158 @@ function wireSettings(body) {
     SETTINGS.catalog.devices[id] = { brand: "", model: id, type: "amp", zones: 1, inputs: {}, verified: false };
     S.openRows.add("cat-" + id); save(); renderPanel();
   };
+  body.querySelector("#openLib")?.addEventListener("click", () => openLibrary());
   const resetCat = body.querySelector("#resetCat");
   if (resetCat) resetCat.onclick = () => {
     if (!confirm("Replace licensing rules and device catalog with the shipped defaults?")) return;
     SETTINGS.catalog = structuredClone(SHIPPED); SETTINGS.catalogBase = {}; syncShippedCatalog(); save(); renderPanel();
   };
 }
+
+/* ---- device library (2026-10-01): every product editable, new ones added or copied ----
+   The rules live in app/library.js; this draws the list + form and saves into SETTINGS.catalog.
+   A shipped entry you edit is listed "edited" and app updates leave it alone (Revert takes the
+   shipped specs back); one you add or copy is yours (custom) and only you change it. */
+const LIB = { sel: null, q: "", type: "" };
+function openLibrary(id) {
+  if (id) { LIB.sel = id; LIB.q = ""; LIB.type = ""; }
+  $("#library").classList.add("show");
+  renderLibrary();
+}
+function libSaved(rerenderList = true) {
+  syncShippedCatalog(); saveSettings(); refresh(false);
+  if (rerenderList) renderLibList(); renderLibEditor();
+}
+function libEntries() {
+  const q = LIB.q.trim().toLowerCase();
+  return Object.entries(SETTINGS.catalog.devices || {}).filter(([id, d]) =>
+    (!LIB.type || d.type === LIB.type) &&
+    (!q || `${d.brand} ${d.model} ${d.partNo || ""} ${id} ${(d.aliases || []).join(" ")}`.toLowerCase().includes(q)));
+}
+function renderLibrary() {
+  const types = [...new Set(Object.values(SETTINGS.catalog.devices || {}).map(d => d.type))];
+  $("#libType").innerHTML = `<option value="">All types</option>` + LIB_TYPES.filter(([t]) => types.includes(t)).map(([t, l]) => `<option value="${t}"${LIB.type === t ? " selected" : ""}>${esc(l)}</option>`).join("");
+  $("#libQ").value = LIB.q;
+  renderLibList(); renderLibEditor();
+}
+function libBadges(id, d) {
+  return `${d.custom ? `<span class="badge2">yours</span>` : CAT_STALE.includes(id) ? `<span class="badge2 ed">edited</span>` : ""}${d.verified === false ? `<span class="badge2 unv">unverified</span>` : ""}`;
+}
+function renderLibList() {
+  const list = libEntries().sort(([, a], [, b]) => `${a.brand} ${a.model}`.localeCompare(`${b.brand} ${b.model}`));
+  if (!list.some(([id]) => id === LIB.sel)) LIB.sel = LIB.sel && SETTINGS.catalog.devices[LIB.sel] ? LIB.sel : list[0]?.[0] || null;
+  const groups = LIB_TYPES.map(([t, l]) => [l, list.filter(([, d]) => d.type === t)]).filter(([, g]) => g.length);
+  const other = list.filter(([, d]) => !LIB_TYPES.some(([t]) => t === d.type));
+  if (other.length) groups.push(["Other", other]);
+  $("#libList").innerHTML = groups.length ? groups.map(([l, g]) => `<div class="grp">${esc(l)} · ${g.length}</div>` + g.map(([id, d]) =>
+    `<div class="it${id === LIB.sel ? " on" : ""}" data-id="${esc(id)}"><div class="m">${esc(`${d.brand || ""} ${d.model || id}`.trim())}${libBadges(id, d)}</div>
+     <div class="s">${esc(d.partNo || "no part #")}${d.zones ? ` · ${d.zones} zones` : ""}</div></div>`).join("")).join("")
+    : `<div class="empty">Nothing matches.</div>`;
+  $("#libList").querySelectorAll(".it").forEach(el => el.onclick = () => { LIB.sel = el.dataset.id; renderLibList(); renderLibEditor(); $("#libEd").scrollTop = 0; });
+}
+function libFieldHTML(e, [k, label, kind, help]) {
+  const v = e[k], h = help ? `<div class="help">${esc(help)}</div>` : "";
+  if (kind === "bool") return `<div class="fld chk"><label><input type="checkbox" data-k="${k}" data-kind="bool"${v ? " checked" : ""}> ${esc(label)}</label>${h}</div>`;
+  if (kind === "area") return `<div class="fld wide"><label>${esc(label)}</label><textarea data-k="${k}" data-kind="text">${esc(v ?? "")}</textarea>${h}</div>`;
+  if (kind === "select") {
+    const opts = k === "type" ? LIB_TYPES : SELECTS[k] || [];
+    return `<div class="fld"><label>${esc(label)}</label><select data-k="${k}" data-kind="select">${opts.map(([o, l]) => `<option value="${esc(o)}"${(v ?? "") === o ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>${h}</div>`;
+  }
+  const val = kind === "list" ? (v || []).join(", ") : v ?? "";
+  return `<div class="fld"><label>${esc(label)}</label><input type="${kind === "num" ? "number" : "text"}" min="0" step="any" data-k="${k}" data-kind="${kind}" value="${esc(val)}">${h}</div>`;
+}
+function renderLibEditor() {
+  const id = LIB.sel, e = id && SETTINGS.catalog.devices[id], ed = $("#libEd");
+  if (!e) { ed.innerHTML = `<div class="empty">Pick a device on the left, or add one.</div>`; return; }
+  const shipped = SHIPPED.devices?.[id], stale = CAT_STALE.includes(id);
+  const used = (S.job?.solutions || []).flatMap(sol => [...(sol.racks || []).flatMap(r => r.devices || []), ...(sol.localDevices || [])]).filter(d => d.catalogRef === id).length;
+  const warns = checkEntry(e);
+  const io = side => {
+    const shown = [...new Set([...(TYPE_IO[e.type]?.[side] || Object.keys(LIB_SIGNALS)), ...Object.keys(e[side] || {})])].filter(k => LIB_SIGNALS[k]);
+    const more = Object.keys(LIB_SIGNALS).filter(k => !shown.includes(k));
+    return `<div class="grid">${shown.map(k => `<div class="fld"><label>${esc(LIB_SIGNALS[k])}</label><input type="number" min="0" step="1" data-io="${side}.${k}" value="${esc(e[side]?.[k] ?? "")}" placeholder="0"></div>`).join("")}
+      ${more.length ? `<div class="fld"><label>Another connector</label><select data-addio="${side}"><option value="">＋ add…</option>${more.map(k => `<option value="${k}">${esc(LIB_SIGNALS[k])}</option>`).join("")}</select></div>` : ""}</div>`;
+  };
+  const sections = LIB_SECTIONS.filter(sc => !sc.types || sc.types.includes(e.type));
+  ed.innerHTML = `
+    <div class="ttl">${esc(`${e.brand || ""} ${e.model || id}`.trim())}</div>
+    <div class="sub">${esc(typeLabel(e.type))} · <span class="mini">id ${esc(id)}</span>${libBadges(id, e)}${e.copiedFrom ? ` · copied from ${esc(e.copiedFrom)}` : ""}</div>
+    <div class="acts">
+      <button data-act="dup" title="A copy you can change — e.g. an MDX-16 into an MDX-18">Duplicate</button>
+      ${shipped && stale ? `<button data-act="revert" title="Take back the specs SignalPath ships">Revert to shipped</button>` : ""}
+      ${e.custom ? `<button class="danger" data-act="del">Delete</button>` : ""}
+    </div>
+    ${used ? `<div class="note">Used ${used}× in this job. Saved jobs keep the specs they were drawn with — the JOB tab offers to take your changes.</div>` : ""}
+    ${!e.custom && !stale ? `<div class="note">Ships with SignalPath. Edit it and your version is kept from then on (Revert brings the shipped one back).</div>` : ""}
+    ${warns.length ? `<div class="warn">${warns.map(esc).join("<br>")}</div>` : ""}
+    ${sections.slice(0, 1).map(sc => `<h3>${esc(sc.title)}</h3><div class="grid">${sc.fields.map(f => libFieldHTML(e, f)).join("")}</div>`).join("")}
+    <h3>Inputs</h3>${io("inputs")}
+    <h3>Outputs</h3>${io("outputs")}
+    ${Array.isArray(e.ports) && e.ports.length ? `<div class="note">${e.ports.length} jacks from an audited rear-panel list${e.portsSource ? ` (${esc(String(e.portsSource).slice(0, 90))}…)` : ""} — the port plan labels wires with these names.
+      <button data-act="dropports" style="margin-left:6px">Use the counts instead</button></div>` : ""}
+    ${sections.slice(1).map(sc => `<h3>${esc(sc.title)}</h3><div class="grid">${sc.fields.map(f => libFieldHTML(e, f)).join("")}</div>`).join("")}
+    <h3>What it does</h3><div class="beh">${BEHAVIOURS.map(([f, l, h]) => `<label><input type="checkbox" data-flag="${f}"${(e.flags || []).includes(f) ? " checked" : ""}><span>${esc(l)}${h ? `<div class="help">${esc(h)}</div>` : ""}</span></label>`).join("")}</div>
+    <h3>Tags</h3><div class="tags">${tagsOf(e).map(t => `<span class="tag">${esc(t)}<button data-untag="${esc(t)}" aria-label="remove">×</button></span>`).join("")}
+      <input type="text" data-addtag placeholder="add a tag ↵" style="font:inherit;font-size:12px;padding:4px 8px;border:1px solid var(--line);border-radius:12px;width:130px"></div>`;
+  const save = (list = false) => libSaved(list);
+  ed.querySelectorAll("[data-k]").forEach(el => el.onchange = () => {
+    const k = el.dataset.k, kind = el.dataset.kind;
+    if (kind === "bool") { if (el.checked) e[k] = true; else delete e[k]; }
+    else if (kind === "num") { if (el.value === "") delete e[k]; else e[k] = Math.max(0, +el.value); }
+    else if (kind === "list") { const a = el.value.split(",").map(x => x.trim()).filter(Boolean); if (a.length) e[k] = a; else delete e[k]; }
+    else { const v = el.value; if (v === "" && k !== "model" && k !== "brand") delete e[k]; else e[k] = v; }
+    save(["brand", "model", "type", "partNo", "verified"].includes(k));
+  });
+  ed.querySelectorAll("[data-io]").forEach(el => el.onchange = () => {
+    const [side, k] = el.dataset.io.split(".");
+    e[side] ||= {};
+    if (el.value === "" || +el.value === 0) delete e[side][k]; else e[side][k] = Math.max(0, Math.round(+el.value));
+    save();
+  });
+  ed.querySelectorAll("[data-addio]").forEach(el => el.onchange = () => { if (!el.value) return; (e[el.dataset.addio] ||= {})[el.value] = 1; save(); });
+  ed.querySelectorAll("[data-flag]").forEach(el => el.onchange = () => {
+    const f = el.dataset.flag, fl = new Set(e.flags || []);
+    el.checked ? fl.add(f) : fl.delete(f); e.flags = [...fl]; save();
+  });
+  ed.querySelectorAll("[data-untag]").forEach(el => el.onclick = () => { e.flags = (e.flags || []).filter(f => f !== el.dataset.untag); save(); });
+  const at = ed.querySelector("[data-addtag]");
+  if (at) at.onkeydown = ev => { if (ev.key !== "Enter") return; const t = at.value.trim().replace(/\s+/g, ""); if (!t) return;
+    e.flags = [...new Set([...(e.flags || []), t])]; save(); };
+  ed.querySelectorAll("[data-act]").forEach(el => el.onclick = () => {
+    const a = el.dataset.act, devs = SETTINGS.catalog.devices;
+    if (a === "dup") { const r = duplicateDevice(devs, id); devs[r.id] = r.entry; LIB.sel = r.id; LIB.q = ""; save(true); $("#libEd").scrollTop = 0; }
+    if (a === "revert" && confirm(`Replace your version of ${e.brand} ${e.model} with the specs SignalPath ships?`)) { takeShipped(id); save(true); }
+    if (a === "del" && confirm(`Delete ${e.brand} ${e.model} from your library?${used ? ` It's used ${used}× in this job (the job keeps its copy of the specs).` : ""}`)) { delete devs[id]; LIB.sel = null; save(true); }
+    if (a === "dropports") { delete e.ports; delete e.portsSource; save(); }
+  });
+}
+$("#libClose").onclick = () => { $("#library").classList.remove("show"); renderPanel(); };
+$("#library").addEventListener("click", ev => { if (ev.target.id === "library") $("#libClose").click(); });
+$("#libQ").oninput = () => { LIB.q = $("#libQ").value; renderLibList(); renderLibEditor(); };
+$("#libType").onchange = () => { LIB.type = $("#libType").value; renderLibList(); renderLibEditor(); };
+$("#libNew").onclick = () => {
+  const devs = SETTINGS.catalog.devices, e = blankDevice(LIB.type || "amp"), id = newId(devs, "", `new ${e.type}`);
+  devs[id] = e; LIB.sel = id; LIB.q = ""; libSaved(true);
+  setTimeout(() => $("#libEd [data-k=brand]")?.focus(), 0);
+};
+$("#libExport").onclick = () => {
+  const file = exportLibrary(SETTINGS.catalog.devices, SHIPPED.devices || {}, stableStr);
+  const n = Object.keys(file.devices).length;
+  if (!n) { alert("Nothing to export yet — the library matches what SignalPath ships. Edit or add a device first."); return; }
+  download(`SignalPath library ${file.exported}.json`, JSON.stringify(file, null, 1), "application/json");
+};
+$("#libImport").onclick = () => $("#libFile").click();
+$("#libFile").onchange = async () => {
+  const f = $("#libFile").files[0]; $("#libFile").value = ""; if (!f) return;
+  try {
+    const file = stripUnsafe(JSON.parse(await f.text()));
+    const plan = planImport(SETTINGS.catalog.devices, file, stableStr);
+    if (!plan.added.length && !plan.updated.length) { alert(`Nothing new in that file (${plan.same.length} device${plan.same.length === 1 ? "" : "s"} already match).`); return; }
+    if (!confirm(`Import ${f.name}?\n\n${plan.added.length} new device${plan.added.length === 1 ? "" : "s"}\n${plan.updated.length} replace${plan.updated.length === 1 ? "s" : ""} your current version\n${plan.same.length} unchanged`)) return;
+    applyImport(SETTINGS.catalog.devices, file, plan);
+    LIB.sel = plan.added[0] || plan.updated[0]; libSaved(true);
+  } catch (err) { alert(`Couldn't import that file: ${err.message}`); }
+};
 
 /* ---- panel event wiring (delegated per render) ---- */
 function wirePanel(body) {
@@ -2469,6 +2678,7 @@ function wirePanel(body) {
     return {};
   };
   on(".dmodel", el => { const { d } = devOf(el); if (d) d.model = el.value; });
+  body.querySelectorAll(".libedit").forEach(el => el.onclick = () => openLibrary(el.dataset.cat));
   body.querySelectorAll(".dcatbtn").forEach(el => el.onclick = () => {
     const { d } = devOf(el); if (!d) return;
     openPicker({ title: `Product — ${d.model || d.id}`, groups: productGroups(d), onPick: v => { linkProduct(d, v === "__none" ? "" : v); refresh(); } });

@@ -2696,6 +2696,28 @@ for (const [name, raw] of Object.entries(fixtures)) {
     tiers.every((x, i) => !i || x >= tiers[i - 1]) && (r.items[r.items.length - 1].type === "power" || r.rear.some(n => /WattBox|WB-800VPS/.test(n))));
   t("rack: a 1U vent panel under each amp / receiver",
     r.items.some((it, i) => it.kind === "vent" && r.items[i - 1]?.tier === 4));
+  {   /* spacing (Ryan 2026-10-02): receivers / amps get vent above and below (2U above when it fits), switches get
+         1U before the next box, a brush plate between router and switches, never two spacers in one gap */
+    const sj = structuredClone(job);
+    sj.solutions[0].racks[0].devices.push({ id: "gw", type: "gateway", model: "Router" });
+    const La = loadJob(sj), ra = advise(La.job, La.ix, CAT).racks[0], it = ra.items;
+    const at = i => it[i] || {}, hot = x => x.kind === "device" && (x.type === "avr" || x.type === "amp");
+    t("rack spacing: every receiver / amp has a vent right above it, and below it unless it sits on the floor",
+      it.every((x, i) => !hot(x) || (at(i - 1).kind === "vent" && (i === it.length - 1 || at(i + 1).kind === "vent"))), it.map(x => x.kind + ":" + (x.type || "")).join(" "));
+    t("rack spacing: with room to spare, the vent above a receiver / amp is 2U", it.some((x, i) => x.kind === "vent" && x.u === 2 && hot(at(i + 1))));
+    t("rack spacing: a network / AV switch has 1U (vent or brush plate) before the next box",
+      it.every((x, i) => !(x.kind === "device" && ["networkSwitch", "avSwitch"].includes(x.type)) || i === it.length - 1 || ["vent", "brush"].includes(at(i + 1).kind)));
+    const gi = it.findIndex(x => x.type === "gateway");
+    t("rack spacing: the router sits up top with a brush plate between it and the switches",
+      gi >= 0 && at(gi + 1).kind === "brush" && ["networkSwitch", "avSwitch"].includes(at(gi + 2).type) && it.slice(0, gi).every(x => x.kind === "patch"));
+    t("rack spacing: never two spacers in a row", it.every((x, i) => !(["vent", "brush"].includes(x.kind) && ["vent", "brush"].includes(at(i + 1).kind))));
+    t("rack spacing: the hardware list counts 1U vents, 2U vents and brush plates",
+      ["vent2", "brush"].every(k => ra.hardware.some(h => h.key === k && h.qty > 0)));
+    const tight = structuredClone(sj); tight.job.rackUnits = 24;
+    const Lt = loadJob(tight), rt = advise(Lt.job, Lt.ix, CAT).racks[0];
+    t("rack spacing: in a tight rack the 2U upgrades go first — never past the rack — the 1U minimums stay",
+      rt.items.filter(x => x.kind === "vent" && x.u === 2).length <= Math.max(0, rt.size - (rt.used - rt.items.filter(x => x.kind === "vent" && x.u === 2).length)) && rt.items.some(x => x.kind === "vent"));
+  }
   t("rack: U used = sum of items, spare against 42U", r.used === r.items.reduce((n, i) => n + i.u, 0) && r.size === 42 && r.spare === 42 - r.used);
   const small = structuredClone(job); small.job.rackUnits = 12;
   { const L = loadJob(small), a2 = advise(L.job, L.ix, CAT);

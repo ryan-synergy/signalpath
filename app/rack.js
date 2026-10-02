@@ -16,9 +16,38 @@ export const DEFAULT_RACK_U = 42;
 export const RACK_SIZES = [12, 16, 20, 24, 27, 32, 36, 38, 40, 42, 44, 45];
 const SHELF_U = 2, PER_SHELF = 3, PATCH_PORTS = 24;
 
-const TIER = { gateway: 1, networkSwitch: 1, avSwitch: 1, avbSwitch: 1,
+const TIER = { gateway: 0.5, networkSwitch: 1, avSwitch: 1, avbSwitch: 1,
   controlBox: 2, host: 2, videoMatrix: 2, danteBridge: 2, downmixer: 2, audioInputModule: 2, audioOutputModule: 2, splitter: 2,
   source: 3, avr: 4, amp: 4, power: 5 };
+
+/* spacing (Ryan 2026-10-02): a receiver or amp gets at least 1U of vent above and below — 2U above
+   when the rack can spare it; anything else that runs warm (network and AV switches, a matrix, a
+   control host) gets 1U before the next box; a brush plate sits between the router and the switches
+   so the cables come out cleanly (it breathes too, so it stands in for a vent there). One gap holds
+   one spacer — two rules meeting at the same gap never stack. The floor below the last amp needs none. */
+const HOT = new Set(["avr", "amp"]);
+const WARM = new Set(["networkSwitch", "avSwitch", "avbSwitch", "videoMatrix", "host"]);
+const SWITCHES = new Set(["networkSwitch", "avSwitch", "avbSwitch"]);
+function spaceRack(items, size) {
+  const type = i => i.kind === "device" ? i.type : null;
+  const out = [];
+  items.forEach((b, k) => {
+    const a = k ? items[k - 1] : null;
+    if (a) {
+      const ta = type(a), tb = type(b);
+      const brush = (ta === "gateway" && SWITCHES.has(tb)) || (tb === "gateway" && SWITCHES.has(ta));
+      const vent = HOT.has(ta) || HOT.has(tb) || WARM.has(ta);
+      if (brush) out.push({ kind: "brush", tier: b.tier, u: 1, label: "Brush plate" });
+      else if (vent) out.push({ kind: "vent", tier: HOT.has(tb) ? b.tier : a.tier, u: 1, label: "Vent panel", above: HOT.has(tb) ? b : null });
+    }
+    out.push(b);
+  });
+  items.splice(0, items.length, ...out);
+  // the room to spare goes to the space above each receiver / amp, top down, one more U each
+  let spare = size - items.reduce((n, i) => n + i.u, 0);
+  for (const v of items) if (spare > 0 && v.kind === "vent" && v.above) { v.u = 2; v.label = "Vent panel"; spare--; }
+  for (const v of items) delete v.above;
+}
 
 export function rackPlans(job, ix, catalog) {
   const out = [];
@@ -52,7 +81,6 @@ export function rackPlans(job, ix, catalog) {
         const confirm = u == null || !!c?.rackUnitsConfirm;
         if (confirm) unknown.push(name);
         items.push({ kind: "device", id: d.id, tier, u: u ?? 1, label: name, type: d.type, guess: confirm, half: !!c?.halfRack, boxKind: deviceKind(d, c) });
-        if (d.type === "amp" || d.type === "avr") items.push({ kind: "vent", tier, u: 1, label: "Vent panel" });
       }
       // rack-side adapters (MXNet encoders/decoders on rack gear) go in AVPro's own rack
       // kits for their platform (catalog `rackKit: {gen, holds}`), picked for the fewest
@@ -95,10 +123,7 @@ export function rackPlans(job, ix, catalog) {
       }
       for (let k = 0; k < small.length; k += PER_SHELF)
         items.push({ kind: "shelf", tier: 3, u: SHELF_U, label: `Shelf: ${small.slice(k, k + PER_SHELF).join(", ")}`, members: small.slice(k, k + PER_SHELF) });
-      // stable by tier; a trailing vent under the last amp is dropped (the WattBox or floor is below)
-      items.sort((a, b) => a.tier - b.tier);
-      const lastAmp = items.map(i => i.kind).lastIndexOf("vent");
-      if (lastAmp >= 0 && !items.slice(lastAmp + 1).some(i => i.kind !== "vent")) items.splice(lastAmp, 1);
+      items.sort((a, b) => a.tier - b.tier);   // stable by tier
       // half-width boxes pair up side by side
       for (let i = 0; i < items.length; i++) {
         const a = items[i];
@@ -106,6 +131,7 @@ export function rackPlans(job, ix, catalog) {
         const j = items.findIndex((b, k) => k > i && b.half && !b.pairedWith && b.u === a.u);
         if (j > 0) { a.pairedWith = items[j].label; items.splice(j, 1); a.label = `${a.label} | ${a.pairedWith}`; }
       }
+      spaceRack(items, size);
       const used = items.reduce((n, i) => n + i.u, 0);
       // the rack hardware the elevation implies — part numbers come from the job
       // (RACK tab) or a kit's catalog entry; anything nobody has filled in is "?"
@@ -114,7 +140,9 @@ export function rackPlans(job, ix, catalog) {
       const hardware = [
         { key: "rack", item: `Equipment rack, ${size}U`, qty: 1, partNo: r.partNo || parts.rack || null },
         { key: "patch", item: "Cat6 patch panel, 24-port, 1U", qty: count("patch"), partNo: parts.patch || null },
-        { key: "vent", item: "Vent panel, 1U", qty: count("vent"), partNo: parts.vent || null },
+        { key: "vent", item: "Vent panel, 1U", qty: items.filter(i => i.kind === "vent" && i.u === 1).length, partNo: parts.vent || null },
+        { key: "vent2", item: "Vent panel, 2U", qty: items.filter(i => i.kind === "vent" && i.u === 2).length, partNo: parts.vent2 || null },
+        { key: "brush", item: "Brush plate, 1U", qty: count("brush"), partNo: parts.brush || null },
         { key: "shelf", item: "Rack shelf, 2U", qty: count("shelf"), partNo: parts.shelf || null },
       ];
       const kitQty = {};

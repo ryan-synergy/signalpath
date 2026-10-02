@@ -761,7 +761,7 @@ export function renderBomCompare(job, ix, adviseResult, opts = {}) {
    on the first rack — the power table: outlets, watts (typical / max, "?"
    where nobody has a figure yet), circuit load and heat. All of it comes from
    advise() (rack.js + power.js); the editor's RACK tab edits the same data. */
-const RACK_FILL = { patch: "#e8f0fb", vent: "#eceef1", shelf: "#f7f3e8" };
+const RACK_FILL = { patch: "#e8f0fb", vent: "#eceef1", brush: "#eceef1", shelf: "#f7f3e8" };
 const TIER_FILL = ["#e8f0fb", "#e6f4ea", "#ecebf8", "#f7f3e8", "#f6e9e7", "#fdf0d2"];
 const Q = { text: "?", color: "#a45a12" };
 // the rack body: frame, U numbers, gear top-down, amps/power on the floor
@@ -790,10 +790,12 @@ function drawRack(r, rx, top, rw, uPx, { kindColor = true, bw = false } = {}) {
     const maxCh = Math.floor((rw - 40) / (fs * 0.56));
     const text = it.label.length > maxCh ? it.label.slice(0, maxCh - 1) + "…" : it.label;
     out.push(`<rect x="${rx + 2}" y="${y + 1}" width="${rw - 4}" height="${ih - 2}" rx="2" fill="${fill}" stroke="${it.guess ? "#a45a12" : "#8a93a3"}"${it.guess ? ' stroke-dasharray="4 3"' : ""}/>` +
-      (it.kind === "vent" ? `<g stroke="#b9bec7">${Array.from({ length: Math.floor((rw - 90) / 30) }, (_, i) => `<line x1="${rx + 60 + i * 30}" y1="${y + 4}" x2="${rx + 60 + i * 30}" y2="${y + ih - 4}"/>`).join("")}</g>` : "") +
+      // a brush plate: a dark slot with bristles, where the cables pass through
+      (it.kind === "brush" ? `<rect x="${rx + 100}" y="${y + ih / 2 - Math.min(4, ih * 0.22)}" width="${rw - 150}" height="${Math.min(8, ih * 0.44)}" rx="2" fill="#3a3d42"/><g stroke="#8c9097" stroke-width="0.8">${Array.from({ length: Math.floor((rw - 154) / 4) }, (_, i) => `<line x1="${rx + 102 + i * 4}" y1="${y + ih / 2 - Math.min(4, ih * 0.22)}" x2="${rx + 102 + i * 4}" y2="${y + ih / 2 + Math.min(4, ih * 0.22)}"/>`).join("")}</g>` : "") +
+      (it.kind === "vent" ? `<g stroke="#b9bec7">${Array.from({ length: Math.floor((rw - 140) / 30) }, (_, i) => `<line x1="${rx + 110 + i * 30}" y1="${y + 4}" x2="${rx + 110 + i * 30}" y2="${y + ih - 4}"/>`).join("")}</g>` : "") +
       // color by kind: the same edge the box wears on the schematic (gray in black & white)
       (edge ? `<rect x="${rx + 2}" y="${y + 1}" width="6" height="${ih - 2}" rx="1" fill="${edge}"/>` : "") +
-      `<text x="${rx + (edge ? 16 : 12)}" y="${y + ih / 2 + fs * 0.36}" font-size="${fs}" fill="${it.kind === "vent" ? "#888" : "#222"}"${it.kind === "device" ? ' font-weight="600"' : ""}>${esc(text)}</text>` +
+      `<text x="${rx + (edge ? 16 : 12)}" y="${y + ih / 2 + fs * 0.36}" font-size="${fs}" fill="${it.kind === "vent" || it.kind === "brush" ? "#888" : "#222"}"${it.kind === "device" ? ' font-weight="600"' : ""}>${esc(text)}</text>` +
       `<text x="${rx + rw - 10}" y="${y + ih / 2 + 4}" text-anchor="end" font-size="${Math.min(10, fs)}" fill="${it.guess ? "#a45a12" : "#888"}">${it.guess ? "?U" : `${it.u}U`}</text>`);
     y += ih;
   }

@@ -678,7 +678,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
   { // Control4: 7 rooms exceeds Core 3's 6-room cap → Core 5, with Connect line
     const { job, ix } = withPlatforms(fixtures.residence, ["control4"]);
     const lic = advise(job, ix, CAT).licensing.find(l => l.platform === "control4");
-    t("advisor: 7-room residence → Core 5 + Connect fee", lic?.pick === "Core 5" && lic.lines.some(l => /Connect/.test(l)), lic?.pick);
+    t("advisor: 7-room residence → Core 5 + its Connect subscription line (no price — the app carries none)", lic?.pick === "Core 5" && lic.lines.some(l => /Connect/.test(l) && !/\$\s?\d/.test(l)), lic?.pick);
   }
   { // Josh: small device count, no voice rooms → Josh One
     const { job, ix } = withPlatforms(fixtures.residence, ["josh"]);
@@ -2688,7 +2688,23 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const provider = id => /provider|directv|xfinity|spectrum/.test(id);
   const loose = Object.entries(CAT.devices).filter(([id, d]) => !provider(id) && !d.notInPlanQueue && (!d.partNo || d.partNoUnsure)).map(([id]) => id);
   t("planqueue SKUs: every catalog device has a PlanQueue SKU or says it isn't in PlanQueue", !loose.length, loose.join(", "));
-  t("planqueue SKUs: no price fields came in with the SKUs", !Object.values(CAT.devices).some(d => "price" in d || "sellPrice" in d || "msrp" in d));
+  // THE NO-PRICING RULE (Ryan 2026-10-02): the repo is public — no prices of any kind, anywhere it ships
+  // (deploy.sh runs check-public.py on the same terms and refuses to publish)
+  {
+    const MONEY = /(?<!["'`\\])[$€£]\s?\d|\b\d[\d,]*(\.\d+)?\s?(USD|dollars?)\b/i, FEE = /\b\d[\d,]*(\.\d+)?\s?\/\s?(mo|month|yr|year)\b/i;
+    const KEY = /["'](price|priceUsd|prices|msrp|cost|costUsd|sellPrice|dealerPrice|listPrice|retailPrice|unitPrice)["']\s*:/i;
+    // built from pieces, so this file doesn't itself read as the export to check-public.py
+    const PQ = new RegExp([["Synergy Plan", "Queue Catalog"], ["dealer sell", " pric"], ["contains", " dealer"], ['^\\s*"?sku"?,\\s*"?name"?,\\s*"?manufacturer"?,\\s*"?category"?,\\s*"?pr', "ice"]].map(p => p.join("")).join("|"), "im");
+    const files = ["../index.html", "../README.md", "../BUILDING.md", "./catalog.json", "../mock-system-residence.json", "../mock-system-estate.json", "../mock-system-stress.json",
+      ...["ai", "asbuilt", "audiochain", "commands", "engine", "exports", "fuzz-jobs", "hookup", "importers", "kinds", "library", "names", "network", "pages", "ports", "power", "quickadd", "rack", "route-audit", "sheets", "starters"].map(m => `./${m}.js`)];
+    const found = [];
+    for (const f of files) {
+      const txt = await (await fetch(f)).text();
+      txt.split("\n").forEach((line, i) => { for (const [rx, why] of [[MONEY, "money"], [FEE, "fee"], [KEY, "price field"], [PQ, "PlanQueue export"]]) if (rx.test(line)) found.push(`${f}:${i + 1} ${why}`); });
+    }
+    t(`no pricing: nothing that ships (catalog, ${files.length - 1} files) carries a price, fee, price field or PlanQueue-export content`, files.length > 20 && !found.length, found.slice(0, 6).join(" | "));
+    t("no pricing: no catalog entry has a price field of any name", !Object.values(CAT.devices).some(d => Object.keys(d).some(k => /price|msrp|cost/i.test(k))));
+  }
   const est = planQueueFiles(fixtures.estate, 0, CAT).map(f => typeof f === "string" ? f : f.text ?? f.content ?? "").join("\n");
   t("planqueue SKUs: known gear exports as its PlanQueue SKU with no unsure note (Anthem MDX-16)", /\| Anthem \| MDX-16$/m.test(est));
   const j = structuredClone(fixtures.residence);

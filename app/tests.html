@@ -3950,9 +3950,22 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t("space: side-by-side racks — no rack-to-rack (X) runs on the wire schedule", !wireRuns(Lb.job, Lb.ix, {}).some(x => x.prefix === "X"));
     const Sh = await import("./sheets.js");
     t("space: a rack beside another shares its sheet (no sheet of its own)", Sh.sheetGroups(Lb.job, 0) === null);
-    const tooBig = structuredClone(fixtures.residence); tooBig.solutions[0].racks[0].space = { h: 60 }; tooBig.solutions[0].racks[0].rackModel = "BGR-4127";
+    const tooBig = structuredClone(fixtures.residence); tooBig.solutions[0].racks[0].space = { h: 60 }; tooBig.solutions[0].racks[0].rackModel = "BGR-4127"; tooBig.solutions[0].racks[0].sizeMode = "model";
     const nt = (() => { const Lx = loadJob(tooBig); return advise(Lx.job, Lx.ix, CAT).notes.find(n => n.code === "rack-space"); })();
     t("space: a picked rack that doesn't fit the space is flagged, with the rack that does", !!nt && /doesn't fit the space/.test(nt.msg) && /SR-CUSTOM-27U/.test(nt.best || ""), nt?.msg);
+  }
+  const RS0 = await import("./racksizes.js");
+  {   // three ways to size a rack (Ryan 2026-10-02): fit the space · pick a rack · by U — each keeps its own inputs
+    const base = structuredClone(fixtures.residence);
+    const planOf = mut => { const j = structuredClone(base); mut(j.solutions[0].racks[0]); const L = loadJob(j), a = advise(L.job, L.ix, CAT); return { r: a.racks[0], notes: a.notes }; };
+    t("size modes: an older job picks its mode from what it has — a model → Pick a rack, a space → Fit the space, nothing → By U",
+      planOf(r => { r.rackModel = "BGR-4132"; }).r.sizeMode === "model" && planOf(r => { r.space = { h: 72 }; }).r.sizeMode === "space" && planOf(() => {}).r.sizeMode === "units");
+    const u = planOf(r => { r.sizeMode = "units"; r.units = 27; r.rackModel = "SR-CUSTOM-42U-24IN"; r.space = { h: 50 }; }).r;
+    t("size modes: By U uses the typed count and ignores the picked model and the space (no brand, no fit check)", u.size === 27 && !u.model && !u.spaceFit);
+    const m = planOf(r => { r.sizeMode = "model"; r.rackModel = "SR-AV-CAB-42U-30IN"; r.space = { h: 80 }; });
+    t("size modes: Pick a rack uses that model — and says so when it doesn't fit the space entered", m.r.size === 42 && m.r.model.part === "SR-AV-CAB-42U-30IN" && m.notes.some(n => n.code === "rack-space"));
+    const sp = planOf(r => { r.sizeMode = "space"; r.rackModel = "SR-AV-CAB-42U-30IN"; r.space = { h: 80 }; }).r;
+    t("size modes: Fit the space never uses a rack that doesn't fit — it falls back to the tallest that does", sp.model.part === RS0.fitRacks({ h: 80 })[0].part && sp.size === 41);
   }
   {   // floor-rack quick reference (Middle Atlantic + Strong, makers' sheets, on casters)
     const RS = await import("./racksizes.js"), q = RS.rackReference(42);

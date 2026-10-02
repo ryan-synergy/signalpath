@@ -457,7 +457,7 @@ export function quickFixes(job, sol, f, catalog = null) {
   if ((f.code === "rack-full" || f.code === "rack-space") && f.rack) {
     const rackOf = s => (s.racks || []).find(r => r.id === f.rack);
     const pick = f.code === "rack-space" ? f.best : f.bigger;
-    if (pick) out.push({ label: `Use the ${pick}${f.code === "rack-full" ? " (still fits the space)" : ""}`, run: (j, s) => { const r = rackOf(s); if (r) { r.rackModel = pick; delete r.units; } } });
+    if (pick) out.push({ label: `Use the ${pick}${f.code === "rack-full" ? " (still fits the space)" : ""}`, run: (j, s) => { const r = rackOf(s); if (r) { r.rackModel = pick; r.sizeMode = "space"; } } });
     if (f.code === "rack-full" && !f.tight && !f.manual)
       out.push({ label: "Squeeze the spacing (keep the vents round amps)", run: (j, s) => { const r = rackOf(s); if (r) r.tight = true; } });
     // a second rack standing beside this one (same space, same rack) — then drag gear onto it on the rack page

@@ -141,11 +141,16 @@ export function rackPlans(job, ix, catalog) {
     const main = sol.racks?.[0]?.id;
     (sol.racks || []).forEach((r, ri) => {
       // 1–60U: a typo'd 4200 would draw 4,200 rows and stall the page
-      // the rack picked for the space (Middle Atlantic / Strong part) sets the size; else the typed U
-      const model = r.rackModel ? rackOption(r.rackModel) : null;
-      const size = model ? model.u : Math.min(60, Math.max(1, Math.floor(+r.units || +job.job?.rackUnits || DEFAULT_RACK_U) || DEFAULT_RACK_U));
+      // three ways to size a rack (Ryan 2026-10-02): fit the space (the opening picks the tallest
+      // Middle Atlantic / Strong rack that fits — or the one picked from those that fit), pick a rack
+      // (a model, whatever the space), or by U (a plain count, no brand). Each mode keeps its own
+      // inputs, so switching back and forth loses nothing.
       const space = r.space && (+r.space.h > 0 || +r.space.w > 0 || +r.space.d > 0) ? r.space : null;
-      const fits = space ? fitRacks(space) : null;
+      const sizeMode = ["space", "model", "units"].includes(r.sizeMode) ? r.sizeMode : r.rackModel ? (space ? "space" : "model") : space ? "space" : "units";
+      const fits = space && sizeMode !== "units" ? fitRacks(space) : null;
+      const chosen = r.rackModel ? rackOption(r.rackModel) : null;
+      const model = sizeMode === "units" ? null : sizeMode === "space" ? (chosen && fits?.some(o => o.part === chosen.part) ? chosen : fits?.[0] || null) : chosen;
+      const size = model ? model.u : Math.min(60, Math.max(1, Math.floor(+r.units || +job.job?.rackUnits || DEFAULT_RACK_U) || DEFAULT_RACK_U));
       const items = [], unknown = [], rear = [], small = [], cboxes = [], smallIds = [], cboxIds = [];
       const cat6 = cat6runs.filter(x => (x.racks?.length ? x.racks : [main]).includes(r.id)).reduce((n, x) => n + x.count, 0);
       if (cat6) for (let k = 0; k < Math.ceil(cat6 / PATCH_PORTS); k++)
@@ -246,9 +251,9 @@ export function rackPlans(job, ix, catalog) {
       for (const [kit, qty] of Object.entries(kitQty)) hardware.push({ key: "kit", item: `MXNet rack kit, ${items.find(i => i.kit === kit).u}U`, qty, partNo: kit });
       out.push({ solution: sol.id, rack: r.id, name: r.name || "Equipment Rack", size, used, spare: size - used,
         over: Math.max(0, manual ? bottom - size : used - size), items, unknown, rear, cat6, manual, spacing,
-        model, space, tight: !!r.tight,
-        // the picked rack against the space it has to go in; the tallest that fits it
-        spaceFit: space ? { ok: !model || fits.some(o => o.part === model.part), best: fits[0] || null, count: fits.length } : null,
+        model, space, tight: !!r.tight, sizeMode,
+        // the picked rack against the space it has to go in; the tallest that fits it (not in "by U")
+        spaceFit: fits ? { ok: !model || fits.some(o => o.part === model.part), best: fits[0] || null, count: fits.length } : null,
         hardware: hardware.filter(h => h.qty > 0) });
     });
   }

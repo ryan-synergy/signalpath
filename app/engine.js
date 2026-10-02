@@ -201,6 +201,7 @@ export function normalizeJob(job) {
         else for (const k of Object.keys(r.space)) { const v = +r.space[k]; if (!["h", "w", "d"].includes(k) || !(v > 0 && v < 400)) delete r.space[k]; else r.space[k] = v; } }
       if (r.rackModel != null && typeof r.rackModel !== "string") delete r.rackModel;
       if (r.tight != null) r.tight = r.tight === true;
+      if (r.sizeMode != null && !["space", "model", "units"].includes(r.sizeMode)) delete r.sizeMode;
       if (r.beside != null && (typeof r.beside !== "string" || !sol.racks.some(x => x.id === r.beside && x !== r))) delete r.beside;
       // a rack arranged by hand on the rack page: { key: row from the top } — whole rows only
       if (r.layout != null) {

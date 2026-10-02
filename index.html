@@ -524,25 +524,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002233601",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002233601",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002233601",
-    "./app/ports.js": "./app/ports.js?v=20261002233601",
-    "./app/commands.js": "./app/commands.js?v=20261002233601",
-    "./app/engine.js": "./app/engine.js?v=20261002233601",
-    "./app/exports.js": "./app/exports.js?v=20261002233601",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002233601",
-    "./app/hookup.js": "./app/hookup.js?v=20261002233601",
-    "./app/importers.js": "./app/importers.js?v=20261002233601",
-    "./app/library.js": "./app/library.js?v=20261002233601",
-    "./app/names.js": "./app/names.js?v=20261002233601",
-    "./app/network.js": "./app/network.js?v=20261002233601",
-    "./app/pages.js": "./app/pages.js?v=20261002233601",
-    "./app/power.js": "./app/power.js?v=20261002233601",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002233601",
-    "./app/rack.js": "./app/rack.js?v=20261002233601",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002233601",
-    "./app/starters.js": "./app/starters.js?v=20261002233601"
+    "./app/ai.js": "./app/ai.js?v=20261002234258",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002234258",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002234258",
+    "./app/ports.js": "./app/ports.js?v=20261002234258",
+    "./app/commands.js": "./app/commands.js?v=20261002234258",
+    "./app/engine.js": "./app/engine.js?v=20261002234258",
+    "./app/exports.js": "./app/exports.js?v=20261002234258",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002234258",
+    "./app/hookup.js": "./app/hookup.js?v=20261002234258",
+    "./app/importers.js": "./app/importers.js?v=20261002234258",
+    "./app/library.js": "./app/library.js?v=20261002234258",
+    "./app/names.js": "./app/names.js?v=20261002234258",
+    "./app/network.js": "./app/network.js?v=20261002234258",
+    "./app/pages.js": "./app/pages.js?v=20261002234258",
+    "./app/power.js": "./app/power.js?v=20261002234258",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002234258",
+    "./app/rack.js": "./app/rack.js?v=20261002234258",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002234258",
+    "./app/starters.js": "./app/starters.js?v=20261002234258"
 } }
 </script>
 <script>
@@ -728,7 +728,7 @@ import { assignPorts, jacksOf, plugCandidates, familyName } from "./app/ports.js
 import { startAsBuilt, asBuiltChanges, changeMarks, isAsBuilt, installRows, installCSV, tidyMac } from "./app/asbuilt.js";
 import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV, labelsCSV, rackFrontSVG, rackEditSVG, rackData, wireLabels } from "./app/pages.js";
 import { parseQuick, quickSuggest } from "./app/quickadd.js";
-import { rackReference, fitRacks, rackOption, RACK_CLEARANCE } from "./app/racksizes.js";
+import { rackReference, fitRacks, rackOption, RACK_CLEARANCE, RACK_OPTIONS } from "./app/racksizes.js";
 import { STARTERS, applyStarter, starterFromJob, listStarters, duplicateStarter } from "./app/starters.js";
 import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/commands.js";
 import { askClaude, handoffPrompt, extractProposal, jobSummary, assess, loadConn, saveConn, connReady, MODELS } from "./app/ai.js";
@@ -765,7 +765,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002233601").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002234258").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -2290,7 +2290,6 @@ function rackHTML(o = {}) {
       : `<input class="rpart" data-key="${h.key}" data-rack="${esc(rr.id)}" value="${esc(h.partNo || "")}" placeholder="?" style="width:130px">`}</td></tr>`).join("");
     return `<div class="sect" data-rackid="${esc(rr.id)}">${esc(rr.name || "Equipment Rack")} ${r ? `<span class="badge">${r.used}U / ${r.size}U</span>` : ""}</div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
-      ${field("Rack size", `<select class="rsize" data-rack="${esc(rr.id)}">${RACK_SIZES.map(n => `<option value="${n}" ${(rackOption(rr.rackModel)?.u || +rr.units || +S.job.job.rackUnits || DEFAULT_RACK_U) === n ? "selected" : ""}>${n}U</option>`).join("")}</select>`)}
       ${r ? `<div class="mini" style="margin:4px 0">${r.used}U used · ${r.over ? `<b style="color:#b32017">${r.over}U over</b>` : `${r.spare}U spare`}${r.cat6 ? ` · ${r.cat6} Cat6 home runs` : ""}${r.unknown.length ? ` · <span style="color:#a45a12">${r.unknown.length} height${r.unknown.length > 1 ? "s" : ""} unknown (?)</span>` : ""}</div>
       <div class="rackview rkopen" title="Open the rack page — drag to arrange" style="background:#fff;border-radius:6px;padding:6px;margin:6px 0;cursor:zoom-in">${rackFrontSVG(r, 300, { kindColor: $("#kindColor").checked })}</div>
       ${(() => { const ref = rackReference(r.size), n1 = v => String(Math.round(v * 10) / 10);   // floor racks this size, on casters
@@ -2413,20 +2412,36 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && S.mainView
    and the door it goes through — picks the tallest Middle Atlantic / Strong floor rack that fits (on
    casters); then the gear is fitted to it (squeeze the spacing, a second rack, the rack page). */
 function spaceHTML(rr, plan) {
-  const sp = rr.space || {}, n1 = v => String(Math.round(v * 10) / 10), model = plan?.model;
-  const inp = (k, ph) => `<input class="rspace" data-rack="${esc(rr.id)}" data-k="${k}" inputmode="decimal" value="${esc(sp[k] ?? "")}" placeholder="${ph}" style="width:62px">`;
-  const fits = sp.h || sp.w || sp.d ? fitRacks(sp) : null;
-  const seen = new Set(), top = (fits || []).filter(o => !seen.has(o.u + o.brand) && seen.add(o.u + o.brand)).slice(0, 6);   // the tallest few, one per height and brand
-  return `<div class="rkspace">
-    <div class="mini" style="margin:2px 0 4px"><b>Space for this rack</b> — the opening it has to fit (the lower of the cabinet opening and the door), inches</div>
-    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px">H ${inp("h", "height")} W ${inp("w", "width")} D ${inp("d", "depth")}</div>
-    ${fits ? fits.length ? `<div class="mini" style="margin:6px 0 2px">Fits (tallest first, on casters + ${RACK_CLEARANCE.top}" clearance):</div><div class="chips" style="flex-wrap:wrap">${top.map(o =>
-        `<button class="chip rpick${model?.part === o.part ? " on" : ""}" data-rack="${esc(rr.id)}" data-part="${esc(o.part)}" title="${esc(`${o.brand} · ${n1(o.hc)}" tall on casters · ${n1(o.w)}" wide · ${n1(o.depth)}" deep (${n1(o.usable)}" usable)`)}">${esc(o.part)} · ${o.u}U</button>`).join("")}</div>`
-      : `<div class="mini" style="color:#b32017;margin-top:4px">No Middle Atlantic or Strong floor rack fits that — check the opening, or plan a wall-mount rack.</div>` : ""}
-    ${model ? `<div class="mini" style="margin:6px 0">Using <b>${esc(model.part)}</b> (${esc(model.brand)}) — ${model.u}U, ${n1(model.hc)}" tall on casters, ${n1(model.w)}" wide, ${n1(model.depth)}" deep (${n1(model.usable)}" usable)
-      · <a href="#" class="rclear" data-rack="${esc(rr.id)}">set the size by hand</a></div>` : ""}
-    ${fits ? `<div class="mini" style="color:#8a8f98">Clearance is a placeholder (${RACK_CLEARANCE.top}" over the rack) until the minimum-cabinet sheet is added.</div>` : ""}
-  </div>`;
+  const sp = rr.space || {}, n1 = v => String(Math.round(v * 10) / 10), model = plan?.model, mode = plan?.sizeMode || "units";
+  const R = esc(rr.id);
+  const tabs = [["space", "Fit the space"], ["model", "Pick a rack"], ["units", "By U"]].map(([k, l]) =>
+    `<button class="chip rmode${mode === k ? " on" : ""}" data-rack="${R}" data-mode="${k}">${l}</button>`).join("");
+  const line = model ? `<div class="mini" style="margin:6px 0 0">${mode === "space" ? "Using" : "Picked"} <b>${esc(model.part)}</b> (${esc(model.brand)}) — ${model.u}U, ${n1(model.hc)}" tall on casters, ${n1(model.w)}" wide, ${n1(model.depth)}" deep (${n1(model.usable)}" usable)</div>` : "";
+  let body = "";
+  if (mode === "space") {
+    const inp = (k, ph) => `<input class="rspace" data-rack="${R}" data-k="${k}" inputmode="decimal" value="${esc(sp[k] ?? "")}" placeholder="${ph}" style="width:62px">`;
+    const fits = sp.h || sp.w || sp.d ? fitRacks(sp) : null;
+    const seen = new Set(), top = (fits || []).filter(o => !seen.has(o.u + o.brand) && seen.add(o.u + o.brand)).slice(0, 6);   // the tallest few, one per height and brand
+    body = `<div class="mini" style="margin:6px 0 4px">The opening it has to fit — the lower of the cabinet opening and the door — in inches. The tallest rack that fits is used.</div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px">H ${inp("h", "height")} W ${inp("w", "width")} D ${inp("d", "depth")}</div>
+      ${fits ? fits.length ? `<div class="mini" style="margin:6px 0 2px">Fits (tallest first, on casters + ${RACK_CLEARANCE.top}" clearance):</div><div class="chips" style="flex-wrap:wrap">${top.map(o =>
+          `<button class="chip rpick${model?.part === o.part ? " on" : ""}" data-rack="${R}" data-part="${esc(o.part)}" title="${esc(`${o.brand} · ${n1(o.hc)}" tall on casters · ${n1(o.w)}" wide · ${n1(o.depth)}" deep (${n1(o.usable)}" usable)`)}">${esc(o.part)} · ${o.u}U</button>`).join("")}</div>`
+        : `<div class="mini" style="color:#b32017;margin-top:4px">No Middle Atlantic or Strong floor rack fits that — check the opening, or plan a wall-mount rack.</div>`
+        : `<div class="mini" style="margin-top:4px;color:#888">Type the height to see the racks that fit.</div>`}
+      ${line}
+      ${fits ? `<div class="mini" style="color:#8a8f98;margin-top:4px">Clearance is a placeholder (${RACK_CLEARANCE.top}" over the rack) until the minimum-cabinet sheet is added.</div>` : ""}`;
+  } else if (mode === "model") {
+    const cur = rr.rackModel || "", opt = o => `<option value="${esc(o.part)}" ${o.part === cur ? "selected" : ""}>${esc(`${o.part} — ${o.u}U · ${n1(o.hc)}" H · ${n1(o.depth)}" D`)}</option>`;
+    const brands = ["Middle Atlantic", "Strong"].map(b => `<optgroup label="${b}">${RACK_OPTIONS.filter(o => o.brand === b).sort((x, y) => y.u - x.u || x.depth - y.depth).map(opt).join("")}</optgroup>`).join("");
+    body = `<div class="mini" style="margin:6px 0 4px">Choose the rack by model — Middle Atlantic or Strong, every height and depth.</div>
+      ${field("Rack", `<select class="rmodel" data-rack="${R}"><option value="" ${cur ? "" : "selected"}>— pick a rack —</option>${brands}</select>`)}
+      ${line}${plan?.spaceFit && !plan.spaceFit.ok ? `<div class="mini" style="color:#b32017;margin-top:4px">It doesn't fit the space you entered (${esc([sp.h && `${sp.h}" high`, sp.w && `${sp.w}" wide`, sp.d && `${sp.d}" deep`].filter(Boolean).join(", "))}).</div>` : ""}`;
+  } else {
+    const cur = +rr.units || +S.job.job.rackUnits || DEFAULT_RACK_U, sizes = [...new Set([...RACK_SIZES, cur])].sort((a, b) => a - b);
+    body = `<div class="mini" style="margin:6px 0 4px">A plain rack height, no brand — the elevation and packet use this U count.</div>
+      ${field("Rack size", `<select class="rsize" data-rack="${R}">${sizes.map(n => `<option value="${n}" ${cur === n ? "selected" : ""}>${n}U</option>`).join("")}</select>`)}`;
+  }
+  return `<div class="rkspace"><div class="mini" style="margin:0 0 4px"><b>Rack size</b></div><div class="chips seg" style="max-width:420px">${tabs}</div>${body}</div>`;
 }
 /* RACK tab (build order, Ryan 2026-10-02): one place per rack — its boxes first (what used to be
    GEAR: each box, its product, its connections), then the elevation, heights / cords / watts,
@@ -2438,7 +2453,7 @@ function rackTabHTML() {
   const strip = h => h.replace(/^\s*<div class="sect" data-rackid="[^"]*">[\s\S]*?<\/div>/, "");   // the rack's name already heads its boxes
   return g.driftBar + sol.racks.map(r => {
     const key = "rk:" + r.id;
-    return g.parts[r.id] + spaceHTML(r, k.plans[r.id]) + `<button class="addbtn rkopen" style="margin:4px 0">⤢ Open the rack page — drag to arrange${k.badge[r.id] ? ` (${esc(k.badge[r.id])})` : ""}</button><details class="more rackdet" data-more="${esc(key)}" ${S.openRows.has(key) ? "open" : ""}><summary>Elevation · heights · power${k.badge[r.id] ? ` — ${esc(k.badge[r.id])}` : ""}</summary>${strip(k.parts[r.id] || "")}</details>`;
+    return g.parts[r.id] + spaceHTML(r, k.plans[r.id]) + `<button class="addbtn rkopen" style="margin:4px 0">⤢ Open in the Rack view — drag to arrange${k.badge[r.id] ? ` (${esc(k.badge[r.id])})` : ""}</button><details class="more rackdet" data-more="${esc(key)}" ${S.openRows.has(key) ? "open" : ""}><summary>Elevation · heights · power${k.badge[r.id] ? ` — ${esc(k.badge[r.id])}` : ""}</summary>${strip(k.parts[r.id] || "")}</details>`;
   }).join("") + k.rest + g.footer;
 }
 
@@ -3382,7 +3397,16 @@ function wirePanel(body) {
   on(".jdrawn", el => { S.job.job.drawnBy = el.value; });
   /* rack tab */
   const rackOf = id => (S.job.solutions[S.sol].racks || []).find(r => r.id === id);
-  on(".rsize", el => { const r = rackOf(el.dataset.rack), n = Math.floor(+el.value); if (r && n >= 1 && n <= 60) { r.units = n; delete r.rackModel; } });
+  on(".rsize", el => { const r = rackOf(el.dataset.rack), n = Math.floor(+el.value); if (r && n >= 1 && n <= 60) { r.units = n; r.sizeMode = "units"; } });
+  on(".rmodel", el => { const r = rackOf(el.dataset.rack); if (!r) return; if (el.value) r.rackModel = el.value; else delete r.rackModel; r.sizeMode = "model"; });
+  // the mode switch: keeps each mode's inputs; "By U" starts from the size the rack is now
+  body.querySelectorAll(".rmode").forEach(b => b.onclick = () => {
+    const r = rackOf(b.dataset.rack); if (!r || r.sizeMode === b.dataset.mode) return;
+    const nowU = (S.lastAdvice?.racks || []).find(p => p.rack === r.id)?.size;
+    pushUndo("rack size mode"); r.sizeMode = b.dataset.mode;
+    if (b.dataset.mode === "units" && nowU) r.units = nowU;
+    refresh();
+  });
   // the space a rack has to fit: entering it picks the tallest rack that fits (unless the one picked still fits)
   on(".rspace", el => {
     const r = rackOf(el.dataset.rack); if (!r) return;
@@ -3390,10 +3414,10 @@ function wirePanel(body) {
     r.space ||= {}; if (v > 0 && v < 400) r.space[el.dataset.k] = v; else delete r.space[el.dataset.k];
     if (!Object.keys(r.space).length) { delete r.space; return; }
     const fits = fitRacks(r.space);
-    if (fits.length && !fits.some(o => o.part === r.rackModel)) { r.rackModel = fits[0].part; delete r.units; toast(`Picked the ${fits[0].part} (${fits[0].u}U) — the tallest that fits`); }
+    r.sizeMode = "space";
+    if (fits.length && !fits.some(o => o.part === r.rackModel)) { r.rackModel = fits[0].part; toast(`Picked the ${fits[0].part} (${fits[0].u}U) — the tallest that fits`); }
   });
-  body.querySelectorAll(".rpick").forEach(b => b.onclick = () => { const r = rackOf(b.dataset.rack); if (!r) return; pushUndo("pick rack"); r.rackModel = b.dataset.part; delete r.units; refresh(); });
-  body.querySelectorAll(".rclear").forEach(b => b.onclick = e => { e.preventDefault(); const r = rackOf(b.dataset.rack); if (r) { delete r.rackModel; refresh(); } });
+  body.querySelectorAll(".rpick").forEach(b => b.onclick = () => { const r = rackOf(b.dataset.rack); if (!r) return; pushUndo("pick rack"); r.rackModel = b.dataset.part; r.sizeMode = "space"; refresh(); });
   on(".rpart", el => {
     const r = rackOf(el.dataset.rack), v = el.value.trim();
     if (el.dataset.key === "rack" && r) { if (v) r.partNo = v; else delete r.partNo; return; }

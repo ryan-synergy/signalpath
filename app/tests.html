@@ -3874,8 +3874,25 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const svgOn = Pg.rackFrontSVG(r), svgOff = Pg.rackFrontSVG(r, 300, { kindColor: false }), svgBw = Pg.rackFrontSVG(r, 300, { bw: true });
   const amp = r.items.find(i => i.type === "amp");
   t("rack page: each device on the elevation carries its kind, and wears the schematic's edge color (off with Color by kind off, gray in B&W)",
-    amp?.boxKind === "audio" && svgOn.includes(`width="6"`) && svgOn.includes(`fill="${KIND_STYLE.audio.edge}"`) && !svgOff.includes(`fill="${KIND_STYLE.audio.edge}"`) &&
-    !svgBw.includes(`fill="${KIND_STYLE.audio.edge}"`) && svgBw.includes('fill="#555"'));
+    amp?.boxKind === "audio" && svgOn.includes(`fill="${KIND_STYLE.audio.edge}"`) && !svgOff.includes(`fill="${KIND_STYLE.audio.edge}"`) &&
+    !svgBw.includes(`fill="${KIND_STYLE.audio.edge}"`) && svgBw.includes('fill="#666"'));
+  {   // drawn to scale (Ryan 2026-10-02): 19" rails at 1.75" a U, labels beside the rack on leader lines
+    const vb = svgOn.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/), rails = svgOn.match(/<rect x="[\d.]+" y="[\d.]+" width="([\d.]+)" height="([\d.]+)" fill="#f4f5f7"/);
+    const ratio = rails && (+rails[2]) / (+rails[1]), want = r.size * 1.75 / 19;
+    t("rack drawing: to scale — rail height ÷ rail width = U × 1.75 ÷ 19", !!ratio && Math.abs(ratio - want) / want < 0.02, `${ratio} vs ${want}`);
+    t("rack drawing: every item is named beside the rack on a leader line, with its height", (svgOn.match(/<polyline /g) || []).length === r.items.length && /Anthem MDX-16 <tspan[^>]*>· 2U</.test(svgOn));
+    t("rack drawing: the rail height is dimensioned (U and inches)", svgOn.includes(`${r.size}U · ${(r.size * 1.75).toFixed(1)}" of rail`));
+  }
+  {   // floor-rack quick reference (Middle Atlantic + Strong, makers' sheets, on casters)
+    const RS = await import("./racksizes.js"), q = RS.rackReference(42);
+    const ma = q.models.filter(m => m.brand === "Middle Atlantic"), st = q.models.filter(m => m.brand === "Strong");
+    t("rack sizes: 42U → Strong's 42U racks exactly; Middle Atlantic (no 42U) shows its nearest smaller and larger",
+      st.length === 3 && st.every(m => m.u === 42 && m.fit === "exact") && ma.map(m => m.u + m.fit).join() === "41smaller,44larger" && q.railIn === 73.5);
+    t("rack sizes: heights are on casters — Middle Atlantic sheets are without, so +1\" for the caster base; Strong publishes both",
+      ma[0].hc === ma[0].h + 1 && st.every(m => m.hc > m.h) && RS.RACK_MODELS.every(m => m.w >= 19 && m.depths.every(([o, u]) => o >= u)));
+    const Lr = loadJob(structuredClone(fixtures.residence)), pg = renderExtraPages(Lr.job, Lr.ix, advise(Lr.job, Lr.ix, CAT), { pages: { elevation: true } }).find(p => /^Rack/.test(p.title));
+    t("rack page: carries the floor-rack quick reference with the brands' models", /Floor racks — 42U quick reference/.test(pg.svg) && /SR-CUSTOM-42U/.test(pg.svg) && /BGR-4127/.test(pg.svg));
+  }
 }
 
 /* ---------- the MXNet control box rides the platform's rack kit (AVPro: R15 / 10G-HDRACK have a CBOX place, R2 a slot) ---------- */

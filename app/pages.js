@@ -10,6 +10,7 @@ import { NET_ROLE_NAME, switchSetup, companionSku } from "./network.js";
 import { isAsBuilt, asBuiltChanges, installRows } from "./asbuilt.js";
 import { KIND_STYLE } from "./kinds.js";
 import { zoneRacks } from "./sheets.js";
+import { rackReference } from "./racksizes.js";
 
 const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const W = 1632, H = 1056;
@@ -85,6 +86,7 @@ const heading = (x, y, text, color = "#111") => `<text x="${x}" y="${y}" font-si
    "(cont.)" heading instead of running off the paper. */
 const LIMIT = 900, TOP = 120;
 // place as many rows as fit above LIMIT; returns the drawn part + leftovers
+const gridTable = (...a) => table(...a);   // the plain table, for pages whose own helper is also called "table"
 function tableFit(x, y, w, cols, rows, pitch = 28) {
   const fit = Math.max(0, Math.floor((LIMIT - (y + 30)) / pitch));
   const t = table(x, y, w, cols, rows.slice(0, fit), pitch);
@@ -765,46 +767,75 @@ const RACK_FILL = { patch: "#e8f0fb", vent: "#eceef1", brush: "#eceef1", shelf: 
 const TIER_FILL = ["#e8f0fb", "#e6f4ea", "#ecebf8", "#f7f3e8", "#f6e9e7", "#fdf0d2"];
 const Q = { text: "?", color: "#a45a12" };
 // the rack body: frame, U numbers, gear top-down, amps/power on the floor
-function drawRack(r, rx, top, rw, uPx, { kindColor = true, bw = false } = {}) {
+/* the rack drawn to scale (Ryan 2026-10-02: "make the rack look more proportional — critical"):
+   1U = 1.75", 19" rails in a ~22" frame, so a 42U rack stands ~3.9× taller than wide. Boxes carry
+   a short tag; the full name and height sit beside the rack on leader lines that never overlap
+   (quiet gray for vents and brush plates). Left: U numbers and the rail height. Returns the SVG
+   pieces and the width it took, so the page / the RACK tab can lay out around it. */
+const BRAND = /^(AVPro Edge|Anthem|Savant|Ubiquiti|Snap ?One|WattBox|Middle Atlantic|AudioControl|Sonance|Sonos|Kaleidescape|Apple|Josh\.ai|Control4|Araknis|Luxul|MOTU|Netgear|Strong)\s+/i;
+function rackTag(it) {
+  if (it.kind === "patch") return "Patch";
+  if (it.kind !== "device") return "";
+  return String(it.label).replace(BRAND, "").replace(/\s*\(Dante\)$/, "");
+}
+function drawRack(r, x0, top, uPx, { kindColor = true, bw = false, labelW = 280, fs = 11.5, dims = true } = {}) {
   const out = [];
-  const rows = Math.max(r.size, r.used), h = rows * uPx;
-  out.push(`<rect x="${rx}" y="${top}" width="${rw}" height="${h}" fill="#f4f5f7" stroke="#333" stroke-width="2"/>`);
-  if (r.over) out.push(`<rect x="${rx}" y="${top + r.size * uPx}" width="${rw}" height="${(rows - r.size) * uPx}" fill="#fbe3e1"/>
-<line x1="${rx - 6}" y1="${top + r.size * uPx}" x2="${rx + rw + 6}" y2="${top + r.size * uPx}" stroke="#b32017" stroke-width="2"/>`);   // the rack floor; red below = doesn't fit
+  const rows = Math.max(r.size, r.used), ppi = uPx / 1.75;
+  const railW = 19 * ppi, frameW = 22 * ppi, rx = x0 + (frameW - railW) / 2, h = rows * uPx;
+  out.push(`<rect x="${x0}" y="${top - uPx * 0.8}" width="${frameW}" height="${h + uPx * 1.6}" rx="3" fill="${bw ? "#444" : "#2b2e33"}"/>`);
+  out.push(`<rect x="${rx}" y="${top}" width="${railW}" height="${h}" fill="#f4f5f7"/>`);
+  if (r.over) out.push(`<rect x="${rx}" y="${top + r.size * uPx}" width="${railW}" height="${(rows - r.size) * uPx}" fill="#fbe3e1"/>
+<line x1="${x0 - 6}" y1="${top + r.size * uPx}" x2="${x0 + frameW + 6}" y2="${top + r.size * uPx}" stroke="#b32017" stroke-width="2"/>`);   // the rack floor; red below = doesn't fit
   for (let u = 0; u < rows; u++) {
     const y = top + u * uPx, n = r.size - u;
-    out.push(`<line x1="${rx}" y1="${y}" x2="${rx + rw}" y2="${y}" stroke="#dde0e5" stroke-width="0.6"/>`);
-    if (n >= 1 && (uPx >= 14 || n % 2 === 1)) out.push(`<text x="${rx - 8}" y="${y + uPx * 0.72}" text-anchor="end" font-size="${Math.min(10, uPx * 0.6)}" fill="#888">${n}</text>`);
+    out.push(`<line x1="${rx}" y1="${y}" x2="${rx + railW}" y2="${y}" stroke="#dde0e5" stroke-width="0.5"/>`);
+    if (n >= 1 && (uPx >= 12 || n % 2 === 1)) out.push(`<text x="${x0 - 5}" y="${y + uPx * 0.72}" text-anchor="end" font-size="${Math.min(9, uPx * 0.62)}" fill="#999">${n}</text>`);
+  }
+  if (dims) {   // rail height, U and inches
+    const dx = x0 - 26, mid = top + r.size * uPx / 2;
+    out.push(`<g stroke="#8a93a3" stroke-width="0.8"><line x1="${dx}" y1="${top}" x2="${dx}" y2="${top + r.size * uPx}"/><line x1="${dx - 4}" y1="${top}" x2="${dx + 4}" y2="${top}"/><line x1="${dx - 4}" y1="${top + r.size * uPx}" x2="${dx + 4}" y2="${top + r.size * uPx}"/></g>
+<text transform="translate(${dx - 6} ${mid}) rotate(-90)" text-anchor="middle" font-size="${fs - 1}" fill="#555">${r.size}U · ${(r.size * 1.75).toFixed(1)}" of rail</text>`);
   }
   // gear dresses the top; amps, receivers and power sit on the floor of the rack
   // (only when it all fits — an over-full rack just stacks in order)
   const low = r.over ? [] : r.items.filter(i => i.tier >= 4);
   const lowStart = top + (r.size - low.reduce((n, i) => n + i.u, 0)) * uPx;
   let y = top;
+  const marks = [];
   for (const it of r.items) {
     if (it === low[0]) y = lowStart;
-    const ih = it.u * uPx;
-    const fill = RACK_FILL[it.kind] || TIER_FILL[it.tier] || "#fff";
-    const edge = kindColor && it.boxKind && KIND_STYLE[it.boxKind]?.edge ? (bw ? "#555" : KIND_STYLE[it.boxKind].edge) : null;
-    const fs = Math.max(7, Math.min(12, ih * 0.62));
-    const maxCh = Math.floor((rw - 40) / (fs * 0.56));
-    const text = it.label.length > maxCh ? it.label.slice(0, maxCh - 1) + "…" : it.label;
-    out.push(`<rect x="${rx + 2}" y="${y + 1}" width="${rw - 4}" height="${ih - 2}" rx="2" fill="${fill}" stroke="${it.guess ? "#a45a12" : "#8a93a3"}"${it.guess ? ' stroke-dasharray="4 3"' : ""}/>` +
-      // a brush plate: a dark slot with bristles, where the cables pass through
-      (it.kind === "brush" ? `<rect x="${rx + 100}" y="${y + ih / 2 - Math.min(4, ih * 0.22)}" width="${rw - 150}" height="${Math.min(8, ih * 0.44)}" rx="2" fill="#3a3d42"/><g stroke="#8c9097" stroke-width="0.8">${Array.from({ length: Math.floor((rw - 154) / 4) }, (_, i) => `<line x1="${rx + 102 + i * 4}" y1="${y + ih / 2 - Math.min(4, ih * 0.22)}" x2="${rx + 102 + i * 4}" y2="${y + ih / 2 + Math.min(4, ih * 0.22)}"/>`).join("")}</g>` : "") +
-      (it.kind === "vent" ? `<g stroke="#b9bec7">${Array.from({ length: Math.floor((rw - 140) / 30) }, (_, i) => `<line x1="${rx + 110 + i * 30}" y1="${y + 4}" x2="${rx + 110 + i * 30}" y2="${y + ih - 4}"/>`).join("")}</g>` : "") +
-      // color by kind: the same edge the box wears on the schematic (gray in black & white)
-      (edge ? `<rect x="${rx + 2}" y="${y + 1}" width="6" height="${ih - 2}" rx="1" fill="${edge}"/>` : "") +
-      `<text x="${rx + (edge ? 16 : 12)}" y="${y + ih / 2 + fs * 0.36}" font-size="${fs}" fill="${it.kind === "vent" || it.kind === "brush" ? "#888" : "#222"}"${it.kind === "device" ? ' font-weight="600"' : ""}>${esc(text)}</text>` +
-      `<text x="${rx + rw - 10}" y="${y + ih / 2 + 4}" text-anchor="end" font-size="${Math.min(10, fs)}" fill="${it.guess ? "#a45a12" : "#888"}">${it.guess ? "?U" : `${it.u}U`}</text>`);
+    const ih = it.u * uPx, quiet = it.kind === "vent" || it.kind === "brush";
+    const st = it.boxKind && KIND_STYLE[it.boxKind];
+    const dark = it.kind === "device" && kindColor && !bw && st;
+    const fill = dark ? st.tint : RACK_FILL[it.kind] || (it.kind === "device" ? "#fff" : TIER_FILL[it.tier] || "#fff");
+    out.push(`<rect x="${rx + 1}" y="${y + 0.5}" width="${railW - 2}" height="${ih - 1}" rx="1.5" fill="${fill}" stroke="${it.guess ? "#a45a12" : "#7d8591"}" stroke-width="${it.guess ? 1 : 0.6}"${it.guess ? ' stroke-dasharray="3 2"' : ""}/>`);
+    if (kindColor && st?.edge) out.push(`<rect x="${rx + 1}" y="${y + 0.5}" width="${Math.max(3, railW * 0.025)}" height="${ih - 1}" fill="${bw ? "#666" : st.edge}"/>`);
+    if (it.kind === "vent") for (let k = 1; k < 6; k++) out.push(`<line x1="${rx + railW * k / 6}" y1="${y + 2}" x2="${rx + railW * k / 6}" y2="${y + ih - 2}" stroke="#b9bec7" stroke-width="0.7"/>`);
+    if (it.kind === "brush") out.push(`<rect x="${rx + railW * 0.18}" y="${y + ih / 2 - Math.min(2.5, ih * 0.18)}" width="${railW * 0.64}" height="${Math.min(5, ih * 0.36)}" rx="1.5" fill="#3a3d42"/>`);
+    const tag = rackTag(it), tfs = Math.min(fs - 1, ih * 0.6, railW / Math.max(6, tag.length) * 1.75);
+    if (tag && ih >= 9 && tfs >= 6) out.push(`<text x="${rx + railW / 2}" y="${y + ih / 2 + tfs * 0.36}" text-anchor="middle" font-size="${tfs.toFixed(1)}" font-weight="600" fill="${dark ? "#fff" : "#222"}">${esc(tag)}</text>`);
+    marks.push({ y: y + ih / 2, it, quiet });
     y += ih;
   }
-  return out;
+  // the labels column: in order, never closer than a line apart; pulled back up if they'd run past the rack
+  const lx = x0 + frameW + 34, lh = fs + 3, maxCh = Math.floor(labelW / (fs * 0.55));
+  const ys = marks.map(m => m.y);
+  for (let i = 1; i < ys.length; i++) ys[i] = Math.max(ys[i], ys[i - 1] + lh);
+  const floor = top + rows * uPx + uPx;
+  if (ys.length && ys[ys.length - 1] > floor) { ys[ys.length - 1] = floor; for (let i = ys.length - 2; i >= 0; i--) ys[i] = Math.min(ys[i], ys[i + 1] - lh); }
+  marks.forEach((m, i) => {
+    const it = m.it, ly = ys[i];
+    const name = it.label.length > maxCh ? it.label.slice(0, maxCh - 1) + "…" : it.label;
+    out.push(`<polyline points="${rx + railW},${m.y} ${lx - 22},${m.y} ${lx - 5},${ly}" fill="none" stroke="${m.quiet ? "#d0d4da" : "#8a93a3"}" stroke-width="0.7"/>`);
+    out.push(`<text x="${lx}" y="${ly + fs * 0.36}" font-size="${fs}" fill="${m.quiet ? "#9aa1ab" : "#222"}"${it.kind === "device" ? ' font-weight="600"' : ""}>${esc(name)} <tspan font-weight="400" fill="${it.guess ? "#a45a12" : "#999"}">· ${it.guess ? "?U" : it.u + "U"}</tspan></text>`);
+  });
+  return { svg: out, width: lx - x0 + labelW, height: h + uPx * 2 };
 }
-// a standalone front view for the editor's RACK tab
+// a standalone front view for the editor's RACK tab — the same drawing, sized for the panel
 export function rackFrontSVG(r, rw = 300, look = {}) {
-  const uPx = 14, top = 6, rows = Math.max(r.size, r.used);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${rw + 40} ${rows * uPx + 12}" width="100%" font-family="'Avenir Next', Avenir, 'Helvetica Neue', sans-serif">${drawRack(r, 30, top, rw, uPx, look).join("")}</svg>`;
+  const rows = Math.max(r.size, r.used), uPx = Math.max(7, Math.min(11, Math.floor(520 / (rows + 2))));
+  const d = drawRack(r, 46, uPx + 4, uPx, { ...look, labelW: 220, fs: 11 });
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${46 + d.width + 6} ${d.height + 10}" width="100%" font-family="'Avenir Next', Avenir, 'Helvetica Neue', sans-serif">${d.svg.join("")}</svg>`;
 }
 export function rackData(adviseResult, solId) {
   const powers = (adviseResult?.power || []).filter(p => p.solution === solId);   // one per rack
@@ -817,13 +848,26 @@ function rackPages(job, ix, adviseResult, opts, label) {
   if (!racks.length) return [];
   const clip = (v, n) => String(v).length > n ? String(v).slice(0, n - 1) + "…" : String(v);
   const bodies = [];
-  const RX = 560, RW = 1000;                           // right column
+  const RX = 660, RW = 900;                            // right column (the rack and its labels take the left)
   racks.forEach(r => {
     const power = powers.find(p => p.rack === r.rack) || null;   // this rack's own WattBox, circuit and heat
     let body = []; bodies.push(body);
-    const top = TOP + 34, rw = 380;
-    const uPx = Math.min(20, Math.floor((LIMIT - top - 10) / Math.max(r.size, r.used)));
-    body.push(heading(40, TOP + 8, `${r.name} — ${r.size}U`), ...drawRack(r, 80, top, rw, uPx, { kindColor: opts.kindColor !== false, bw: !!opts.grayscale }));
+    const top = TOP + 44;
+    // the floor-rack quick reference sits under the rack (left column), so the rack page stays one sheet
+    const ref = rackReference(r.size), n1 = v => String(Math.round(v * 10) / 10);
+    const refH = 64 + ref.models.length * 20;
+    const uPx = Math.min(18, Math.floor((LIMIT - top - 16 - refH) / (Math.max(r.size, r.used) + 1.6)));
+    const x0 = 96, frameW = 22 * uPx / 1.75;
+    const d = drawRack(r, x0, top, uPx, { kindColor: opts.kindColor !== false, bw: !!opts.grayscale, labelW: RX - 30 - (x0 + frameW + 34) });
+    body.push(heading(40, TOP + 8, `${r.name} — ${r.size}U`), ...d.svg);
+    {   // what a floor rack this size measures — Middle Atlantic + Strong, on casters (without in brackets)
+      const ry = top + d.height - uPx * 0.2 + 14;
+      body.push(`<text x="40" y="${ry + 14}" font-size="13" font-weight="700" fill="#111">Floor racks — ${r.size}U quick reference <tspan font-weight="400" font-size="11" fill="#666">${n1(ref.railIn)}" of rail · on casters (without) · gray = nearest size</tspan></text>`);
+      const t = gridTable(40, ry + 22, RX - 70, [{ label: "Rack", dx: 10 }, { label: "U", dx: 262 }, { label: "Height", dx: 292 }, { label: "Width", dx: 392 }, { label: "Depth (usable)", dx: 452 }],
+        ref.models.map(m => ({ gray: m.fit !== "exact", cells: [clip(`${m.brand === "Middle Atlantic" ? "MA" : "Strong"} ${m.model}`, 36), String(m.u), `${n1(m.hc)}" (${n1(m.h)}")`, `${n1(m.w)}"${m.wPanels ? `–${n1(m.wPanels)}"` : ""}`,
+          (() => { const us = m.depths.map(x => x[1]); return `${m.depths.map(x => n1(x[0])).join(" / ")}" (${us.length > 1 ? `${n1(Math.min(...us))}–${n1(Math.max(...us))}` : n1(us[0])}")`; })()] })), 20);
+      body.push(t.svg);
+    }
     let y = TOP;
     const more = () => { body = []; bodies.push(body); y = TOP; };
     const text = (lines) => {
@@ -869,7 +913,7 @@ function rackPages(job, ix, adviseResult, opts, label) {
     }
   });
   return assemble(job, opts, "Rack", "Elevation, rack hardware, power and heat — ? = not known yet, fill in on the RACK tab", bodies, label,
-    () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Build order top to bottom: patch panels, network, control/processing, sources on shelves / rack kits, receivers + amps (1U vent under each), power. Typical W = 1/8 power or the maker's typical; heat = typical W × 3.412 BTU/hr.</text>`);
+    () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">To scale (1U = 1.75"). Top down: patch, brush, router, brush, network, control, kits + source shelves, receivers + amps, power; vents around hot and warm gear. Typical W = 1/8 power or the maker's typical; heat = typical W × 3.412 BTU/hr.</text>`);
 }
 
 /* ============ PAGE: NETWORK ============

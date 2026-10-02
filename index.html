@@ -500,25 +500,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002220851",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002220851",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002220851",
-    "./app/ports.js": "./app/ports.js?v=20261002220851",
-    "./app/commands.js": "./app/commands.js?v=20261002220851",
-    "./app/engine.js": "./app/engine.js?v=20261002220851",
-    "./app/exports.js": "./app/exports.js?v=20261002220851",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002220851",
-    "./app/hookup.js": "./app/hookup.js?v=20261002220851",
-    "./app/importers.js": "./app/importers.js?v=20261002220851",
-    "./app/library.js": "./app/library.js?v=20261002220851",
-    "./app/names.js": "./app/names.js?v=20261002220851",
-    "./app/network.js": "./app/network.js?v=20261002220851",
-    "./app/pages.js": "./app/pages.js?v=20261002220851",
-    "./app/power.js": "./app/power.js?v=20261002220851",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002220851",
-    "./app/rack.js": "./app/rack.js?v=20261002220851",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002220851",
-    "./app/starters.js": "./app/starters.js?v=20261002220851"
+    "./app/ai.js": "./app/ai.js?v=20261002222600",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002222600",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002222600",
+    "./app/ports.js": "./app/ports.js?v=20261002222600",
+    "./app/commands.js": "./app/commands.js?v=20261002222600",
+    "./app/engine.js": "./app/engine.js?v=20261002222600",
+    "./app/exports.js": "./app/exports.js?v=20261002222600",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002222600",
+    "./app/hookup.js": "./app/hookup.js?v=20261002222600",
+    "./app/importers.js": "./app/importers.js?v=20261002222600",
+    "./app/library.js": "./app/library.js?v=20261002222600",
+    "./app/names.js": "./app/names.js?v=20261002222600",
+    "./app/network.js": "./app/network.js?v=20261002222600",
+    "./app/pages.js": "./app/pages.js?v=20261002222600",
+    "./app/power.js": "./app/power.js?v=20261002222600",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002222600",
+    "./app/rack.js": "./app/rack.js?v=20261002222600",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002222600",
+    "./app/starters.js": "./app/starters.js?v=20261002222600"
 } }
 </script>
 <script>
@@ -697,6 +697,7 @@ import { assignPorts, jacksOf, plugCandidates, familyName } from "./app/ports.js
 import { startAsBuilt, asBuiltChanges, changeMarks, isAsBuilt, installRows, installCSV, tidyMac } from "./app/asbuilt.js";
 import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV, labelsCSV, rackFrontSVG, rackData, wireLabels } from "./app/pages.js";
 import { parseQuick, quickSuggest } from "./app/quickadd.js";
+import { rackReference } from "./app/racksizes.js";
 import { STARTERS, applyStarter, starterFromJob, listStarters, duplicateStarter } from "./app/starters.js";
 import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/commands.js";
 import { askClaude, handoffPrompt, extractProposal, jobSummary, assess, loadConn, saveConn, connReady, MODELS } from "./app/ai.js";
@@ -733,7 +734,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002220851").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002222600").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -2257,7 +2258,10 @@ function rackHTML(o = {}) {
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       ${field("Rack size", `<select class="rsize" data-rack="${esc(rr.id)}">${RACK_SIZES.map(n => `<option value="${n}" ${(+rr.units || +S.job.job.rackUnits || DEFAULT_RACK_U) === n ? "selected" : ""}>${n}U</option>`).join("")}</select>`)}
       ${r ? `<div class="mini" style="margin:4px 0">${r.used}U used · ${r.over ? `<b style="color:#b32017">${r.over}U over</b>` : `${r.spare}U spare`}${r.cat6 ? ` · ${r.cat6} Cat6 home runs` : ""}${r.unknown.length ? ` · <span style="color:#a45a12">${r.unknown.length} height${r.unknown.length > 1 ? "s" : ""} unknown (?)</span>` : ""}</div>
-      <div class="rackview" style="background:#fff;border-radius:6px;padding:6px;margin:6px 0">${rackFrontSVG(r, 300, { kindColor: $("#kindColor").checked })}</div>` : ""}
+      <div class="rackview" style="background:#fff;border-radius:6px;padding:6px;margin:6px 0">${rackFrontSVG(r, 300, { kindColor: $("#kindColor").checked })}</div>
+      ${(() => { const ref = rackReference(r.size), n1 = v => String(Math.round(v * 10) / 10);   // floor racks this size, on casters
+        return `<div class="mini" style="margin:6px 0 2px"><b>Floor racks — ${r.size}U</b> (${n1(ref.railIn)}" of rail) · outside, on casters</div>` + ref.models.map(m =>
+          `<div class="mini" style="margin:2px 0 2px 8px${m.fit !== "exact" ? ";color:#888" : ""}">${esc(m.brand === "Middle Atlantic" ? "MA" : "Strong")} ${esc(m.model)}${m.fit !== "exact" ? ` <i>(${m.u}U — nearest ${m.fit})</i>` : ""}: ${n1(m.hc)}" H · ${n1(m.w)}" W · ${esc(m.depths.map(([o]) => n1(o)).join(" / "))}" D</div>`).join(""); })()}` : ""}
       <div class="mini" style="margin:8px 0 4px"><b>Gear</b> — U · cords · typical W · max W. <span style="color:#a45a12">?</span> = not known: type it in (saved on this job).</div>
       <table class="rtab"><tr><th>Box</th><th>U</th><th>Cords</th><th>Typ W</th><th>Max W</th></tr>${devs}</table>
       ${hw ? `<div class="mini" style="margin:10px 0 4px"><b>Rack hardware</b> — part numbers; <span style="color:#a45a12">?</span> = fill in later</div>

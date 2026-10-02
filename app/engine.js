@@ -196,6 +196,12 @@ export function normalizeJob(job) {
     if (sol.audioNetwork != null && typeof sol.audioNetwork !== "string") delete sol.audioNetwork;
     for (const k of ["racks", "localDevices", "companions", "connections", "annotations"]) list(sol, k);
     sol.racks.forEach((r, i) => { scalars(r); if (typeof r.name !== "string" || !r.name.trim()) r.name = i ? `Rack ${i + 1}` : "Equipment Rack"; list(r, "devices").forEach(scalars);
+      // the space it has to fit (inches) and the rack picked for it
+      if (r.space != null) { if (typeof r.space !== "object" || Array.isArray(r.space)) delete r.space;
+        else for (const k of Object.keys(r.space)) { const v = +r.space[k]; if (!["h", "w", "d"].includes(k) || !(v > 0 && v < 400)) delete r.space[k]; else r.space[k] = v; } }
+      if (r.rackModel != null && typeof r.rackModel !== "string") delete r.rackModel;
+      if (r.tight != null) r.tight = r.tight === true;
+      if (r.beside != null && (typeof r.beside !== "string" || !sol.racks.some(x => x.id === r.beside && x !== r))) delete r.beside;
       // a rack arranged by hand on the rack page: { key: row from the top } — whole rows only
       if (r.layout != null) {
         if (typeof r.layout !== "object" || Array.isArray(r.layout)) delete r.layout;
@@ -4736,8 +4742,14 @@ export function advise(job, ix = indexJob(job), catalog = null) {
   /* -- rack space: the elevation's U count against the rack's size -- */
   out.racks = catalog?.devices ? rackPlans(job, ix, catalog) : [];
   for (const r of out.racks) {
-    if (r.over) out.notes.push({ code: "rack-full", solution: r.solution, ref: r.rack,
-      msg: `${r.name}: ${r.used}U of gear, shelves, vents and patch panels in a ${r.size}U rack — ${r.over}U over; a bigger rack or a second one` });
+    if (r.over) out.notes.push({ code: "rack-full", solution: r.solution, ref: r.rack, rack: r.rack, tight: r.tight, manual: r.manual,
+      bigger: r.spaceFit ? (r.spaceFit.best && r.spaceFit.best.u > r.size ? r.spaceFit.best.part : null) : null,
+      msg: `${r.name}: ${r.used}U of gear, shelves, vents and patch panels in a ${r.size}U rack — ${r.over}U over; ${r.spaceFit ? (r.spaceFit.best && r.spaceFit.best.u > r.size ? `a ${r.spaceFit.best.u}U rack still fits the space, ` : "it's the tallest that fits the space — ") : "a bigger rack, "}${r.tight ? "" : "squeeze the spacing, "}or move gear to a second rack` });
+    // the space it has to go in (cabinet opening / door): the picked rack doesn't fit, or nothing does
+    if (r.spaceFit && !r.spaceFit.ok) out.notes.push({ code: "rack-space", solution: r.solution, ref: r.rack, rack: r.rack, best: r.spaceFit.best?.part || null,
+      msg: `${r.name}: the ${r.model.part} (${r.model.hc}" tall on casters) doesn't fit the space (${[r.space.h && `${r.space.h}" high`, r.space.w && `${r.space.w}" wide`, r.space.d && `${r.space.d}" deep`].filter(Boolean).join(", ")})${r.spaceFit.best ? ` — the ${r.spaceFit.best.part} (${r.spaceFit.best.u}U) does` : " — no Middle Atlantic or Strong floor rack does"}` });
+    else if (r.spaceFit && !r.spaceFit.count) out.notes.push({ code: "rack-space", solution: r.solution, ref: r.rack, rack: r.rack,
+      msg: `${r.name}: no Middle Atlantic or Strong floor rack fits the space — check the opening, or a wall-mount rack` });
     // arranged by hand on the rack page: a spacing rule the arrangement breaks (amp with no vent…)
     for (const w of r.spacing || []) out.notes.push({ code: "rack-spacing", solution: r.solution, rack: r.rack, msg: `${r.name}: ${w}` });
     if (r.unknown.length) out.notes.push({ code: "rack-unknown-u", solution: r.solution, ref: r.rack,

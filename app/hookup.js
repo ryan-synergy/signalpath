@@ -453,6 +453,22 @@ export function quickFixes(job, sol, f, catalog = null) {
     } });
     return out;
   }
+  // a rack over-full / not fitting its space: a taller rack that still fits, or squeeze the spacing
+  if ((f.code === "rack-full" || f.code === "rack-space") && f.rack) {
+    const rackOf = s => (s.racks || []).find(r => r.id === f.rack);
+    const pick = f.code === "rack-space" ? f.best : f.bigger;
+    if (pick) out.push({ label: `Use the ${pick}${f.code === "rack-full" ? " (still fits the space)" : ""}`, run: (j, s) => { const r = rackOf(s); if (r) { r.rackModel = pick; delete r.units; } } });
+    if (f.code === "rack-full" && !f.tight && !f.manual)
+      out.push({ label: "Squeeze the spacing (keep the vents round amps)", run: (j, s) => { const r = rackOf(s); if (r) r.tight = true; } });
+    // a second rack standing beside this one (same space, same rack) — then drag gear onto it on the rack page
+    if (f.code === "rack-full") out.push({ label: "Add a second rack beside it (then drag gear onto it)", run: (j, s) => {
+      const r = rackOf(s); if (!r) return;
+      const n = (s.racks || []).filter(x => x.beside === r.id).length + 2;
+      s.racks.push({ id: freeId(j, s, `${r.id}-b`), name: `${r.name} ${n}`, devices: [], beside: r.id,
+        ...(r.space ? { space: { ...r.space } } : {}), ...(r.rackModel ? { rackModel: r.rackModel } : r.units ? { units: r.units } : {}) });
+    } });
+    return out;
+  }
   if (!f.ref) return out;
   const devs = rackDevices(sol);
   const zoneOf = j => (j.house?.zones || []).find(z => (z.endpoints || []).some(e => e.id === f.ref));

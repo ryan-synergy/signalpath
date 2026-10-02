@@ -3919,6 +3919,38 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const nb = loadJob(bad).job.solutions[0].racks[0].layout;
     t("rack page: a saved layout keeps whole rows only (junk dropped on load)", JSON.stringify(nb) === JSON.stringify({ cbx: 7 }));
   }
+  {   // start from the space (Ryan 2026-10-02): the opening picks the rack, then the gear is fitted to it
+    const RS = await import("./racksizes.js"), H2 = await import("./hookup.js");
+    t("space: an 80\" opening fits Middle Atlantic's 41U (Strong's 42U is 79.9\" on casters + clearance); 72\" + 26\" deep → 32U",
+      RS.fitRacks({ h: 80 })[0].u === 41 && RS.fitRacks({ h: 72, d: 26 })[0].part === "SR-CUSTOM-32U-24IN" && RS.fitRacks({ h: 20 }).length === 0);
+    const sj = structuredClone(fixtures.stress), r0 = sj.solutions[0].racks[0];
+    r0.space = { h: 72 }; r0.rackModel = "SR-CUSTOM-32U-24IN";
+    const plan = () => { const Lx = loadJob(structuredClone(sj)); const a = advise(Lx.job, Lx.ix, CAT); return { r: a.racks[0], notes: a.notes }; };
+    let { r, notes } = plan();
+    t("space: the picked rack sets the size and goes on the hardware list by its part number",
+      r.size === 32 && r.hardware.find(h => h.key === "rack").partNo === "SR-CUSTOM-32U-24IN" && /Strong/.test(r.hardware.find(h => h.key === "rack").item));
+    const full = notes.find(n => n.code === "rack-full");
+    const labels = H2.quickFixes(sj, sj.solutions[0], full, CAT).map(x => x.label);
+    t("space: over-full in the tallest rack that fits → squeeze the spacing, or a second rack beside it (no 'bigger rack' — none fits)",
+      /tallest that fits the space/.test(full.msg) && labels.some(l => /^Squeeze/.test(l)) && labels.some(l => /second rack beside/.test(l)) && !labels.some(l => /^Use the/.test(l)), labels.join(" | "));
+    const used0 = r.used;
+    H2.quickFixes(sj, sj.solutions[0], full, CAT).find(x => /^Squeeze/.test(x.label)).run(sj, sj.solutions[0]);
+    ({ r, notes } = plan());
+    t("space: squeezed — fewer U, every receiver / amp still has its vent above", r.used < used0 && r.items.every((x, i) => !(x.kind === "device" && ["avr", "amp"].includes(x.type)) || i === 0 || r.items[i - 1].kind === "vent"));
+    H2.quickFixes(sj, sj.solutions[0], notes.find(n => n.code === "rack-full"), CAT).find(x => /second rack/.test(x.label)).run(sj, sj.solutions[0]);
+    const r2 = sj.solutions[0].racks[1];
+    t("space: the second rack stands beside the first — same space, same rack model", r2?.beside === r0.id && r2.rackModel === r0.rackModel && r2.space.h === 72);
+    // move the amps over: the wiring between the two racks is patching (no rack-to-rack pull), and it shares the sheet
+    for (const d of r0.devices.filter(d => d.type === "amp")) r2.devices.push(d);
+    r0.devices = r0.devices.filter(d => d.type !== "amp");
+    const Lb = loadJob(structuredClone(sj));
+    t("space: side-by-side racks — no rack-to-rack (X) runs on the wire schedule", !wireRuns(Lb.job, Lb.ix, {}).some(x => x.prefix === "X"));
+    const Sh = await import("./sheets.js");
+    t("space: a rack beside another shares its sheet (no sheet of its own)", Sh.sheetGroups(Lb.job, 0) === null);
+    const tooBig = structuredClone(fixtures.residence); tooBig.solutions[0].racks[0].space = { h: 60 }; tooBig.solutions[0].racks[0].rackModel = "BGR-4127";
+    const nt = (() => { const Lx = loadJob(tooBig); return advise(Lx.job, Lx.ix, CAT).notes.find(n => n.code === "rack-space"); })();
+    t("space: a picked rack that doesn't fit the space is flagged, with the rack that does", !!nt && /doesn't fit the space/.test(nt.msg) && /SR-CUSTOM-27U/.test(nt.best || ""), nt?.msg);
+  }
   {   // floor-rack quick reference (Middle Atlantic + Strong, makers' sheets, on casters)
     const RS = await import("./racksizes.js"), q = RS.rackReference(42);
     const ma = q.models.filter(m => m.brand === "Middle Atlantic"), st = q.models.filter(m => m.brand === "Strong");

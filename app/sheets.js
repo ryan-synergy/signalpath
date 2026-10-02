@@ -47,12 +47,15 @@ export function zoneRacks(job, solIndex = 0) {
 }
 
 export function sheetGroups(job, solIndex = 0) {
-  const { racks, main, zoneRack } = zoneRacks(job, solIndex);
+  const { racks, main, zoneRack: zr } = zoneRacks(job, solIndex);
   if (racks.length < 2) return null;
+  // a rack standing beside another (a second rack in the same closet) shares that rack's sheet
+  const home = id => racks.find(x => x.id === id)?.beside || id;
+  const zoneRack = Object.fromEntries(Object.entries(zr).map(([z, r]) => [z, home(r)]));
   const zones = job.house?.zones || [];
-  const own = racks.filter(r => r.id === main || zones.some(z => zoneRack[z.id] === r.id));
+  const own = racks.filter(r => !r.beside && (r.id === main || zones.some(z => zoneRack[z.id] === r.id)));
   if (own.length < 2) return null;
-  const sheetOf = id => own.some(r => r.id === id) ? id : main;
+  const sheetOf = id => own.some(r => r.id === id) ? id : own.some(r => r.id === home(id)) ? home(id) : main;
   const areaName = rid => (job.house?.areas || []).find(a => a.homeRack === rid)?.name;
   return own.map((r, i) => ({
     rack: r.id,

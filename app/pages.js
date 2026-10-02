@@ -434,6 +434,9 @@ export function wireRuns(job, ix, opts = {}) {
   const zoneOfEp = {};
   for (const z of job.house?.zones || []) for (const e of z.endpoints || []) zoneOfEp[e.id] = z.id;
   const rackFor = zid => rackNamed(zoneRack[zid]) || rackName;
+  // two racks standing side by side (a second rack added beside one): wiring between them is patching, not a pull
+  const beside = rid => (sol.racks || []).find(r => r.id === rid)?.beside;
+  const sideBySide = (a, b) => beside(a) === b || beside(b) === a || (beside(a) && beside(a) === beside(b));
   const rackAt = (id, room) => rackNamed(rackOf[id]) || (room ? rackFor(zoneOfEp[room] ?? room) : rackName);
   const runs = []; // {prefix, cable, from, to, carries, carriesColor, term, count, gray}
   const spkCable = ep => {
@@ -467,7 +470,7 @@ export function wireRuns(job, ix, opts = {}) {
     }
     if (c.signal === "audioReturn" && s.companions[c.to]) continue;   // TV eARC into its AXIS — an HDMI at the TV
     // one rack to another (main house → pool house): the run between the buildings
-    if (s.devices[c.from] && s.devices[c.to] && rackOf[c.from] && rackOf[c.to] && rackOf[c.from] !== rackOf[c.to]) {
+    if (s.devices[c.from] && s.devices[c.to] && rackOf[c.from] && rackOf[c.to] && rackOf[c.from] !== rackOf[c.to] && !sideBySide(rackOf[c.from], rackOf[c.to])) {
       const what = { network: "Network uplink", video: "Video", audio: "Audio", speaker: "Speaker level" }[c.signal] || "Signal";
       runs.push({ prefix: "X", cable: c.signal === "speaker" ? "14/2" : "Cat6 / fiber", from: at(c.from, pm.from), to: at(c.to, pm.to),
         carries: `Rack interconnect — ${what}`, color: c.signal === "video" ? "#b32017" : c.signal === "network" ? "#2f9e44" : "#1a5fa0",

@@ -11,6 +11,7 @@
 import { wireRuns } from "./pages.js";
 import { companionRef, specFor } from "./network.js";
 import { deviceKind } from "./kinds.js";
+import { rackOption, fitRacks } from "./racksizes.js";
 
 export const DEFAULT_RACK_U = 42;
 export const RACK_SIZES = [12, 16, 20, 24, 27, 32, 36, 38, 40, 42, 44, 45];
@@ -32,7 +33,7 @@ const TIER = { gateway: 0.5, networkSwitch: 1, avSwitch: 1, avbSwitch: 1,
 const HOT = new Set(["avr", "amp"]);
 const WARM = new Set(["videoMatrix", "host", "source"]);
 const SWITCHES = new Set(["networkSwitch", "avSwitch", "avbSwitch"]);
-function spaceRack(items, size) {
+function spaceRack(items, size, tight = false) {
   const type = i => i.kind === "device" ? i.type : null;
   const warm = i => WARM.has(type(i)) || i.kind === "shelf";   // a shelf of boxes and an MXNet encoder kit run warm (Ryan 2026-10-02)
   const gaps = [];                                       // gaps[k] = the spacer above items[k] (or null)
@@ -40,6 +41,8 @@ function spaceRack(items, size) {
     const a = k ? items[k - 1] : null;
     if (!a || a.kind === "patch" && b.kind === "patch") { gaps.push(null); return; }
     const ta = type(a), tb = type(b);
+    // squeezed (a rack the space limits): only the vents round receivers / amps stay
+    if (tight) { gaps.push(HOT.has(ta) || HOT.has(tb) ? { kind: "vent", tier: HOT.has(tb) ? b.tier : a.tier, u: 1, label: "Vent panel", need: true } : null); return; }
     if (a.kind === "patch" || (ta === "gateway" && SWITCHES.has(tb)) || (tb === "gateway" && SWITCHES.has(ta)))
       gaps.push({ kind: "brush", tier: b.tier, u: 1, label: "Brush plate", need: true });
     else if (HOT.has(ta) || HOT.has(tb) || warm(a))
@@ -138,7 +141,11 @@ export function rackPlans(job, ix, catalog) {
     const main = sol.racks?.[0]?.id;
     (sol.racks || []).forEach((r, ri) => {
       // 1–60U: a typo'd 4200 would draw 4,200 rows and stall the page
-      const size = Math.min(60, Math.max(1, Math.floor(+r.units || +job.job?.rackUnits || DEFAULT_RACK_U) || DEFAULT_RACK_U));
+      // the rack picked for the space (Middle Atlantic / Strong part) sets the size; else the typed U
+      const model = r.rackModel ? rackOption(r.rackModel) : null;
+      const size = model ? model.u : Math.min(60, Math.max(1, Math.floor(+r.units || +job.job?.rackUnits || DEFAULT_RACK_U) || DEFAULT_RACK_U));
+      const space = r.space && (+r.space.h > 0 || +r.space.w > 0 || +r.space.d > 0) ? r.space : null;
+      const fits = space ? fitRacks(space) : null;
       const items = [], unknown = [], rear = [], small = [], cboxes = [], smallIds = [], cboxIds = [];
       const cat6 = cat6runs.filter(x => (x.racks?.length ? x.racks : [main]).includes(r.id)).reduce((n, x) => n + x.count, 0);
       if (cat6) for (let k = 0; k < Math.ceil(cat6 / PATCH_PORTS); k++)
@@ -219,7 +226,7 @@ export function rackPlans(job, ix, catalog) {
       // arranged by hand on the rack page (rack.layout = { key: row from the top }) — the gear goes
       // where it was put and the spacers fill in around it; otherwise the build-order stack
       const manual = r.layout && typeof r.layout === "object" && Object.keys(r.layout).length > 0;
-      const spacing = manual ? manualRows(items, size, r.layout) : (spaceRack(items, size), autoRows(items, size), []);
+      const spacing = manual ? manualRows(items, size, r.layout) : (spaceRack(items, size, !!r.tight), autoRows(items, size), []);
       const used = items.reduce((n, i) => n + i.u, 0);
       const bottom = items.reduce((n, i) => Math.max(n, i.row + i.u), 0);
       // the rack hardware the elevation implies — part numbers come from the job
@@ -227,7 +234,7 @@ export function rackPlans(job, ix, catalog) {
       const parts = job.job?.rackParts || {};
       const count = k => items.filter(i => i.kind === k && !i.kit).length;
       const hardware = [
-        { key: "rack", item: `Equipment rack, ${size}U`, qty: 1, partNo: r.partNo || parts.rack || null },
+        { key: "rack", item: `Equipment rack, ${size}U${model ? ` (${model.brand})` : ""}`, qty: 1, partNo: r.partNo || model?.part || parts.rack || null },
         { key: "patch", item: "Cat6 patch panel, 24-port, 1U", qty: count("patch"), partNo: parts.patch || null },
         { key: "vent", item: "Vent panel, 1U", qty: items.filter(i => i.kind === "vent" && i.u === 1).length, partNo: parts.vent || null },
         { key: "vent2", item: "Vent panel, 2U", qty: items.filter(i => i.kind === "vent" && i.u === 2).length, partNo: parts.vent2 || null },
@@ -239,6 +246,9 @@ export function rackPlans(job, ix, catalog) {
       for (const [kit, qty] of Object.entries(kitQty)) hardware.push({ key: "kit", item: `MXNet rack kit, ${items.find(i => i.kit === kit).u}U`, qty, partNo: kit });
       out.push({ solution: sol.id, rack: r.id, name: r.name || "Equipment Rack", size, used, spare: size - used,
         over: Math.max(0, manual ? bottom - size : used - size), items, unknown, rear, cat6, manual, spacing,
+        model, space, tight: !!r.tight,
+        // the picked rack against the space it has to go in; the tallest that fits it
+        spaceFit: space ? { ok: !model || fits.some(o => o.part === model.part), best: fits[0] || null, count: fits.length } : null,
         hardware: hardware.filter(h => h.qty > 0) });
     });
   }

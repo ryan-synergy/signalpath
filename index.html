@@ -524,25 +524,28 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002234258",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002234258",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002234258",
-    "./app/ports.js": "./app/ports.js?v=20261002234258",
-    "./app/commands.js": "./app/commands.js?v=20261002234258",
-    "./app/engine.js": "./app/engine.js?v=20261002234258",
-    "./app/exports.js": "./app/exports.js?v=20261002234258",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002234258",
-    "./app/hookup.js": "./app/hookup.js?v=20261002234258",
-    "./app/importers.js": "./app/importers.js?v=20261002234258",
-    "./app/library.js": "./app/library.js?v=20261002234258",
-    "./app/names.js": "./app/names.js?v=20261002234258",
-    "./app/network.js": "./app/network.js?v=20261002234258",
-    "./app/pages.js": "./app/pages.js?v=20261002234258",
-    "./app/power.js": "./app/power.js?v=20261002234258",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002234258",
-    "./app/rack.js": "./app/rack.js?v=20261002234258",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002234258",
-    "./app/starters.js": "./app/starters.js?v=20261002234258"
+    "./app/ai.js": "./app/ai.js?v=20261002235545",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002235545",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002235545",
+    "./app/ports.js": "./app/ports.js?v=20261002235545",
+    "./app/commands.js": "./app/commands.js?v=20261002235545",
+    "./app/engine.js": "./app/engine.js?v=20261002235545",
+    "./app/exports.js": "./app/exports.js?v=20261002235545",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002235545",
+    "./app/hookup.js": "./app/hookup.js?v=20261002235545",
+    "./app/importers.js": "./app/importers.js?v=20261002235545",
+    "./app/library.js": "./app/library.js?v=20261002235545",
+    "./app/names.js": "./app/names.js?v=20261002235545",
+    "./app/network.js": "./app/network.js?v=20261002235545",
+    "./app/pages.js": "./app/pages.js?v=20261002235545",
+    "./app/power.js": "./app/power.js?v=20261002235545",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002235545",
+    "./app/rack.js": "./app/rack.js?v=20261002235545",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002235545",
+    "./app/starters.js": "./app/starters.js?v=20261002235545",
+    "./app/kinds.js": "./app/kinds.js?v=20261002235545",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261002235545",
+    "./app/sheets.js": "./app/sheets.js?v=20261002235545"
 } }
 </script>
 <script>
@@ -733,7 +736,7 @@ import { STARTERS, applyStarter, starterFromJob, listStarters, duplicateStarter 
 import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/commands.js";
 import { askClaude, handoffPrompt, extractProposal, jobSummary, assess, loadConn, saveConn, connReady, MODELS } from "./app/ai.js";
 import { setDanteAudio, danteAmpFor } from "./app/hookup.js";
-import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, quickFixes, adapterAudioOut, adapterAudioTargets, setAdapterAudio, nextFreeOutputs, outputsNeeded,
+import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, quickFixes, adapterAudioOut, adapterAudioTargets, setAdapterAudio, addLocalAmp, nextFreeOutputs, outputsNeeded,
          VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS, REACH, bulletFor } from "./app/hookup.js";
 import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME, AUDIO_NET_NAME,
          signalName, describeNode, humanizeWireIds, productName, productSku, ADAPTER, adapterName, isOutdoorZone, ZONE_GROUPING_NAME } from "./app/names.js";
@@ -765,7 +768,10 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002234258").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+// offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
+  navigator.serviceWorker.register("./sw.js").catch(() => {});
+const SHIPPED = await fetch("./app/catalog.json?v=20261002235545").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -817,7 +823,7 @@ function syncShippedCatalog() {
   return changed;
 }
 // advisor notes that ask for a fix (the rest are reference: setup checklists, budgets)
-const ACTION_NOTES = new Set(["rack-spacing", "rack-space", "no-port", "tv-apps-no-surround", "input-module-idle", "bullet-too-far", "bullet-arc", "run-too-long", "downres-surround", "amp-sub-outs", "earc-extender", "mxnet-no-cbox", "dante-no-controller", "mxnet-cbox-per-platform", "net-mismatch", "net-mixed",
+const ACTION_NOTES = new Set(["rack-spacing", "rack-space", "rack-depth", "no-port", "tv-apps-no-surround", "input-module-idle", "bullet-too-far", "bullet-arc", "run-too-long", "downres-surround", "amp-sub-outs", "earc-extender", "mxnet-no-cbox", "dante-no-controller", "mxnet-cbox-per-platform", "net-mismatch", "net-mixed",
   "dante-multicast", "pcm-only", "switch-ports-full", "switch-no-poe", "lan-no-switch", "power-none", "power-short", "power-tight",
   "power-circuit", "power-peak", "rack-full", "rack-unknown-u", "rack-heat"]);
 const saveSettings = () => dbPut({ id: "__settings", updated: Date.now(), settings: SETTINGS });
@@ -2333,7 +2339,8 @@ function encAudioHTML(sol, d) {
     const what = c.type === "enc" ? "Encoder audio out" : "Decoder audio out";
     return field(what, `<select class="encaud" data-comp="${esc(c.id)}" data-sub="analog out of the ${esc(adapterName(c))}">${o("", "— not used —")}
       ${t.rack.length ? `<optgroup label="In the rack">${t.rack.map(x => o(x.id, `${x.label}${x.type === "amp" ? " (straight to the amp)" : ""}`)).join("")}</optgroup>` : ""}
-      ${t.local.length ? `<optgroup label="In a room">${t.local.map(x => o(x.id, x.label)).join("")}</optgroup>` : ""}</select>`);
+      ${t.local.length ? `<optgroup label="In a room">${t.local.map(x => o(x.id, x.label)).join("")}</optgroup>` : ""}
+      ${S.job.house.zones.length ? `<optgroup label="Add">${S.job.house.zones.filter(z => (z.scope || "included") === "included").map(z => o(`__newamp:${z.id}`, `＋ New local amp in ${z.name}`)).join("")}</optgroup>` : ""}</select>`);
   }).join("");
 }
 /* ---- the rack page (Ryan 2026-10-02): every rack of the solution side by side, to scale; drag a box
@@ -2368,21 +2375,28 @@ function renderRackEd(fresh = false) {
   $("#rkBody").querySelectorAll(".rkreset").forEach(b => b.onclick = () => {
     pushUndo("reset rack layout"); resetRackLayout(S.job.solutions[S.sol], b.dataset.rack); refresh();
   });
-  $("#rkBody").querySelectorAll(".rk-item").forEach(g => g.onpointerdown = rkStart);
+  $("#rkBody").querySelectorAll(".rk-item").forEach(g => g.onpointerdown = e => rkStart(e, g));
+  // a box's name beside the rack is a handle too — a bigger target for a finger than a 1U box
+  $("#rkBody").querySelectorAll(".rk-label").forEach(l => l.onpointerdown = e => {
+    const g = l.ownerSVGElement.querySelector(`.rk-item[data-key="${CSS.escape(l.dataset.key)}"]`);
+    if (g) rkStart(e, g);
+  });
 }
-function rkStart(e) {
+function rkStart(e, g) {
   if (e.button > 0) return;
   e.preventDefault();
-  const g = e.currentTarget, box = g.querySelector("rect").getBoundingClientRect();
+  const box = g.querySelector("rect").getBoundingClientRect();
   const it = S.rkPlans.find(p => p.rack === g.dataset.rack)?.items.find(i => i.key === g.dataset.key);
   let ghost = $("#rkGhost");
   if (!ghost) { ghost = document.createElement("div"); ghost.id = "rkGhost"; document.body.appendChild(ghost); }
   ghost.textContent = it?.label || ""; ghost.style.display = "block";
   Object.assign(ghost.style, { left: box.left + "px", top: box.top + "px", width: box.width + "px", height: box.height + "px" });
-  const drag = { key: g.dataset.key, from: g.dataset.rack, u: +g.dataset.u, row0: +g.dataset.row, dy: e.clientY - box.top, moved: false, target: null };
+  // grabbed by its label, the box still drags from its own middle
+  const dy = e.clientY >= box.top && e.clientY <= box.bottom ? e.clientY - box.top : box.height / 2;
+  const drag = { key: g.dataset.key, from: g.dataset.rack, u: +g.dataset.u, row0: +g.dataset.row, dy, moved: false, target: null };
   g.classList.add("dragging");
   const move = ev => {
-    drag.moved ||= Math.abs(ev.clientY - (box.top + drag.dy)) > 3;
+    drag.moved ||= Math.abs(ev.clientY - e.clientY) > 3 || Math.abs(ev.clientX - e.clientX) > 3;
     const svg = document.elementsFromPoint(ev.clientX, ev.clientY).map(el => el.closest?.("svg.rkedit")).find(Boolean);
     if (!svg) { drag.target = null; Object.assign(ghost.style, { left: ev.clientX - box.width / 2 + "px", top: ev.clientY - drag.dy + "px", borderColor: "#b32017" }); return; }
     const m = svg.getScreenCTM(), inv = m.inverse(), top = +svg.dataset.top, uPx = +svg.dataset.upx;
@@ -2425,11 +2439,11 @@ function spaceHTML(rr, plan) {
     body = `<div class="mini" style="margin:6px 0 4px">The opening it has to fit — the lower of the cabinet opening and the door — in inches. The tallest rack that fits is used.</div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px">H ${inp("h", "height")} W ${inp("w", "width")} D ${inp("d", "depth")}</div>
       ${fits ? fits.length ? `<div class="mini" style="margin:6px 0 2px">Fits (tallest first, on casters + ${RACK_CLEARANCE.top}" clearance):</div><div class="chips" style="flex-wrap:wrap">${top.map(o =>
-          `<button class="chip rpick${model?.part === o.part ? " on" : ""}" data-rack="${R}" data-part="${esc(o.part)}" title="${esc(`${o.brand} · ${n1(o.hc)}" tall on casters · ${n1(o.w)}" wide · ${n1(o.depth)}" deep (${n1(o.usable)}" usable)`)}">${esc(o.part)} · ${o.u}U</button>`).join("")}</div>`
+          `<button class="chip rpick${model?.part === o.part ? " on" : ""}" data-rack="${R}" data-part="${esc(o.part)}" title="${esc(`${o.brand} · ${n1(o.hc)}" tall on casters · ${n1(o.w)}" wide · ${n1(o.depth)}" deep (${n1(o.usable)}" usable)`)}"${plan?.needDepth && o.usable < plan.needDepth ? ' style="opacity:.55"' : ""}>${esc(o.part)} · ${o.u}U${plan?.needDepth && o.usable < plan.needDepth ? " · shallow" : ""}</button>`).join("")}</div>`
         : `<div class="mini" style="color:#b32017;margin-top:4px">No Middle Atlantic or Strong floor rack fits that — check the opening, or plan a wall-mount rack.</div>`
         : `<div class="mini" style="margin-top:4px;color:#888">Type the height to see the racks that fit.</div>`}
       ${line}
-      ${fits ? `<div class="mini" style="color:#8a8f98;margin-top:4px">Clearance is a placeholder (${RACK_CLEARANCE.top}" over the rack) until the minimum-cabinet sheet is added.</div>` : ""}`;
+      ${plan?.belowMin ? `<div class="mini" style="color:#b32017;margin-top:4px">Under Synergy's minimum cabinet — at least 22" wide and 26" deep.</div>` : ""}`;
   } else if (mode === "model") {
     const cur = rr.rackModel || "", opt = o => `<option value="${esc(o.part)}" ${o.part === cur ? "selected" : ""}>${esc(`${o.part} — ${o.u}U · ${n1(o.hc)}" H · ${n1(o.depth)}" D`)}</option>`;
     const brands = ["Middle Atlantic", "Strong"].map(b => `<optgroup label="${b}">${RACK_OPTIONS.filter(o => o.brand === b).sort((x, y) => y.u - x.u || x.depth - y.depth).map(opt).join("")}</optgroup>`).join("");
@@ -2441,7 +2455,12 @@ function spaceHTML(rr, plan) {
     body = `<div class="mini" style="margin:6px 0 4px">A plain rack height, no brand — the elevation and packet use this U count.</div>
       ${field("Rack size", `<select class="rsize" data-rack="${R}">${sizes.map(n => `<option value="${n}" ${cur === n ? "selected" : ""}>${n}U</option>`).join("")}</select>`)}`;
   }
-  return `<div class="rkspace"><div class="mini" style="margin:0 0 4px"><b>Rack size</b></div><div class="chips seg" style="max-width:420px">${tabs}</div>${body}</div>`;
+  // the cabinet / closet it needs: Synergy's minimum (22" W × 26" D), never less than the rack itself
+  const cab = plan?.cabinet;
+  const dp = plan?.depth;   // the deepest box against the picked rack's usable depth
+  const depthLine = dp?.deepest ? `<div class="mini" style="margin-top:4px${dp.over.length ? ";color:#b32017" : dp.tight.length ? ";color:#a45a12" : ""}">Deepest: ${esc(dp.deepest.label)} ${n1(dp.deepest.d)}" of ${n1(dp.usable)}" usable${dp.over.length ? " — too deep" : dp.tight.length ? " — tight for cables" : ""}</div>` : "";
+  const cabLine = cab ? `<div class="mini" style="margin-top:6px"><b>Cabinet needs at least</b> ${n1(cab.w)}" wide × ${n1(cab.d)}" deep${cab.h ? ` × ${n1(cab.h)}" high (on casters + ${RACK_CLEARANCE.top}")` : ""} <span style="color:#8a8f98">· Synergy minimum 22" × 26"</span></div>` : "";
+  return `<div class="rkspace"><div class="mini" style="margin:0 0 4px"><b>Rack size</b></div><div class="chips seg" style="max-width:420px">${tabs}</div>${body}${cabLine}${depthLine}</div>`;
 }
 /* RACK tab (build order, Ryan 2026-10-02): one place per rack — its boxes first (what used to be
    GEAR: each box, its product, its connections), then the elevation, heights / cords / watts,
@@ -3057,7 +3076,10 @@ function wirePanel(body) {
   };
   body.querySelectorAll(".encaud").forEach(el => el.onchange = () => {
     pushUndo("encoder audio out");
-    setAdapterAudio(S.job.solutions[S.sol], el.dataset.comp, el.value || null);
+    const sol = S.job.solutions[S.sol];
+    let to = el.value || null;
+    if (to?.startsWith("__newamp:")) to = addLocalAmp(S.job, sol, to.slice(9));
+    setAdapterAudio(sol, el.dataset.comp, to);
     refresh();
   });
   body.querySelectorAll(".hvfrom").forEach(el => el.onchange = () => hook(el, (z, sol) => {
@@ -3415,7 +3437,10 @@ function wirePanel(body) {
     if (!Object.keys(r.space).length) { delete r.space; return; }
     const fits = fitRacks(r.space);
     r.sizeMode = "space";
-    if (fits.length && !fits.some(o => o.part === r.rackModel)) { r.rackModel = fits[0].part; toast(`Picked the ${fits[0].part} (${fits[0].u}U) — the tallest that fits`); }
+    // the tallest that fits — and is deep enough for the deepest box (the plan knows how deep that is)
+    const need = (S.lastAdvice?.racks || []).find(p => p.rack === r.id)?.needDepth || 0;
+    const best = fits.find(o => o.usable >= need) || fits[0];
+    if (best && !fits.some(o => o.part === r.rackModel)) { r.rackModel = best.part; toast(`Picked the ${best.part} (${best.u}U) — the tallest that fits${need && best.usable >= need ? " and is deep enough" : ""}`); }
   });
   body.querySelectorAll(".rpick").forEach(b => b.onclick = () => { const r = rackOf(b.dataset.rack); if (!r) return; pushUndo("pick rack"); r.rackModel = b.dataset.part; r.sizeMode = "space"; refresh(); });
   on(".rpart", el => {

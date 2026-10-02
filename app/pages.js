@@ -828,7 +828,7 @@ function drawRack(r, x0, top, uPx, { kindColor = true, bw = false, labelW = 280,
     const it = m.it, ly = ys[i];
     const name = it.label.length > maxCh ? it.label.slice(0, maxCh - 1) + "…" : it.label;
     out.push(`<polyline points="${rx + railW},${m.y} ${lx - 22},${m.y} ${lx - 5},${ly}" fill="none" stroke="${m.quiet ? "#d0d4da" : "#8a93a3"}" stroke-width="0.7"/>`);
-    out.push(`<text x="${lx}" y="${ly + fs * 0.36}" font-size="${fs}" fill="${m.quiet ? "#9aa1ab" : "#222"}"${it.kind === "device" ? ' font-weight="600"' : ""}>${esc(name)} <tspan font-weight="400" fill="${it.guess ? "#a45a12" : "#999"}">· ${it.guess ? "?U" : it.u + "U"}</tspan></text>`);
+    out.push(`<text${interactive && it.key ? ` class="rk-label" data-key="${esc(it.key)}" data-rack="${esc(r.rack)}" style="cursor:grab"` : ""} x="${lx}" y="${ly + fs * 0.36}" font-size="${fs}" fill="${m.quiet ? "#9aa1ab" : "#222"}"${it.kind === "device" ? ' font-weight="600"' : ""}>${esc(name)} <tspan font-weight="400" fill="${it.guess ? "#a45a12" : "#999"}">· ${it.guess ? "?U" : it.u + "U"}</tspan></text>`);
   });
   return { svg: out, width: lx - x0 + labelW, height: h + uPx * 2, rails: { x: rx, w: railW, top, uPx, rows } };
 }
@@ -898,6 +898,9 @@ function rackPages(job, ix, adviseResult, opts, label) {
     text([
       [`${r.used}U used · ${r.over ? `${r.over}U OVER` : `${r.spare}U spare`} of ${r.size}U`, r.over ? "#b32017" : "#111", true],
       [`Cat6 home runs: ${r.cat6}${r.cat6 ? ` → ${Math.ceil(r.cat6 / 24)} patch panel${Math.ceil(r.cat6 / 24) > 1 ? "s" : ""}` : ""}`],
+      ...(r.model ? [[`Rack: ${r.model.brand} ${r.model.part}`, "#111", true]] : []),
+      ...(r.depth?.deepest ? [[`Deepest: ${r.depth.deepest.label} ${r.depth.deepest.d}" of ${r.depth.usable}" usable${r.depth.over.length ? " — too deep" : r.depth.tight.length ? " — tight for cables" : ""}`, r.depth.over.length ? "#b32017" : r.depth.tight.length ? "#a45a12" : "#333"]] : []),
+      ...(r.cabinet ? [[`Cabinet needs at least ${r.cabinet.w}" W × ${r.cabinet.d}" D${r.cabinet.h ? ` × ${r.cabinet.h}" H (on casters + 1")` : ""} — Synergy minimum 22" × 26"`, r.belowMin ? "#b32017" : "#333"]] : []),
       ...(r.rear.length ? [[`Rear rails (no U): ${r.rear.join(", ")}`]] : []),
       ...(r.unknown.length ? [[`Height unknown (?U, drawn 1U): ${clip(r.unknown.join(", "), 110)}`, "#a45a12"]] : []),
       ...r.items.filter(i => i.kind === "shelf").map((i, n) => [`${i.kit || `Shelf ${n + 1}`}: ${clip(i.members.join(", "), 110)}`, "#555"]),

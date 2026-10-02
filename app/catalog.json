@@ -192,7 +192,9 @@
       ],
       "portsSource": "https://www.sarte-audio.com/sites/default/files/manuales/MDX_Manual.pdf (Anthem MDX-16/MDX-8 Operating Manual) (high confidence, rear-panel audit 2026-09-29)",
       "goTo": true,
-      "powerUnpublished": true
+      "powerUnpublished": true,
+      "depthIn": 17.0,
+      "depthSource": "Anthem MDX manual p.34 (includes speaker terminal blocks) (checked 2026-10-02)"
     },
     "anthem-mdx-8": {
       "brand": "Anthem",
@@ -284,7 +286,9 @@
       ],
       "portsSource": "https://www.sarte-audio.com/sites/default/files/manuales/MDX_Manual.pdf (Anthem MDX-16/MDX-8 Operating Manual) (high confidence, rear-panel audit 2026-09-29)",
       "goTo": true,
-      "powerUnpublished": true
+      "powerUnpublished": true,
+      "depthIn": 17.0,
+      "depthSource": "Anthem MDX manual p.34 (includes speaker terminal blocks) (checked 2026-10-02)"
     },
     "anthem-mrx-540-8k": {
       "brand": "Anthem",
@@ -454,7 +458,9 @@
         }
       ],
       "portsSource": "https://manuals.anthemav.com/media/manuals/mrx-avm_en.pdf ; https://faq.anthemav.com/support/solutions/articles/43000720540 ; https://anthemav.com/products-current/type=av-receiver/model=mrx-540-8k (medium confidence, rear-panel audit 2026-09-29)",
-      "goTo": true
+      "goTo": true,
+      "depthIn": 15.0,
+      "depthSource": "Anthem MRX-X40 dimensional drawing: 15.0\" max incl. knob + rear connectors (spec sheet 14.5\") (checked 2026-10-02)"
     },
     "anthem-mrx-740-8k": {
       "brand": "Anthem",
@@ -635,7 +641,9 @@
         }
       ],
       "portsSource": "https://manuals.anthemav.com/media/manuals/mrx-avm_en.pdf ; https://faq.anthemav.com/support/solutions/articles/43000720540 ; https://anthemav.com/products-current/type=av-receiver/model=mrx-740-8k (medium confidence, rear-panel audit 2026-09-29)",
-      "goTo": true
+      "goTo": true,
+      "depthIn": 15.0,
+      "depthSource": "Anthem MRX-X40 dimensional drawing: 15.0\" max incl. knob + rear connectors (spec sheet 14.5\") (checked 2026-10-02)"
     },
     "anthem-mrx-1140-8k": {
       "brand": "Anthem",
@@ -816,7 +824,9 @@
         }
       ],
       "portsSource": "https://manuals.anthemav.com/media/manuals/mrx-avm_en.pdf ; https://faq.anthemav.com/support/solutions/articles/43000720540 ; https://anthemav.com/products-current/type=av-receiver/model=mrx-1140-8k (medium confidence, rear-panel audit 2026-09-29)",
-      "goTo": true
+      "goTo": true,
+      "depthIn": 15.0,
+      "depthSource": "Anthem MRX-X40 dimensional drawing: 15.0\" max incl. knob + rear connectors (spec sheet 14.5\") (checked 2026-10-02)"
     },
     "avpro-ac-avdm-v3": {
       "brand": "AVPro Edge",
@@ -1206,7 +1216,9 @@
         }
       ],
       "portsSource": "https://www.avproglobal.com/products/ac-mx-88 (high confidence, rear-panel audit 2026-09-29)",
-      "goTo": true
+      "goTo": true,
+      "depthIn": 9.0,
+      "depthSource": "https://www.avproglobal.com/products/ac-mx-88 (checked 2026-10-02)"
     },
     "avpro-mxnet-sw12": {
       "brand": "AVPro Edge",
@@ -1230,7 +1242,9 @@
       "rackUnits": 1,
       "aliases": [
         "MXNET SW12"
-      ]
+      ],
+      "depthIn": 8.63,
+      "depthSource": "https://www.avproglobal.com/products/ac-mxnet-sw8p (checked 2026-10-02)"
     },
     "avpro-mxnet-cbox-ha": {
       "brand": "AVPro Edge",
@@ -1269,7 +1283,9 @@
       "rackUnits": 1,
       "aliases": [
         "UDM-SE"
-      ]
+      ],
+      "depthIn": 11.2,
+      "depthSource": "https://techspecs.ui.com/unifi/cloud-gateways/udm-se (checked 2026-10-02)"
     },
     "motu-avb-switch": {
       "brand": "MOTU",
@@ -1321,7 +1337,9 @@
       "partNo": "GSM4212P-100NAS",
       "notInPlanQueue": true,
       "rackUnits": 1,
-      "notes": "Netgear AV Line M4250: 8× 1G PoE+ + 2× 1G RJ45 + 2× 1G SFP, 125 W PoE, 1U rack. Avnu-compliant AVB, license-free from AV firmware 13.0.4.17 (Nov 2023). Synergy's bigger AVB switch — model confirmed by Ryan 2026-10-02 (of the 8-port M4250s: 10G2F-PoE+ GSM4212P, not the 9G1F-PoE+ GSM4210PD or 8G2XF-PoE+ GSM4210PX). Not on Savant's IP Audio supported list (Extreme, MOTU, generic AVB). Sources: netgear.com M4250 datasheet; kb.netgear.com AV Line."
+      "notes": "Netgear AV Line M4250: 8× 1G PoE+ + 2× 1G RJ45 + 2× 1G SFP, 125 W PoE, 1U rack. Avnu-compliant AVB, license-free from AV firmware 13.0.4.17 (Nov 2023). Synergy's bigger AVB switch — model confirmed by Ryan 2026-10-02 (of the 8-port M4250s: 10G2F-PoE+ GSM4212P, not the 9G1F-PoE+ GSM4210PD or 8G2XF-PoE+ GSM4210PX). Not on Savant's IP Audio supported list (Extreme, MOTU, generic AVB). Sources: netgear.com M4250 datasheet; kb.netgear.com AV Line.",
+      "depthIn": 7.87,
+      "depthSource": "https://www.netgear.com/business/wired/switches/fully-managed/gsm4212p/ (200 mm) (checked 2026-10-02)"
     },
     "ubiquiti-usw-pro-24-poe": {
       "brand": "Ubiquiti",
@@ -1344,7 +1362,9 @@
       "notes": " POWER/RU 2026-09-27: 450W incl. PoE / 50W excl., 1U — techspecs.ui.com",
       "aliases": [
         "USW-Pro-24-PoE"
-      ]
+      ],
+      "depthIn": 11.2,
+      "depthSource": "https://techspecs.ui.com/unifi/switching/usw-pro-24-poe (checked 2026-10-02)"
     },
     "ubiquiti-usw-pro-max-24-poe": {
       "brand": "Ubiquiti",
@@ -1365,7 +1385,9 @@
       "partNo": "USW-Pro-Max-24-PoE",
       "powerMaxW": 450,
       "powerNoPoeW": 50,
-      "rackUnits": 1
+      "rackUnits": 1,
+      "depthIn": 12.8,
+      "depthSource": "https://techspecs.ui.com/unifi/switching/usw-pro-max-24-poe (checked 2026-10-02)"
     },
     "ubiquiti-usw-pro-max-48-poe": {
       "brand": "Ubiquiti",
@@ -1386,7 +1408,9 @@
       "partNo": "USW-Pro-Max-48-PoE (720W)",
       "powerMaxW": 820,
       "powerNoPoeW": 100,
-      "rackUnits": 1
+      "rackUnits": 1,
+      "depthIn": 15.7,
+      "depthSource": "https://techspecs.ui.com/unifi/switching/usw-pro-max-48-poe (checked 2026-10-02)"
     },
     "audiocontrol-m4800d": {
       "brand": "AudioControl",
@@ -1524,7 +1548,9 @@
           "conn": "dante"
         }
       ],
-      "portsSource": "https://adeogroup.it/sites/default/files/prodotti_allegati_pubblici/audiocontrol_M4800D%20User%20Manual.pdf ; data sheet https://partnerzon.specialelektronik.se/storage/files/products/7b0da8e88b830a16d16c29db27389c25c1113c1e.pdf (high confidence, rear-panel audit 2026-09-29)"
+      "portsSource": "https://adeogroup.it/sites/default/files/prodotti_allegati_pubblici/audiocontrol_M4800D%20User%20Manual.pdf ; data sheet https://partnerzon.specialelektronik.se/storage/files/products/7b0da8e88b830a16d16c29db27389c25c1113c1e.pdf (high confidence, rear-panel audit 2026-09-29)",
+      "depthIn": 15.5,
+      "depthSource": "https://www.avproglobal.com/products/director-m4800d (checked 2026-10-02)"
     },
     "audiocontrol-m6800d": {
       "brand": "AudioControl",
@@ -1720,7 +1746,9 @@
         }
       ],
       "portsSource": "https://adeogroup.it/sites/default/files/prodotti_allegati_pubblici/audio-control_manual_acp_dmz-m6800d.pdf (high confidence, rear-panel audit 2026-09-29)",
-      "goTo": true
+      "goTo": true,
+      "depthIn": 15.5,
+      "depthSource": "https://www.avproglobal.com/products/the-director-model-m6800d-dante (checked 2026-10-02)"
     },
     "audiocontrol-d2800": {
       "brand": "AudioControl",
@@ -1745,7 +1773,9 @@
       "powerTypicalW": 186,
       "powerIdleW": 41,
       "rackUnits": 1,
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "depthIn": 15.5,
+      "depthSource": "https://www.avproglobal.com/products/the-director-model-d2800 (checked 2026-10-02)"
     },
     "audiocontrol-d4600": {
       "brand": "AudioControl",
@@ -1769,7 +1799,9 @@
       "powerTypicalW": 330,
       "powerIdleW": 53,
       "rackUnits": 2,
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "depthIn": 15.5,
+      "depthSource": "https://www.avproglobal.com/products/the-director-model-d4600 (checked 2026-10-02)"
     },
     "audiocontrol-cm2-750d": {
       "brand": "AudioControl",
@@ -1798,7 +1830,9 @@
       "powerTypicalW": 274,
       "powerIdleW": 37,
       "rackUnits": 2,
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "depthIn": 15.5,
+      "depthSource": "https://www.avproglobal.com/products/cm2-750d-dante (checked 2026-10-02)"
     },
     "audiocontrol-bijou-3100": {
       "brand": "AudioControl",
@@ -1826,7 +1860,9 @@
       "powerMaxW": 700,
       "powerTypicalW": 125,
       "rackUnits": 1,
-      "halfRack": true
+      "halfRack": true,
+      "depthIn": 11.9,
+      "depthSource": "https://www.avproglobal.com/products/bijou-3100 (checked 2026-10-02)"
     },
     "audiocontrol-acp-dante-e-poe": {
       "brand": "AudioControl",
@@ -2018,7 +2054,9 @@
       "powerMaxW": 150,
       "powerTypicalW": 97,
       "rackUnits": 1,
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "depthIn": 12.6,
+      "depthSource": "https://sonance.com/products/ubx-888-024 (checked 2026-10-02)"
     },
     "sonance-blaze-pzc-1008d": {
       "brand": "Sonance",
@@ -2046,7 +2084,9 @@
       "powerMaxW": 300,
       "powerTypicalW": 200,
       "rackUnits": 1,
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "depthIn": 12.6,
+      "depthSource": "https://sonance.com/products/ubx-888-031 (checked 2026-10-02)"
     },
     "sonance-blaze-pzc-2004d": {
       "brand": "Sonance",
@@ -2074,7 +2114,9 @@
       "powerMaxW": 700,
       "powerTypicalW": 346,
       "rackUnits": 2,
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "depthIn": 12.6,
+      "depthSource": "https://sonance.com/products/lbx-888-007 (checked 2026-10-02)"
     },
     "sonance-blaze-pzc-6008d": {
       "brand": "Sonance",
@@ -2102,7 +2144,9 @@
       "powerMaxW": 1400,
       "powerTypicalW": 999,
       "rackUnits": 2,
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "depthIn": 16.3,
+      "depthSource": "https://sonance.com/products/lbx-888-011 (checked 2026-10-02)"
     },
     "sonance-dsp-2-150-mkiii": {
       "brand": "Sonance",
@@ -2131,7 +2175,9 @@
       "halfRack": true,
       "aliases": [
         "DSP 2-150 MKIII"
-      ]
+      ],
+      "depthIn": 16.81,
+      "depthSource": "https://sonance.com/products/93542 (checked 2026-10-02)"
     },
     "sonance-dsp-8-130-mkiii": {
       "brand": "Sonance",
@@ -2155,7 +2201,9 @@
       "powerTypicalW": 254,
       "powerIdleW": 80,
       "rackUnits": 1,
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "depthIn": 16.81,
+      "depthSource": "https://sonance.com/products/93538 (checked 2026-10-02)"
     },
     "sonance-dsp-2-750-mkiii": {
       "brand": "Sonance",
@@ -2184,7 +2232,9 @@
       "rackUnits": 2,
       "aliases": [
         "DSP 2-750 MKIII"
-      ]
+      ],
+      "depthIn": 17.22,
+      "depthSource": "https://sonance.com/products/93540 (checked 2026-10-02)"
     },
     "audiocontrol-acp-dante-d-poe": {
       "brand": "AudioControl",
@@ -2449,7 +2499,9 @@
           "audio": "pcm2"
         }
       ],
-      "portsSource": "https://www.avproglobal.com/products/ac-mx-44 (high confidence, rear-panel audit 2026-09-29)"
+      "portsSource": "https://www.avproglobal.com/products/ac-mx-44 (high confidence, rear-panel audit 2026-09-29)",
+      "depthIn": 8.875,
+      "depthSource": "https://www.avproglobal.com/products/ac-mx-44 (checked 2026-10-02)"
     },
     "avpro-ac-mx-1616": {
       "brand": "AVPro Edge",
@@ -2466,10 +2518,10 @@
         "audioMatrix"
       ],
       "verified": true,
-      "notes": "CONFIRMED (Markertek AC-MX-1616 Gen 2 spec): 16x16 HDMI 18Gbps, 16x balanced analog de-embed (5-pin terminal, ships with 16 extraction cables), 3 extraction modes (bind input / bind output / independent matrix). NO Toslink/coax digital de-embed — the distributor 'digital coax outputs' blurb was wrong. AUDIT 2026-09-27: 16 balanced 5-pin analog outs, 2ch PCM only; no Toslink/coax/HDBaseT. SKU AC-MX1616-AUHD-GEN2. POWER/RU 2026-09-27: 92W max, 1U, 48V brick (current AC-MX-1616 page; older AUHD-Gen2 unpublished) — avproglobal.com product page",
+      "notes": "CONFIRMED (Markertek AC-MX-1616 Gen 2 spec): 16x16 HDMI 18Gbps, 16x balanced analog de-embed (5-pin terminal, ships with 16 extraction cables), 3 extraction modes (bind input / bind output / independent matrix). NO Toslink/coax digital de-embed — the distributor 'digital coax outputs' blurb was wrong. AUDIT 2026-09-27: 16 balanced 5-pin analog outs, 2ch PCM only; no Toslink/coax/HDBaseT. SKU AC-MX1616-AUHD-GEN2. POWER/RU 2026-09-27: 92W max, 2U (the page says 1 rack unit but lists it 2\" tall — 2U; checked 2026-10-02), 48V brick (current AC-MX-1616 page; older AUHD-Gen2 unpublished) — avproglobal.com product page",
       "partNo": "AC-MX1616-AUHD-GEN2",
       "powerMaxW": 92,
-      "rackUnits": 1,
+      "rackUnits": 2,
       "notInPlanQueue": true,
       "ports": [
         {
@@ -2761,7 +2813,9 @@
           "audio": "pcm2"
         }
       ],
-      "portsSource": "https://www.avproglobal.com/products/ac-mx-1616 (high confidence, rear-panel audit 2026-09-29)"
+      "portsSource": "https://www.avproglobal.com/products/ac-mx-1616 (high confidence, rear-panel audit 2026-09-29)",
+      "depthIn": 10.25,
+      "depthSource": "https://www.avproglobal.com/products/ac-mx-1616 (checked 2026-10-02)"
     },
     "savant-pav-aim7c": {
       "brand": "Savant",
@@ -2786,7 +2840,9 @@
       "partNo": "PAV-AIM7C-20",
       "aliases": [
         "PAV-AIM7C-00"
-      ]
+      ],
+      "depthIn": 3.7,
+      "depthSource": "Savant QRG 009-1945-02 (sav-documentation.s3.amazonaws.com) (checked 2026-10-02)"
     },
     "savant-pav-aom8c": {
       "brand": "Savant",
@@ -2806,7 +2862,9 @@
       ],
       "verified": true,
       "notes": "CURRENT Savant spec path for AVB-network-to-zone audio output, replacing the legacy AOM-D16U backplane card. Marketed as \"16-Channel Audio Output IP Receiver\" = 8 stereo pairs, unbalanced RCA, any-stream-to-any-output routing. Receives up to 8 AVB streams from the network and can route any stream to any of the 8 stereo outputs (matrix-style, not fixed-assignment). Max 15W draw (PoE on -10 SKU; -00 is 5V DC) (fits 802.3af). Supports mute/volume/PEQ/mono-sum/up to 160ms delay per output, plus GPIO to trigger an external amp. Balanced version: see savant-pav-aombal8c. AUDIT 2026-09-27: connector is RCA only; -00 = 5V DC 3A adapter, PoE on -10 only.",
-      "partNo": "PAV-AOM8C-10"
+      "partNo": "PAV-AOM8C-10",
+      "depthIn": 3.7,
+      "depthSource": "Savant QRG 009-1563-04 (sav-documentation.s3.amazonaws.com) (checked 2026-10-02)"
     },
     "savant-pav-aombal8c": {
       "brand": "Savant",
@@ -2855,7 +2913,9 @@
       "partNo": "PAV-SIPA125SM-10",
       "powerMaxW": 515,
       "rackUnits": 2,
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "depthIn": 14.24,
+      "depthSource": "Savant IP Audio 125 QRG 009-1584-01 (PAV-SIPA125-00; same 2U chassis) (checked 2026-10-02)"
     },
     "savant-ip-audio-50v2": {
       "brand": "Savant",
@@ -3214,7 +3274,9 @@
       "partNo": "AC-MXNET-SW24P",
       "powerMaxW": 880,
       "rackUnits": 1,
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "depthIn": 11.0,
+      "depthSource": "https://www.avproglobal.com/products/ac-mxnet-sw24p (checked 2026-10-02)"
     },
     "avpro-acp-axis16": {
       "brand": "AudioControl",
@@ -3380,7 +3442,9 @@
         }
       ],
       "portsSource": "https://www.avproglobal.com/products/acp-hype-tetra (connections inferred identical to Hepta manual) (medium confidence, rear-panel audit 2026-09-29)",
-      "powerUnpublished": true
+      "powerUnpublished": true,
+      "depthIn": 16.5,
+      "depthSource": "https://www.avproglobal.com/products/acp-hype-tetra (checked 2026-10-02)"
     },
     "audiocontrol-hype-penta": {
       "brand": "AudioControl",
@@ -3511,7 +3575,9 @@
         }
       ],
       "portsSource": "https://www.avproglobal.com/products/acp-hype-penta (connections inferred identical to Hepta manual) (medium confidence, rear-panel audit 2026-09-29)",
-      "powerUnpublished": true
+      "powerUnpublished": true,
+      "depthIn": 16.5,
+      "depthSource": "https://www.avproglobal.com/products/acp-hype-penta (checked 2026-10-02)"
     },
     "audiocontrol-hype-hepta": {
       "brand": "AudioControl",
@@ -3682,7 +3748,9 @@
         }
       ],
       "portsSource": "https://avproglobal.egnyte.com/dd/QP7mhmT7VbCY (Hyperion Hepta manual) ; https://www.avproglobal.com/products/acp-hype-hepta (high confidence, rear-panel audit 2026-09-29)",
-      "powerUnpublished": true
+      "powerUnpublished": true,
+      "depthIn": 16.5,
+      "depthSource": "https://www.avproglobal.com/products/acp-hype-hepta (checked 2026-10-02)"
     },
     "avpro-mxnet-sw24e": {
       "brand": "AVPro Edge",
@@ -3706,7 +3774,9 @@
       "powerNoPoeW": 30,
       "rackUnits": 1,
       "notInPlanQueue": true,
-      "goTo": true
+      "goTo": true,
+      "depthIn": 10.23,
+      "depthSource": "https://www.avproglobal.com/products/ac-mxnet-sw24e (checked 2026-10-02)"
     },
     "avpro-mxnet-sw48e": {
       "brand": "AVPro Edge",
@@ -3728,7 +3798,9 @@
       "partNo": "AC-MXNET-SW48E",
       "powerMaxW": 850,
       "powerNoPoeW": 30,
-      "rackUnits": 1
+      "rackUnits": 1,
+      "depthIn": 10.23,
+      "depthSource": "https://www.avproglobal.com/products/ac-mxnet-sw48e (checked 2026-10-02)"
     },
     "avpro-mxnet-dante-cbox": {
       "brand": "AVPro Edge",
@@ -3992,7 +4064,9 @@
       "poeBudgetW": 370,
       "partNo": "AC-MXNET-10G-SW12C",
       "powerMaxW": 430,
-      "rackUnits": 1
+      "rackUnits": 1,
+      "depthIn": 12.56,
+      "depthSource": "https://www.avproglobal.com/products/ac-mxnet-10g-sw12c (checked 2026-10-02)"
     },
     "avpro-mxnet-10g-sw24c": {
       "brand": "AVPro Edge",
@@ -4013,7 +4087,9 @@
       "poeBudgetW": 960,
       "partNo": "AC-MXNET-10G-SW24C",
       "powerMaxW": 530,
-      "rackUnits": 1
+      "rackUnits": 1,
+      "depthIn": 14.96,
+      "depthSource": "https://www.avproglobal.com/products/ac-mxnet-10g-sw24c (checked 2026-10-02)"
     },
     "avpro-mxnet-10g-sw24q": {
       "brand": "AVPro Edge",
@@ -4093,7 +4169,9 @@
       ],
       "verified": true,
       "notes": "800 Series 1U chassis with faceplate meter: 8 rear controlled outlets + 1 front accessory outlet (uncontrolled, unprotected — not counted), 15A. All rear outlets IP-switchable; one Ethernet port (no built-in switch); no battery — OvrC UPS link for a separate WattBox UPS pack. Source: Snap One product pages + WattBox comparison chart (WB-060420), checked 2026-09-27.",
-      "partNo": "WB-800CH1U-IPVM-8"
+      "partNo": "WB-800CH1U-IPVM-8",
+      "depthIn": 12.29,
+      "depthSource": "https://www.snapav.com/shop/en/snapav/ip-power/wb-800ch1u-ipvm-8 (body; outlets and inlet stick out behind) (checked 2026-10-02)"
     },
     "wattbox-800-ipvm-12": {
       "brand": "WattBox",
@@ -4194,7 +4272,9 @@
       "verified": true,
       "notes": "820 Series (20A) 1U faceplate chassis: 3× NEMA 5-20 + 5× NEMA 5-15 rear, plus a front accessory outlet (control status unstated — not counted) and USB-A/C. All rear outlets IP-switchable; one Ethernet port (no built-in switch); no battery — OvrC UPS link for a separate WattBox UPS pack. Source: Snap One product pages + WattBox comparison chart (WB-060420), checked 2026-09-27.",
       "partNo": "WB-820CH1U-IPVM-8",
-      "notInPlanQueue": true
+      "notInPlanQueue": true,
+      "depthIn": 12.29,
+      "depthSource": "https://www.snapav.com/shop/en/snapav/ip-power/wb-820ch1u-ipvm-8 (checked 2026-10-02)"
     },
     "wattbox-700ch-ipv-12": {
       "brand": "WattBox",
@@ -4579,7 +4659,9 @@
       "powerTypicalW": 4.9,
       "powerIdleW": 3.8,
       "rackUnits": 1,
-      "halfRack": true
+      "halfRack": true,
+      "depthIn": 10.0,
+      "depthSource": "https://www.kaleidescape.com/strato-v-movie-player/spec/ (asks 2\" free behind) (checked 2026-10-02)"
     },
     "kaleidescape-strato-e": {
       "inputs": {},
@@ -4602,7 +4684,9 @@
       "powerTypicalW": 4.3,
       "powerIdleW": 3.8,
       "rackUnits": 1,
-      "halfRack": true
+      "halfRack": true,
+      "depthIn": 6.4,
+      "depthSource": "https://www.kaleidescape.com/strato-e-movie-player/spec/ (checked 2026-10-02)"
     },
     "kaleidescape-strato-k": {
       "inputs": {},
@@ -4627,7 +4711,9 @@
       "powerTypicalW": 6.8,
       "powerIdleW": 0.2,
       "rackUnits": 1,
-      "halfRack": true
+      "halfRack": true,
+      "depthIn": 10.0,
+      "depthSource": "https://www.kaleidescape.com/strato-k-movie-player/spec/ (checked 2026-10-02)"
     },
     "kaleidescape-compact-terra-prime-24": {
       "inputs": {},
@@ -4643,7 +4729,9 @@
       "notes": "kaleidescape.com spec page + Terra/Mini Terra Prime install guides (2026-09-28): 24W typical; max for the HDD model not published (\"?\"); server only, no A/V outputs; 1× GbE; external 12V 60W brick; 1–2 per 1U on KMOUNT-RACKSHELF. PlanQueue SKU K0114-0024.",
       "powerTypicalW": 24,
       "rackUnits": 1,
-      "halfRack": true
+      "halfRack": true,
+      "depthIn": 14.33,
+      "depthSource": "Kaleidescape Terra Prime HDD datasheet (checked 2026-10-02)"
     },
     "kaleidescape-compact-terra-prime-22": {
       "inputs": {},
@@ -4676,7 +4764,9 @@
       "powerMaxW": 23,
       "powerTypicalW": 15,
       "rackUnits": 1,
-      "halfRack": true
+      "halfRack": true,
+      "depthIn": 6.4,
+      "depthSource": "https://www.kaleidescape.com/terra-prime-movie-server/spec/ (checked 2026-10-02)"
     },
     "sonance-blaze-pzc-504": {
       "brand": "Sonance",
@@ -4707,7 +4797,9 @@
       "rackUnits": 1,
       "halfRack": true,
       "lan": 1,
-      "notes": "Blaze PowerZone Connect 1U Data Sheet + Manual (sonance.com, fetched 2026-09-28): 4 x 125W @4/8Ω Lo-Z or 2 x 250W @70/100V; power share 250W across ch 1/2 and 3/4. 4 unbalanced RCA + 4 balanced inputs (paired with channels; counted as 2 stereo sources, conservatively, like the 508), S/PDIF in + out (logged as coax), RJ45 + built-in Wi-Fi AP, full-matrix DSP (PowerZone Control). Power consumption 150W; 107W in at 1/8 power (4Ω); idle 14.5W @120V; standby <0.5W. Half-width 1U (8.7in), rack plates included. No Dante (504D is the Dante model). In Synergy's PlanQueue as UBX-888-011 \"POWERZONE CONNECT 504\"."
+      "notes": "Blaze PowerZone Connect 1U Data Sheet + Manual (sonance.com, fetched 2026-09-28): 4 x 125W @4/8Ω Lo-Z or 2 x 250W @70/100V; power share 250W across ch 1/2 and 3/4. 4 unbalanced RCA + 4 balanced inputs (paired with channels; counted as 2 stereo sources, conservatively, like the 508), S/PDIF in + out (logged as coax), RJ45 + built-in Wi-Fi AP, full-matrix DSP (PowerZone Control). Power consumption 150W; 107W in at 1/8 power (4Ω); idle 14.5W @120V; standby <0.5W. Half-width 1U (8.7in), rack plates included. No Dante (504D is the Dante model). In Synergy's PlanQueue as UBX-888-011 \"POWERZONE CONNECT 504\".",
+      "depthIn": 12.6,
+      "depthSource": "https://sonance.com/products/ubx-888-011 (checked 2026-10-02)"
     },
     "sonance-blaze-pzc-1008": {
       "brand": "Sonance",
@@ -4737,7 +4829,9 @@
       "powerIdleW": 27.7,
       "rackUnits": 1,
       "lan": 1,
-      "notes": "Blaze PowerZone Connect 1U Data Sheet + Manual (sonance.com, fetched 2026-09-28): 8 x 125W @4/8Ω Lo-Z or 4 x 250W @70/100V; power share 250W per channel pair. 8 unbalanced RCA + 8 balanced inputs (counted as 4 stereo sources, like the 508), S/PDIF in + out (logged as coax), RJ45 + Wi-Fi AP, full-matrix DSP. Power consumption 300W; 200W in at 1/8 power (4Ω); idle 27.7W @120V; standby <0.5W. Full-width 1U. No Dante (1008D is the Dante model). Sonance order code UBX-888-025; Synergy's PlanQueue files it under SKU \"PowerZone Connect 1008\"."
+      "notes": "Blaze PowerZone Connect 1U Data Sheet + Manual (sonance.com, fetched 2026-09-28): 8 x 125W @4/8Ω Lo-Z or 4 x 250W @70/100V; power share 250W per channel pair. 8 unbalanced RCA + 8 balanced inputs (counted as 4 stereo sources, like the 508), S/PDIF in + out (logged as coax), RJ45 + Wi-Fi AP, full-matrix DSP. Power consumption 300W; 200W in at 1/8 power (4Ω); idle 27.7W @120V; standby <0.5W. Full-width 1U. No Dante (1008D is the Dante model). Sonance order code UBX-888-025; Synergy's PlanQueue files it under SKU \"PowerZone Connect 1008\".",
+      "depthIn": 12.6,
+      "depthSource": "https://sonance.com/products/ubx-888-025 (checked 2026-10-02)"
     },
     "sonance-sonamp-8-50": {
       "brand": "Sonance",
@@ -4761,7 +4855,9 @@
       "powerTypicalW": 200,
       "powerIdleW": 30,
       "rackUnits": 1,
-      "notes": "Sonamp 8-50/16-50 manual 12/13/2022 (sonance.com, fetched 2026-09-28): 8 ch = 4 stereo zones, 50W/ch @8Ω, 100W/ch @4Ω, 200W bridged @8Ω; no 70V. Inputs: a local stereo input per zone + Bus A + Bus B (with thru) = 6 stereo sources; each zone picks local / Bus A / Bus B by DIP switch (NOT a matrix). Bus A sub out with 80/120Hz crossover. Audio sense or 3-30V trigger. Power: 600W max, <200W at 1/8 power (200 used), 30W idle, <0.5W standby; 3 per 15A / 4 per 20A circuit. 1U full width, rack ears 93559. Sonance order code 93544 (US); Synergy's PlanQueue SKU \"Sonamp 8-50\"."
+      "notes": "Sonamp 8-50/16-50 manual 12/13/2022 (sonance.com, fetched 2026-09-28): 8 ch = 4 stereo zones, 50W/ch @8Ω, 100W/ch @4Ω, 200W bridged @8Ω; no 70V. Inputs: a local stereo input per zone + Bus A + Bus B (with thru) = 6 stereo sources; each zone picks local / Bus A / Bus B by DIP switch (NOT a matrix). Bus A sub out with 80/120Hz crossover. Audio sense or 3-30V trigger. Power: 600W max, <200W at 1/8 power (200 used), 30W idle, <0.5W standby; 3 per 15A / 4 per 20A circuit. 1U full width, rack ears 93559. Sonance order code 93544 (US); Synergy's PlanQueue SKU \"Sonamp 8-50\".",
+      "depthIn": 12.3,
+      "depthSource": "https://sonance.com/products/93544 (checked 2026-10-02)"
     },
     "sonance-sonamp-16-50": {
       "brand": "Sonance",
@@ -4785,7 +4881,9 @@
       "powerTypicalW": 200,
       "powerIdleW": 50,
       "rackUnits": 1,
-      "notes": "Sonamp 8-50/16-50 manual 12/13/2022 (sonance.com, fetched 2026-09-28): 16 ch = 8 stereo zones, 50W/ch @8Ω, 100W/ch @4Ω, 200W bridged @8Ω; no 70V. Inputs: a local stereo input per zone + Bus A + Bus B = 10 stereo sources; zone input by DIP switch (not a matrix). Bus A sub out with crossover. Audio sense or 3-30V trigger. Power: 600W max, <200W at 1/8 power (200 used), 50W idle, <0.5W standby. 1U full width (17.2 x 1.75 x 12.3in). Sonance order code 93546 (US); Synergy's PlanQueue SKU \"Sonamp 16-50\"."
+      "notes": "Sonamp 8-50/16-50 manual 12/13/2022 (sonance.com, fetched 2026-09-28): 16 ch = 8 stereo zones, 50W/ch @8Ω, 100W/ch @4Ω, 200W bridged @8Ω; no 70V. Inputs: a local stereo input per zone + Bus A + Bus B = 10 stereo sources; zone input by DIP switch (not a matrix). Bus A sub out with crossover. Audio sense or 3-30V trigger. Power: 600W max, <200W at 1/8 power (200 used), 50W idle, <0.5W standby. 1U full width (17.2 x 1.75 x 12.3in). Sonance order code 93546 (US); Synergy's PlanQueue SKU \"Sonamp 16-50\".",
+      "depthIn": 12.3,
+      "depthSource": "https://sonance.com/products/93546 (checked 2026-10-02)"
     },
     "avpro-ac-ex70-444-kit": {
       "brand": "AVPro Edge",

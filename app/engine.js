@@ -4749,8 +4749,15 @@ export function advise(job, ix = indexJob(job), catalog = null) {
     // the space it has to go in (cabinet opening / door): the picked rack doesn't fit, or nothing does
     if (r.spaceFit && !r.spaceFit.ok) out.notes.push({ code: "rack-space", solution: r.solution, ref: r.rack, rack: r.rack, best: r.spaceFit.best?.part || null,
       msg: `${r.name}: the ${r.model.part} (${r.model.hc}" tall on casters) doesn't fit the space (${[r.space.h && `${r.space.h}" high`, r.space.w && `${r.space.w}" wide`, r.space.d && `${r.space.d}" deep`].filter(Boolean).join(", ")})${r.spaceFit.best ? ` — the ${r.spaceFit.best.part} (${r.spaceFit.best.u}U) does` : " — no Middle Atlantic or Strong floor rack does"}` });
-    else if (r.spaceFit && !r.spaceFit.count) out.notes.push({ code: "rack-space", solution: r.solution, ref: r.rack, rack: r.rack,
+    if (r.belowMin) out.notes.push({ code: "rack-space", solution: r.solution, ref: r.rack, rack: r.rack,
+      msg: `${r.name}: the space (${[r.space.w && `${r.space.w}" wide`, r.space.d && `${r.space.d}" deep`].filter(Boolean).join(", ")}) is under Synergy's minimum cabinet — at least 22" wide and 26" deep` });
+    if (r.spaceFit && !r.spaceFit.count && r.spaceFit.ok) out.notes.push({ code: "rack-space", solution: r.solution, ref: r.rack, rack: r.rack,
       msg: `${r.name}: no Middle Atlantic or Strong floor rack fits the space — check the opening, or a wall-mount rack` });
+    // gear deeper than the picked rack takes, or with no room behind it for cables
+    if (r.depth?.over.length) out.notes.push({ code: "rack-depth", solution: r.solution, ref: r.rack, rack: r.rack,
+      msg: `${r.name}: too deep for the ${r.model.part} (${r.depth.usable}" usable) — ${r.depth.over.map(x => `${x.label} ${x.d}"`).join(", ")}; pick a deeper rack` });
+    else if (r.depth?.tight.length) out.notes.push({ code: "rack-depth", solution: r.solution, ref: r.rack, rack: r.rack,
+      msg: `${r.name}: tight behind ${r.depth.tight.map(x => `${x.label} (${x.d}", ${x.left}" left)`).join(", ")} in the ${r.model.part} (${r.depth.usable}" usable) — leave about 3" for plugs and cables, or a deeper rack` });
     // arranged by hand on the rack page: a spacing rule the arrangement breaks (amp with no vent…)
     for (const w of r.spacing || []) out.notes.push({ code: "rack-spacing", solution: r.solution, rack: r.rack, msg: `${r.name}: ${w}` });
     if (r.unknown.length) out.notes.push({ code: "rack-unknown-u", solution: r.solution, ref: r.rack,

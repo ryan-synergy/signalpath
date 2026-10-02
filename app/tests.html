@@ -3967,6 +3967,31 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const sp = planOf(r => { r.sizeMode = "space"; r.rackModel = "SR-AV-CAB-42U-30IN"; r.space = { h: 80 }; }).r;
     t("size modes: Fit the space never uses a rack that doesn't fit — it falls back to the tallest that does", sp.model.part === RS0.fitRacks({ h: 80 })[0].part && sp.size === 41);
   }
+  {   // Synergy's minimum cabinet (22" W × 26" D) and gear depth against the rack (Ryan 2026-10-02)
+    const RSx = await import("./racksizes.js"), Hx = await import("./hookup.js");
+    t("cabinet: never under Synergy's 22\" × 26\", never under the rack itself (a 23\"-wide BGR needs 23\")",
+      JSON.stringify(RSx.cabinetNeeds(null)) === JSON.stringify({ w: 22, d: 26, h: null }) && RSx.cabinetNeeds(RSx.rackOption("BGR-4132")).w === 23 && RSx.cabinetNeeds(RSx.rackOption("BGR-4132")).d === 32
+      && RSx.cabinetNeeds(RSx.rackOption("SR-CUSTOM-42U-20IN")).d === 26);
+    const planOf = mut => { const j = structuredClone(fixtures.residence); mut(j.solutions[0].racks[0]); const L = loadJob(j), a = advise(L.job, L.ix, CAT); return { r: a.racks[0], notes: a.notes }; };
+    const small = planOf(r => { r.space = { h: 80, w: 20, d: 24 }; });
+    t("cabinet: a space under 22\" × 26\" is flagged", !!small.r.belowMin && small.notes.some(n => n.code === "rack-space" && /under Synergy's minimum cabinet/.test(n.msg)));
+    t("depth: every racked Anthem / AVPro / AudioControl / Sonance / Ubiquiti piece in the catalog has a sourced depth",
+      ["anthem-mdx-16", "anthem-mrx-540-8k", "avpro-mxnet-sw24e", "audiocontrol-m6800d", "sonance-dsp-2-750-mkiii", "ubiquiti-usw-pro-24-poe"].every(k => typeof CAT.devices[k].depthIn === "number" && CAT.devices[k].depthSource));
+    const fs42 = planOf(r => { r.sizeMode = "model"; r.rackModel = "SR-FS-SYSTEM-DC-42U"; });
+    t("depth: the MDX-16 (17\") in Strong's FS 42U (18.25\" usable) is flagged tight for cables", fs42.r.depth.tight.some(x => /MDX-16/.test(x.label)) && fs42.notes.some(n => n.code === "rack-depth"));
+    const bgr = planOf(r => { r.sizeMode = "model"; r.rackModel = "BGR-4132"; });
+    t("depth: in a BGR-4132 (29.4\" usable) it's fine — no depth note", !bgr.r.depth.tight.length && !bgr.r.depth.over.length && !bgr.notes.some(n => n.code === "rack-depth"));
+    const fit = planOf(r => { r.sizeMode = "space"; r.space = { h: 80, d: 26 }; });
+    t("depth: Fit the space takes the tallest rack that's deep enough for the deepest box + 3\" (not the shallow FS)",
+      fit.r.needDepth === 20 && fit.r.model.usable >= 20 && !/FS-SYSTEM/.test(fit.r.model.part), fit.r.model.part);
+    const lj = structuredClone(fixtures.estate), ls = lj.solutions[0];
+    const amp = Hx.addLocalAmp(lj, ls, "z-kitchen");
+    t("encoder audio: '＋ New local amp' puts an amp in that room (it drives the speakers if nothing does)",
+      ls.localDevices.some(d => d.id === amp && d.zone === "z-kitchen" && d.type === "amp"));
+    const im = await (await fetch("../index.html")).text();
+    t("deploy: every app module is in the import map (an unstamped module could load stale after an update)",
+      ["kinds.js", "racksizes.js", "sheets.js", "rack.js", "hookup.js"].every(b => im.includes(`"./app/${b}": "./app/${b}?v=dev"`)));
+  }
   {   // floor-rack quick reference (Middle Atlantic + Strong, makers' sheets, on casters)
     const RS = await import("./racksizes.js"), q = RS.rackReference(42);
     const ma = q.models.filter(m => m.brand === "Middle Atlantic"), st = q.models.filter(m => m.brand === "Strong");

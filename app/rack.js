@@ -11,7 +11,7 @@
 import { wireRuns } from "./pages.js";
 import { companionRef, specFor } from "./network.js";
 import { deviceKind } from "./kinds.js";
-import { rackOption, fitRacks } from "./racksizes.js";
+import { rackOption, fitRacks, cabinetNeeds, belowMinimum } from "./racksizes.js";
 
 export const DEFAULT_RACK_U = 42;
 export const RACK_SIZES = [12, 16, 20, 24, 27, 32, 36, 38, 40, 42, 44, 45];
@@ -128,6 +128,19 @@ function manualRows(items, size, layout) {
   return warnings;
 }
 
+/* gear depth against the rack's usable depth (Ryan 2026-10-02): a box deeper than the rails allow
+   doesn't go in; one that leaves under CABLE_IN" behind it has no room for its plugs and cables.
+   Depths are the makers' published chassis depths (catalog depthIn, sourced). Only with a picked
+   rack — a plain "42U" has no depth to check against. */
+export const CABLE_IN = 3;
+function depthCheck(items, model) {
+  if (!model) return null;
+  const devs = items.filter(i => i.kind === "device" && typeof i.depthIn === "number").sort((a, b) => b.depthIn - a.depthIn);
+  return { usable: model.usable, deepest: devs[0] ? { label: devs[0].label, d: devs[0].depthIn } : null,
+    over: devs.filter(i => i.depthIn > model.usable).map(i => ({ label: i.label, d: i.depthIn })),
+    tight: devs.filter(i => i.depthIn <= model.usable && i.depthIn + CABLE_IN > model.usable).map(i => ({ label: i.label, d: i.depthIn, left: +(model.usable - i.depthIn).toFixed(1) })) };
+}
+
 export function rackPlans(job, ix, catalog) {
   const out = [];
   const cat = ref => ref ? catalog?.devices?.[ref] : null;
@@ -149,7 +162,12 @@ export function rackPlans(job, ix, catalog) {
       const sizeMode = ["space", "model", "units"].includes(r.sizeMode) ? r.sizeMode : r.rackModel ? (space ? "space" : "model") : space ? "space" : "units";
       const fits = space && sizeMode !== "units" ? fitRacks(space) : null;
       const chosen = r.rackModel ? rackOption(r.rackModel) : null;
-      const model = sizeMode === "units" ? null : sizeMode === "space" ? (chosen && fits?.some(o => o.part === chosen.part) ? chosen : fits?.[0] || null) : chosen;
+      // the deepest box (published depth) + room for cables: Fit the space prefers the tallest rack
+      // that's also deep enough; only when none is, the tallest that fits at all
+      const deepest = Math.max(0, ...(r.devices || []).map(d => specFor(d, catalog)?.depthIn).filter(v => typeof v === "number"));
+      const deepEnough = o => !deepest || o.usable >= deepest + CABLE_IN;
+      const fitPick = fits ? fits.find(deepEnough) || fits[0] || null : null;
+      const model = sizeMode === "units" ? null : sizeMode === "space" ? (chosen && fits?.some(o => o.part === chosen.part) ? chosen : fitPick) : chosen;
       const size = model ? model.u : Math.min(60, Math.max(1, Math.floor(+r.units || +job.job?.rackUnits || DEFAULT_RACK_U) || DEFAULT_RACK_U));
       const items = [], unknown = [], rear = [], small = [], cboxes = [], smallIds = [], cboxIds = [];
       const cat6 = cat6runs.filter(x => (x.racks?.length ? x.racks : [main]).includes(r.id)).reduce((n, x) => n + x.count, 0);
@@ -168,7 +186,8 @@ export function rackPlans(job, ix, catalog) {
         // modules drawn 1U, flagged "need to confirm") — either way the elevation shows it and the advisor asks
         const confirm = u == null || !!c?.rackUnitsConfirm;
         if (confirm) unknown.push(name);
-        items.push({ kind: "device", id: d.id, tier, u: u ?? 1, label: name, type: d.type, guess: confirm, half: !!c?.halfRack, boxKind: deviceKind(d, c) });
+        items.push({ kind: "device", id: d.id, tier, u: u ?? 1, label: name, type: d.type, guess: confirm, half: !!c?.halfRack, boxKind: deviceKind(d, c),
+          ...(typeof c?.depthIn === "number" ? { depthIn: c.depthIn } : {}) });
       }
       // rack-side adapters (MXNet encoders/decoders on rack gear) go in AVPro's own rack
       // kits for their platform (catalog `rackKit: {gen, holds}`), picked for the fewest
@@ -251,9 +270,11 @@ export function rackPlans(job, ix, catalog) {
       for (const [kit, qty] of Object.entries(kitQty)) hardware.push({ key: "kit", item: `MXNet rack kit, ${items.find(i => i.kit === kit).u}U`, qty, partNo: kit });
       out.push({ solution: sol.id, rack: r.id, name: r.name || "Equipment Rack", size, used, spare: size - used,
         over: Math.max(0, manual ? bottom - size : used - size), items, unknown, rear, cat6, manual, spacing,
-        model, space, tight: !!r.tight, sizeMode,
+        model, space, tight: !!r.tight, sizeMode, depth: depthCheck(items, model),
+        cabinet: cabinetNeeds(model), belowMin: space ? belowMinimum(space) : null,
         // the picked rack against the space it has to go in; the tallest that fits it (not in "by U")
-        spaceFit: fits ? { ok: !model || fits.some(o => o.part === model.part), best: fits[0] || null, count: fits.length } : null,
+        spaceFit: fits ? { ok: !model || fits.some(o => o.part === model.part), best: fitPick, count: fits.length } : null,
+        needDepth: deepest ? +(deepest + CABLE_IN).toFixed(1) : null,
         hardware: hardware.filter(h => h.qty > 0) });
     });
   }

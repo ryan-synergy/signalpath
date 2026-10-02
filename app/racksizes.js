@@ -53,7 +53,18 @@ export function rackReference(u) {
    that fits sets the rack, then the gear is fitted to it. Each depth option is its own orderable
    rack. Clearance = room left over the rack on casters, and side / depth allowance — a placeholder
    until Synergy's minimum-cabinet sheet is added (`RACK_CLEARANCE`). */
-export const RACK_CLEARANCE = { top: 1, side: 0, depth: 0, source: "placeholder — replace with Synergy's minimum-cabinet sheet" };
+export const RACK_CLEARANCE = { top: 1, side: 0, depth: 0, source: "1\" over the rack on casters — height allowance (Synergy's minimum gives width and depth)" };
+// Synergy's minimum cabinet / closet opening for a floor rack (Ryan 2026-10-02): 22" wide, 26" deep
+export const MIN_CABINET = { w: 22, d: 26 };
+// what the cabinet must be for a rack: never under Synergy's minimum, never under the rack itself (+ clearance)
+export function cabinetNeeds(o, clr = RACK_CLEARANCE) {
+  return { w: Math.max(MIN_CABINET.w, o ? o.w + clr.side : 0), d: Math.max(MIN_CABINET.d, o ? o.depth + clr.depth : 0), h: o ? +(o.hc + clr.top).toFixed(1) : null };
+}
+// the space entered is under Synergy's minimum (null = fine / not entered)
+export function belowMinimum(space = {}) {
+  const w = +space.w > 0 && +space.w < MIN_CABINET.w, d = +space.d > 0 && +space.d < MIN_CABINET.d;
+  return w || d ? { w, d } : null;
+}
 export const RACK_OPTIONS = RACK_MODELS.flatMap(m => m.depths.map(([depth, usable, part]) => ({ part, brand: m.brand, series: m.series, u: m.u,
   hc: m.hc, h: m.h, w: m.wPanels || m.w, depth, usable })));
 export const rackOption = part => RACK_OPTIONS.find(o => o.part === part) || null;

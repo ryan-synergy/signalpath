@@ -573,3 +573,13 @@ export function setAdapterAudio(sol, compId, to) {
   sol.connections = (sol.connections || []).filter(c => !(c.from === compId && c.signal === "audio" && !c.dante));
   if (to) sol.connections.push({ from: compId, to, signal: "audio" });
 }
+// a new amp in a room (the rare local feed: an encoder's analog out to an amp at the room) —
+// it drives the room's speakers when nothing else does yet; returns its id
+export function addLocalAmp(job, sol, zoneId) {
+  const z = (job.house?.zones || []).find(x => x.id === zoneId); if (!z) return null;
+  const id = freeId(job, sol, `${zoneId}-amp`);
+  (sol.localDevices ||= []).push({ id, type: "amp", model: `Local amp — ${z.name}`, status: "new", zone: z.id, location: "at-display", zones: 1 });
+  const spk = (z.endpoints || []).find(e => e.type === "speakers");
+  if (spk && !(sol.connections || []).some(c => c.to === spk.id && c.signal === "speaker")) (sol.connections ||= []).push({ from: id, to: spk.id, signal: "speaker" });
+  return id;
+}

@@ -453,25 +453,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002003352",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002003352",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002003352",
-    "./app/ports.js": "./app/ports.js?v=20261002003352",
-    "./app/commands.js": "./app/commands.js?v=20261002003352",
-    "./app/engine.js": "./app/engine.js?v=20261002003352",
-    "./app/exports.js": "./app/exports.js?v=20261002003352",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002003352",
-    "./app/hookup.js": "./app/hookup.js?v=20261002003352",
-    "./app/importers.js": "./app/importers.js?v=20261002003352",
-    "./app/library.js": "./app/library.js?v=20261002003352",
-    "./app/names.js": "./app/names.js?v=20261002003352",
-    "./app/network.js": "./app/network.js?v=20261002003352",
-    "./app/pages.js": "./app/pages.js?v=20261002003352",
-    "./app/power.js": "./app/power.js?v=20261002003352",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002003352",
-    "./app/rack.js": "./app/rack.js?v=20261002003352",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002003352",
-    "./app/starters.js": "./app/starters.js?v=20261002003352"
+    "./app/ai.js": "./app/ai.js?v=20261002011938",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002011938",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002011938",
+    "./app/ports.js": "./app/ports.js?v=20261002011938",
+    "./app/commands.js": "./app/commands.js?v=20261002011938",
+    "./app/engine.js": "./app/engine.js?v=20261002011938",
+    "./app/exports.js": "./app/exports.js?v=20261002011938",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002011938",
+    "./app/hookup.js": "./app/hookup.js?v=20261002011938",
+    "./app/importers.js": "./app/importers.js?v=20261002011938",
+    "./app/library.js": "./app/library.js?v=20261002011938",
+    "./app/names.js": "./app/names.js?v=20261002011938",
+    "./app/network.js": "./app/network.js?v=20261002011938",
+    "./app/pages.js": "./app/pages.js?v=20261002011938",
+    "./app/power.js": "./app/power.js?v=20261002011938",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002011938",
+    "./app/rack.js": "./app/rack.js?v=20261002011938",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002011938",
+    "./app/starters.js": "./app/starters.js?v=20261002011938"
 } }
 </script>
 <script>
@@ -684,7 +684,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002003352").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002011938").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -2362,7 +2362,9 @@ function libBadges(id, d) {
 }
 function renderLibList() {
   const list = libEntries().sort(([, a], [, b]) => `${a.brand} ${a.model}`.localeCompare(`${b.brand} ${b.model}`));
-  if (!list.some(([id]) => id === LIB.sel)) LIB.sel = LIB.sel && SETTINGS.catalog.devices[LIB.sel] ? LIB.sel : list[0]?.[0] || null;
+  // a search that filters the open product out opens the first match (on a phone the editor sits
+  // under a short list — typing "motu" and still seeing the MDX-16 read as "search is broken")
+  if (!list.some(([id]) => id === LIB.sel)) LIB.sel = list[0]?.[0] || (LIB.sel && SETTINGS.catalog.devices[LIB.sel] ? LIB.sel : null);
   const groups = LIB_TYPES.map(([t, l]) => [l, list.filter(([, d]) => d.type === t)]).filter(([, g]) => g.length);
   const other = list.filter(([, d]) => !LIB_TYPES.some(([t]) => t === d.type));
   if (other.length) groups.push(["Other", other]);

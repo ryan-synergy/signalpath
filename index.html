@@ -459,25 +459,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002041054",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002041054",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002041054",
-    "./app/ports.js": "./app/ports.js?v=20261002041054",
-    "./app/commands.js": "./app/commands.js?v=20261002041054",
-    "./app/engine.js": "./app/engine.js?v=20261002041054",
-    "./app/exports.js": "./app/exports.js?v=20261002041054",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002041054",
-    "./app/hookup.js": "./app/hookup.js?v=20261002041054",
-    "./app/importers.js": "./app/importers.js?v=20261002041054",
-    "./app/library.js": "./app/library.js?v=20261002041054",
-    "./app/names.js": "./app/names.js?v=20261002041054",
-    "./app/network.js": "./app/network.js?v=20261002041054",
-    "./app/pages.js": "./app/pages.js?v=20261002041054",
-    "./app/power.js": "./app/power.js?v=20261002041054",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002041054",
-    "./app/rack.js": "./app/rack.js?v=20261002041054",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002041054",
-    "./app/starters.js": "./app/starters.js?v=20261002041054"
+    "./app/ai.js": "./app/ai.js?v=20261002121708",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002121708",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002121708",
+    "./app/ports.js": "./app/ports.js?v=20261002121708",
+    "./app/commands.js": "./app/commands.js?v=20261002121708",
+    "./app/engine.js": "./app/engine.js?v=20261002121708",
+    "./app/exports.js": "./app/exports.js?v=20261002121708",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002121708",
+    "./app/hookup.js": "./app/hookup.js?v=20261002121708",
+    "./app/importers.js": "./app/importers.js?v=20261002121708",
+    "./app/library.js": "./app/library.js?v=20261002121708",
+    "./app/names.js": "./app/names.js?v=20261002121708",
+    "./app/network.js": "./app/network.js?v=20261002121708",
+    "./app/pages.js": "./app/pages.js?v=20261002121708",
+    "./app/power.js": "./app/power.js?v=20261002121708",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002121708",
+    "./app/rack.js": "./app/rack.js?v=20261002121708",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002121708",
+    "./app/starters.js": "./app/starters.js?v=20261002121708"
 } }
 </script>
 <script>
@@ -693,7 +693,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002041054").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002121708").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -3097,6 +3097,18 @@ async function takeHandoff() {
 }
 addEventListener("hashchange", takeHandoff);
 window.__spBooted = true;                    // the head's start-up guard stands down
+// a browser that won't let SignalPath save (a private window, site data off) gets told so, once per
+// session, with the way to keep the work — the in-memory fallback works but dies with the tab
+if (!DB) {
+  const bar = document.createElement("div");
+  bar.id = "noSaveBar"; bar.setAttribute("role", "alert");
+  bar.style.cssText = "position:fixed;left:16px;right:16px;bottom:16px;z-index:9999;background:#fff4e5;color:#4a2a00;border:1px solid #e0a040;border-radius:8px;padding:10px 14px;font:14px/1.4 -apple-system,system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.18);display:flex;gap:10px;align-items:center;flex-wrap:wrap";
+  bar.innerHTML = `<span style="flex:1;min-width:220px"><b>This browser isn't letting SignalPath save.</b> (A private window, or site data turned off.) Your work lasts until you close this tab — use <b>Export → Job file</b> to keep it.</span>
+    <button type="button" data-a="export" style="font:inherit;padding:4px 10px">Save a job file now</button><button type="button" data-a="ok" style="font:inherit;padding:4px 10px">Got it</button>`;
+  bar.querySelector('[data-a="export"]').onclick = () => $("#exportJson").click();
+  bar.querySelector('[data-a="ok"]').onclick = () => bar.remove();
+  document.body.appendChild(bar);
+}
 await takeHandoff();
 </script>
 </body>

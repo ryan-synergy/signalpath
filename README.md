@@ -83,6 +83,8 @@ No build step, no dependencies, no server. Pure static HTML + ES modules.
 
 This repo is public (it serves the live site), so SignalPath carries **no pricing of any kind**: no dealer or sell prices, no list/MSRP/retail prices, no subscription fees, and nothing from Synergy's private PlanQueue product export. SKUs and product names are fine. A schematic doesn't need prices — Synergy prices in PlanQueue. `deploy.sh` runs `check-public.py` on the exact copy it's about to publish and stops on any money amount, fee, price field or PlanQueue-export content; a test in `app/tests.html` scans the catalog and every shipped module the same way.
 
+**Private windows.** If the browser won't let SignalPath save (a private window, or site data turned off), the app still works for that tab and says so in a bar at the bottom, with a button that saves a job file — use Export → Job file to keep the work.
+
 ## Running it
 
 **Easiest:** open the live URL above. It works offline-ish after first load and runs fine on an iPad. Right after an update, a browser still holding old files shows *"SignalPath was just updated — Reload"* instead of a blank page; your jobs are kept either way.

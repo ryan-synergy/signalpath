@@ -532,6 +532,9 @@ export function wireRuns(job, ix, opts = {}) {
       carries: `Network (${devName(d)})`, color: "#2f9e44", term: "RJ45 at TV", count: 1,
       gray: (z?.scope || "included") !== "included" });   // a puck in a pre-wire room is a pre-wire drop
   }
+  // which rack(s) each run lands in — its patch panel (a rack-to-rack run lands in both)
+  const rackIdOf = t => { const r = (sol.racks || []).find(r => String(t) === r.name || String(t).startsWith(`${r.name} · `)); return r?.id; };
+  for (const r of runs) r.racks = [...new Set([rackIdOf(r.from), rackIdOf(r.to)].filter(Boolean))];
   // deterministic numbering per prefix, non-gray first within prefix order V,N,R,S
   const order = { X: 0, V: 1, N: 2, R: 3, S: 4 };
   runs.sort((a, b) => order[a.prefix] - order[b.prefix] || (a.gray ? 1 : 0) - (b.gray ? 1 : 0));
@@ -797,17 +800,19 @@ export function rackFrontSVG(r, rw = 300, look = {}) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${rw + 40} ${rows * uPx + 12}" width="100%" font-family="'Avenir Next', Avenir, 'Helvetica Neue', sans-serif">${drawRack(r, 30, top, rw, uPx, look).join("")}</svg>`;
 }
 export function rackData(adviseResult, solId) {
+  const powers = (adviseResult?.power || []).filter(p => p.solution === solId);   // one per rack
   return { racks: (adviseResult?.racks || []).filter(r => r.solution === solId && (r.items.length || r.rear.length)),
-           power: (adviseResult?.power || []).find(p => p.solution === solId) || null };
+           power: powers[0] || null, powers };
 }
 function rackPages(job, ix, adviseResult, opts, label) {
   const s = ix.solutions[opts.solution ?? 0];
-  const { racks, power } = rackData(adviseResult, s?.sol.id);
+  const { racks, powers } = rackData(adviseResult, s?.sol.id);
   if (!racks.length) return [];
   const clip = (v, n) => String(v).length > n ? String(v).slice(0, n - 1) + "…" : String(v);
   const bodies = [];
   const RX = 560, RW = 1000;                           // right column
-  racks.forEach((r, k) => {
+  racks.forEach(r => {
+    const power = powers.find(p => p.rack === r.rack) || null;   // this rack's own WattBox, circuit and heat
     let body = []; bodies.push(body);
     const top = TOP + 34, rw = 380;
     const uPx = Math.min(20, Math.floor((LIMIT - top - 10) / Math.max(r.size, r.used)));
@@ -840,7 +845,7 @@ function rackPages(job, ix, adviseResult, opts, label) {
     table("Rack hardware", "What the elevation needs beyond the gear — ? = part number to fill in",
       [{ label: "Item", dx: 14 }, { label: "Qty", dx: 520 }, { label: "Part no.", dx: 600 }],
       r.hardware.map(h => ({ cells: [h.item, String(h.qty), h.partNo || Q] })));
-    if (k === 0 && power) {
+    if (power) {
       const units = power.units.length ? power.units.map(u => `${u.model}${u.outlets != null ? ` (${u.outlets} outlets)` : ""}`).join(" + ") : "No power conditioner";
       const verdict = power.supply == null ? (power.units.length ? "outlet count ?" : `spec ${power.pick ? `${power.pick.qty > 1 ? power.pick.qty + " × " : ""}${power.pick.model}` : "a WattBox"}`)
         : power.short ? `${power.short} SHORT` : `${power.supply - power.need} spare${power.tight ? ` (aim for ${power.spare})` : ""}`;

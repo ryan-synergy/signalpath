@@ -26,14 +26,17 @@ export function rackPlans(job, ix, catalog) {
   for (const [si, s] of ix.solutions.entries()) {
     const sol = s.sol;
     const tenG = Object.values(s.devices).some(d => cat(d.catalogRef)?.gen === "10g");
-    // Cat6 home runs land on patch panels in the first rack
-    let cat6 = 0;
-    try { cat6 = wireRuns(job, ix, { solution: si }).filter(r => /^Cat6/.test(r.cable)).reduce((n, r) => n + r.count, 0); } catch { cat6 = 0; }
+    // Cat6 home runs land on patch panels in the rack they start from (a pool house rack
+    // patches its own rooms; the run between two racks takes a port in each)
+    let cat6runs = [];
+    try { cat6runs = wireRuns(job, ix, { solution: si }).filter(r => /^Cat6/.test(r.cable)); } catch { cat6runs = []; }
+    const main = sol.racks?.[0]?.id;
     (sol.racks || []).forEach((r, ri) => {
       // 1–60U: a typo'd 4200 would draw 4,200 rows and stall the page
       const size = Math.min(60, Math.max(1, Math.floor(+r.units || +job.job?.rackUnits || DEFAULT_RACK_U) || DEFAULT_RACK_U));
       const items = [], unknown = [], rear = [], small = [], cboxes = [];
-      if (ri === 0 && cat6) for (let k = 0; k < Math.ceil(cat6 / PATCH_PORTS); k++)
+      const cat6 = cat6runs.filter(x => (x.racks?.length ? x.racks : [main]).includes(r.id)).reduce((n, x) => n + x.count, 0);
+      if (cat6) for (let k = 0; k < Math.ceil(cat6 / PATCH_PORTS); k++)
         items.push({ kind: "patch", tier: 0, u: 1, label: `Cat6 patch panel ${PATCH_PORTS}-port${Math.ceil(cat6 / PATCH_PORTS) > 1 ? ` (${k + 1})` : ""}` });
       for (const d of r.devices || []) {
         const c = specFor(d, catalog);
@@ -118,7 +121,7 @@ export function rackPlans(job, ix, catalog) {
       for (const i of items.filter(i => i.kit)) kitQty[i.kit] = (kitQty[i.kit] || 0) + 1;
       for (const [kit, qty] of Object.entries(kitQty)) hardware.push({ key: "kit", item: `MXNet rack kit, ${items.find(i => i.kit === kit).u}U`, qty, partNo: kit });
       out.push({ solution: sol.id, rack: r.id, name: r.name || "Equipment Rack", size, used, spare: size - used,
-        over: Math.max(0, used - size), items, unknown, rear, cat6: ri === 0 ? cat6 : 0,
+        over: Math.max(0, used - size), items, unknown, rear, cat6,
         hardware: hardware.filter(h => h.qty > 0) });
     });
   }

@@ -389,6 +389,8 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     runs.filter(r => r.prefix !== "X" && !poolRuns.includes(r)).every(r => r.from.startsWith("Main Equipment Rack")));
   const one = loadJob(fixtures.residence);
   t("wire schedule: a one-rack job has no rack-to-rack runs", !wireRuns(one.job, one.ix, {}).some(r => r.prefix === "X"));
+  t("wire schedule: each run knows the rack(s) it lands in (X lands in both)",
+    x[0]?.racks?.length === 2 && poolRuns.every(r => r.racks.length === 1 && r.racks[0] === "rack-pool"));
 }
 
 /* ---------- hide-signals view (tech-view slice: hide network wires) ---------- */
@@ -2505,6 +2507,30 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const r = a.racks[0], kinds = r.items.map(i => i.kind);
   t("rack: patch panels sized from the Cat6 home runs (24 per panel), at the top",
     r.cat6 > 0 && r.items.filter(i => i.kind === "patch").length === Math.ceil(r.cat6 / 24) && kinds[0] === "patch");
+  {
+    const E2 = loadJob(fixtures.estate), re = advise(E2.job, E2.ix, CAT).racks;
+    const m = re.find(x => x.rack === "rack-main"), pl = re.find(x => x.rack === "rack-pool");
+    t("rack: a second rack patches its own rooms — pool house rack gets its own panel, interconnect counted in both",
+      m?.cat6 === 5 && pl?.cat6 === 3 && pl.items.some(i => i.kind === "patch"), JSON.stringify(re.map(x => [x.rack, x.cat6])));
+    // power: one budget per rack — the pool house's amp never borrows the main rack's WattBox
+    const ae = advise(E2.job, E2.ix, CAT), pw = ae.power;
+    const pm = pw.find(p => p.rack === "rack-main"), pp = pw.find(p => p.rack === "rack-pool");
+    t("power: one plan per rack, each box counted in the rack it sits in",
+      pw.length === 2 && pm.need === 8 && pp.need === 2 && pp.loads.some(l => /MDX-8/.test(l.what)) && !pm.loads.some(l => /MDX-8/.test(l.what)), JSON.stringify(pw.map(p => [p.rack, p.need])));
+    t("power: a rack with no WattBox gets its own note naming it, sized for that rack",
+      ae.notes.some(n => n.code === "power-none" && n.rack === "rack-pool" && /^Pool House Rack:/.test(n.msg) && n.msg.includes(pp.pick.model)));
+    // add a WattBox to the main rack only: the main note clears, the pool house's stays
+    const wb = Object.entries(CAT.devices).find(([, c]) => c.type === "power" && c.outlets >= 12);
+    const e3 = structuredClone(fixtures.estate);
+    e3.solutions[0].racks[0].devices.push({ id: "wb-main", type: "power", catalogRef: wb[0], model: wb[1].model });
+    const L3 = loadJob(e3), a3 = advise(L3.job, L3.ix, CAT), u3 = boxUsage(L3.job, L3.ix, CAT, a3, 0);
+    t("power: a WattBox in the main rack covers only the main rack",
+      !a3.notes.some(n => n.code === "power-none" && n.rack === "rack-main") && a3.notes.some(n => n.code === "power-none" && n.rack === "rack-pool")
+      && u3["wb-main"]?.outlets?.used === 8, JSON.stringify(u3["wb-main"]));
+    const one = advise(loadJob(fixtures.residence).job, loadJob(fixtures.residence).ix, CAT);
+    t("power: a one-rack job reads as before (no rack name in the note)",
+      one.power.length === 1 && one.notes.some(n => n.code === "power-none" && /no power conditioner on the job/.test(n.msg) && /^\d/.test(n.msg)));
+  }
   t("rack: small boxes (Apple TVs, CBOX, encoders) ride shelves of up to 3",
     r.items.filter(i => i.kind === "shelf" && !i.kit).every(i => i.members.length <= 3 && i.u === 2) && r.items.some(i => i.kind === "shelf" && i.members.some(m => /CBOX/.test(m))));
   const tiers = r.items.map(i => i.tier);

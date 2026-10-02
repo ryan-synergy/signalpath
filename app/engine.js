@@ -121,17 +121,18 @@ export function boxUsage(job, ix, catalog, advice, solIndex = 0) {
     if (p.solution !== sol.id || !s.devices[p.switch] || !p.known) continue;
     (out[p.switch] ||= {}).ports = { used: p.used, cap: (p.copper || 0) + (p.sfp || 0) };
   }
-  const pw = (advice?.power || []).find(p => p.solution === sol.id);
-  const units = (pw?.units || []).filter(u => u.outlets > 0 && s.devices[u.id]);
-  // the load splits across the WattBoxes the way an installer balances circuits (by size);
-  // a shortfall lands on the last one and lights red
-  const need = pw?.need || 0, supply = units.reduce((n, u) => n + u.outlets, 0);
-  let left = need;
-  units.forEach((u, i) => {
-    const n = i === units.length - 1 ? left : Math.min(left, Math.round(Math.min(need, supply) * u.outlets / supply));
-    (out[u.id] ||= {}).outlets = { used: n, cap: u.outlets };
-    left -= n;
-  });
+  // one power plan per rack: the load splits across that rack's WattBoxes the way an
+  // installer balances circuits (by size); a shortfall lands on the last one and lights red
+  for (const pw of (advice?.power || []).filter(p => p.solution === sol.id)) {
+    const units = (pw.units || []).filter(u => u.outlets > 0 && s.devices[u.id]);
+    const need = pw.need || 0, supply = units.reduce((n, u) => n + u.outlets, 0);
+    let left = need;
+    units.forEach((u, i) => {
+      const n = i === units.length - 1 ? left : Math.min(left, Math.round(Math.min(need, supply) * u.outlets / supply));
+      (out[u.id] ||= {}).outlets = { used: n, cap: u.outlets };
+      left -= n;
+    });
+  }
   return out;
 }
 
@@ -4734,23 +4735,25 @@ export function advise(job, ix = indexJob(job), catalog = null) {
   /* -- rack outlets: every box needs one on the WattBox unless PoE powers it -- */
   out.power = catalog?.devices ? powerPlan(job, ix, catalog, out.network) : [];
   for (const p of out.power) {
+    // a job with two racks says which one ("Pool House Rack power: …"); one rack reads as before
+    const who = p.multi ? p.rackName : "Rack", R = { solution: p.solution, rack: p.rack };
     const pick = p.pick ? `${p.pick.qty > 1 ? `${p.pick.qty} × ` : ""}${p.pick.model} (${p.pick.outlets} outlets${p.pick.qty > 1 ? " each" : ""})` : "a WattBox";
     if (!p.units.length)
-      out.notes.push({ code: "power-none", solution: p.solution, msg: `${p.need} rack outlet${p.need === 1 ? "" : "s"} needed (${p.loads.length} boxes${p.poe.length ? `, ${p.poe.length} more on PoE` : ""}) — no power conditioner on the job; spec ${pick}` });
+      out.notes.push({ code: "power-none", ...R, msg: `${p.multi ? `${p.rackName}: ` : ""}${p.need} rack outlet${p.need === 1 ? "" : "s"} needed (${p.loads.length} boxes${p.poe.length ? `, ${p.poe.length} more on PoE` : ""}) — no power conditioner ${p.multi ? "in this rack" : "on the job"}; spec ${pick}` });
     else if (p.short)
-      out.notes.push({ code: "power-short", solution: p.solution, msg: `Rack power: ${p.need} outlets needed, ${p.supply} on the power conditioner — ${p.short} short; step up to ${pick}` });
+      out.notes.push({ code: "power-short", ...R, msg: `${who} power: ${p.need} outlets needed, ${p.supply} on the power conditioner — ${p.short} short; step up to ${pick}` });
     else if (p.tight)
-      out.notes.push({ code: "power-tight", solution: p.solution, msg: `Rack power: ${p.need} of ${p.supply} outlets used — under ${p.spare} spare for the ISP modem, router and add-ons` });
-    if (p.cooling) out.notes.push({ code: "rack-heat", solution: p.solution,
+      out.notes.push({ code: "power-tight", ...R, msg: `${who} power: ${p.need} of ${p.supply} outlets used — under ${p.spare} spare for the ISP modem, router and add-ons` });
+    if (p.cooling) out.notes.push({ code: "rack-heat", ...R,
       msg: p.cooling === "room"
-        ? `Rack heat: ~${p.heatW} W (${p.btu.toLocaleString("en-US")} BTU/hr) at typical load — more than a closet sheds on its own; plan cooling for the room (HVAC supply + return, or a dedicated unit) plus rack fans`
-        : `Rack heat: ~${p.heatW} W (${p.btu.toLocaleString("en-US")} BTU/hr) at typical load — plan active ventilation (a top-exhaust rack fan) and a vented door or closet` });
+        ? `${who} heat: ~${p.heatW} W (${p.btu.toLocaleString("en-US")} BTU/hr) at typical load — more than a closet sheds on its own; plan cooling for the room (HVAC supply + return, or a dedicated unit) plus rack fans`
+        : `${who} heat: ~${p.heatW} W (${p.btu.toLocaleString("en-US")} BTU/hr) at typical load — plan active ventilation (a top-exhaust rack fan) and a vented door or closet` });
     if (p.typicalW > p.circuitW)
-      out.notes.push({ code: "power-circuit", solution: p.solution,
-        msg: `Rack power: ~${p.typicalW} W typical draw is over ${p.circuits > 1 ? `${p.circuits} × ${p.circuitA}A circuits'` : `the ${p.circuitA}A circuit's`} ${p.circuitW} W continuous — split the amps onto a second circuit + WattBox, or a WB-820 on a 20A circuit` });
+      out.notes.push({ code: "power-circuit", ...R,
+        msg: `${who} power: ~${p.typicalW} W typical draw is over ${p.circuits > 1 ? `${p.circuits} × ${p.circuitA}A circuits'` : `the ${p.circuitA}A circuit's`} ${p.circuitW} W continuous — split the amps onto a second circuit + WattBox, or a WB-820 on a 20A circuit` });
     else if (p.maxW > p.circuitW)
-      out.notes.push({ code: "power-peak", solution: p.solution,
-        msg: `Rack power: ~${p.typicalW} W typical, up to ${p.maxW} W at full output — over ${p.circuits > 1 ? `${p.circuits} × ${p.circuitA}A circuits'` : `the ${p.circuitA}A circuit's`} ${p.circuitW} W continuous at peak; give the amps a dedicated 20A circuit` });
+      out.notes.push({ code: "power-peak", ...R,
+        msg: `${who} power: ~${p.typicalW} W typical, up to ${p.maxW} W at full output — over ${p.circuits > 1 ? `${p.circuits} × ${p.circuitA}A circuits'` : `the ${p.circuitA}A circuit's`} ${p.circuitW} W continuous at peak; give the amps a dedicated 20A circuit` });
   }
   // source / TV audio settings (downres-the-source rule, audiochain.js)
   out.setup = ix.solutions.map((s, i) => ({ solution: s.sol.id, ...audioSetup(job, ix, catalog, i) }));

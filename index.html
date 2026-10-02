@@ -463,25 +463,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002145134",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002145134",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002145134",
-    "./app/ports.js": "./app/ports.js?v=20261002145134",
-    "./app/commands.js": "./app/commands.js?v=20261002145134",
-    "./app/engine.js": "./app/engine.js?v=20261002145134",
-    "./app/exports.js": "./app/exports.js?v=20261002145134",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002145134",
-    "./app/hookup.js": "./app/hookup.js?v=20261002145134",
-    "./app/importers.js": "./app/importers.js?v=20261002145134",
-    "./app/library.js": "./app/library.js?v=20261002145134",
-    "./app/names.js": "./app/names.js?v=20261002145134",
-    "./app/network.js": "./app/network.js?v=20261002145134",
-    "./app/pages.js": "./app/pages.js?v=20261002145134",
-    "./app/power.js": "./app/power.js?v=20261002145134",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002145134",
-    "./app/rack.js": "./app/rack.js?v=20261002145134",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002145134",
-    "./app/starters.js": "./app/starters.js?v=20261002145134"
+    "./app/ai.js": "./app/ai.js?v=20261002153337",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002153337",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002153337",
+    "./app/ports.js": "./app/ports.js?v=20261002153337",
+    "./app/commands.js": "./app/commands.js?v=20261002153337",
+    "./app/engine.js": "./app/engine.js?v=20261002153337",
+    "./app/exports.js": "./app/exports.js?v=20261002153337",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002153337",
+    "./app/hookup.js": "./app/hookup.js?v=20261002153337",
+    "./app/importers.js": "./app/importers.js?v=20261002153337",
+    "./app/library.js": "./app/library.js?v=20261002153337",
+    "./app/names.js": "./app/names.js?v=20261002153337",
+    "./app/network.js": "./app/network.js?v=20261002153337",
+    "./app/pages.js": "./app/pages.js?v=20261002153337",
+    "./app/power.js": "./app/power.js?v=20261002153337",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002153337",
+    "./app/rack.js": "./app/rack.js?v=20261002153337",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002153337",
+    "./app/starters.js": "./app/starters.js?v=20261002153337"
 } }
 </script>
 <script>
@@ -697,7 +697,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002145134").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002153337").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -2114,8 +2114,8 @@ function rackHTML() {
   const cat = effectiveCatalog();
   const a = advise(job, ix, cat);
   const sol = S.job.solutions[S.sol];
-  const { racks, power } = rackData(a, ix.solutions[S.sol]?.sol.id);
-  const notes = (a.notes || []).filter(n => /^(power|rack|switch-no-poe)/.test(n.code) && (!n.solution || n.solution === sol.id));
+  const { racks, powers } = rackData(a, ix.solutions[S.sol]?.sol.id);
+  const allNotes = (a.notes || []).filter(n => /^(power|rack|switch-no-poe)/.test(n.code) && (!n.solution || n.solution === sol.id));
   const num = v => v == null ? "" : String(Math.round(v * 10) / 10);
   const inp = (dev, k, own, fromCat, w = 46) => `<input class="rspec" data-dev="${esc(dev)}" data-k="${k}" value="${esc(num(own ?? fromCat))}" placeholder="?" style="width:${w}px${own == null && fromCat != null ? ";color:#777" : ""}" title="${own != null ? "Typed in for this job" : fromCat != null ? "From the catalog — type to override" : "Not known yet — type it in"}">`;
   const rackRow = rr => {
@@ -2140,15 +2140,20 @@ function rackHTML() {
       <table class="rtab"><tr><th>Item</th><th>Qty</th><th>Part no.</th></tr>${hw}</table>` : ""}
     </div></div>`;
   };
-  const pw = power ? `<div class="sect">POWER & HEAT</div>
+  // one POWER & HEAT block per rack (a pool house rack has its own WattBox, circuit and heat)
+  const pw = power => { const notes = allNotes.filter(n => n.rack !== undefined ? n.rack === power.rack : power === powers[0]);   // rack-less notes under the first
+    return `<div class="sect">POWER & HEAT${power.multi ? ` — ${esc(power.rackName)}` : ""}</div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       <div class="mini">${power.units.length ? esc(power.units.map(u => `${u.model} (${u.outlets ?? "?"} outlets)`).join(" + ")) : "No power conditioner yet"} · ${power.need} outlets needed${power.supply != null ? ` · ${power.supply - power.need} spare` : ""}</div>
       <div class="mini">Load ~${power.typicalW}${power.noWatts.length ? "+" : ""} W typical / ${power.maxW}${power.noWatts.length ? "+" : ""} W max${power.noWatts.length ? ` (${power.noWatts.length} without watts — "?" below)` : ""} · circuit ${power.circuitW} W (${power.circuits > 1 ? `${power.circuits} × ` : ""}${power.circuitA}A)</div>
       <div class="mini">Heat ~${power.btu.toLocaleString("en-US")} BTU/hr${power.noWatts.length ? ` · <span style="color:#a45a12">${power.noWatts.length} box${power.noWatts.length > 1 ? "es" : ""} with ? watts — totals are a floor</span>` : ""}</div>
       ${notes.map(n => `<div class="mini" style="margin-top:6px;color:#a45a12">⚠ ${esc(n.msg)}</div>`).join("")}
-    </div></div>` : "";
+    </div></div>`; };
   const rs = sol.racks || [];
-  return rs.length ? rs.map(rackRow).join("") + pw : `<div class="mini" style="padding:12px">No rack on this job yet — add gear under GEAR.</div>`;
+  // each rack's power & heat sits under that rack; a plan with no rack match (none) trails
+  const placed = new Set();
+  const under = rr => powers.filter(p => p.rack === rr.id).map(p => (placed.add(p), pw(p))).join("");
+  return rs.length ? rs.map(rr => rackRow(rr) + under(rr)).join("") + powers.filter(p => !placed.has(p)).map(pw).join("") : `<div class="mini" style="padding:12px">No rack on this job yet — add gear under GEAR.</div>`;
 }
 
 /* as-built install record: serial / MAC / IP / notes per box (prints as "Install Record" in the service packet) */

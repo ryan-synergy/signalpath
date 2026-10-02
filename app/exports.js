@@ -326,11 +326,12 @@ export function aiReviewMarkdown(job, solIndex, catalog, { today = new Date().to
       p.virtual ? `${p.used} Ethernet ports needed.` : p.known ? `${p.copper} RJ45 + ${p.sfp} SFP · ${p.used} used · ${p.over ? `${p.over} short` : `${p.spare} spare`}${p.poeBudgetW ? ` · PoE budget ${p.poeBudgetW} W` : ""}` : `${p.used} connections (port count not in the catalog)`, "",
       table(["Port", "Device", "Location", "Network", "Power"], p.rows.map(r => [r.port ?? "NO PORT", r.what, r.where, r.net, r.power || "—"])), "");
   }
-  const pw = (adv.power || []).find(mine);
-  if (pw) o.push("### Rack power (outlets)", "",
+  for (const pw of (adv.power || []).filter(mine)) {
+  o.push(`### Rack power (outlets)${pw.multi ? ` — ${clean(pw.rackName)}` : ""}`, "",
     `${pw.units.length ? pw.units.map(u => `${u.model} (${u.outlets ?? "?"} outlets)`).join(" + ") : "No power conditioner on the job"} · ${pw.need} outlets needed · ${pw.supply == null ? (pw.pick ? `suggest ${pw.pick.qty > 1 ? pw.pick.qty + " × " : ""}${pw.pick.model}` : "size unknown") : pw.short ? `${pw.short} short` : `${pw.supply - pw.need} spare`}`, "",
     table(["Device", "Outlets", "Note"], [...pw.loads.map(l => [l.what, String(l.outlets), l.why || "—"]), ...pw.poe.map(p => [p.what, "0", "PoE from its switch"])]), "");
-  if (pw) o.push(`Load: ~${pw.noWatts.length ? "at least " : ""}${pw.typicalW} W typical / ${pw.maxW} W max against ${pw.circuitW} W continuous (${pw.circuits > 1 ? `${pw.circuits} × ` : ""}${pw.circuitA}A)${pw.noWatts.length ? ` — no wattage on file for ${pw.noWatts.join(", ")}` : ""}`, "");
+  o.push(`Load: ~${pw.noWatts.length ? "at least " : ""}${pw.typicalW} W typical / ${pw.maxW} W max against ${pw.circuitW} W continuous (${pw.circuits > 1 ? `${pw.circuits} × ` : ""}${pw.circuitA}A)${pw.noWatts.length ? ` — no wattage on file for ${pw.noWatts.join(", ")}` : ""}`, "");
+  }
   for (const r of (adv.racks || []).filter(mine)) o.push(`### Rack elevation — ${clean(r.name)} (${r.size}U)`, "",
     `${r.used}U used · ${r.over ? `${r.over}U over` : `${r.spare}U spare`}${r.unknown.length ? ` · height unknown: ${r.unknown.join(", ")}` : ""}`, "",
     ...r.items.map(i => `- ${i.guess ? "?U (drawn as 1U)" : `${i.u}U`} ${i.label}`), "");

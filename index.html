@@ -365,16 +365,25 @@
   /* ---- new job: rack starting points ---- */
   #starter { position: fixed; inset: 0; background: rgba(10,12,16,.55); display: none; z-index: 50; align-items: center; justify-content: center; }
   #starter.show { display: flex; }
-  #starter .card { background: #fff; border-radius: 12px; width: min(760px, 94vw); max-height: 88vh; overflow-y: auto;
+  #starter .card { background: #fff; border-radius: 12px; width: min(820px, 94vw); max-height: 88vh; overflow-y: auto;
                    box-shadow: 0 12px 40px rgba(0,0,0,.35); padding: 18px 20px; }
   #starter h2 { margin: 0 0 2px; font-size: 18px; }
   #starter .s { font-size: 12.5px; color: #666; margin-bottom: 12px; }
-  #starter .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-  #starter .opt { text-align: left; font: inherit; background: #f8f9fb; border: 1px solid var(--line); border-radius: 10px;
-                  padding: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; }
+  #starter .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
+  #starter .kgroup { grid-column: 1 / -1; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #6a7380; margin: 8px 0 0; }
+  #starter .kgroup:first-child { margin-top: 0; }
+  #starter .opt { background: #f8f9fb; border: 1px solid var(--line); border-radius: 10px; position: relative; }
   #starter .opt:hover { border-color: var(--accent); background: #f1f6fc; }
+  #starter .opt .pick { all: unset; box-sizing: border-box; width: 100%; display: flex; gap: 12px; align-items: center; padding: 10px 70px 10px 10px; cursor: pointer; border-radius: 10px; min-height: 86px; }
+  #starter .opt .pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #starter .opt .kthumb { flex: none; }
+  #starter .opt .txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   #starter .opt b { font-size: 14px; }
-  #starter .opt .bl { font-size: 12px; color: #555; }
+  #starter .opt .bl { font-size: 12.5px; color: #444; line-height: 1.35; }
+  #starter .opt .meta { font-size: 11.5px; color: #7a828c; }
+  #starter .opt .det { position: absolute; top: 8px; right: 8px; font: inherit; font-size: 11.5px; color: var(--accent); background: none; border: 0; padding: 6px 8px; cursor: pointer; min-height: 30px; }
+  #starter .opt .more { padding: 0 12px 12px 76px; font-size: 12px; color: #555; display: flex; flex-direction: column; gap: 6px; line-height: 1.4; }
+  #starter .opt .more[hidden] { display: none; }
   #starter .opt .gear { font-size: 11px; color: #777; line-height: 1.4; }
   #starter .ft { display: flex; justify-content: flex-end; margin-top: 12px; }
   #starter .ft button { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 7px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
@@ -476,25 +485,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002182627",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002182627",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002182627",
-    "./app/ports.js": "./app/ports.js?v=20261002182627",
-    "./app/commands.js": "./app/commands.js?v=20261002182627",
-    "./app/engine.js": "./app/engine.js?v=20261002182627",
-    "./app/exports.js": "./app/exports.js?v=20261002182627",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002182627",
-    "./app/hookup.js": "./app/hookup.js?v=20261002182627",
-    "./app/importers.js": "./app/importers.js?v=20261002182627",
-    "./app/library.js": "./app/library.js?v=20261002182627",
-    "./app/names.js": "./app/names.js?v=20261002182627",
-    "./app/network.js": "./app/network.js?v=20261002182627",
-    "./app/pages.js": "./app/pages.js?v=20261002182627",
-    "./app/power.js": "./app/power.js?v=20261002182627",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002182627",
-    "./app/rack.js": "./app/rack.js?v=20261002182627",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002182627",
-    "./app/starters.js": "./app/starters.js?v=20261002182627"
+    "./app/ai.js": "./app/ai.js?v=20261002192136",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002192136",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002192136",
+    "./app/ports.js": "./app/ports.js?v=20261002192136",
+    "./app/commands.js": "./app/commands.js?v=20261002192136",
+    "./app/engine.js": "./app/engine.js?v=20261002192136",
+    "./app/exports.js": "./app/exports.js?v=20261002192136",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002192136",
+    "./app/hookup.js": "./app/hookup.js?v=20261002192136",
+    "./app/importers.js": "./app/importers.js?v=20261002192136",
+    "./app/library.js": "./app/library.js?v=20261002192136",
+    "./app/names.js": "./app/names.js?v=20261002192136",
+    "./app/network.js": "./app/network.js?v=20261002192136",
+    "./app/pages.js": "./app/pages.js?v=20261002192136",
+    "./app/power.js": "./app/power.js?v=20261002192136",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002192136",
+    "./app/rack.js": "./app/rack.js?v=20261002192136",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002192136",
+    "./app/starters.js": "./app/starters.js?v=20261002192136"
 } }
 </script>
 <script>
@@ -627,8 +636,8 @@
 </div></div>
 
 <div id="starter" role="dialog" aria-modal="true" aria-labelledby="stTitle"><div class="card">
-  <h2 id="stTitle">New job — start from a rack</h2>
-  <div class="s">Pick the rack this job looks most like. Its gear and the patching inside the rack are filled in; then add zones with quick-add and they wire themselves to it.</div>
+  <h2 id="stTitle">New job — pick the closest rack</h2>
+  <div class="s">Its gear comes filled in. Then type the rooms — they wire themselves to it.</div>
   <div class="grid" id="stGrid"></div>
   <div class="ft"><button id="stCancel">Cancel</button></div>
 </div></div>
@@ -663,7 +672,7 @@
 </div></div>
 
 <script type="module">
-import { loadJob, normalizeJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock, trunkMode, boxUsage, SHEET } from "./app/engine.js";
+import { loadJob, normalizeJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock, trunkMode, boxUsage, SHEET, KIND_STYLE, deviceKind } from "./app/engine.js";
 import { importAny, mergeHouse, drawFromWalk, decodeHandoff, stripUnsafe } from "./app/importers.js";
 import { sheetGroups, sheetJob } from "./app/sheets.js";
 import { LIB_TYPES, typeLabel, SIGNALS as LIB_SIGNALS, TYPE_IO, LIB_SECTIONS, SELECTS, BEHAVIOURS, tagsOf, newId, blankDevice, duplicateDevice, checkEntry, exportLibrary, planImport, applyImport, tidyStarterStore } from "./app/library.js";
@@ -710,7 +719,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002182627").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002192136").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1100,16 +1109,49 @@ async function startJobFrom(st) {
   await persist(); refresh();
   setTimeout(() => $("#qaInput")?.focus(), 50);
 }
+/* new job: simpler cards (Ryan 2026-10-02) — grouped, each a small rack picture in the
+   equipment colors, the kit's name, one line, and its size; the full description and the
+   part list wait behind "Details". The kit manager's order holds inside each group. */
+const KIT_GROUPS = [["mine", "Your kits"], ["whole", "Whole home"], ["small", "Smaller jobs"], ["room", "One room"], ["start", "Start from"]];
+const KIT_RANK = { network: 0, mxnet: 1, video: 1, avb: 2, control: 2, source: 3, avr: 4, audio: 4, power: 5 };
+function kitThumb(st, cat) {
+  const W = 54, H = 78, inner = H - 8;
+  const boxes = st.devices.map(d => { const c = cat.devices?.[d.catalogRef]; const k = deviceKind(d, c);
+    return { k, u: Math.min(4, Math.max(1, typeof c?.rackUnits === "number" ? c.rackUnits : 1)) }; })
+    .sort((a, b) => (KIT_RANK[a.k] ?? 3) - (KIT_RANK[b.k] ?? 3));
+  const total = boxes.reduce((n, b) => n + b.u * 3 + 2, 0), f = total > inner ? inner / total : 1;
+  let y = 4;
+  // each box a slab in its equipment colour (sources black, power grey) — the kit's character at a glance
+  const slabs = boxes.map(b => { const h = Math.max(1.8, (b.u * 3) * f), st = KIND_STYLE[b.k] || KIND_STYLE.source;
+    const g = `<rect x="9" y="${y.toFixed(1)}" width="36" height="${h.toFixed(1)}" rx="0.8" fill="${b.k === "source" ? "#26282c" : b.k === "power" ? "#8d939b" : st.edge || st.tint}"/>`;
+    y += h + 1.6 * f; return g; }).join("");
+  return `<svg class="kthumb" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true"><rect x="3" y="1" width="48" height="${H - 2}" rx="3" fill="#fbfbfc" stroke="#9aa3ad" stroke-width="1.2"${st.devices.length ? "" : ' stroke-dasharray="3 2"'}/><rect x="5.5" y="3" width="2" height="${H - 6}" fill="#d3d8de"/><rect x="46.5" y="3" width="2" height="${H - 6}" fill="#d3d8de"/>${slabs}</svg>`;
+}
+const kitLine = st => st.line || (String(st.blurb || "").split(/(?<=[.:;])\s/)[0] || "").replace(/[.:;]$/, "").slice(0, 80);
 $("#newJob").onclick = () => {
   const cat = SETTINGS.catalog, kits = listStarters(SETTINGS.starters).filter(k => !k.hidden);
-  $("#stGrid").innerHTML = kits.map(st => `<button class="opt" data-st="${esc(st.id)}"><b>${esc(st.name)}${st.custom ? ` <span class="mini">· yours</span>` : ""}</b>
-    <span class="bl">${esc(st.blurb)}</span>
-    <span class="gear">${st.devices.length ? esc(st.devices.map(d => d.model || productName(cat.devices?.[d.catalogRef]) || d.id).join(" · ")) : "No gear yet"}${st.rooms ? ` <span class="mini">· ${st.rooms.split(",").length} starting rooms</span>` : ""}</span></button>`).join("");
+  const card = st => {
+    const n = st.devices.length, rooms = st.rooms ? st.rooms.split(",").length : 0;
+    const meta = [n ? `${n} box${n > 1 ? "es" : ""}` : "no gear yet", rooms && `${rooms} starting room${rooms > 1 ? "s" : ""}`].filter(Boolean).join(" · ");
+    return `<div class="opt" data-card="${esc(st.id)}">
+      <button class="pick" data-st="${esc(st.id)}">${kitThumb(st, cat)}<span class="txt"><b>${esc(st.name)}</b><span class="bl">${esc(kitLine(st))}</span><span class="meta">${esc(meta)}</span></span></button>
+      <button class="det" data-det="${esc(st.id)}" aria-expanded="false">Details</button>
+      <div class="more" hidden><div>${esc(st.blurb || "")}</div>
+        <div class="gear">${n ? esc(st.devices.map(d => d.model || productName(cat.devices?.[d.catalogRef]) || d.id).join(" · ")) : "No gear yet"}</div>
+        ${st.rooms ? `<div class="gear">Starting rooms: ${esc(st.rooms)}</div>` : ""}</div></div>`;
+  };
+  const groupOf = st => st.custom ? "mine" : st.group || "whole";
+  $("#stGrid").innerHTML = KIT_GROUPS.map(([g, label]) => { const list = kits.filter(k => groupOf(k) === g);
+    return list.length ? `<div class="kgroup">${esc(label)}</div>${list.map(card).join("")}` : ""; }).join("");
   $("#starter").classList.add("show");
   $("#stGrid").querySelectorAll("[data-st]").forEach(b => b.onclick = async () => {
     const st = kits.find(x => x.id === b.dataset.st);
     $("#starter").classList.remove("show");
     await startJobFrom(st);
+  });
+  $("#stGrid").querySelectorAll("[data-det]").forEach(b => b.onclick = () => {
+    const more = b.parentElement.querySelector(".more"), open = more.hidden;
+    more.hidden = !open; b.setAttribute("aria-expanded", String(open)); b.textContent = open ? "Hide" : "Details";
   });
 };
 $("#stCancel").onclick = () => $("#starter").classList.remove("show");

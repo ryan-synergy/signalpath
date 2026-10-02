@@ -1734,6 +1734,8 @@ for (const [name, raw] of Object.entries(fixtures)) {
       t(`rooms wire themselves: kit ${id} + plain rooms → no errors`, vk.errors.length === 0, vk.errors.map(e => e.msg).join(" | "));
     }
     t("rooms wire themselves: kit tips no longer teach the 'matrix' keyword", STARTERS.every(s => !/\bmatrix\b/.test(s.tip || "")));
+    t("new-job cards: every shipped kit has a group and a one-line summary that fits a card",
+      STARTERS.every(s => ["whole", "small", "room", "start"].includes(s.group) && s.line && s.line.length <= 64 && !/\$|\d+\s?USD/.test(s.line)), STARTERS.filter(s => !s.line || s.line.length > 64).map(s => s.id).join(", "));
 
     /* one-click fixes: every button must clear the finding it sits on */
     const errsOf = jj => { const Lx = loadJob(structuredClone(jj)); return validate(Lx.job, Lx.ix); };

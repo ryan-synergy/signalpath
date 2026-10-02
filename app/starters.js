@@ -18,6 +18,7 @@ const v = (from, to) => ({ from, to, signal: "video" });
 export const STARTERS = [
   {
     id: "mxnet-savant",
+    group: "whole", line: "The usual: MXNet video, Savant audio, a multi-zone amp",   // the new-job card (2026-10-02 simpler cards)
     name: "MXNet + Savant audio",
     blurb: "The usual system: MXNet EV2 video (AVDM encoders break each source's audio out as stereo for the Savant input module), Savant AVB audio into a multi-zone amp.",
     tip: "family room 5.1 75 sony, kitchen stereo 55, patio landscape 8",
@@ -52,6 +53,7 @@ export const STARTERS = [
   },
   {
     id: "dante-director",
+    group: "whole", line: "MXNet video, Dante audio on Director amps",   // the new-job card (2026-10-02 simpler cards)
     name: "MXNet + Dante",
     blurb: "MXNet video + Dante audio: Director amps, Dante decoders (DANTE-DV2) at MXNet TVs, AXIS2/AXIS16 elsewhere, Dante CBOX + its own switch.",
     tip: "kitchen stereo 55, family room 5.1 75, office stereo 43, theater 7.1 85",
@@ -81,6 +83,7 @@ export const STARTERS = [
   },
   {
     id: "mxnet",
+    group: "whole", line: "Smaller whole-home: MXNet video, speaker rooms on an MDX-16",   // the new-job card (2026-10-02 simpler cards)
     name: "MXNet + MDX-16",
     blurb: "For a smaller system: sources on MXNet EV2 encoders into a switch, decoders at each TV, the speaker rooms on an Anthem MDX-16.",
     tip: "family room 5.1 75 sony, master bed stereo 65",
@@ -102,6 +105,7 @@ export const STARTERS = [
   },
   {
     id: "theater-receiver",
+    group: "room", line: "One receiver runs the theater's TV and surround",   // the new-job card (2026-10-02 simpler cards)
     name: "Theater receiver",
     blurb: "One AV receiver drives the theater's TV and surround speakers.",
     tip: "theater 7.1 85 sony avr",
@@ -111,6 +115,7 @@ export const STARTERS = [
   },
   {
     id: "savant-whole-home",
+    group: "whole", line: "HDMI matrix to the TVs, Savant audio (rare now)",   // the new-job card (2026-10-02 simpler cards)
     name: "HDMI matrix (AXION) + Savant audio",
     blurb: "Rare nowadays: an AXION matrix to the TVs (its audio outs downmix to stereo for the Savant input module), Savant AVB audio into a multi-zone amp.",
     tip: "family room 5.1 75 sony, kitchen stereo, patio landscape 8",
@@ -139,6 +144,7 @@ export const STARTERS = [
           change). Each carries starting rooms so it shows what it's for; quick-add wires them. ---- */
   {
     id: "mxnet-10g-estate",
+    group: "whole", line: "Large house: MXNet 10G, Kaleidescape, two MDX-16s",   // the new-job card (2026-10-02 simpler cards)
     name: "MXNet 10G estate + Savant audio",
     blurb: "A large house: MXNet 10G (encoders become 10G transceivers), Kaleidescape, Savant AVB audio through two output modules into two MDX-16s, a 48-port house switch.",
     tip: "bedroom 4 stereo 55, wine room stereo",
@@ -177,6 +183,7 @@ export const STARTERS = [
   },
   {
     id: "condo",
+    group: "small", line: "Two sources on MXNet, Sonos Port into an MDX-8",   // the new-job card (2026-10-02 simpler cards)
     name: "Condo — MXNet + MDX-8",
     blurb: "A small system: two sources on MXNet EV2 into an 8-port switch, a Sonos Port streaming into an MDX-8 for the speaker rooms, a receiver for the living room's surround.",
     tip: "guest room 50, balcony stereo",
@@ -199,6 +206,7 @@ export const STARTERS = [
   },
   {
     id: "sonos",
+    group: "small", line: "No video distribution: TVs local, Sonos Amps for audio",   // the new-job card (2026-10-02 simpler cards)
     name: "Sonos — streaming, local TVs",
     blurb: "No video distribution: each TV has its own source; Sonos Amps in the rack drive the speaker rooms over the network, a Sonos soundbar in the family room.",
     tip: "office stereo, primary bath stereo",
@@ -212,6 +220,7 @@ export const STARTERS = [
   },
   {
     id: "josh-dante",
+    group: "whole", line: "Josh.ai control, MXNet video, Dante audio",   // the new-job card (2026-10-02 simpler cards)
     name: "Josh.ai + MXNet + Dante",
     blurb: "Josh.ai control with Josh remotes; MXNet EV2 video, Dante audio into a Director amp, Dante decoders at the TVs, Dante CBOX on its own switch.",
     tip: "guest room stereo 50 josh remote",
@@ -242,6 +251,7 @@ export const STARTERS = [
   },
   {
     id: "outdoor",
+    group: "small", line: "Landscape audio and Sunbrite TVs for outdoor living",   // the new-job card (2026-10-02 simpler cards)
     name: "Outdoor living — landscape + Sunbrite",
     blurb: "Outdoor-heavy: Sonance landscape sets on a Sonance amp, an MDX-8 for the stereo areas (a Sonos Port streaming into each), patio and outdoor kitchen Sunbrite TVs on MXNet.",
     tip: "side yard landscape 6, cabana stereo",
@@ -266,6 +276,7 @@ export const STARTERS = [
   },
   {
     id: "dedicated-theater",
+    group: "room", line: "Kaleidescape + MRX 1140, projector on a Bullet Train",   // the new-job card (2026-10-02 simpler cards)
     name: "Dedicated theater — Kaleidescape + MRX 1140",
     blurb: "A room of its own: Kaleidescape, Apple TV and cable into an Anthem MRX 1140, the projector on an AVPro Bullet Train.",
     tip: "theater 7.1.4 projector 135 avr bullet",
@@ -280,6 +291,7 @@ export const STARTERS = [
   },
   {
     id: "prewire",
+    group: "start", line: "Rough-in only — every room pre-wired, no gear yet",   // the new-job card (2026-10-02 simpler cards)
     name: "Prewire only — rough-in",
     blurb: "Rough-in before the gear is chosen: every room pre-wired, no rack gear yet. The quote carries Synergy's prewire items.",
     tip: "bedroom 2 prewire stereo 55",
@@ -289,6 +301,7 @@ export const STARTERS = [
   },
   {
     id: "blank",
+    group: "start", line: "Start empty and add gear yourself",   // the new-job card (2026-10-02 simpler cards)
     name: "Blank rack",
     blurb: "Start empty and add gear yourself.",
     tip: "family room 5.1 75 sony, kitchen stereo",

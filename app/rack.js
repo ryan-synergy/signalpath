@@ -22,8 +22,8 @@ const TIER = { gateway: 0.5, networkSwitch: 1, avSwitch: 1, avbSwitch: 1,
 
 /* spacing (Ryan 2026-10-02, Synergy practice). Two strengths:
    - always: a receiver or amp (sub amps too) has 1U of vent above and below; anything else that runs
-     warm — a matrix switcher, a Savant host, a shelf of sources (Apple TV, DirecTV, cable boxes), a box
-     source like a Kaleidescape — has 1U after it; a brush plate sits under the patch panels and between
+     warm — a matrix switcher, a Savant host, a shelf of sources (Apple TV, DirecTV, cable boxes), an MXNet
+     encoder kit, a box source like a Kaleidescape — has 1U after it; a brush plate sits under the patch panels and between
      the router and the switches so the cables come out cleanly (it breathes too, so it stands in for a vent);
    - when there's room: 1U between the other boxes too — routers and switches are what stack when a rack
      has to be squeezed, so those spaces are the first given up.
@@ -34,7 +34,7 @@ const WARM = new Set(["videoMatrix", "host", "source"]);
 const SWITCHES = new Set(["networkSwitch", "avSwitch", "avbSwitch"]);
 function spaceRack(items, size) {
   const type = i => i.kind === "device" ? i.type : null;
-  const warm = i => WARM.has(type(i)) || (i.kind === "shelf" && !i.kit);   // a shelf of boxes runs warm; an MXNet encoder kit is spaced only when there's room
+  const warm = i => WARM.has(type(i)) || i.kind === "shelf";   // a shelf of boxes and an MXNet encoder kit run warm (Ryan 2026-10-02)
   const gaps = [];                                       // gaps[k] = the spacer above items[k] (or null)
   items.forEach((b, k) => {
     const a = k ? items[k - 1] : null;

@@ -2712,8 +2712,8 @@ for (const [name, raw] of Object.entries(fixtures)) {
       gi >= 0 && at(gi + 1).kind === "brush" && ["networkSwitch", "avSwitch"].includes(at(gi + 2).type) && it.slice(0, gi).every(x => x.kind === "patch" || x.kind === "brush"));
     const lp = it.map(x => x.kind).lastIndexOf("patch");
     t("rack spacing: a brush plate right under the patch panels (the home runs drop cleanly into the network gear)", lp >= 0 && at(lp + 1).kind === "brush");
-    t("rack spacing: a shelf of sources (Apple TV, cable box) always has a vent after it; an MXNet encoder kit only when there's room",
-      it.every((x, i) => !(x.kind === "shelf" && !x.kit && /Apple TV|Cable/.test(x.label)) || i === it.length - 1 || ["vent", "brush"].includes(at(i + 1).kind)));
+    t("rack spacing: a shelf of sources (Apple TV, cable box) and an MXNet encoder kit always have a vent after them",
+      it.every((x, i) => x.kind !== "shelf" || i === it.length - 1 || ["vent", "brush"].includes(at(i + 1).kind)));
     t("rack spacing: never two spacers in a row", it.every((x, i) => !(["vent", "brush"].includes(x.kind) && ["vent", "brush"].includes(at(i + 1).kind))));
     t("rack spacing: the hardware list counts 1U vents, 2U vents and brush plates",
       ["vent2", "brush"].every(k => ra.hardware.some(h => h.key === k && h.qty > 0)));

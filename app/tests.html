@@ -3744,6 +3744,15 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("hardening: a damaged kit store still lists every shipped kit (never throws)", junkStores.every(st => { try { return St2.listStarters(st).length === St2.STARTERS.length; } catch { return false; } }));
 }
 
+/* ---------- the PlanQueue file quotes every adapter the takeoff counts (2026-10-02: rack-side decoders were dropped) ---------- */
+{
+  const CAT = await (await fetch("./catalog.json")).json(), X = await import("./exports.js");
+  const qtyOf = (txt, sku) => txt.split("\n").filter(l => l.endsWith(`| ${sku}`)).reduce((n, l) => n + (+l.match(/^- (\d+)/)?.[1] || 0), 0);
+  const est = X.planQueueFiles(structuredClone(fixtures.estate), 0, CAT).map(f => typeof f === "string" ? f : f.text ?? f.content ?? "").join("\n");
+  t("planqueue: every MXNet decoder is quoted — the rack's decoders into the MRX-540 and the pool MDX-8 included (5 DV2, 3 EV2)",
+    qtyOf(est, "AC-MXNET-1G-DV2") === 5 && qtyOf(est, "AC-MXNET-1G-EV2") === 3, `DV2 ${qtyOf(est, "AC-MXNET-1G-DV2")} EV2 ${qtyOf(est, "AC-MXNET-1G-EV2")}`);
+}
+
 document.getElementById("summary").innerHTML =
   fail === 0 ? `<span class="pass">ALL ${pass} TESTS PASS</span>` : `<span class="fail">${fail} FAILED</span> · ${pass} passed`;
 document.title = fail === 0 ? `✓ ${pass} pass` : `✗ ${fail} fail`;

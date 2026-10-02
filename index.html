@@ -459,25 +459,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002121708",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002121708",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002121708",
-    "./app/ports.js": "./app/ports.js?v=20261002121708",
-    "./app/commands.js": "./app/commands.js?v=20261002121708",
-    "./app/engine.js": "./app/engine.js?v=20261002121708",
-    "./app/exports.js": "./app/exports.js?v=20261002121708",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002121708",
-    "./app/hookup.js": "./app/hookup.js?v=20261002121708",
-    "./app/importers.js": "./app/importers.js?v=20261002121708",
-    "./app/library.js": "./app/library.js?v=20261002121708",
-    "./app/names.js": "./app/names.js?v=20261002121708",
-    "./app/network.js": "./app/network.js?v=20261002121708",
-    "./app/pages.js": "./app/pages.js?v=20261002121708",
-    "./app/power.js": "./app/power.js?v=20261002121708",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002121708",
-    "./app/rack.js": "./app/rack.js?v=20261002121708",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002121708",
-    "./app/starters.js": "./app/starters.js?v=20261002121708"
+    "./app/ai.js": "./app/ai.js?v=20261002123754",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002123754",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002123754",
+    "./app/ports.js": "./app/ports.js?v=20261002123754",
+    "./app/commands.js": "./app/commands.js?v=20261002123754",
+    "./app/engine.js": "./app/engine.js?v=20261002123754",
+    "./app/exports.js": "./app/exports.js?v=20261002123754",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002123754",
+    "./app/hookup.js": "./app/hookup.js?v=20261002123754",
+    "./app/importers.js": "./app/importers.js?v=20261002123754",
+    "./app/library.js": "./app/library.js?v=20261002123754",
+    "./app/names.js": "./app/names.js?v=20261002123754",
+    "./app/network.js": "./app/network.js?v=20261002123754",
+    "./app/pages.js": "./app/pages.js?v=20261002123754",
+    "./app/power.js": "./app/power.js?v=20261002123754",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002123754",
+    "./app/rack.js": "./app/rack.js?v=20261002123754",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002123754",
+    "./app/starters.js": "./app/starters.js?v=20261002123754"
 } }
 </script>
 <script>
@@ -693,7 +693,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002121708").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002123754").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {

@@ -112,8 +112,10 @@ function quoteRooms(job, sol, catalog, adv) {
       const c = cat(d.catalogRef);
       add(floor, room, "included", c ? fromCatalog(c) : guessProduct(d), { ofe: d.status === "ofe" });
     }
-    // encoders ride with their sources in the rack
-    for (const e of (sol.companions || []).filter(e => e.type === "enc" && (r.devices || []).some(d => d.id === e.serves))) {
+    // adapters on rack gear ride in the rack: encoders on sources AND decoders feeding a receiver or amp
+    // (2026-10-02: only encoders were listed, so an MXNet decoder into an MRX or MDX dropped off the quote
+    // while the takeoff page counted it)
+    for (const e of (sol.companions || []).filter(e => (r.devices || []).some(d => d.id === e.serves))) {
       const c = cat(companionSku(e, sol, catalog));
       add(floor, room, "included", fromCatalog(c));
     }

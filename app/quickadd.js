@@ -58,6 +58,11 @@ const PHRASES = [
   [/\b(\d{1,2})\s+(?:(?:in-?)?ceiling|in-?wall|wall|outdoor|rock|bookshelf)\s+(speakers?)\b/g, (m, n, w) => `${n} ${w}`],
 ];
 
+// words a sentence wraps around a room that aren't its name (Wispr Flow / dictation writes full sentences)
+const FILLER = new Set(["the", "a", "an", "with", "and", "in", "on", "of", "has", "have", "had", "is", "are", "was", "will", "be", "gets", "get",
+  "wants", "want", "needs", "need", "would", "like", "also", "plus", "only", "just", "audio", "sound", "speakers", "speaker", "system",
+  "it", "its", "it's", "there", "that", "which", "for", "to", "some", "set", "setup", "up", "we", "they", "i", "it'll", "going", "goes", "using", "use"]);
+
 export function parseQuickZone(text) {
   let t = " " + String(text || "").toLowerCase().trim() + " ";
   for (const [re, sub] of SPOKEN) t = t.replace(re, (...m) => " " + (typeof sub === "function" ? sub(...m) : sub) + " ");
@@ -109,7 +114,11 @@ export function parseQuickZone(text) {
 
   // landscape with optional sat count: "landscape 8" / "landscape"
   const land = eat(/\blandscape\s*(\d{1,2})?\b/);
-  if (land) { spk = { config: "landscape", satCount: land[1] ? +land[1] : 6, buriedSub: true }; }
+  if (land) {
+    // "landscape with eight speakers" — the count can come later in the sentence
+    const n = land[1] || eat(/\b(\d{1,2})\s*(?:x\s*)?(?:speakers?|satellites?|sats?)\b/)?.[1];
+    spk = { config: "landscape", satCount: n ? +n : 6, buriedSub: true };
+  }
 
   // explicit configs
   if (!spk) for (const [tok, cfg] of Object.entries(CONFIGS)) {
@@ -117,6 +126,8 @@ export function parseQuickZone(text) {
     const re = new RegExp(`(^|\\s)${tok.replace(/\./g, "\\.")}(\\s|$)`);
     if (re.test(t)) { t = t.replace(re, " "); spk = { config: cfg }; break; }
   }
+  // the setup said twice ("two-channel stereo", "7.1.4 Atmos", "5.1 surround") — the rest is not a name
+  if (spk) { t = t.replace(/(^|\s)(\d\.\d(?:\.\d)?)(?=\s|$)/g, " "); eat(/\bstereo\b/); }
   // "N speakers" / "pair"
   if (!spk) {
     const pairs = eat(/\b(\d{1,2})\s*(x\s*)?pairs?\b/);
@@ -138,11 +149,16 @@ export function parseQuickZone(text) {
     if (!noTv && (size || brand || saidTv)) tv = { displayType: "tv", size: size ? +size[1] : null, brand }; }
   if (tv && brand && !tv.brand) tv.brand = brand;
 
-  // leftover words = zone name
-  const name = t.replace(/#(\d)/g, "$1").replace(/\s+/g, " ").trim().split(" ")
-    .filter(w => w && !/^(the|a|an|with|and|in|room)$/.test(w) || w === "room")
-    .map(w => w[0] ? w[0].toUpperCase() + w.slice(1) : w).join(" ").trim() || "New Zone";
+  // leftover words = zone name (dictation's grammar — "the kitchen is stereo only", "has a",
+  // "with a pair of speakers" — never becomes part of it)
+  // a setup SignalPath doesn't have ("3.1") is flagged, never part of the name
+  let oddSetup = null;
+  t = t.replace(/(^|\s)(\d\.\d(?:\.\d)?)(?=\s|$)/g, (m, sp, x) => { oddSetup = x; return " "; });
+  const words = t.replace(/#(\d)/g, (m, d) => d).replace(/[.,;:!?–—"“”()]/g, " ").replace(/\s+/g, " ").trim().split(" ")
+    .filter(w => w && !FILLER.has(w));
+  const name = words.map(w => w[0] ? w[0].toUpperCase() + w.slice(1) : w).join(" ").trim() || "New Zone";
   zone.name = name;
+  const named = words.length > 0;
   zone.id = "z-" + slug(name);
   zone.endpoints = [];
   chips.unshift({ kind: "name", label: name });
@@ -173,17 +189,20 @@ export function parseQuickZone(text) {
   if (bullet && tv) chips.push({ kind: "hint", label: "Bullet Train fiber HDMI to the TV" });
   if (zone.reach || zone.runFt) chips.push({ kind: "hint", label: zone.runFt ? `${zone.runFt} ft from the rack` : `${zone.reach} from the rack` });
   zone._hints = { local, matrix, apps, avr, dante, director, bullet };
+  if (oddSetup && !spk) chips.push({ kind: "warn", label: `${oddSetup} isn't a setup here — pick stereo, 5.1, 7.1 or 7.1.4` });
   // a room with no speakers and no TV has nothing to draw — say so before Add skips it
   if (!zone.endpoints.length) chips.push({ kind: "warn", label: "nothing to add — give it a setup or a TV size" });
-  return { zone, chips, empty: !zone.endpoints.length };
+  return { zone, chips, empty: !zone.endpoints.length, named };
 }
 
 /* what the room being typed still needs, as tappable suggestions (Ryan 2026-10-02: "select the
    bubbles to confirm instead of typing it all out"). Each item's `add` is appended to the text. */
 export function quickSuggest(text) {
-  const segs = String(text || "").split(/,|\bthen\b|\n/);
+  // a trailing comma / period / "then" means the last room is done — nothing to suggest yet
+  if (/([,;\n]|\.|\bthen|\bnext)\s*$/i.test(String(text || "")) && !/\d\.\s*$/.test(String(text || ""))) return null;
+  const segs = roomTexts(text);
   const last = segs[segs.length - 1];
-  if (!last.trim()) return null;
+  if (!last || !last.trim()) return null;
   const p = parseQuickZone(last), low = " " + last.toLowerCase() + " ";
   const has = type => p.zone.endpoints.some(e => e.type === type);
   const out = { room: p.zone.name, groups: [] };
@@ -195,8 +214,25 @@ export function quickSuggest(text) {
   return out.groups.length ? out : null;
 }
 
+/* a line → one text per room. Clauses split at commas, sentence ends, semicolons, new lines and
+   "then"/"next"; a clause that names no room ("65-inch TV", "two-channel stereo", "with a 65")
+   belongs to the room before it — so "Master bedroom, 65-inch TV, two-channel stereo." is one room. */
+export function roomTexts(text) {
+  const clauses = String(text || "")
+    .replace(/(\d)\.(\d)/g, (m, a, b) => `${a}\u2024${b}`)                           // keep 5.1 / 7.1.4 whole while sentences split
+    .split(/[,;\n]|\.(?=\s|$)|\bthen\b|\bnext\b/i)
+    .map(x => x.replace(/\u2024/g, ".").replace(/^\s*(and|also|plus)\b/i, "").trim()).filter(Boolean);
+  const rooms = [];
+  for (const c of clauses) {
+    const named = parseQuickZone(c).named;
+    if (!named && rooms.length) rooms[rooms.length - 1] += " " + c;
+    else rooms.push(c);
+  }
+  return rooms;
+}
+
 export function parseQuick(text) {
-  return String(text || "").split(/,|\bthen\b|\n/).map(s => s.trim()).filter(Boolean).map(parseQuickZone);
+  return roomTexts(text).map(parseQuickZone);
 }
 
 /* a room back as quick-add text (starter kits keep their starting rooms this way — readable,

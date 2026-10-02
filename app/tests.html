@@ -483,6 +483,21 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     && sz("theater projector one twenty") === 120 && one("theater projector one twenty").name === "Theater" && one("bedroom two stereo 55").name === "Bedroom 2");
   t("quickadd: '4 ceiling speakers' is 4 speakers; 'tv only' isn't part of the name",
     one("gym 4 ceiling speakers").endpoints[0].count === 4 && one("guest room tv only 50 inch").name === "Guest Room");
+  /* dictation (Wispr Flow writes full sentences: capitals, commas inside a room, periods, colons) */
+  const rooms = x => parseQuick(x).map(p => [p.zone.name, ...p.chips.slice(1).map(c => c.label)].join(" | "));
+  const D = [
+    ["Master bedroom, 65-inch TV, two-channel stereo.", ["Master Bedroom | Stereo pair | TV 65\""]],
+    ["Family room: 5.1 surround with a 75-inch Sony.", ["Family Room | 5.1 surround | Sony 75\""]],
+    ["Kitchen stereo, office stereo, and patio landscape with eight speakers.", ["Kitchen | Stereo pair", "Office | Stereo pair", "Patio | Landscape 8+1"]],
+    ["The master bedroom has a 65-inch TV and two-channel audio. The kitchen is stereo only, no TV.", ["Master Bedroom | Stereo pair | TV 65\"", "Kitchen | Stereo pair"]],
+    ["Theater, 7.1.4 Atmos, 120-inch projector.", ["Theater | 7.1.4 Atmos | Projector 120\""]],
+    ["Guest room. 50-inch TV. No speakers.", ["Guest Room | TV 50\""]],
+    ["Bedroom 2 with a 55-inch TV and a pair of speakers.", ["Bedroom 2 | Stereo pair | TV 55\""]],
+    ["Primary suite, 85 inch Sony, stereo, then gym, four ceiling speakers.", ["Primary Suite | Stereo pair | Sony 85\"", "Gym | 4 speakers"]],
+  ];
+  for (const [x, want] of D) t(`quickadd dictation: "${x}"`, rooms(x).join(" ‖ ") === want.join(" ‖ "), rooms(x).join(" ‖ "));
+  t("quickadd: an unknown setup (3.1) is flagged and kept out of the room's name",
+    one("bonus room 3.1 65").name === "Bonus Room" && parseQuickZone("bonus room 3.1 65").chips.some(c => c.kind === "warn" && /3\.1/.test(c.label)));
   {
     const { quickSuggest } = await import("./quickadd.js");
     const a = quickSuggest("master bedroom"), b = quickSuggest("master bedroom stereo 65"), c = quickSuggest("kitchen stereo no tv"), d = quickSuggest("den 55 no speakers");

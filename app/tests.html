@@ -3704,6 +3704,25 @@ for (const [name, raw] of Object.entries(fixtures)) {
     n >= 40 && split >= 5 && !bad.length, bad.slice(0, 4).join(" | "));
 }
 
+/* ---------- a box with no product picked can carry typed-in counts (ports, HDMI in/out) ---------- */
+{
+  const CAT = await (await fetch("./catalog.json")).json();
+  const raw = structuredClone(fixtures.residence), devs = raw.solutions[0].racks[0].devices;
+  const avb = devs.find(d => d.type === "avbSwitch"), mx = devs.find(d => d.type === "videoMatrix");
+  delete avb.catalogRef; delete mx.catalogRef; mx.model = "Some HDMI matrix";   // nothing to link to
+  const before = (() => { const { job, ix } = loadJob(structuredClone(raw)); const a = advise(job, ix, CAT); return { a, U: boxUsage(job, ix, CAT, a, 0) }; })();
+  avb.switchPorts = 8; mx.hdmiIn = 4; mx.hdmiOut = 4;
+  const { job, ix } = loadJob(raw), a = advise(job, ix, CAT), U = boxUsage(job, ix, CAT, a, 0), plan = a.network.find(p => p.switch === avb.id);
+  t("typed counts: an AVB switch with no product says 8 ports — the port plan knows it and its lights count against it",
+    !before.U[avb.id]?.ports && plan?.known && plan.copper === 8 && U[avb.id]?.ports?.cap === 8 && U[avb.id].ports.used === plan.used, JSON.stringify(U[avb.id]));
+  t("typed counts: an unlinked matrix lights its HDMI inputs and outputs from the typed counts",
+    U[mx.id]?.in?.cap === 4 && U[mx.id]?.out?.cap === 4 && U[mx.id].in.used >= 1);
+  const linked = structuredClone(fixtures.residence), sw = linked.solutions[0].racks[0].devices.find(d => d.type === "avbSwitch");
+  sw.catalogRef = "motu-avb-switch"; sw.switchPorts = 40;
+  { const { job, ix } = loadJob(linked), p = advise(job, ix, CAT).network.find(p => p.switch === sw.id);
+    t("typed counts: a picked product's own ports win over a typed count", p?.copper === 6); }
+}
+
 document.getElementById("summary").innerHTML =
   fail === 0 ? `<span class="pass">ALL ${pass} TESTS PASS</span>` : `<span class="fail">${fail} FAILED</span> · ${pass} passed`;
 document.title = fail === 0 ? `✓ ${pass} pass` : `✗ ${fail} fail`;

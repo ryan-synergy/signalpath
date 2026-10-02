@@ -165,7 +165,10 @@ export function networkPlan(job, ix, catalog) {
     if (!switches.length) continue;
 
     for (const sw of switches) {
-      const r = sw.virtual ? "lan" : role(sw), swCat = cat(sw.catalogRef), cap = portsOf(swCat);
+      // a switch with no product picked can still say how many ports it has (GEAR: "Ports", typed on site)
+      const typed = Math.floor(+sw.switchPorts);
+      const r = sw.virtual ? "lan" : role(sw), swCat = cat(sw.catalogRef),
+            cap = swCat ? portsOf(swCat) : { copper: typed > 0 && typed <= 96 ? typed : 0, sfp: 0 };
       const known = cap.copper + cap.sfp > 0;
       const swPoe = (swCat?.flags || []).includes("poe") || !!swCat?.poeBudgetW;
       const info = [...members.get(sw.id)].map(([id, extra], order) => {

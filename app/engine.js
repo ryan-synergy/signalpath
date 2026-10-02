@@ -100,9 +100,12 @@ export function boxUsage(job, ix, catalog, advice, solIndex = 0) {
     const c = catOf(d) || {}, u = {};
     const inb = conns.filter(k => k.to === d.id && !k.dante), outb = conns.filter(k => k.from === d.id && !k.dante);
     const videoIn = inb.filter(k => k.signal === "video" || (k.signal === "audioReturn" && k.earcKit)).length;
+    // a box with no product picked can carry typed-in counts (GEAR: "HDMI in" / "HDMI out")
+    const typed = k => { const n = Math.floor(+d[k]); return n > 0 && n <= 64 ? n : null; };
     if (d.type === "videoMatrix" || d.type === "splitter") {
-      if (c.inputs?.hdmi) u.in = { used: videoIn, cap: c.inputs.hdmi };
-      const co = c.outputs?.hdmi ?? d.io?.out;
+      const ci = c.inputs?.hdmi ?? typed("hdmiIn");
+      if (ci) u.in = { used: videoIn, cap: ci };
+      const co = c.outputs?.hdmi ?? d.io?.out ?? typed("hdmiOut");
       if (co) u.out = { used: outb.filter(k => k.signal === "video").length, cap: co };
     } else if (d.type === "avr") {
       if (c.inputs?.hdmi) u.in = { used: videoIn, cap: c.inputs.hdmi };
@@ -165,7 +168,7 @@ export function normalizeJob(job) {
   list(job.house, "areas");
   // plain-value fields that arrive as a list or object print "[object Object]" everywhere — drop them
   const SCALAR = ["name", "type", "size", "count", "satCount", "channels", "brand", "model", "config", "status", "scope", "displayType", "signal", "units", "partNo",
-                  "rackUnits", "powerTypicalW", "powerMaxW", "outlets"];
+                  "rackUnits", "powerTypicalW", "powerMaxW", "outlets", "switchPorts", "hdmiIn", "hdmiOut"];
   const scalars = o => { for (const k of SCALAR) if (o[k] != null && typeof o[k] === "object") delete o[k]; };
   list(job.house, "zones").forEach((z, i) => {
     scalars(z);

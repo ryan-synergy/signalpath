@@ -459,25 +459,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002024016",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002024016",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002024016",
-    "./app/ports.js": "./app/ports.js?v=20261002024016",
-    "./app/commands.js": "./app/commands.js?v=20261002024016",
-    "./app/engine.js": "./app/engine.js?v=20261002024016",
-    "./app/exports.js": "./app/exports.js?v=20261002024016",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002024016",
-    "./app/hookup.js": "./app/hookup.js?v=20261002024016",
-    "./app/importers.js": "./app/importers.js?v=20261002024016",
-    "./app/library.js": "./app/library.js?v=20261002024016",
-    "./app/names.js": "./app/names.js?v=20261002024016",
-    "./app/network.js": "./app/network.js?v=20261002024016",
-    "./app/pages.js": "./app/pages.js?v=20261002024016",
-    "./app/power.js": "./app/power.js?v=20261002024016",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002024016",
-    "./app/rack.js": "./app/rack.js?v=20261002024016",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002024016",
-    "./app/starters.js": "./app/starters.js?v=20261002024016"
+    "./app/ai.js": "./app/ai.js?v=20261002032206",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002032206",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002032206",
+    "./app/ports.js": "./app/ports.js?v=20261002032206",
+    "./app/commands.js": "./app/commands.js?v=20261002032206",
+    "./app/engine.js": "./app/engine.js?v=20261002032206",
+    "./app/exports.js": "./app/exports.js?v=20261002032206",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002032206",
+    "./app/hookup.js": "./app/hookup.js?v=20261002032206",
+    "./app/importers.js": "./app/importers.js?v=20261002032206",
+    "./app/library.js": "./app/library.js?v=20261002032206",
+    "./app/names.js": "./app/names.js?v=20261002032206",
+    "./app/network.js": "./app/network.js?v=20261002032206",
+    "./app/pages.js": "./app/pages.js?v=20261002032206",
+    "./app/power.js": "./app/power.js?v=20261002032206",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002032206",
+    "./app/rack.js": "./app/rack.js?v=20261002032206",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002032206",
+    "./app/starters.js": "./app/starters.js?v=20261002032206"
 } }
 </script>
 <script>
@@ -693,7 +693,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002024016").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002032206").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -2011,6 +2011,8 @@ function gearHTML() {
         ${field("Product", `<button class="pickbtn dcatbtn">${catOf(d) ? `${esc(productName(catOf(d)))}${productSku(catOf(d)) ? ` <span class="mini">· ${esc(productSku(catOf(d)))}</span>` : ""}` : `<span class="mini">Pick a product…</span>`} ▾</button>`)}
         ${catOf(d) && SETTINGS.catalog.devices[d.catalogRef] ? `<div style="text-align:right;margin:-4px 0 4px"><button class="libedit" data-cat="${esc(d.catalogRef)}" style="font-size:11.5px;padding:3px 8px;border:none;background:none;color:var(--accent);cursor:pointer">Edit this product in the library →</button></div>` : ""}
         ${field("Name", `<input class="dmodel" value="${esc(d.model || "")}" title="What the drawing and paperwork call this box — follows the product you pick">`)}
+        ${!catOf(d) && ["networkSwitch", "avSwitch", "avbSwitch", "gateway"].includes(d.type) ? field("Ports", `<input class="dcount" data-k="switchPorts" type="number" min="1" max="96" inputmode="numeric" value="${esc(d.switchPorts ?? "")}" placeholder="how many?" title="No product picked — say how many ports it has and the port plan and lights count against it">`) : ""}
+        ${!catOf(d) && ["videoMatrix", "splitter"].includes(d.type) ? field("HDMI in", `<input class="dcount" data-k="hdmiIn" type="number" min="1" max="64" inputmode="numeric" value="${esc(d.hdmiIn ?? "")}" placeholder="how many?">`) + field("HDMI out", `<input class="dcount" data-k="hdmiOut" type="number" min="1" max="64" inputmode="numeric" value="${esc(d.hdmiOut ?? "")}" placeholder="how many?">`) : ""}
         ${drifted(d) ? `<div class="mini" style="margin:-2px 0 6px 80px;color:#8a5a00">The drawing says “${esc(d.model || "")}”, the product is “${esc(drifted(d))}”. <a href="#" class="dusecat">Use “${esc(drifted(d))}”</a></div>` : ""}
         <div class="sect">INPUTS${cap.ins ? ` <span class="mini">${esc(cap.ins)}</span>` : ""}</div>
         <div class="ports">${ins.length ? ins.map(([c, i]) => connRowHTML(c, i, sol, d.id, "in")).join("") : `<div class="empty">Nothing plugged in yet.</div>`}
@@ -2870,6 +2872,9 @@ function wirePanel(body) {
     }
     refresh();
   };
+  // counts typed for a box with no product picked (ports, HDMI in/out): 1–96, blank clears it
+  on(".dcount", el => { const { d } = devOf(el); if (!d) return; const k = el.dataset.k, v = Math.round(+el.value);
+    if (el.value === "" || !(v > 0)) delete d[k]; else d[k] = Math.min(k === "switchPorts" ? 96 : 64, v); });
   on(".dtype", el => { const { d } = devOf(el); if (d) { d.type = el.value; if (el.value === "amp" && !d.zones) d.zones = 8; } });
   on(".dzones", el => { const { d } = devOf(el); if (d) d.zones = +el.value; });
   on(".dstatus", el => { const { d } = devOf(el); if (d) d.status = el.value; });

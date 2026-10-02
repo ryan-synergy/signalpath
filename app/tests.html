@@ -2709,12 +2709,23 @@ for (const [name, raw] of Object.entries(fixtures)) {
       it.every((x, i) => !(x.kind === "device" && ["networkSwitch", "avSwitch"].includes(x.type)) || i === it.length - 1 || ["vent", "brush"].includes(at(i + 1).kind)));
     const gi = it.findIndex(x => x.type === "gateway");
     t("rack spacing: the router sits up top with a brush plate between it and the switches",
-      gi >= 0 && at(gi + 1).kind === "brush" && ["networkSwitch", "avSwitch"].includes(at(gi + 2).type) && it.slice(0, gi).every(x => x.kind === "patch"));
+      gi >= 0 && at(gi + 1).kind === "brush" && ["networkSwitch", "avSwitch"].includes(at(gi + 2).type) && it.slice(0, gi).every(x => x.kind === "patch" || x.kind === "brush"));
+    const lp = it.map(x => x.kind).lastIndexOf("patch");
+    t("rack spacing: a brush plate right under the patch panels (the home runs drop cleanly into the network gear)", lp >= 0 && at(lp + 1).kind === "brush");
+    t("rack spacing: a shelf of sources (Apple TV, cable box) always has a vent after it; an MXNet encoder kit only when there's room",
+      it.every((x, i) => !(x.kind === "shelf" && !x.kit && /Apple TV|Cable/.test(x.label)) || i === it.length - 1 || ["vent", "brush"].includes(at(i + 1).kind)));
     t("rack spacing: never two spacers in a row", it.every((x, i) => !(["vent", "brush"].includes(x.kind) && ["vent", "brush"].includes(at(i + 1).kind))));
     t("rack spacing: the hardware list counts 1U vents, 2U vents and brush plates",
       ["vent2", "brush"].every(k => ra.hardware.some(h => h.key === k && h.qty > 0)));
     const tight = structuredClone(sj); tight.job.rackUnits = 24;
     const Lt = loadJob(tight), rt = advise(Lt.job, Lt.ix, CAT).racks[0];
+    {   // in a squeezed rack, routers / switches stack first; the must-have spacing stays (and the rack says it's over)
+      const sq = structuredClone(sj); sq.job.rackUnits = 20;
+      const Ls = loadJob(sq), rs = advise(Ls.job, Ls.ix, CAT).racks[0], si = rs.items, sat = i => si[i] || {};
+      t("rack spacing: squeezed — no space between switches, but every receiver / amp keeps its vents",
+        si.some((x, i) => ["networkSwitch", "avSwitch"].includes(x.type) && ["networkSwitch", "avSwitch", "gateway", undefined].includes(sat(i + 1).type) && sat(i + 1).kind === "device")
+        && si.every((x, i) => !(x.kind === "device" && ["avr", "amp"].includes(x.type)) || sat(i - 1).kind === "vent"), si.map(x => x.kind + ":" + (x.type || "")).join(" "));
+    }
     t("rack spacing: in a tight rack the 2U upgrades go first — never past the rack — the 1U minimums stay",
       rt.items.filter(x => x.kind === "vent" && x.u === 2).length <= Math.max(0, rt.size - (rt.used - rt.items.filter(x => x.kind === "vent" && x.u === 2).length)) && rt.items.some(x => x.kind === "vent"));
   }
@@ -3880,6 +3891,13 @@ for (const [name, raw] of Object.entries(fixtures)) {
     est.items.some(i => /HDRACK \(7\/12 \+ control box\)/.test(i.label) && /CBOX/.test(i.label)) && !shelfCbox(est), est.items.map(i => i.label).join(" | "));
   t("rack: on a 1G job the control box fills a half-empty R2's spare slot (2/2)",
     mx.items.some(i => /R2 \(2\/2\)/.test(i.label) && /CBOX/.test(i.label)) && !shelfCbox(mx) && !mx.items.some(i => /R2 \(1\/2\)/.test(i.label)));
+  {   // a big MXNet system starts with the AC-MXNET-1G-R15 (Ryan 2026-10-02); four or fewer endpoints keep the 1U R2s
+    let j = St.applyStarter(blank(), St.STARTERS.find(k => k.id === "mxnet-savant"), CAT);
+    j = Cm.planCommands(j, 0, [{ op: "add_zones", text: "family room 5.1 75, theater 7.1 85, kitchen stereo" }], CAT).job;
+    const L = loadJob(j), r = advise(L.job, L.ix, CAT).racks[0], kits = r.items.filter(i => i.kit);
+    t("rack kits: more than 4 MXNet 1G endpoints → one AC-MXNET-1G-R15 with the control box in its own place, no R2s",
+      kits.length === 1 && kits[0].kit === "AC-MXNET-1G-R15" && /\+ control box/.test(kits[0].label) && kits[0].members.length > 4 && !shelfCbox(r), kits.map(k => k.label).join(" / "));
+  }
 }
 
 /* ---------- a sheet per rack (Ryan 2026-10-02): a pool house / guest house with its own rack on its own sheet ---------- */

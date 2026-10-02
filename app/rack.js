@@ -20,33 +20,38 @@ const TIER = { gateway: 0.5, networkSwitch: 1, avSwitch: 1, avbSwitch: 1,
   controlBox: 2, host: 2, videoMatrix: 2, danteBridge: 2, downmixer: 2, audioInputModule: 2, audioOutputModule: 2, splitter: 2,
   source: 3, avr: 4, amp: 4, power: 5 };
 
-/* spacing (Ryan 2026-10-02): a receiver or amp gets at least 1U of vent above and below — 2U above
-   when the rack can spare it; anything else that runs warm (network and AV switches, a matrix, a
-   control host) gets 1U before the next box; a brush plate sits between the router and the switches
-   so the cables come out cleanly (it breathes too, so it stands in for a vent there). One gap holds
-   one spacer — two rules meeting at the same gap never stack. The floor below the last amp needs none. */
+/* spacing (Ryan 2026-10-02, Synergy practice). Two strengths:
+   - always: a receiver or amp (sub amps too) has 1U of vent above and below; anything else that runs
+     warm — a matrix switcher, a Savant host, a shelf of sources (Apple TV, DirecTV, cable boxes), a box
+     source like a Kaleidescape — has 1U after it; a brush plate sits under the patch panels and between
+     the router and the switches so the cables come out cleanly (it breathes too, so it stands in for a vent);
+   - when there's room: 1U between the other boxes too — routers and switches are what stack when a rack
+     has to be squeezed, so those spaces are the first given up.
+   The room left after that goes to the space above each receiver / amp (2U, top down). One gap holds one
+   spacer; the floor below the last box needs none. */
 const HOT = new Set(["avr", "amp"]);
-const WARM = new Set(["networkSwitch", "avSwitch", "avbSwitch", "videoMatrix", "host"]);
+const WARM = new Set(["videoMatrix", "host", "source"]);
 const SWITCHES = new Set(["networkSwitch", "avSwitch", "avbSwitch"]);
 function spaceRack(items, size) {
   const type = i => i.kind === "device" ? i.type : null;
-  const out = [];
+  const warm = i => WARM.has(type(i)) || (i.kind === "shelf" && !i.kit);   // a shelf of boxes runs warm; an MXNet encoder kit is spaced only when there's room
+  const gaps = [];                                       // gaps[k] = the spacer above items[k] (or null)
   items.forEach((b, k) => {
     const a = k ? items[k - 1] : null;
-    if (a) {
-      const ta = type(a), tb = type(b);
-      const brush = (ta === "gateway" && SWITCHES.has(tb)) || (tb === "gateway" && SWITCHES.has(ta));
-      const vent = HOT.has(ta) || HOT.has(tb) || WARM.has(ta);
-      if (brush) out.push({ kind: "brush", tier: b.tier, u: 1, label: "Brush plate" });
-      else if (vent) out.push({ kind: "vent", tier: HOT.has(tb) ? b.tier : a.tier, u: 1, label: "Vent panel", above: HOT.has(tb) ? b : null });
-    }
-    out.push(b);
+    if (!a || a.kind === "patch" && b.kind === "patch") { gaps.push(null); return; }
+    const ta = type(a), tb = type(b);
+    if (a.kind === "patch" || (ta === "gateway" && SWITCHES.has(tb)) || (tb === "gateway" && SWITCHES.has(ta)))
+      gaps.push({ kind: "brush", tier: b.tier, u: 1, label: "Brush plate", need: true });
+    else if (HOT.has(ta) || HOT.has(tb) || warm(a))
+      gaps.push({ kind: "vent", tier: HOT.has(tb) ? b.tier : a.tier, u: 1, label: "Vent panel", need: true, above: HOT.has(tb) });
+    else gaps.push({ kind: "vent", tier: a.tier, u: 1, label: "Vent panel", need: false });
   });
+  let spare = size - items.reduce((n, i) => n + i.u, 0) - gaps.filter(g => g?.need).length;
+  for (const g of gaps) if (g && !g.need) { if (spare > 0) spare--; else gaps[gaps.indexOf(g)] = null; }   // nice-to-have spaces, top down, while they fit
+  for (const g of gaps) if (g?.above && spare > 0) { g.u = 2; spare--; }                                   // then 2U over the receivers / amps
+  const out = [];
+  items.forEach((b, k) => { const g = gaps[k]; if (g) { delete g.need; delete g.above; out.push(g); } out.push(b); });
   items.splice(0, items.length, ...out);
-  // the room to spare goes to the space above each receiver / amp, top down, one more U each
-  let spare = size - items.reduce((n, i) => n + i.u, 0);
-  for (const v of items) if (spare > 0 && v.kind === "vent" && v.above) { v.u = 2; v.label = "Vent panel"; spare--; }
-  for (const v of items) delete v.above;
 }
 
 export function rackPlans(job, ix, catalog) {
@@ -101,6 +106,13 @@ export function rackPlans(job, ix, catalog) {
         const fits = m => fit.length && !fit.every(([, c]) => c.rackKit.excludes && m.model.toUpperCase().includes(c.rackKit.excludes));
         small.push(...members.filter(m => !fits(m)).map(m => m.label));
         let rest = members.filter(fits).map(m => m.label);
+        // a big MXNet system starts with the big kit (Ryan 2026-10-02: "start with an AC-MXNET-1G-R15") —
+        // more than two R2s' worth of endpoints goes in the largest kit first (the control box rides in its own place)
+        const biggest = [...fit].sort((x, y) => y[1].rackKit.holds - x[1].rackKit.holds)[0];
+        if (biggest && rest.length > 4 && biggest[1].rackKit.holds > 4) {
+          const k = biggest[1], take = rest.splice(0, k.rackKit.holds);
+          items.push({ kind: "shelf", tier: 3, u: k.rackUnits, label: `${k.model} (${take.length}/${k.rackKit.holds}): ${take.join(", ")}`, members: take, kit: k.model, kitSpec: { holds: k.rackKit.holds, cbox: k.rackKit.cbox || null } });
+        }
         while (rest.length) {
           // the kit that houses what's left in the fewest rack units (4 endpoints: two 1U R2s beat a 6U R15)
           const cost = ([, c]) => Math.ceil(rest.length / c.rackKit.holds) * c.rackUnits;

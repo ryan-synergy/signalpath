@@ -65,6 +65,8 @@ const FILLER = new Set(["the", "a", "an", "with", "and", "in", "on", "of", "has"
 
 export function parseQuickZone(text) {
   let t = " " + String(text || "").toLowerCase().trim() + " ";
+  // dictation punctuation never sticks to a word ("soundbar:", "50 inch!", "3.1:") — decimals (5.1) and the inch mark stay
+  t = t.replace(/[,;:!?–—()]/g, " ").replace(/\.(?=\s|$)/g, " ");
   for (const [re, sub] of SPOKEN) t = t.replace(re, (...m) => " " + (typeof sub === "function" ? sub(...m) : sub) + " ");
   t = wordsToDigits(t);
   for (const [re, sub] of PHRASES) t = t.replace(re, m => " " + m.replace(re, sub) + " ");

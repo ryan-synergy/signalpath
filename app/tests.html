@@ -496,6 +496,9 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     ["Primary suite, 85 inch Sony, stereo, then gym, four ceiling speakers.", ["Primary Suite | Stereo pair | Sony 85\"", "Gym | 4 speakers"]],
   ];
   for (const [x, want] of D) t(`quickadd dictation: "${x}"`, rooms(x).join(" ‖ ") === want.join(" ‖ "), rooms(x).join(" ‖ "));
+  t("quickadd dictation: punctuation stuck to a word ('soundbar:', '50 inch!', '3.1:') is ignored — found by harden/today.mjs",
+    rooms("Theater, soundbar: 120-inch projector").join(" ‖ ") === "Theater | Soundbar | Projector 120\"" && rooms("Guest room, TV only 50 inch!").join(" ‖ ") === "Guest Room | TV 50\""
+    && one("the kitchen and 3.1: projector one twenty").name === "Kitchen", [rooms("Theater, soundbar: 120-inch projector").join(" ‖ "), rooms("Guest room, TV only 50 inch!").join(" ‖ "), one("the kitchen and 3.1: projector one twenty").name].join(" / "));
   t("quickadd: an unknown setup (3.1) is flagged and kept out of the room's name",
     one("bonus room 3.1 65").name === "Bonus Room" && parseQuickZone("bonus room 3.1 65").chips.some(c => c.kind === "warn" && /3\.1/.test(c.label)));
   {

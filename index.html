@@ -524,25 +524,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002233039",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002233039",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002233039",
-    "./app/ports.js": "./app/ports.js?v=20261002233039",
-    "./app/commands.js": "./app/commands.js?v=20261002233039",
-    "./app/engine.js": "./app/engine.js?v=20261002233039",
-    "./app/exports.js": "./app/exports.js?v=20261002233039",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002233039",
-    "./app/hookup.js": "./app/hookup.js?v=20261002233039",
-    "./app/importers.js": "./app/importers.js?v=20261002233039",
-    "./app/library.js": "./app/library.js?v=20261002233039",
-    "./app/names.js": "./app/names.js?v=20261002233039",
-    "./app/network.js": "./app/network.js?v=20261002233039",
-    "./app/pages.js": "./app/pages.js?v=20261002233039",
-    "./app/power.js": "./app/power.js?v=20261002233039",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002233039",
-    "./app/rack.js": "./app/rack.js?v=20261002233039",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002233039",
-    "./app/starters.js": "./app/starters.js?v=20261002233039"
+    "./app/ai.js": "./app/ai.js?v=20261002233601",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002233601",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002233601",
+    "./app/ports.js": "./app/ports.js?v=20261002233601",
+    "./app/commands.js": "./app/commands.js?v=20261002233601",
+    "./app/engine.js": "./app/engine.js?v=20261002233601",
+    "./app/exports.js": "./app/exports.js?v=20261002233601",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002233601",
+    "./app/hookup.js": "./app/hookup.js?v=20261002233601",
+    "./app/importers.js": "./app/importers.js?v=20261002233601",
+    "./app/library.js": "./app/library.js?v=20261002233601",
+    "./app/names.js": "./app/names.js?v=20261002233601",
+    "./app/network.js": "./app/network.js?v=20261002233601",
+    "./app/pages.js": "./app/pages.js?v=20261002233601",
+    "./app/power.js": "./app/power.js?v=20261002233601",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002233601",
+    "./app/rack.js": "./app/rack.js?v=20261002233601",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002233601",
+    "./app/starters.js": "./app/starters.js?v=20261002233601"
 } }
 </script>
 <script>
@@ -765,7 +765,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002233039").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002233601").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -892,7 +892,9 @@ function refresh(save = true) {
                    sheet: `${S.sheet + 1} of ${sheetTotal(whole.job, whole.ix, a, { solution: S.sol, rawJob: S.job, schematicSheets: sheets.length })}` };
     if (trunkMode(job)) opts.wireLabels = wireLabels(job, ix, { solution: S.sol, portMap: S.portMap });
     // a kit's rack draws the moment it's picked — rooms join it as they're added
-    if (S.job.house.zones.length || job.solutions[S.sol]?.racks?.some(r => r.devices?.length)) {
+    S.lastAdvice = a;                                          // the rack view draws from the same advice (no second pass)
+    // the schematic is laid out and routed only when it's on screen (the rack view hides it)
+    if (S.mainView !== "rack" && (S.job.house.zones.length || job.solutions[S.sol]?.racks?.some(r => r.devices?.length))) {
       const p = place(job, ix, opts);
       const rt = route(job, ix, p, opts);
       // an as-built shows its revision clouds on screen (the service packet prints them too)
@@ -962,7 +964,7 @@ function refresh(save = true) {
   for (const io of (a?.io || []).filter(mine)) (S.ioByDev.get(io.device) ?? S.ioByDev.set(io.device, {}).get(io.device))[io.kind] = io;   // each finding also shows on its own zone / box row
   renderTopbar();
   renderPanel();
-  renderRackEd();                                            // the rack view follows every change (space, size, gear)
+  renderRackEd(true);                                        // the rack view follows every change (space, size, gear)
   if (save) { clearTimeout(saveTimer); saveTimer = setTimeout(() => { saveTimer = null; persist(); }, 400); }
 }
 /* findings → the row they belong to: zones by the endpoint / adapter / in-zone
@@ -2346,15 +2348,15 @@ function setView(v) {
   document.querySelectorAll("#viewSw button").forEach(b => { const on = b.dataset.view === S.mainView; b.classList.toggle("on", on); b.setAttribute("aria-selected", String(on)); });
   $("#rackView").hidden = S.mainView !== "rack";
   $("#right").classList.toggle("rackmode", S.mainView === "rack");
-  renderRackEd();
+  if (S.job) refresh(false);                                 // draws whichever view is now on screen
 }
 document.querySelectorAll("#viewSw button").forEach(b => b.onclick = () => setView(b.dataset.view));
 try { if (localStorage.getItem("signalpath.view") === "rack") setView("rack"); } catch {}   // the view you left it in
 function openRackEd() { setView("rack"); }
-function renderRackEd() {
+function renderRackEd(fresh = false) {
   if (S.mainView !== "rack" || !S.job) return;
   const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
-  const a = advise(job, ix, effectiveCatalog()), solId = ix.solutions[S.sol]?.sol.id;
+  const a = fresh && S.lastAdvice ? S.lastAdvice : advise(job, ix, effectiveCatalog()), solId = ix.solutions[S.sol]?.sol.id;
   S.rkPlans = (a.racks || []).filter(r => r.solution === solId);
   $("#rkUndo").disabled = !S.undo.length;
   $("#rkBody").innerHTML = S.rkPlans.length ? S.rkPlans.map(r => `<div class="rkcol">
@@ -2365,7 +2367,7 @@ function renderRackEd() {
       ${(r.spacing || []).map(w => `<div class="rkwarn">⚠ ${esc(w)}</div>`).join("")}</div>`).join("")
     : `<div class="mini" style="padding:20px">No rack on this solution yet.</div>`;
   $("#rkBody").querySelectorAll(".rkreset").forEach(b => b.onclick = () => {
-    pushUndo("reset rack layout"); resetRackLayout(S.job.solutions[S.sol], b.dataset.rack); refresh(); renderRackEd();
+    pushUndo("reset rack layout"); resetRackLayout(S.job.solutions[S.sol], b.dataset.rack); refresh();
   });
   $("#rkBody").querySelectorAll(".rk-item").forEach(g => g.onpointerdown = rkStart);
 }
@@ -2399,7 +2401,7 @@ function rkStart(e) {
     pushUndo("arrange rack");
     const res = moveRackItem(S.job.solutions[S.sol], S.rkPlans, { from: drag.from, key: drag.key, to: t.to, row: t.row });
     if (!res.ok) { S.undo.pop(); syncUndo(); toast(res.msg); return; }
-    refresh(); renderRackEd(); toast(res.msg, true);
+    refresh(); toast(res.msg, true);
   };
   addEventListener("pointermove", move); addEventListener("pointerup", up); addEventListener("pointercancel", up);
 }

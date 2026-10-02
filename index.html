@@ -110,6 +110,10 @@
   details.more { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 6px; }
   details.more > summary { font-size: 11.5px; color: var(--accent); cursor: pointer; padding: 4px 0; list-style: none; }
   details.more > summary::before { content: "▸ "; } details.more[open] > summary::before { content: "▾ "; }
+  details.more.rackdet { margin: 4px 0 14px; }
+  details.more.rackdet > summary { font-size: 12.5px; font-weight: 600; }
+  details.more.advanced { margin-top: 18px; }
+  details.more.advanced > summary { font-size: 12.5px; }
   details.more.wiring { margin-top: 4px; border-top: 0; padding-top: 0; }
   details.more.wiring > summary { color: #5a6470; font-size: 12px; }
   details.more.wiring > summary::after { content: " · change"; color: var(--accent); }
@@ -489,25 +493,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002192502",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002192502",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002192502",
-    "./app/ports.js": "./app/ports.js?v=20261002192502",
-    "./app/commands.js": "./app/commands.js?v=20261002192502",
-    "./app/engine.js": "./app/engine.js?v=20261002192502",
-    "./app/exports.js": "./app/exports.js?v=20261002192502",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002192502",
-    "./app/hookup.js": "./app/hookup.js?v=20261002192502",
-    "./app/importers.js": "./app/importers.js?v=20261002192502",
-    "./app/library.js": "./app/library.js?v=20261002192502",
-    "./app/names.js": "./app/names.js?v=20261002192502",
-    "./app/network.js": "./app/network.js?v=20261002192502",
-    "./app/pages.js": "./app/pages.js?v=20261002192502",
-    "./app/power.js": "./app/power.js?v=20261002192502",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002192502",
-    "./app/rack.js": "./app/rack.js?v=20261002192502",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002192502",
-    "./app/starters.js": "./app/starters.js?v=20261002192502"
+    "./app/ai.js": "./app/ai.js?v=20261002193742",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002193742",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002193742",
+    "./app/ports.js": "./app/ports.js?v=20261002193742",
+    "./app/commands.js": "./app/commands.js?v=20261002193742",
+    "./app/engine.js": "./app/engine.js?v=20261002193742",
+    "./app/exports.js": "./app/exports.js?v=20261002193742",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002193742",
+    "./app/hookup.js": "./app/hookup.js?v=20261002193742",
+    "./app/importers.js": "./app/importers.js?v=20261002193742",
+    "./app/library.js": "./app/library.js?v=20261002193742",
+    "./app/names.js": "./app/names.js?v=20261002193742",
+    "./app/network.js": "./app/network.js?v=20261002193742",
+    "./app/pages.js": "./app/pages.js?v=20261002193742",
+    "./app/power.js": "./app/power.js?v=20261002193742",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002193742",
+    "./app/rack.js": "./app/rack.js?v=20261002193742",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002193742",
+    "./app/starters.js": "./app/starters.js?v=20261002193742"
 } }
 </script>
 <script>
@@ -598,10 +602,9 @@
 <div id="main">
   <div id="panel">
     <div class="tabs">
-      <button data-tab="zones" class="on"><span class="lbl">Zones</span><span class="mini" style="display:none">Z</span></button>
-      <button data-tab="gear"><span class="lbl">Gear</span></button>
+      <button data-tab="zones" class="on"><span class="lbl">Rooms</span><span class="mini" style="display:none">R</span></button>
       <button data-tab="rack"><span class="lbl">Rack</span></button>
-      <button data-tab="job"><span class="lbl">Job</span></button>
+      <button data-tab="job"><span class="lbl">Paperwork</span></button>
       <button data-tab="settings" aria-label="Settings" title="Settings"><span class="lbl">⚙</span></button>
       <button id="collapse" title="Collapse">⟨⟨</button>
     </div>
@@ -723,7 +726,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002192502").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002193742").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -889,7 +892,7 @@ function refresh(save = true) {
   for (const w of new Map(routeWarn.filter(w => w.code === "hint-unroutable").map(w => [w.msg, w])).values()) A("w", `A custom route can't be drawn — ${wname(w.msg)} is routed automatically`);
   for (const w of placeWarn) A("w", w.msg, w.ref);
   const drift = catalogDrift(S.job, SETTINGS.catalog);
-  if (drift.length) R(`Newer catalog specs for ${drift.length} device${drift.length > 1 ? "s" : ""} — ${drift.slice(0, 3).map(d => d.model).join(", ")}${drift.length > 3 ? "…" : ""} still use the quoted specs. JOB tab → Update catalog specs.`);
+  if (drift.length) R(`Newer catalog specs for ${drift.length} device${drift.length > 1 ? "s" : ""} — ${drift.slice(0, 3).map(d => d.model).join(", ")}${drift.length > 3 ? "…" : ""} still use the quoted specs. Paperwork tab → Update catalog specs.`);
   for (const io of (a?.io || []).filter(mine)) {
     if (io.over) A("e", io.msg, io.device);
     else if (io.msg && (io.kind === "analog-in" || io.kind === "audio-out" || io.kind === "return-in")) R(io.msg, io.device);
@@ -1558,6 +1561,7 @@ function syncGlow() {
 }
 
 function switchTab(tab) {
+  if (tab === "gear") tab = "rack";                        // GEAR merged into RACK (build order: Rooms → Rack → Paperwork)
   S.tab = tab;
   $("#panel").classList.remove("collapsed");
   document.querySelectorAll(".tabs button[data-tab]").forEach(x => x.classList.toggle("on", x.dataset.tab === tab));
@@ -1585,6 +1589,7 @@ function openConn(wid, signal) {
   const home = isRackDev(sol, c.from) ? c.from : isRackDev(sol, c.to) ? c.to : null;
   focusRows(home);
   S.openRows.add(`conn:${i}@${home || "job"}`);
+  if (!home) S.openRows.add("adv:conns");                  // the full list sits under Paperwork → Advanced
   const wasCollapsed = $("#panel").classList.contains("collapsed");
   switchTab(home ? "gear" : "job"); renderPanel();
   // scroll after the panel finishes opening, or it measures a moving layout
@@ -1873,10 +1878,10 @@ function purgeHouseRefs(epIds, zoneId = null) {
 
 function renderPanel() {
   const body = $("#panelBody");
+  if (S.tab === "gear") S.tab = "rack";                     // GEAR lives in the RACK tab now
   if (S.tab === "zones") body.innerHTML = zonesHTML();
-  else if (S.tab === "gear") body.innerHTML = gearHTML();
   else if (S.tab === "settings") body.innerHTML = settingsHTML();
-  else if (S.tab === "rack") body.innerHTML = rackHTML();
+  else if (S.tab === "rack") body.innerHTML = rackTabHTML();
   else body.innerHTML = jobHTML();
   wirePanel(body);
   if (S.tab === "settings") wireSettings(body);
@@ -2093,7 +2098,7 @@ function hookupHTML(z, sol, multi) {
   return `<div class="sect">WHAT FEEDS THIS ROOM${multi ? ` <span class="mini">${esc(sol.name)}</span>` : ""}</div>${rows.join("")}${nudge}${details}`;
 }
 
-function gearHTML() {
+function gearHTML(o = {}) {
   const sol = S.job.solutions[S.sol];
   // catalog link: powers the port-budget advisor + snapshot lockfile (same-type entries listed first)
   const EC = effectiveCatalog();                       // one clone per render, not one per lookup
@@ -2104,8 +2109,8 @@ function gearHTML() {
   const nDrift = sol.racks.flatMap(r => r.devices).filter(drifted).length;
   const driftBar = nDrift ? `<div class="drift"><span>${nDrift} name${nDrift > 1 ? "s don't" : " doesn't"} match the catalog product ${nDrift > 1 ? "they're" : "it's"} linked to.</span>
     <button class="addbtn" id="matchAll">Use the catalog names</button></div>` : "";
-  const racks = driftBar + sol.racks.map(r => `
-    <div class="sect">${esc(String(r.name || r.id).toUpperCase())}</div>
+  const rackParts = sol.racks.map(r => [r.id, `
+    <div class="sect"${o.parts ? ` data-rackid="${esc(r.id)}"` : ""}>${esc(String(r.name || r.id).toUpperCase())}${o.badge?.[r.id] ? ` <span class="badge">${esc(o.badge[r.id])}</span>` : ""}</div>
     ${r.devices.map(d => {
       const open = S.openRows.has(d.id);
       const found = S.findings?.byDev.get(d.id) || [];
@@ -2140,9 +2145,11 @@ function gearHTML() {
         </details>
       </div></div>`;
     }).join("")}
-    <button class="addbtn adddev" data-rid="${esc(r.id)}">＋ Add device to ${esc(r.name || r.id)}</button>`).join("");
+    <button class="addbtn adddev" data-rid="${esc(r.id)}">＋ Add device to ${esc(r.name || r.id)}</button>`]);
   const other = sol.connections.filter(c => !isRackDev(sol, c.from) && !isRackDev(sol, c.to)).length;
-  return racks + `<div class="mini" style="margin:12px 2px">Every connection, searchable, lives under <a href="#" id="toAllConns">JOB → All connections</a>${other ? ` (including ${other} that don't touch the rack, like baluns to TVs)` : ""}.</div>`;
+  const footer = `<div class="mini" style="margin:12px 2px">Every connection, searchable, lives under <a href="#" id="toAllConns">Paperwork → Advanced → All connections</a>${other ? ` (including ${other} that don't touch the rack, like baluns to TVs)` : ""}.</div>`;
+  if (o.parts) return { driftBar, parts: Object.fromEntries(rackParts), footer };
+  return driftBar + rackParts.map(x => x[1]).join("") + footer;
 }
 
 const isRackDev = (sol, id) => sol.racks.some(r => r.devices.some(d => d.id === id));
@@ -2218,7 +2225,7 @@ function allConnsHTML() {
    each box's height / cords / watts (a "?" is a value nobody has yet: type it
    in and it's saved on the job, overriding the catalog), the rack hardware with
    part numbers, and the power / heat totals. Same numbers as the Rack sheet. */
-function rackHTML() {
+function rackHTML(o = {}) {
   const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
   const cat = effectiveCatalog();
   const a = advise(job, ix, cat);
@@ -2263,7 +2270,24 @@ function rackHTML() {
   // each rack's power & heat sits under that rack; a plan with no rack match (none) trails
   const placed = new Set();
   const under = rr => powers.filter(p => p.rack === rr.id).map(p => (placed.add(p), pw(p))).join("");
+  if (o.parts) {
+    const parts = Object.fromEntries(rs.map(rr => [rr.id, rackRow(rr) + under(rr)]));
+    return { parts, rest: powers.filter(p => !placed.has(p)).map(pw).join(""), badge: Object.fromEntries(racks.map(r => [r.rack, `${r.used}U / ${r.size}U`])) };
+  }
   return rs.length ? rs.map(rr => rackRow(rr) + under(rr)).join("") + powers.filter(p => !placed.has(p)).map(pw).join("") : `<div class="mini" style="padding:12px">No rack on this job yet — add gear under GEAR.</div>`;
+}
+/* RACK tab (build order, Ryan 2026-10-02): one place per rack — its boxes first (what used to be
+   GEAR: each box, its product, its connections), then the elevation, heights / cords / watts,
+   rack hardware and power & heat folded under one line. */
+function rackTabHTML() {
+  const sol = S.job.solutions[S.sol];
+  if (!(sol.racks || []).length) return `<div class="mini" style="padding:12px">No rack on this job yet.</div>`;
+  const k = rackHTML({ parts: true }), g = gearHTML({ parts: true, badge: k.badge });
+  const strip = h => h.replace(/^\s*<div class="sect" data-rackid="[^"]*">[\s\S]*?<\/div>/, "");   // the rack's name already heads its boxes
+  return g.driftBar + sol.racks.map(r => {
+    const key = "rk:" + r.id;
+    return g.parts[r.id] + `<details class="more rackdet" data-more="${esc(key)}" ${S.openRows.has(key) ? "open" : ""}><summary>Elevation · heights · power${k.badge[r.id] ? ` — ${esc(k.badge[r.id])}` : ""}</summary>${strip(k.parts[r.id] || "")}</details>`;
+  }).join("") + k.rest + g.footer;
 }
 
 /* as-built install record: serial / MAC / IP / notes per box (prints as "Install Record" in the service packet) */
@@ -2329,10 +2353,6 @@ function jobHTML() {
       ${field("Platform", sel("solplat", ["", "savant", "josh", "control4"], (S.job.solutions[S.sol].platforms || [])[0] || "", PLATFORM_LABEL))}
       ${field("Audio network", sel("solnet", ["", "dante", "avb"], S.job.solutions[S.sol].audioNetwork || "", AUDIO_NET_NAME))}
     </div></div>
-    <div class="sect" id="allConns">ALL CONNECTIONS <span class="badge">${S.job.solutions[S.sol].connections.length}</span></div>
-    <input id="connSearch" placeholder="Search — a box, a zone, a signal…" value="${esc(S.connQuery || "")}">
-    <div id="connList">${allConnsHTML()}</div>
-    <button class="addbtn" id="addConn">＋ Add connection</button>
     <div class="sect">PACKET PAGES <span class="mini">sheet 1 always prints</span></div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       ${["channelMap:Channel Map", "audioSetup:Audio Setup (source & TV settings)", "equipment:Equipment & Takeoff", "patchList:Patch List (every jack)", "wireSchedule:Wire Schedule", "elevation:Rack (elevation, hardware, power)", "network:Network (switch ports)", "labels:Cable Labels",
@@ -2351,7 +2371,13 @@ function jobHTML() {
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       ${(J.revisions || []).map(r => `<div class="mini">Rev ${esc(r.rev)} · ${esc(r.date)} · ${esc(r.description)} · ${esc(r.by)}</div>`).join("")}
       <button class="addbtn" id="addRev" style="margin-top:6px">＋ Add revision</button>
-    </div></div>`;
+    </div></div>
+    <details class="more advanced" data-more="adv:conns" id="advConns" ${S.openRows.has("adv:conns") || S.connQuery ? "open" : ""}><summary>Advanced — every connection (${S.job.solutions[S.sol].connections.length}), searchable</summary>
+    <div class="sect" id="allConns">ALL CONNECTIONS <span class="badge">${S.job.solutions[S.sol].connections.length}</span></div>
+    <input id="connSearch" placeholder="Search — a box, a zone, a signal…" value="${esc(S.connQuery || "")}">
+    <div id="connList">${allConnsHTML()}</div>
+    <button class="addbtn" id="addConn">＋ Add connection</button>
+    </details>`;
 }
 
 /* ---- settings tab: company, licensing rules, device catalog ---- */
@@ -2557,7 +2583,7 @@ function renderLibEditor() {
       ${shipped && stale ? `<button data-act="revert" title="Take back the specs SignalPath ships">Revert to shipped</button>` : ""}
       ${e.custom ? `<button class="danger" data-act="del">Delete</button>` : ""}
     </div>
-    ${used ? `<div class="note">Used ${used}× in this job. Saved jobs keep the specs they were drawn with — the JOB tab offers to take your changes.</div>` : ""}
+    ${used ? `<div class="note">Used ${used}× in this job. Saved jobs keep the specs they were drawn with — the Paperwork tab offers to take your changes.</div>` : ""}
     ${!e.custom && !stale ? `<div class="note">Ships with SignalPath. Edit it and your version is kept from then on (Revert brings the shipped one back).</div>` : ""}
     ${warns.length ? `<div class="warn">${warns.map(esc).join("<br>")}</div>` : ""}
     ${sections.slice(0, 1).map(sc => `<h3>${esc(sc.title)}</h3><div class="grid">${sc.fields.map(f => libFieldHTML(e, f)).join("")}</div>`).join("")}
@@ -3162,7 +3188,7 @@ function wirePanel(body) {
     cs.oninput = filter; filter();
   }
   const toAll = body.querySelector("#toAllConns");
-  if (toAll) toAll.onclick = ev => { ev.preventDefault(); switchTab("job"); renderPanel(); setTimeout(() => $("#allConns")?.scrollIntoView({ block: "start", behavior: "smooth" }), 30); };
+  if (toAll) toAll.onclick = ev => { ev.preventDefault(); S.openRows.add("adv:conns"); switchTab("job"); renderPanel(); setTimeout(() => $("#allConns")?.scrollIntoView({ block: "start", behavior: "smooth" }), 30); };
 
   /* job */
   on(".inst", el => {

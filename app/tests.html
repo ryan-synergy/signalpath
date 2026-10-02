@@ -1764,6 +1764,14 @@ for (const [name, raw] of Object.entries(fixtures)) {
       t("click-to-edit: each chip is a tappable group naming its adapter, each rack name names its rack",
         pe.chips.every(c => svgE.includes(`data-chip="${c.id}"`)) && pe.racks.every(r => svgE.includes(`class="racklabel" data-rack="${r.id}"`)) && !new DOMParser().parseFromString(svgE, "image/svg+xml").querySelector("parsererror"));
     }
+    {   // the TV's apps can't reach the surround speakers → add its sound back (optical or the eARC kit)
+      const ef = structuredClone(fixtures.estate);
+      const nOf = jj => { const Lx = loadJob(structuredClone(jj)); return advise(Lx.job, Lx.ix, CAT).notes.find(n => n.code === "tv-apps-no-surround"); };
+      const n0 = nOf(ef), labels = n0 ? H.quickFixes(ef, ef.solutions[0], n0, CAT).map(x => x.label) : [];
+      if (n0) applyFix(ef, n0, labels.find(l => /eARC kit/.test(l)));
+      t("fixes: 'TV apps won't play on the surround' offers optical or the eARC kit, and the kit clears it",
+        !!n0 && labels.some(l => /^Add optical back to/.test(l)) && !nOf(ef) && ef.solutions[0].connections.some(c => c.earcKit), labels.join(" | "));
+    }
     t("fixes: a pool house rack's missing WattBox is added to the pool house rack, sized for it",
       ee.solutions[0].racks[1].devices.some(d => d.type === "power" && d.catalogRef === pn.add.ref) && !ee.solutions[0].racks[0].devices.some(d => d.type === "power"));
   }

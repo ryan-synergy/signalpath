@@ -493,6 +493,15 @@ export function quickFixes(job, sol, f, catalog = null) {
       }
     }
   }
+  // a surround room whose TV comes off the matrix: its own apps need their sound back to the receiver
+  if (f.code === "tv-apps-no-surround" && zone) {
+    const drive = (sol.connections || []).find(c => c.signal === "speaker" && zone.endpoints.some(e => e.id === c.to) && devs.some(d => d.id === c.from && d.type === "avr"));
+    if (drive) {
+      const name = devs.find(d => d.id === drive.from).model;
+      out.push({ label: `Add optical back to the ${name}`, run: (j, s) => setReturn(j, s, zoneOf(j), drive.from, false, false) });
+      out.push({ label: "Add the eARC kit (Atmos from the apps)", run: (j, s) => setReturn(j, s, zoneOf(j), drive.from, false, true) });
+    }
+  }
   if (f.code === "no-input") {
     const d = devs.find(x => x.id === f.ref);
     if (d?.type === "amp" && devs.some(x => x.type === "avSwitch" && !x.danteSwitch))

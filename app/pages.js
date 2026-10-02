@@ -973,7 +973,7 @@ function installPages(job, ix, opts, label) {
     bodies.push([t.svg]); rest = t.rest;
   } while (rest.length);
   return assemble(job, opts, "Install Record", `Serial numbers and network addresses as installed · ${recs.filter(r => r.filled).length} of ${recs.length} boxes recorded`, bodies, label,
-    () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Recorded on site in SignalPath (JOB → Install record). Blank rows can be filled in by hand. Shaded rows have an address to check.</text>`);
+    () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Recorded on site in SignalPath (Paperwork → Install record). Blank rows can be filled in by hand. Shaded rows have an address to check.</text>`);
 }
 /* ---------- Patch List ----------
    Every wire, jack to jack: box · port → box · port and the cable it takes

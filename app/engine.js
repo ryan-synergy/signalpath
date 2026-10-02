@@ -4560,7 +4560,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       else if (sol.audioNetwork === "avb" && danteOnly.length)
         out.notes.push({ code: "net-mismatch", solution: sol.id, msg: `Dante gear on a Savant AVB job: ${names(danteOnly)} — one audio network per job` });
       else if (!sol.audioNetwork && avbOnly.length && danteOnly.length)
-        out.notes.push({ code: "net-mixed", solution: sol.id, msg: `Both Dante (${names(danteOnly)}) and AVB (${names(avbOnly)}) gear — pick one audio network for the job (JOB → Audio network)` });
+        out.notes.push({ code: "net-mixed", solution: sol.id, msg: `Both Dante (${names(danteOnly)}) and AVB (${names(avbOnly)}) gear — pick one audio network for the job (Paperwork → Audio network)` });
       // Dante on its own switch, set up for Dante (AVPro guidance; MXNet E-series ship this way)
       if (danteJob)
         out.notes.push({ code: "dante-switch", solution: sol.id,

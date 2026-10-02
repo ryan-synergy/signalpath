@@ -666,9 +666,10 @@ const quant = (need, min) => Math.max(min, Math.ceil(need / PL.corridorQuantum) 
 /* TVs and speakers draw 25% bigger (Ryan 2026-10-01) unless that costs the drawing: when the
    bigger room cards shrink the whole sheet by more than 3%, step down (1.12, then today's 1.0) —
    a condo gets big icons for free, a 30-room estate keeps its rack and captions legible.
-   opts.glyphScale pins it. The Off (classic) drawing keeps today's sizes: its gutter feeds
-   route worse around taller cards (200 random jobs: 11 → 16 best-effort wires), while Bundle
-   and Ribbon route as well or better with them (2 → 1, 5 → 4; estate 14 → 12 crossings). */
+   opts.glyphScale pins it. The Off (classic) drawing keeps today's sizes: its per-wire gutter routing
+   is fragile to any change in card sizes (200 random jobs: 11 best-effort wires at 1×, 11 at 1.12×,
+   14 at 1.25×, 15 with the size picked per job — different jobs fail each time), while Bundle and
+   Ribbon route as well or better at 25% (2 → 1, 5 → 4; estate 14 → 12 crossings). */
 export const GLYPH_SCALES = [1.25, 1.12, 1];
 export function place(job, ix = indexJob(job), opts = {}) {
   if (opts.glyphScale != null) return placeAt(job, ix, opts, opts.glyphScale);

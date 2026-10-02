@@ -1317,10 +1317,9 @@
       ],
       "verified": true,
       "partNo": "GSM4212P-100NAS",
-      "partNoUnsure": true,
       "notInPlanQueue": true,
       "rackUnits": 1,
-      "notes": "Netgear AV Line M4250: 8× 1G PoE+ + 2× 1G RJ45 + 2× 1G SFP, 125 W PoE, 1U rack. Avnu-compliant AVB, license-free from AV firmware 13.0.4.17 (Nov 2023). Ryan 2026-10-01: 'a bigger Netgear switch, I believe 8-port PoE' — model to confirm (the 8-port M4250s are the 10G2F-PoE+ GSM4212P, 9G1F-PoE+ GSM4210PD 110 W, 8G2XF-PoE+ GSM4210PX 220 W). Not on Savant's IP Audio supported list (Extreme, MOTU, generic AVB). Sources: netgear.com M4250 datasheet; kb.netgear.com AV Line."
+      "notes": "Netgear AV Line M4250: 8× 1G PoE+ + 2× 1G RJ45 + 2× 1G SFP, 125 W PoE, 1U rack. Avnu-compliant AVB, license-free from AV firmware 13.0.4.17 (Nov 2023). Synergy's bigger AVB switch — model confirmed by Ryan 2026-10-02 (of the 8-port M4250s: 10G2F-PoE+ GSM4212P, not the 9G1F-PoE+ GSM4210PD or 8G2XF-PoE+ GSM4210PX). Not on Savant's IP Audio supported list (Extreme, MOTU, generic AVB). Sources: netgear.com M4250 datasheet; kb.netgear.com AV Line."
     },
     "ubiquiti-usw-pro-24-poe": {
       "brand": "Ubiquiti",

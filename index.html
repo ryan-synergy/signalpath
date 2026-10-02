@@ -268,6 +268,10 @@
   .libov .it:hover { background: #eef1f5; }
   .libov .it.on { background: #e6eef9; border-left-color: var(--accent); }
   .libov .it .m { font-size: 13px; } .libov .it .s { font-size: 11px; color: #888; margin-top: 1px; }
+  /* kit list: an eye per kit shows or hides it in ＋ New job (Ryan 2026-10-02) */
+  .libov .it.kit { display: flex; align-items: center; gap: 8px; } .libov .it.kit .tx { flex: 1; min-width: 0; }
+  .libov .it .eye { min-height: 0; width: 44px; height: 44px; padding: 0; border: 1px solid transparent; background: transparent; border-radius: 8px; display: grid; place-items: center; color: #556; flex: none; }
+  .libov .it .eye:hover { background: #e9edf3; border-color: var(--line); } .libov .it .eye.off { color: #aab; }
   .libov .badge2 { font-size: 10px; padding: 1px 6px; border-radius: 9px; margin-left: 4px; background: #eef2f8; color: var(--accent); white-space: nowrap; }
   .libov .badge2.ed { background: #fff3dc; color: #8a5b00; } .libov .badge2.unv { background: #fdecea; color: var(--bad); }
   .libov .ed { overflow-y: auto; padding: 14px 18px 30px; }
@@ -459,25 +463,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002124619",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002124619",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002124619",
-    "./app/ports.js": "./app/ports.js?v=20261002124619",
-    "./app/commands.js": "./app/commands.js?v=20261002124619",
-    "./app/engine.js": "./app/engine.js?v=20261002124619",
-    "./app/exports.js": "./app/exports.js?v=20261002124619",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002124619",
-    "./app/hookup.js": "./app/hookup.js?v=20261002124619",
-    "./app/importers.js": "./app/importers.js?v=20261002124619",
-    "./app/library.js": "./app/library.js?v=20261002124619",
-    "./app/names.js": "./app/names.js?v=20261002124619",
-    "./app/network.js": "./app/network.js?v=20261002124619",
-    "./app/pages.js": "./app/pages.js?v=20261002124619",
-    "./app/power.js": "./app/power.js?v=20261002124619",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002124619",
-    "./app/rack.js": "./app/rack.js?v=20261002124619",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002124619",
-    "./app/starters.js": "./app/starters.js?v=20261002124619"
+    "./app/ai.js": "./app/ai.js?v=20261002131302",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002131302",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002131302",
+    "./app/ports.js": "./app/ports.js?v=20261002131302",
+    "./app/commands.js": "./app/commands.js?v=20261002131302",
+    "./app/engine.js": "./app/engine.js?v=20261002131302",
+    "./app/exports.js": "./app/exports.js?v=20261002131302",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002131302",
+    "./app/hookup.js": "./app/hookup.js?v=20261002131302",
+    "./app/importers.js": "./app/importers.js?v=20261002131302",
+    "./app/library.js": "./app/library.js?v=20261002131302",
+    "./app/names.js": "./app/names.js?v=20261002131302",
+    "./app/network.js": "./app/network.js?v=20261002131302",
+    "./app/pages.js": "./app/pages.js?v=20261002131302",
+    "./app/power.js": "./app/power.js?v=20261002131302",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002131302",
+    "./app/rack.js": "./app/rack.js?v=20261002131302",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002131302",
+    "./app/starters.js": "./app/starters.js?v=20261002131302"
 } }
 </script>
 <script>
@@ -693,7 +697,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002124619").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002131302").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1867,13 +1871,13 @@ function zonesHTML() {
           return spk ? fieldO("Speakers", inner, "endpoints", spkH.id, "config") : field("Speakers", inner);
         })()}
         ${tv ? fieldO("Display", chips("tvtype", ZTV, tvType, "seg"), "endpoints", tvH.id, "displayType") : field("Display", chips("tvtype", ZTV, tvType, "seg"))}
-        ${tv ? fieldO("TV size", (() => {
+        ${tv ? fieldO(tv.displayType === "projector" ? "Screen size" : "TV size", (() => {
           const sizes = [55, 65, 75, 85, 98], cur = +tv.size || 65;
           const list = sizes.includes(cur) ? sizes : [...sizes, cur].sort((a, b) => a - b);
           return chips("tvsize", list.map(n => [String(n), n + "″"]), String(cur)).replace(/<\/div>$/, `<button type="button" class="chip more" data-other="tvsize">Other…</button></div>`);
         })(), "endpoints", tvH.id, "size") : ""}
         ${tv ? fieldO("Brand", `<input class="tvbrand" value="${esc(tv.brand || "")}" placeholder="e.g. Sony">`, "endpoints", tvH.id, "brand") : ""}
-        ${tv ? fieldO("Model", `<input class="tvmodel" value="${esc(tv.model || "")}" placeholder="e.g. K-85XR90 — blank quotes “Unspecified TV”" autocorrect="off" spellcheck="false">`, "endpoints", tvH.id, "model") : ""}
+        ${tv ? fieldO("Model", `<input class="tvmodel" value="${esc(tv.model || "")}" placeholder="${tv.displayType === "projector" ? "e.g. Epson LS12000 — blank quotes “Unspecified Projector”" : "e.g. K-85XR90 — blank quotes “Unspecified TV”"}" autocorrect="off" spellcheck="false">`, "endpoints", tvH.id, "model") : ""}
         ${hookupHTML(z, sol, multi)}
         <details class="more" data-more="${esc(moreKey)}" ${S.openRows.has(moreKey) ? "open" : ""}><summary>More — name, scope, status, remote${tv ? ", size check" : ""}</summary>
           ${field("Name", `<input class="zname" value="${esc(z.name)}">`)}
@@ -2518,13 +2522,23 @@ const KIT = { sel: null };
 function openKits(id) { if (id) KIT.sel = id; $("#kits").classList.add("show"); renderKits(); }
 function kitsSaved() { saveSettings(); renderKits(); }
 const kitTaken = () => listStarters(SETTINGS.starters).map(k => k.id);
+const EYE_ON = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const EYE_OFF = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.7 10.7 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1M6.6 6.6C3.9 8.4 2 12 2 12s3.6 7 10 7a9.9 9.9 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>`;
 function renderKits() {
   const kits = listStarters(SETTINGS.starters);
   if (!kits.some(k => k.id === KIT.sel)) KIT.sel = kits[0]?.id || null;
   $("#kitList").innerHTML = `<div class="grp">New-job picker order · ${kits.filter(k => !k.hidden).length} shown</div>` + kits.map(k =>
-    `<div class="it${k.id === KIT.sel ? " on" : ""}" data-id="${esc(k.id)}" style="${k.hidden ? "opacity:.5" : ""}"><div class="m">${esc(k.name)}${k.custom ? `<span class="badge2">yours</span>` : ""}${k.hidden ? `<span class="badge2 ed">hidden</span>` : ""}</div>
-     <div class="s">${k.devices.length} boxes${k.rooms ? ` · ${k.rooms.split(",").length} rooms` : ""}</div></div>`).join("");
+    `<div class="it kit${k.id === KIT.sel ? " on" : ""}" data-id="${esc(k.id)}"><div class="tx" style="${k.hidden ? "opacity:.5" : ""}"><div class="m">${esc(k.name)}${k.custom ? `<span class="badge2">yours</span>` : ""}${k.hidden ? `<span class="badge2 ed">hidden</span>` : ""}</div>
+     <div class="s">${k.devices.length} boxes${k.rooms ? ` · ${k.rooms.split(",").length} rooms` : ""}</div></div>
+     <button type="button" class="eye${k.hidden ? " off" : ""}" data-eye="${esc(k.id)}" aria-pressed="${!k.hidden}" aria-label="${k.hidden ? "Show" : "Hide"} ${esc(k.name)} in ＋ New job" title="${k.hidden ? "Hidden from ＋ New job — tap to show" : "Shown in ＋ New job — tap to hide"}">${k.hidden ? EYE_OFF : EYE_ON}</button></div>`).join("");
   $("#kitList").querySelectorAll(".it").forEach(el => el.onclick = () => { KIT.sel = el.dataset.id; renderKits(); });
+  // the eye: show / hide in one tap, without opening the kit
+  $("#kitList").querySelectorAll("[data-eye]").forEach(b => b.onclick = ev => {
+    ev.stopPropagation();
+    const K = SETTINGS.starters, id = b.dataset.eye;
+    K.hidden = K.hidden.includes(id) ? K.hidden.filter(x => x !== id) : [...K.hidden, id];
+    kitsSaved();
+  });
   renderKitEditor(kits);
 }
 function renderKitEditor(kits) {

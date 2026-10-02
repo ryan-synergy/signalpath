@@ -1124,9 +1124,9 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t("advisor: an AVB switch picked from the catalog (MOTU) silences the Avnu note and gets real ports (5 AVB + 1)",
       !a.notes.some(n => n.code === "avb-switch") && sw?.known && sw.copper === 6, JSON.stringify(sw && { used: sw.used, copper: sw.copper }));
   }
-  t("catalog: Synergy's AVB switches — MOTU AVB Switch (PlanQueue SKU 'MOTU AVB'), Savant ESN-AVB12E-00 (12 + 4 SFP), Netgear M4250 8-port PoE+ (to confirm)",
+  t("catalog: Synergy's AVB switches — MOTU AVB Switch (PlanQueue SKU 'MOTU AVB'), Savant ESN-AVB12E-00 (12 + 4 SFP), Netgear M4250-10G2F-PoE+ (confirmed; not in PlanQueue)",
     cat.devices["motu-avb-switch"]?.partNo === "MOTU AVB" && cat.devices["savant-esn-avb12e"]?.outputs.gbe === 12 &&
-    cat.devices["netgear-m4250-10g2f-poe"]?.partNoUnsure === true && ["motu-avb-switch", "savant-esn-avb12e", "netgear-m4250-10g2f-poe"].every(k => cat.devices[k].type === "avbSwitch"));
+    cat.devices["netgear-m4250-10g2f-poe"]?.partNo === "GSM4212P-100NAS" && !cat.devices["netgear-m4250-10g2f-poe"].partNoUnsure && cat.devices["netgear-m4250-10g2f-poe"].notInPlanQueue && ["motu-avb-switch", "savant-esn-avb12e", "netgear-m4250-10g2f-poe"].every(k => cat.devices[k].type === "avbSwitch"));
   {
     const St = await import("./starters.js");
     t("kits: every Savant AVB kit starts with the MOTU AVB Switch, not a nameless box",
@@ -3751,6 +3751,13 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const est = X.planQueueFiles(structuredClone(fixtures.estate), 0, CAT).map(f => typeof f === "string" ? f : f.text ?? f.content ?? "").join("\n");
   t("planqueue: every MXNet decoder is quoted — the rack's decoders into the MRX-540 and the pool MDX-8 included (5 DV2, 3 EV2)",
     qtyOf(est, "AC-MXNET-1G-DV2") === 5 && qtyOf(est, "AC-MXNET-1G-EV2") === 3, `DV2 ${qtyOf(est, "AC-MXNET-1G-DV2")} EV2 ${qtyOf(est, "AC-MXNET-1G-EV2")}`);
+  { // projectors are rare — no catalog of them: blank model = Synergy's placeholder, a typed model quotes as itself, OFE = customer-supplied
+    const pj = structuredClone(fixtures.residence), tv = pj.house.zones[0].endpoints.find(e => e.type === "display"); tv.displayType = "projector"; delete tv.brand; delete tv.model;
+    const out = () => X.planQueueFiles(structuredClone(pj), 0, CAT).map(f => typeof f === "string" ? f : f.text ?? f.content ?? "").join("\n");
+    const a = out(); tv.brand = "Epson"; tv.model = "LS12000"; const b = out(); tv.status = "ofe"; const c = out();
+    t("planqueue: a projector quotes as Synergy | Unspecified Projector, as its typed brand | model, or Customer-Supplied when the owner has it",
+      /\| Synergy \| Unspecified Projector$/m.test(a) && /\| Epson \| LS12000$/m.test(b) && !/LS12000/.test(c) && /\| Customer-Supplied \| Equipment$/m.test(c));
+  }
   const res = X.planQueueFiles(structuredClone(fixtures.residence), 0, CAT).map(f => typeof f === "string" ? f : f.text ?? f.content ?? "").join("\n");
   const poolSection = est.split("\n## ").find(sec => sec.startsWith("Pool House Rack")) || "";
   t("planqueue: a second rack wired to the main one quotes one Prewire - Rack Interconnect, in its own section; a one-rack job none",

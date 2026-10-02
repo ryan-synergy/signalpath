@@ -152,7 +152,9 @@ function quoteRooms(job, sol, catalog, adv) {
         const ofe = ep.status === "ofe", tv = ep.displayType !== "projector";
         const p = ofe ? { customer: tv ? "TV" : "Equipment" }
           : ep.model ? { mfr: ep.brand || "Unspecified", model: ep.model }
-          : tv ? SYN("Unspecified TV") : { mfr: ep.brand || "Unspecified", model: "Projector" };
+          // a projector with no model: Synergy's placeholder, like an unmodelled TV (projectors are rare —
+          // no catalog of them; type the model in the zone's Model field and it quotes as that)
+          : tv ? SYN("Unspecified TV") : ep.brand ? { mfr: ep.brand, model: "Projector" } : SYN("Unspecified Projector");
         add(floor, z.name, scope, p, { ofe });
       } else if (ep.type === "speakers") {
         const [n, sub] = speakerCounts(ep), bar = String(ep.config || "").startsWith("soundbar");

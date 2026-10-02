@@ -3639,6 +3639,55 @@ for (const [name, raw] of Object.entries(fixtures)) {
     mx.items.some(i => /R2 \(2\/2\)/.test(i.label) && /CBOX/.test(i.label)) && !shelfCbox(mx) && !mx.items.some(i => /R2 \(1\/2\)/.test(i.label)));
 }
 
+/* ---------- a sheet per rack (Ryan 2026-10-02): a pool house / guest house with its own rack on its own sheet ---------- */
+{
+  const Sh = await import("./sheets.js"), F = await import("./fuzz-jobs.js"), Pg = await import("./pages.js");
+  const legal = (p, rt) => {   // no body crossed, no two nets on one lane
+    const PAD = 2, bad = [];
+    const inside = (x1, y1, x2, y2, o) => Math.min(x1, x2) < o.x + o.w - PAD && Math.max(x1, x2) > o.x + PAD && Math.min(y1, y2) < o.y + o.h - PAD && Math.max(y1, y2) > o.y + PAD;
+    const bodies = [...p.racks.flatMap(r => r.devices), ...p.chips, ...p.zones], runs = [];
+    for (const w of rt.wires) if (!w.insideCard && w.cls !== "local" && !/fallback/.test(w.cls)) w.pts.forEach((q, i) => { if (!i) return;
+      const [a, b] = [w.pts[i - 1], q];
+      const hit = bodies.find(o => inside(a[0], a[1], b[0], b[1], o)); if (hit) bad.push(`${w.id} crosses ${hit.id}`);
+      const h = a[1] === b[1]; runs.push({ w, h, c: h ? a[1] : a[0], lo: Math.min(h ? a[0] : a[1], h ? b[0] : b[1]), hi: Math.max(h ? a[0] : a[1], h ? b[0] : b[1]) }); });
+    for (let i = 0; i < runs.length; i++) for (let j = i + 1; j < runs.length; j++) { const a = runs[i], b = runs[j];
+      if (a.w.net !== b.w.net && a.h === b.h && Math.abs(a.c - b.c) < 0.5 && Math.min(a.hi, b.hi) - Math.max(a.lo, b.lo) > 2) bad.push(`${a.w.id} on ${b.w.id}`); }
+    return bad;
+  };
+
+  const est = structuredClone(fixtures.estate), G = Sh.sheetGroups(est, 0);
+  t("sheets: the estate splits into Main House (main rack + 4 rooms) and Pool House (pool rack + 3 rooms) by each area's home rack",
+    G?.length === 2 && G[0].name === "Main House" && G[0].zones.length === 4 && G[1].name === "Pool House" && G[1].zones.length === 3 && G[1].racks[0] === "rack-pool", JSON.stringify(G));
+  const s0 = Sh.sheetJob(est, 0, G, 0), s1 = Sh.sheetJob(est, 0, G, 1);
+  const rk = (j, id) => j.solutions[0].racks.find(r => r.id === id);
+  t("sheets: each sheet shows how the racks link — the other rack reduced to the box wired to this one, titled with its sheet",
+    rk(s0, "rack-pool")?.name === "Pool House Rack — sheet 2" && rk(s0, "rack-pool").devices.map(d => d.id).join() === "sw-pool" &&
+    rk(s1, "rack-main")?.name === "Main Equipment Rack — sheet 1" && rk(s1, "rack-main").devices.map(d => d.id).join() === "sw-main" &&
+    s0.solutions[0].connections.some(c => c.from === "sw-main" && c.to === "sw-pool") && s1.solutions[0].connections.some(c => c.from === "sw-main" && c.to === "sw-pool") &&
+    s1.solutions[0].racks[0].id === "rack-pool" && s0.job.sheetLabel === "Main House" && s1.job.sheetLabel === "Pool House");
+  t("sheets: a one-rack job (and a second rack with no rooms of its own) doesn't split",
+    Sh.sheetGroups(structuredClone(fixtures.residence), 0) === null);
+  { const { job, ix } = loadJob(structuredClone(fixtures.estate)), a = advise(job, ix, null);
+    const one = Pg.sheetTotal(job, ix, a, { solution: 0 }), two = Pg.sheetTotal(job, ix, a, { solution: 0, schematicSheets: 2 });
+    const pages = Pg.renderExtraPages(job, ix, a, { solution: 0, schematicSheets: 2 });
+    t("sheets: the packet counts the extra schematic sheet — the next page is sheet 3", two === one + 1 && /Sheet 3 of/.test(pages[0]?.svg || ""), `${one} → ${two}`); }
+  // nothing is lost: every room on exactly one sheet, every wire on at least one; each sheet draws legally
+  const g = F.jobGenerator(1, { extras: true }); let n = 0, split = 0; const bad = [];
+  for (let k = 0; k < 325 && n < 60; k++) { const raw = g(k); if (raw.solutions[0].racks.length < 2 || !raw.house.zones.length) continue; n++;
+    const e = effectiveJob(structuredClone(raw), 0), gr = Sh.sheetGroups(e, 0); if (!gr) continue; split++;
+    const sj = gr.map((_, i) => Sh.sheetJob(e, 0, gr, i));
+    const zc = {}; sj.forEach(j => j.house.zones.forEach(z => zc[z.id] = (zc[z.id] || 0) + 1));
+    if (e.house.zones.some(z => zc[z.id] !== 1)) bad.push(`#${k} rooms`);
+    const keyOf = c => `${c.from}>${c.to}>${c.signal}`, seen = new Set(sj.flatMap(j => j.solutions[0].connections.map(keyOf)));
+    const lost = e.solutions[0].connections.filter(c => !c.dante && !seen.has(keyOf(c)));
+    if (lost.length) bad.push(`#${k} lost ${lost.map(keyOf).join(",")}`);
+    for (const j of sj) { try { const { job, ix } = loadJob(j), o = { trunks: "bundle" }, p = enginePlace(job, ix, o), rt = engineRoute(job, ix, p, o); render(job, ix, p, rt, o);
+      if (legal(p, rt).length) bad.push(`#${k} illegal`); } catch (err) { bad.push(`#${k} ${err.message}`); } }
+  }
+  t(`sheets: random two-rack jobs split with nothing lost — every room on one sheet, every wire on a sheet, each sheet legal (${split} of ${n} split)`,
+    n >= 40 && split >= 5 && !bad.length, bad.slice(0, 4).join(" | "));
+}
+
 document.getElementById("summary").innerHTML =
   fail === 0 ? `<span class="pass">ALL ${pass} TESTS PASS</span>` : `<span class="fail">${fail} FAILED</span> · ${pass} passed`;
 document.title = fail === 0 ? `✓ ${pass} pass` : `✗ ${fail} fail`;

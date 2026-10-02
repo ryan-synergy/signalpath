@@ -1038,15 +1038,17 @@ function pageGroups(job, ix, adviseResult, opts) {
   if (flags.labels) g.push(["Cable Labels", lbl => labelPages(job, ix, opts, lbl)]);
   return g;
 }
+// opts.schematicSheets: how many schematic sheets lead the packet (a job split by rack draws one per rack)
 export function sheetTotal(job, ix, adviseResult, opts = {}) {
-  return 1 + pageGroups(job, ix, adviseResult, opts).reduce((n, [, fn]) => n + fn(() => "").length, 0);
+  return (opts.schematicSheets || 1) + pageGroups(job, ix, adviseResult, opts).reduce((n, [, fn]) => n + fn(() => "").length, 0);
 }
 export function renderExtraPages(job, ix, adviseResult, opts = {}) {
   const groups = pageGroups(job, ix, adviseResult, opts);
   const counts = groups.map(([, fn]) => fn(() => "").length);
-  const n = 1 + counts.reduce((a, b) => a + b, 0);
+  const lead = opts.schematicSheets || 1;
+  const n = lead + counts.reduce((a, b) => a + b, 0);
   const pages = [];
-  let no = 2;
+  let no = lead + 1;
   groups.forEach(([title, fn], gi) => {
     const first = no;
     fn(k => `Sheet ${first + k} of ${n}`).forEach((svg, k) => pages.push({ title: k ? `${title} (cont.)` : title, svg }));

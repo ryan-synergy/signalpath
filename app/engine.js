@@ -4288,7 +4288,7 @@ export function render(job, ix, P, rt, opts = {}) {
   push(`<text x="${tb.x + 8}" y="500" font-size="11" fill="#111">${esc(J.name || "")}</text>`);
   push(`<line x1="${tb.x}" y1="510" x2="${tb.x + tb.w}" y2="510" stroke="#999" stroke-width="0.7"/>`);
   push(`<text x="${tb.x + 8}" y="524" font-size="8" fill="#777">Drawing</text>`);
-  push(`<text x="${tb.x + 8}" y="538" font-size="11" fill="#111">AV Schematic — ${esc(sol.name || "")}</text>`);
+  push(`<text x="${tb.x + 8}" y="538" font-size="11" fill="#111">AV Schematic — ${esc(sol.name || "")}${J.sheetLabel ? ` · ${esc(J.sheetLabel)}` : ""}</text>`);
   push(`<line x1="${tb.x}" y1="548" x2="${tb.x + tb.w}" y2="548" stroke="#444"/>`);
   push(`<rect x="${tb.x + 18}" y="558" width="120" height="24" fill="none" stroke="${stageCol}" stroke-width="1.6"/>`);
   push(`<text x="${cx}" y="575" text-anchor="middle" font-size="13" font-weight="700" letter-spacing="2" fill="${stageCol}">${stageTxt}</text>`);

@@ -208,6 +208,12 @@
     border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,.12); }
   #zoomBar button { font: inherit; font-size: 14px; min-width: 34px; height: 30px; border: 0; background: transparent; border-radius: 6px; cursor: pointer; color: #222; }
   #zoomBar button:hover { background: #eef0f3; }
+  /* split by rack: one tab per schematic sheet, top-left over the drawing */
+  #sheetTabs { position: absolute; top: 10px; left: 26px; z-index: 5; display: flex; gap: 2px; padding: 2px; background: rgba(255,255,255,.94);
+    border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); max-width: calc(100% - 200px); overflow-x: auto; }
+  #sheetTabs[hidden] { display: none; }
+  #sheetTabs button { font: inherit; font-size: 12px; height: 30px; padding: 0 10px; border: 0; background: transparent; border-radius: 6px; cursor: pointer; color: #444; white-space: nowrap; }
+  #sheetTabs button.on { background: var(--accent); color: #fff; font-weight: 600; }
   #zoomBar #zFit { min-width: 54px; font-size: 12px; font-variant-numeric: tabular-nums; }
   #canvas svg { width: calc(100% * var(--zoom, 1)); max-width: none; height: auto; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.18); border-radius: 3px; }
 
@@ -453,25 +459,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002012855",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002012855",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002012855",
-    "./app/ports.js": "./app/ports.js?v=20261002012855",
-    "./app/commands.js": "./app/commands.js?v=20261002012855",
-    "./app/engine.js": "./app/engine.js?v=20261002012855",
-    "./app/exports.js": "./app/exports.js?v=20261002012855",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002012855",
-    "./app/hookup.js": "./app/hookup.js?v=20261002012855",
-    "./app/importers.js": "./app/importers.js?v=20261002012855",
-    "./app/library.js": "./app/library.js?v=20261002012855",
-    "./app/names.js": "./app/names.js?v=20261002012855",
-    "./app/network.js": "./app/network.js?v=20261002012855",
-    "./app/pages.js": "./app/pages.js?v=20261002012855",
-    "./app/power.js": "./app/power.js?v=20261002012855",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002012855",
-    "./app/rack.js": "./app/rack.js?v=20261002012855",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002012855",
-    "./app/starters.js": "./app/starters.js?v=20261002012855"
+    "./app/ai.js": "./app/ai.js?v=20261002022414",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002022414",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002022414",
+    "./app/ports.js": "./app/ports.js?v=20261002022414",
+    "./app/commands.js": "./app/commands.js?v=20261002022414",
+    "./app/engine.js": "./app/engine.js?v=20261002022414",
+    "./app/exports.js": "./app/exports.js?v=20261002022414",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002022414",
+    "./app/hookup.js": "./app/hookup.js?v=20261002022414",
+    "./app/importers.js": "./app/importers.js?v=20261002022414",
+    "./app/library.js": "./app/library.js?v=20261002022414",
+    "./app/names.js": "./app/names.js?v=20261002022414",
+    "./app/network.js": "./app/network.js?v=20261002022414",
+    "./app/pages.js": "./app/pages.js?v=20261002022414",
+    "./app/power.js": "./app/power.js?v=20261002022414",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002022414",
+    "./app/rack.js": "./app/rack.js?v=20261002022414",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002022414",
+    "./app/starters.js": "./app/starters.js?v=20261002022414"
 } }
 </script>
 <script>
@@ -533,6 +539,7 @@
         <label class="chk"><input type="radio" name="trunkStyle" value="off"><span><b>Off</b><em>Each wire takes its own path (the older drawing)</em></span></label>
       </div>
       <label class="chk"><input type="checkbox" id="danteLabels"><span><b>Dante as labels</b><em>Saved with the job: no Dante lines — each amp lists its Dante sources, each source says where it goes</em></span></label>
+      <label class="chk"><input type="checkbox" id="splitSheets"><span><b>A sheet per rack</b><em>Saved with the job: a pool house, guest house or backyard with its own rack draws on its own sheet; the main sheet shows how the main rack feeds it</em></span></label>
       <label class="chk"><input type="checkbox" id="harnessMode"><span><b>Harness style</b><em>Saved with the job: runs to 3+ zones share one trunk and break out near each zone, like an electrical drawing</em></span></label>
       <label class="chk"><input type="checkbox" id="kindColor" checked><span><b>Color by kind</b><em>Each kind of rack box wears its own tint and edge (sources stay black); remembered on this computer</em></span></label>
       <label class="chk"><input type="checkbox" id="bwMode"><span><b>Black &amp; white</b><em>Dash patterns carry each signal, for office laser printers</em></span></label>
@@ -573,6 +580,7 @@
   <div id="grip" title="Drag to resize the panel"></div>
   <div id="right">
     <div id="canvas"></div>
+    <div id="sheetTabs" role="tablist" aria-label="Schematic sheets" hidden></div>
     <div id="zoomBar" role="group" aria-label="Zoom"><button id="zOut" title="Zoom out" aria-label="Zoom out">−</button><button id="zFit" title="Fit the sheet to the window">Fit</button><button id="zIn" title="Zoom in" aria-label="Zoom in">+</button></div>
     <div id="advisor"></div>
   </div>
@@ -640,6 +648,7 @@
 <script type="module">
 import { loadJob, normalizeJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock, trunkMode, boxUsage } from "./app/engine.js";
 import { importAny, mergeHouse, drawFromWalk, decodeHandoff, stripUnsafe } from "./app/importers.js";
+import { sheetGroups, sheetJob } from "./app/sheets.js";
 import { LIB_TYPES, typeLabel, SIGNALS as LIB_SIGNALS, TYPE_IO, LIB_SECTIONS, SELECTS, BEHAVIOURS, tagsOf, newId, blankDevice, duplicateDevice, checkEntry, exportLibrary, planImport, applyImport } from "./app/library.js";
 import { planQueueFiles, aiReviewMarkdown } from "./app/exports.js";
 import { RACK_SIZES, DEFAULT_RACK_U } from "./app/rack.js";
@@ -684,7 +693,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002012855").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002022414").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -777,24 +786,39 @@ let saveTimer = null;
 // mid-delete wrote the deleted job straight back)
 async function flushSave() { if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; await persist(); } }
 function cancelSave() { clearTimeout(saveTimer); saveTimer = null; }
+// the schematic sheets to draw: one — or, when the job is split by rack (View → A sheet per rack),
+// one per rack that has rooms of its own (app/sheets.js); each is an ordinary job
+function schematicSheets(raw) {
+  const g = S.job.job.splitSheets ? sheetGroups(raw, S.sol) : null;
+  return g ? g.map((x, k) => ({ name: x.name, raw: sheetJob(raw, S.sol, g, k) })) : [{ name: null, raw }];
+}
 function refresh(save = true) {
   const sol = S.job.solutions[S.sol] || S.job.solutions[0];
   S.sol = S.job.solutions.indexOf(sol);
   let v, a, svg = "", err, routeWarn = [], placeWarn = [];
   $("#harnessMode").checked = !!S.job.job.harnessStyle;     // a per-job drawing choice: follows job switches
+  $("#splitSheets").checked = !!S.job.job.splitSheets;
   for (const r of document.querySelectorAll('input[name="trunkStyle"]')) r.checked = r.value === (S.job.job.trunkStyle || "bundle");
   $("#harnessMode").disabled = !!trunkMode(S.job);          // trunks replace the harness; it applies with trunks off
   $("#danteLabels").checked = S.job.job.danteStyle === "labels";
   try {
     autoLinkCatalog(S.job, effectiveCatalog());                // self-heal: fill missing catalog links by model
-    const { job, ix } = loadJob(effectiveJob(S.job, S.sol));   // active solution's overrides applied
+    const full = effectiveJob(S.job, S.sol);                   // active solution's overrides applied
+    const whole = loadJob(full);
+    v = validate(whole.job, whole.ix); a = advise(whole.job, whole.ix, effectiveCatalog());   // checks see the whole job
+    const sheets = schematicSheets(full);
+    S.sheet = Math.min(S.sheet || 0, sheets.length - 1);
+    const { job, ix } = sheets.length > 1 ? loadJob(sheets[S.sheet].raw) : whole;   // the drawing shows one sheet
     S.view = { job, ix };                                      // interactive sheet resolves names from here
-    v = validate(job, ix); a = advise(job, ix, effectiveCatalog());
+    const tabs = $("#sheetTabs");
+    tabs.hidden = sheets.length < 2;
+    tabs.innerHTML = sheets.length < 2 ? "" : sheets.map((sh, k) => `<button role="tab" aria-selected="${k === S.sheet}" class="${k === S.sheet ? "on" : ""}" data-sheet="${k}">${k + 1} · ${esc(sh.name)}</button>`).join("");
+    tabs.querySelectorAll("button").forEach(b => b.onclick = () => { S.sheet = +b.dataset.sheet; refresh(false); });
     S.portMap = (a.ports || []).find(p => p.solution === job.solutions[S.sol]?.id)?.map || [];   // which jack each wire lands on
     // "1 of N" counts the continuation sheets a long schedule/map paginates into
     const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, kindColor: $("#kindColor").checked, company: SETTINGS.company,
-                   usage: boxUsage(job, ix, effectiveCatalog(), a, S.sol),   // the lit windows on every box
-                   sheet: `1 of ${sheetTotal(job, ix, a, { solution: S.sol, rawJob: S.job })}` };
+                   usage: boxUsage(whole.job, whole.ix, effectiveCatalog(), a, S.sol),   // the lit windows on every box (whole-job counts)
+                   sheet: `${S.sheet + 1} of ${sheetTotal(whole.job, whole.ix, a, { solution: S.sol, rawJob: S.job, schematicSheets: sheets.length })}` };
     if (trunkMode(job)) opts.wireLabels = wireLabels(job, ix, { solution: S.sol, portMap: S.portMap });
     if (S.job.house.zones.length) {
       const p = place(job, ix, opts);
@@ -974,6 +998,7 @@ for (const r of document.querySelectorAll('input[name="trunkStyle"]')) r.onchang
   refresh();
 };
 $("#danteLabels").onchange = e => { if (e.target.checked) S.job.job.danteStyle = "labels"; else delete S.job.job.danteStyle; refresh(); };
+$("#splitSheets").onchange = e => { if (e.target.checked) S.job.job.splitSheets = true; else delete S.job.job.splitSheets; S.sheet = 0; refresh(); };
 $("#harnessMode").onchange = e => { if (e.target.checked) S.job.job.harnessStyle = true; else delete S.job.job.harnessStyle; refresh(); };
 $("#solSel").onchange = e => {
   if (e.target.value === "__add") {
@@ -1241,16 +1266,22 @@ $("#toolsBtn").onclick = () => {
 // packet: "service" (everything; as-built jobs add clouds + the changes page) or "client" (clean handover)
 function printPacket(packet = "service") {
   try {
-    const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
+    const full = effectiveJob(S.job, S.sol);
+    const { job, ix } = loadJob(full);
     const a = advise(job, ix, effectiveCatalog());
+    const sheets = schematicSheets(full);                      // one schematic sheet per rack when split
     const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, kindColor: $("#kindColor").checked, company: SETTINGS.company, usage: boxUsage(job, ix, effectiveCatalog(), a, S.sol),
-                   rawJob: S.job, packet, catalog: effectiveCatalog() };   // the takeoff names the real parts
-    opts.sheet = `1 of ${sheetTotal(job, ix, a, opts)}`;
-    if (trunkMode(job)) opts.wireLabels = wireLabels(job, ix, { solution: S.sol });
-    const p = place(job, ix, opts);
-    const rt = route(job, ix, p, opts);
-    if (packet !== "client" && isAsBuilt(S.job)) opts.marks = changeMarks(asBuiltChanges(S.job), p, rt, { grayscale: opts.grayscale });
-    const pagesSvg = [render(job, ix, p, rt, opts), ...renderExtraPages(job, ix, a, opts).map(pg => pg.svg)];
+                   rawJob: S.job, packet, catalog: effectiveCatalog(), schematicSheets: sheets.length };   // the takeoff names the real parts
+    const total = sheetTotal(job, ix, a, opts);
+    const drawn = sheets.map((sh, k) => {
+      const d = sheets.length > 1 ? loadJob(sh.raw) : { job, ix };
+      const o = { ...opts, sheet: `${k + 1} of ${total}` };
+      if (trunkMode(d.job)) o.wireLabels = wireLabels(d.job, d.ix, { solution: S.sol });
+      const p = place(d.job, d.ix, o), rt = route(d.job, d.ix, p, o);
+      if (packet !== "client" && isAsBuilt(S.job)) o.marks = changeMarks(asBuiltChanges(S.job), p, rt, { grayscale: o.grayscale });
+      return render(d.job, d.ix, p, rt, o);
+    });
+    const pagesSvg = [...drawn, ...renderExtraPages(job, ix, a, opts).map(pg => pg.svg)];
     const w = window.open("", "_blank");
     if (!w) { alert("The print packet opens in a new window — allow pop-ups for this site, then press Print again."); return; }
     w.document.write(`<!doctype html><html><head><title>${esc(S.job.job.name)} — ${isAsBuilt(S.job) ? (packet === "client" ? "As-Built (client)" : "As-Built (service)") : "AV Schematic Packet"}</title><style>

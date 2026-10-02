@@ -214,7 +214,7 @@
   #qa .ex { font-size: 10.5px; color: #999; margin-top: 5px; }
 
   /* ---- canvas + advisor ---- */
-  #right { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  #right { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
   /* portrait tablet / narrow window: the drawing on top at full width, the
      editor panel underneath (side by side left the sheet at ~25% scale) */
   @media (max-width: 900px) and (orientation: portrait) {
@@ -297,17 +297,27 @@
   .libov .it.on { background: #e6eef9; border-left-color: var(--accent); }
   .libov .it .m { font-size: 13px; } .libov .it .s { font-size: 11px; color: #888; margin-top: 1px; }
   /* the rack page: racks side by side, to scale, every box draggable (Ryan 2026-10-02) */
-  #rackEd .card { width: min(1500px, 98vw); height: 94vh; }
+  #viewSw { display: inline-flex; border: 1px solid #3a3f47; border-radius: 9px; overflow: hidden; }
+  #viewSw button { font: inherit; font-size: 13px; padding: 0 14px; min-height: 38px; background: transparent; color: #cfd4da; border: 0; cursor: pointer; }
+  #viewSw button + button { border-left: 1px solid #3a3f47; }
+  #viewSw button.on { background: #e9edf2; color: #16181c; font-weight: 600; }
+  #rackView { flex: 1; min-height: 0; display: flex; flex-direction: column; background: #fafbfc; }
+  #rackView[hidden] { display: none; }
+  #right.rackmode #canvas, #right.rackmode #zoomBar, #right.rackmode #sheetTabs { display: none; }
+  #rackView .hd { display: flex; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); background: #fff; flex-wrap: wrap; }
+  #rackView .hd .t { font-size: 15px; font-weight: 700; }
+  #rackView .hd .mini { flex: 1; }
+  #rackView button { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--act-line); background: #fff; min-height: var(--hit); cursor: pointer; }
   .rkspace { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 6px 0; background: #fbfbfc; }
-  #rackEd .rkbody { flex: 1; overflow: auto; display: flex; gap: 28px; padding: 16px 20px; align-items: flex-start; background: #fafbfc; }
-  #rackEd .rkcol { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; flex: none; max-width: 100%; }
-  #rackEd .rkhd { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  #rackEd .rkhd b { font-size: 14px; margin-right: auto; }
-  #rackEd .rkhd .badge { font-size: 11px; }
-  #rackEd .rkwarn { font-size: 12px; color: #a45a12; margin-top: 6px; max-width: 520px; }
-  #rackEd .rkwarn.over { color: var(--bad); font-weight: 600; }
-  #rackEd .rk-item:hover rect:first-child { stroke: #e8842c; stroke-width: 1.6; }
-  #rackEd .rk-item.dragging { opacity: .35; }
+  #rackView .rkbody { flex: 1; overflow: auto; display: flex; gap: 28px; padding: 16px 20px; align-items: flex-start; background: #fafbfc; }
+  #rackView .rkcol { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; flex: none; max-width: 100%; }
+  #rackView .rkhd { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  #rackView .rkhd b { font-size: 14px; margin-right: auto; }
+  #rackView .rkhd .badge { font-size: 11px; }
+  #rackView .rkwarn { font-size: 12px; color: #a45a12; margin-top: 6px; max-width: 520px; }
+  #rackView .rkwarn.over { color: var(--bad); font-weight: 600; }
+  #rackView .rk-item:hover rect:first-child { stroke: #e8842c; stroke-width: 1.6; }
+  #rackView .rk-item.dragging { opacity: .35; }
   #rkGhost { position: fixed; z-index: 70; pointer-events: none; border: 2px solid #e8842c; background: rgba(232,132,44,.18); border-radius: 3px;
     font: 600 12px/1.2 inherit; color: #6b3a0e; padding: 2px 6px; display: none; overflow: hidden; white-space: nowrap; }
   /* kit list: an eye per kit shows or hides it in ＋ New job (Ryan 2026-10-02) */
@@ -514,25 +524,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002232443",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002232443",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002232443",
-    "./app/ports.js": "./app/ports.js?v=20261002232443",
-    "./app/commands.js": "./app/commands.js?v=20261002232443",
-    "./app/engine.js": "./app/engine.js?v=20261002232443",
-    "./app/exports.js": "./app/exports.js?v=20261002232443",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002232443",
-    "./app/hookup.js": "./app/hookup.js?v=20261002232443",
-    "./app/importers.js": "./app/importers.js?v=20261002232443",
-    "./app/library.js": "./app/library.js?v=20261002232443",
-    "./app/names.js": "./app/names.js?v=20261002232443",
-    "./app/network.js": "./app/network.js?v=20261002232443",
-    "./app/pages.js": "./app/pages.js?v=20261002232443",
-    "./app/power.js": "./app/power.js?v=20261002232443",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002232443",
-    "./app/rack.js": "./app/rack.js?v=20261002232443",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002232443",
-    "./app/starters.js": "./app/starters.js?v=20261002232443"
+    "./app/ai.js": "./app/ai.js?v=20261002233039",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002233039",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002233039",
+    "./app/ports.js": "./app/ports.js?v=20261002233039",
+    "./app/commands.js": "./app/commands.js?v=20261002233039",
+    "./app/engine.js": "./app/engine.js?v=20261002233039",
+    "./app/exports.js": "./app/exports.js?v=20261002233039",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002233039",
+    "./app/hookup.js": "./app/hookup.js?v=20261002233039",
+    "./app/importers.js": "./app/importers.js?v=20261002233039",
+    "./app/library.js": "./app/library.js?v=20261002233039",
+    "./app/names.js": "./app/names.js?v=20261002233039",
+    "./app/network.js": "./app/network.js?v=20261002233039",
+    "./app/pages.js": "./app/pages.js?v=20261002233039",
+    "./app/power.js": "./app/power.js?v=20261002233039",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002233039",
+    "./app/rack.js": "./app/rack.js?v=20261002233039",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002233039",
+    "./app/starters.js": "./app/starters.js?v=20261002233039"
 } }
 </script>
 <script>
@@ -583,6 +593,7 @@
   <span class="spacer"></span>
   <button id="aiBtn" title="Describe a change — Claude proposes it, you preview and apply">✦ Ask AI</button>
   <span id="rulesChip" class="ok">✓</span>
+  <div id="viewSw" role="tablist" aria-label="View"><button role="tab" data-view="schematic" class="on" aria-selected="true">Schematic</button><button role="tab" data-view="rack" aria-selected="false" title="The racks, full size — drag gear to arrange">Rack</button></div>
   <span class="spacer"></span>
   <div class="menu" id="viewMenu"><button class="mbtn" aria-haspopup="true" aria-expanded="false">View ▾</button>
     <div class="mlist" role="menu" hidden>
@@ -636,6 +647,12 @@
     <div id="canvas"></div>
     <div id="sheetTabs" role="tablist" aria-label="Schematic sheets" hidden></div>
     <div id="zoomBar" role="group" aria-label="Zoom"><button id="zOut" title="Zoom out" aria-label="Zoom out">−</button><button id="zFit" title="Fit the sheet to the window">Fit</button><button id="zIn" title="Zoom in" aria-label="Zoom in">+</button></div>
+    <div id="rackView" hidden>
+      <div class="hd"><div class="t">Racks — drag gear to arrange</div>
+        <span class="mini">Drag a box up or down, or onto another rack. Drop on a box the same height to swap. Vents and brush plates fill in on their own.</span>
+        <button id="rkUndo">↶ Undo</button></div>
+      <div class="rkbody" id="rkBody"></div>
+    </div>
     <div id="advisor"></div>
   </div>
 </div>
@@ -670,12 +687,6 @@
   <div class="ft"><button id="stCancel">Cancel</button></div>
 </div></div>
 
-<div id="rackEd" class="libov" role="dialog" aria-modal="true" aria-labelledby="rkTitle"><div class="card">
-  <div class="hd"><div class="t" id="rkTitle">Rack page — drag gear to arrange it</div>
-    <span class="mini" id="rkHint">Drag a box up or down, or onto another rack. Drop on a box the same height to swap. Vents and brush plates fill in on their own.</span>
-    <button id="rkUndo">↶ Undo</button><button class="primary" id="rkClose">Done</button></div>
-  <div class="rkbody" id="rkBody"></div>
-</div></div>
 <div id="library" class="libov"><div class="card">
   <div class="hd"><div class="t">Device library</div>
     <input id="libQ" type="search" placeholder="Search brand, model, part #" autocomplete="off">
@@ -754,7 +765,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002232443").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002233039").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -951,6 +962,7 @@ function refresh(save = true) {
   for (const io of (a?.io || []).filter(mine)) (S.ioByDev.get(io.device) ?? S.ioByDev.set(io.device, {}).get(io.device))[io.kind] = io;   // each finding also shows on its own zone / box row
   renderTopbar();
   renderPanel();
+  renderRackEd();                                            // the rack view follows every change (space, size, gear)
   if (save) { clearTimeout(saveTimer); saveTimer = setTimeout(() => { saveTimer = null; persist(); }, 400); }
 }
 /* findings → the row they belong to: zones by the endpoint / adapter / in-zone
@@ -2326,9 +2338,21 @@ function encAudioHTML(sol, d) {
 /* ---- the rack page (Ryan 2026-10-02): every rack of the solution side by side, to scale; drag a box
    up / down or onto another rack. rack.js does the move (moveRackItem) and the re-layout; this is the
    gesture: a ghost that snaps to whole U over whichever rack is under the finger. ---- */
-function openRackEd() { $("#rackEd").classList.add("show"); renderRackEd(); }
+/* two views of the same job (Ryan 2026-10-02): the schematic for wiring, the racks full size for
+   fine-tuning — a switch in the top bar; the panel on the left stays as it is */
+function setView(v) {
+  S.mainView = v === "rack" ? "rack" : "schematic";
+  try { localStorage.setItem("signalpath.view", S.mainView); } catch {}
+  document.querySelectorAll("#viewSw button").forEach(b => { const on = b.dataset.view === S.mainView; b.classList.toggle("on", on); b.setAttribute("aria-selected", String(on)); });
+  $("#rackView").hidden = S.mainView !== "rack";
+  $("#right").classList.toggle("rackmode", S.mainView === "rack");
+  renderRackEd();
+}
+document.querySelectorAll("#viewSw button").forEach(b => b.onclick = () => setView(b.dataset.view));
+try { if (localStorage.getItem("signalpath.view") === "rack") setView("rack"); } catch {}   // the view you left it in
+function openRackEd() { setView("rack"); }
 function renderRackEd() {
-  if (!$("#rackEd").classList.contains("show")) return;
+  if (S.mainView !== "rack" || !S.job) return;
   const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
   const a = advise(job, ix, effectiveCatalog()), solId = ix.solutions[S.sol]?.sol.id;
   S.rkPlans = (a.racks || []).filter(r => r.solution === solId);
@@ -2379,10 +2403,9 @@ function rkStart(e) {
   };
   addEventListener("pointermove", move); addEventListener("pointerup", up); addEventListener("pointercancel", up);
 }
-$("#rkClose").onclick = () => { $("#rackEd").classList.remove("show"); renderPanel(); };
 $("#rkUndo").onclick = () => { undo(); renderRackEd(); };
 document.addEventListener("click", e => { if (e.target.closest(".rkopen")) { e.preventDefault(); openRackEd(); } });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#rackEd").classList.contains("show")) $("#rkClose").click(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && S.mainView === "rack" && !e.target.closest?.("input, textarea, select")) setView("schematic"); });
 
 /* start from the space (Ryan 2026-10-02): the opening a rack has to fit — the lower of the cabinet opening
    and the door it goes through — picks the tallest Middle Atlantic / Strong floor rack that fits (on

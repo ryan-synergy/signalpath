@@ -511,6 +511,11 @@ export function wireRuns(job, ix, opts = {}) {
       if (s.locals[c.to] || ix.endpointsById[c.to]) continue;   // handled at the TV (local encoder / soundbar) — no pull
       runs.push({ prefix: "R", cable: c.earcKit ? "Cat6A" : "Optical (Toslink)", from: `${zoneName(ix, c.from)} — TV location`, to: s.devices[c.to] ? at(c.to, pm.to) : rackAt(c.to, c.from),
         carries: c.earcKit ? "Audio return — eARC extender (AVPro AC-AEX-DEARC-KIT)" : c.backup ? "Audio return — optical backup to eARC" : "Audio return", color: "#a45a12", term: s.devices[c.to]?.model || nameOf(job, s, c.to), count: 1, gray });
+    } else if (c.signal === "audio" && s.locals[c.to] && (s.devices[c.from] || s.devices[s.companions[c.from]?.serves])) {
+      // line-level audio from the rack out to gear in a room (an encoder's analog out to a local amp)
+      const lz = s.locals[c.to].zone;
+      runs.push({ prefix: "A", cable: "Shielded 22/2 (line level)", from: rackAt(c.from), to: `${ix.zonesById[lz]?.name || "(zone removed)"} — ${devName(s.locals[c.to])}`,
+        carries: "Line-level audio", color: "#1a5fa0", term: `${devName(s.locals[c.to])} line in`, count: 1, gray });
     } else if (c.signal === "network" && (toEp || servesEp(s, c.to))) {
       runs.push({ prefix: "N", cable: "Cat6", from: rackAt(c.from, toEp ? c.to : s.companions[c.to].serves), to: zoneName(ix, toEp ? c.to : s.companions[c.to].serves), carries: "Network", color: "#2f9e44", term: "RJ45", count: 1, gray });
     }
@@ -536,7 +541,7 @@ export function wireRuns(job, ix, opts = {}) {
   const rackIdOf = t => { const r = (sol.racks || []).find(r => String(t) === r.name || String(t).startsWith(`${r.name} · `)); return r?.id; };
   for (const r of runs) r.racks = [...new Set([rackIdOf(r.from), rackIdOf(r.to)].filter(Boolean))];
   // deterministic numbering per prefix, non-gray first within prefix order V,N,R,S
-  const order = { X: 0, V: 1, N: 2, R: 3, S: 4 };
+  const order = { X: 0, V: 1, N: 2, A: 3, R: 4, S: 5 };
   runs.sort((a, b) => order[a.prefix] - order[b.prefix] || (a.gray ? 1 : 0) - (b.gray ? 1 : 0));
   const counters = {};
   for (const r of runs) {
@@ -646,7 +651,7 @@ function wireSchedulePages(job, ix, opts, label) {
   body.push(`<g font-size="12" fill="#555"><text x="40" y="${ry + 40}" font-weight="700">Totals:</text>
 <text x="110" y="${ry + 40}">${esc(totals)} — ${total} home runs${grayCount ? ` (${grayCount} pre-wire)` : ""}</text></g>`);
   return assemble(job, opts, "Wire Schedule", "Pull sheet — every home run, derived from the schematic. Check off as pulled.", bodies, label,
-    () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Run IDs: X = rack to rack, V = video, N = network, R = audio return, S = speaker. Gray rows are pre-wire scope. Generated from the schematic — no run exists here that isn't drawn on the schematic.</text>`);
+    () => `<text x="40" y="920" font-size="11.5" font-style="italic" fill="#767676">Run IDs: X = rack to rack, V = video, N = network, A = line-level audio, R = audio return, S = speaker. Gray rows are pre-wire scope. Generated from the schematic — no run exists here that isn't drawn on the schematic.</text>`);
 }
 export function renderWireSchedule(job, ix, opts = {}) {
   return wireSchedulePages(job, ix, opts, () => opts.sheetLabel || "")[0];

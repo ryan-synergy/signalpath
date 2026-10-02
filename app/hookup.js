@@ -514,3 +514,23 @@ export function quickFixes(job, sol, f, catalog = null) {
   }
   return out;
 }
+
+/* ---------- a rack-side adapter's analog audio out (Ryan 2026-10-02) ----------
+   An MXNet AVDM encoder breaks its source's audio out as analog — normally into the Savant
+   input module. It can go elsewhere: straight into an amp or a receiver (bypassing the AIM),
+   or out to gear in a room. One output, one destination; null = not used. */
+const AUDIO_IN_RACK = ["audioInputModule", "amp", "avr", "danteBridge"];
+export function adapterAudioOut(sol, compId) {
+  return (sol.connections || []).find(c => c.from === compId && c.signal === "audio" && !c.dante)?.to || null;
+}
+export function adapterAudioTargets(job, sol, compId) {
+  const comp = (sol.companions || []).find(c => c.id === compId);
+  const rack = rackDevices(sol).filter(d => AUDIO_IN_RACK.includes(d.type) && d.id !== comp?.serves);
+  const zoneName = zid => (job.house?.zones || []).find(z => z.id === zid)?.name || zid;
+  const local = (sol.localDevices || []).filter(d => ["amp", "avr"].includes(d.type)).map(d => ({ id: d.id, label: `${d.model || d.type} — ${zoneName(d.zone)}` }));
+  return { rack: rack.map(d => ({ id: d.id, label: d.model || d.id, type: d.type })), local };
+}
+export function setAdapterAudio(sol, compId, to) {
+  sol.connections = (sol.connections || []).filter(c => !(c.from === compId && c.signal === "audio" && !c.dante));
+  if (to) sol.connections.push({ from: compId, to, signal: "audio" });
+}

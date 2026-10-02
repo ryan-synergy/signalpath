@@ -1795,6 +1795,25 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const ee = structuredClone(fixtures.estate);
     const pn = (() => { const Lx = loadJob(structuredClone(ee)); return advise(Lx.job, Lx.ix, CAT).notes.find(n => n.code === "power-none" && n.rack === "rack-pool"); })();
     applyFix(ee, pn);
+    {   // an encoder's analog out goes where you choose: the AIM (default), straight to an amp, a room, or nowhere
+      const je = build("mxnet-savant", "family room 5.1 75 sony, kitchen stereo"), se = je.solutions[0];
+      const amp = se.racks[0].devices.find(d => d.type === "amp"), aim = se.racks[0].devices.find(d => d.type === "audioInputModule");
+      const tg = H.adapterAudioTargets(je, se, "enc-atv1");
+      t("encoder audio: an AVDM encoder starts on the Savant input module; the amp and receiver are offered too",
+        H.adapterAudioOut(se, "enc-atv1") === aim.id && tg.rack.some(x => x.id === amp.id) && tg.rack.some(x => x.type === "avr") && !tg.rack.some(x => x.id === "atv1"));
+      H.setAdapterAudio(se, "enc-atv1", amp.id);
+      const Lx = loadJob(structuredClone(je));
+      t("encoder audio: sent straight to the amp (bypassing the AIM) — one audio out, still a valid job",
+        H.adapterAudioOut(se, "enc-atv1") === amp.id && se.connections.filter(c => c.from === "enc-atv1" && c.signal === "audio").length === 1 && validate(Lx.job, Lx.ix).errors.length === 0,
+        validate(Lx.job, Lx.ix).errors.map(e => e.msg).join(" | "));
+      se.localDevices.push({ id: "kamp", type: "amp", model: "Local amp", zone: "z-kitchen", location: "at-display", status: "new", zones: 1 });
+      H.setAdapterAudio(se, "enc-atv2", "kamp");
+      const Ly = loadJob(structuredClone(je)), ra = wireRuns(Ly.job, Ly.ix, {}).filter(r => r.prefix === "A");
+      t("encoder audio: to gear in a room it's a line-level pull on the wire schedule (A-01)",
+        ra.length === 1 && ra[0].id === "A-01" && /Kitchen/.test(ra[0].to) && /^Equipment Rack|Rack/.test(ra[0].from), JSON.stringify(ra));
+      H.setAdapterAudio(se, "enc-cable", null);
+      t("encoder audio: 'not used' leaves the encoder with no audio out", H.adapterAudioOut(se, "enc-cable") === null);
+    }
     {   // click-to-edit: every adapter chip and rack name on the sheet is a tap target
       const Le = loadJob(structuredClone(fixtures.estate)), pe = place(Le.job, Le.ix), svgE = render(Le.job, Le.ix, pe, route(Le.job, Le.ix, pe));
       t("click-to-edit: each chip is a tappable group naming its adapter, each rack name names its rack",

@@ -500,25 +500,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002194826",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002194826",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002194826",
-    "./app/ports.js": "./app/ports.js?v=20261002194826",
-    "./app/commands.js": "./app/commands.js?v=20261002194826",
-    "./app/engine.js": "./app/engine.js?v=20261002194826",
-    "./app/exports.js": "./app/exports.js?v=20261002194826",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002194826",
-    "./app/hookup.js": "./app/hookup.js?v=20261002194826",
-    "./app/importers.js": "./app/importers.js?v=20261002194826",
-    "./app/library.js": "./app/library.js?v=20261002194826",
-    "./app/names.js": "./app/names.js?v=20261002194826",
-    "./app/network.js": "./app/network.js?v=20261002194826",
-    "./app/pages.js": "./app/pages.js?v=20261002194826",
-    "./app/power.js": "./app/power.js?v=20261002194826",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002194826",
-    "./app/rack.js": "./app/rack.js?v=20261002194826",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002194826",
-    "./app/starters.js": "./app/starters.js?v=20261002194826"
+    "./app/ai.js": "./app/ai.js?v=20261002195236",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002195236",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002195236",
+    "./app/ports.js": "./app/ports.js?v=20261002195236",
+    "./app/commands.js": "./app/commands.js?v=20261002195236",
+    "./app/engine.js": "./app/engine.js?v=20261002195236",
+    "./app/exports.js": "./app/exports.js?v=20261002195236",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002195236",
+    "./app/hookup.js": "./app/hookup.js?v=20261002195236",
+    "./app/importers.js": "./app/importers.js?v=20261002195236",
+    "./app/library.js": "./app/library.js?v=20261002195236",
+    "./app/names.js": "./app/names.js?v=20261002195236",
+    "./app/network.js": "./app/network.js?v=20261002195236",
+    "./app/pages.js": "./app/pages.js?v=20261002195236",
+    "./app/power.js": "./app/power.js?v=20261002195236",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002195236",
+    "./app/rack.js": "./app/rack.js?v=20261002195236",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002195236",
+    "./app/starters.js": "./app/starters.js?v=20261002195236"
 } }
 </script>
 <script>
@@ -701,10 +701,10 @@ import { STARTERS, applyStarter, starterFromJob, listStarters, duplicateStarter 
 import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/commands.js";
 import { askClaude, handoffPrompt, extractProposal, jobSummary, assess, loadConn, saveConn, connReady, MODELS } from "./app/ai.js";
 import { setDanteAudio, danteAmpFor } from "./app/hookup.js";
-import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, quickFixes, nextFreeOutputs, outputsNeeded,
+import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, quickFixes, adapterAudioOut, adapterAudioTargets, setAdapterAudio, nextFreeOutputs, outputsNeeded,
          VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS, REACH, bulletFor } from "./app/hookup.js";
 import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME, AUDIO_NET_NAME,
-         signalName, describeNode, humanizeWireIds, productName, productSku, ADAPTER, isOutdoorZone, ZONE_GROUPING_NAME } from "./app/names.js";
+         signalName, describeNode, humanizeWireIds, productName, productSku, ADAPTER, adapterName, isOutdoorZone, ZONE_GROUPING_NAME } from "./app/names.js";
 
 /* ============ IndexedDB jobs store ============ */
 const DB = await new Promise((res, rej) => {
@@ -733,7 +733,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002194826").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002195236").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -2144,6 +2144,7 @@ function gearHTML(o = {}) {
         <div class="sect">OUTPUTS${cap.outs ? ` <span class="mini">${esc(cap.outs)}</span>` : ""}</div>
         <div class="ports">${outs.length ? outs.map(([c, i]) => connRowHTML(c, i, sol, d.id, "out")).join("") : `<div class="empty">Not feeding anything yet.</div>`}
           <button class="addconn" data-dir="out">＋ Connect an output</button></div>
+        ${encAudioHTML(sol, d)}
         <details class="more" data-more="more:${esc(d.id)}" ${S.openRows.has("more:" + d.id) ? "open" : ""}><summary>More — type, status${d.type === "amp" ? ", zones" : ""}</summary>
           ${field("Type", sel("dtype", DEV_TYPES, d.type, { ...DEV_TYPE_LABEL, source: "Source (Apple TV, cable box, streamer…)" }))}
           ${d.type === "amp" ? field("Zones", `<input class="dzones" type="number" min="1" max="32" value="${esc(d.zones || 8)}">`) : ""}
@@ -2282,6 +2283,20 @@ function rackHTML(o = {}) {
     return { parts, rest: powers.filter(p => !placed.has(p)).map(pw).join(""), badge: Object.fromEntries(racks.map(r => [r.rack, `${r.used}U / ${r.size}U`])) };
   }
   return rs.length ? rs.map(rr => rackRow(rr) + under(rr)).join("") + powers.filter(p => !placed.has(p)).map(pw).join("") : `<div class="mini" style="padding:12px">No rack on this job yet — add gear under GEAR.</div>`;
+}
+/* a source's MXNet encoder (AVDM) breaks its audio out as analog — normally into the Savant input
+   module; pick another home for it here: an amp or receiver directly, gear in a room, or nothing.
+   The same for an amp's audio decoder. (Ryan 2026-10-02) */
+function encAudioHTML(sol, d) {
+  const comps = (sol.companions || []).filter(c => c.serves === d.id && (c.avdm || c.variant === "audio-deembed" || adapterAudioOut(sol, c.id)));
+  return comps.map(c => {
+    const cur = adapterAudioOut(sol, c.id) || "", t = adapterAudioTargets(S.job, sol, c.id);
+    const o = (v, l) => `<option value="${esc(v)}" ${v === cur ? "selected" : ""}>${esc(l)}</option>`;
+    const what = c.type === "enc" ? "Encoder audio out" : "Decoder audio out";
+    return field(what, `<select class="encaud" data-comp="${esc(c.id)}" data-sub="analog out of the ${esc(adapterName(c))}">${o("", "— not used —")}
+      ${t.rack.length ? `<optgroup label="In the rack">${t.rack.map(x => o(x.id, `${x.label}${x.type === "amp" ? " (straight to the amp)" : ""}`)).join("")}</optgroup>` : ""}
+      ${t.local.length ? `<optgroup label="In a room">${t.local.map(x => o(x.id, x.label)).join("")}</optgroup>` : ""}</select>`);
+  }).join("");
 }
 /* RACK tab (build order, Ryan 2026-10-02): one place per rack — its boxes first (what used to be
    GEAR: each box, its product, its connections), then the elevation, heights / cords / watts,
@@ -2895,6 +2910,11 @@ function wirePanel(body) {
     const model = prompt(type === "amp" ? "Amp model:" : "Receiver model:", type === "amp" ? "Multi-zone amp" : "AV receiver");
     return model ? addRackDevice(S.job, sol, type, model) : null;
   };
+  body.querySelectorAll(".encaud").forEach(el => el.onchange = () => {
+    pushUndo("encoder audio out");
+    setAdapterAudio(S.job.solutions[S.sol], el.dataset.comp, el.value || null);
+    refresh();
+  });
   body.querySelectorAll(".hvfrom").forEach(el => el.onchange = () => hook(el, (z, sol) => {
     let v = el.value;
     if (v === "__apps") { setVideo(S.job, sol, z, null); const tv = z.endpoints.find(e => e.type === "display"); if (tv) tv.ownApps = true; return; }

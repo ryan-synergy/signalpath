@@ -180,31 +180,32 @@
       {
        "id": "mrx540",
        "type": "avr",
-       "model": "Anthem MRX-540",
+       "model": "Anthem MRX 540",
        "catalogRef": "anthem-mrx-540-8k",
        "status": "new"
       },
       {
        "id": "axion8",
        "type": "videoMatrix",
-       "model": "AVPro Edge Axion 8",
+       "model": "AVPro Edge AC-AXION-8",
        "io": {
         "in": 2,
         "out": 4
        },
-       "status": "new"
+       "status": "new",
+       "catalogRef": "avpro-ac-axion-8"
       },
       {
        "id": "sav-in",
        "type": "audioInputModule",
-       "model": "Savant Input Module",
+       "model": "Savant Analog Audio Input Module",
        "status": "new",
        "catalogRef": "savant-avb-input-module"
       },
       {
        "id": "sav-out",
        "type": "audioOutputModule",
-       "model": "Savant Output Module",
+       "model": "Savant Analog Audio Output Module",
        "status": "new",
        "catalogRef": "savant-avb-output-module"
       },
@@ -387,7 +388,7 @@
    ],
    "annotations": [
     {
-     "text": "Gym pre-wired only \u2014 MDX-16 ch 6 reserved for future",
+     "text": "Gym pre-wired only — MDX-16 ch 6 reserved for future",
      "near": "z-gym"
     }
    ]

@@ -471,7 +471,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
   t("channel map: input module shows the audio return in orange",
     cm.includes("Master Bed TV — audio return") && cm.includes("#a45a12"));
   t("channel map: AVR mini-card summarizes the surround zone",
-    cm.includes("Anthem MRX-540") && cm.includes("5.1 set"));
+    cm.includes("Anthem MRX 540") && cm.includes("5.1 set"));
 
   const tk = renderTakeoff(job, ix, a, { sheetLabel: "Sheet 3 of 4" });
   t("takeoff: valid SVG, no leaks", parseOk(tk) && !/NaN|undefined/.test(tk));
@@ -1177,7 +1177,9 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const catalog = await (await fetch("./catalog.json")).json();
   const raw = structuredClone(fixtures.residence);
   const devsOf = j => j.solutions[0].racks[0].devices;
-  for (const d of devsOf(raw)) delete d.catalogRef;            // simulate an old saved job
+  // simulate an old saved job: no links, and the names jobs had before the PlanQueue names (2026-10-02)
+  const OLD = { mrx540: "Anthem MRX-540", axion8: "AVPro Edge Axion 8", "sav-in": "Savant Input Module", "sav-out": "Savant Output Module" };
+  for (const d of devsOf(raw)) { delete d.catalogRef; if (OLD[d.id]) d.model = OLD[d.id]; }
   const n = autoLinkCatalog(raw, catalog);
   const ref = id => devsOf(raw).find(d => d.id === id)?.catalogRef;
   t("autolink: relinks the known gear on an old job", n >= 4, `linked ${n}`);
@@ -1571,7 +1573,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
     ["Kitchen", "Office", "Dining Room"].every(n => r.job.solutions[0].connections.some(c => c.from === "mdx16" && c.to === r.job.house.zones.find(z => z.name === n).endpoints.find(e => e.type === "speakers").id)));
   r = run("family room from the receiver");
   const fam = z => z.house.zones.find(x => x.name === "Family Room");
-  t("commands: a zone from the receiver = TV and speakers", r.steps[0].ok && /TV ← Anthem MRX-540.*speakers ← Anthem MRX-540/.test(r.steps[0].text));
+  t("commands: a zone from the receiver = TV and speakers", r.steps[0].ok && /TV ← Anthem MRX 540.*speakers ← Anthem MRX 540/.test(r.steps[0].text));
   r = run("master bed tv direct hdmi");
   t("commands: change a zone's run", r.steps[0].ok && !r.job.solutions[0].companions.some(c => c.serves === "master-tv"));
   r = run("patio 75 ofe");
@@ -1704,7 +1706,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const squeezed = [...tile.querySelectorAll("text")].find(x => x.textContent === "Analog Audio Input Module");
   t("render: a long name is squeezed to fit inside its tile", !!squeezed && +squeezed.getAttribute("textLength") <= tl.w - 40);
   t("render: a two-word brand stays whole on the tile", [...doc.querySelectorAll('[data-device="axion8"] text')].some(x => x.textContent === "AVPro Edge") &&
-    [...doc.querySelectorAll('[data-device="axion8"] text')].some(x => x.textContent === "Axion 8"));
+    [...doc.querySelectorAll('[data-device="axion8"] text')].some(x => x.textContent === "AC-AXION-8"));
   t("render: a short name is drawn as-is", ![...doc.querySelectorAll('[data-device="mrx540"] text')].some(x => x.hasAttribute("textLength")));
 }
 
@@ -2424,9 +2426,11 @@ for (const [name, raw] of Object.entries(fixtures)) {
   { const L = loadJob(tiny), a3 = advise(L.job, L.ix, CAT);
     t("power: too few outlets → power-short with a step-up pick", a3.notes.some(n => n.code === "power-short" && /short/.test(n.msg))); }
   { // baluns: one PSU per kit at the rack TX (it powers both ends over PoH); none for a pre-wire room
-    const L = loadJob(structuredClone(fixtures.residence)), p = advise(L.job, L.ix, CAT).power[0];
+    // a generic matrix (an AXION powers its own receivers, so its baluns need no PSU — the demo's is one now)
+    const gen = structuredClone(fixtures.residence), mx = gen.solutions[0].racks[0].devices.find(d => d.id === "axion8"); delete mx.catalogRef; mx.model = "HDMI matrix";
+    const L = loadJob(structuredClone(gen)), p = advise(L.job, L.ix, CAT).power[0];
     const bl = p.loads.filter(l => L.ix.solutions[0].companions[l.id]?.type === "balun");
-    const nb = (fixtures.residence.solutions[0].companions || []).filter(c => c.type === "balun" &&
+    const nb = (gen.solutions[0].companions || []).filter(c => c.type === "balun" &&
       (L.ix.zonesById[L.ix.endpointZone[c.serves]]?.scope || "included") === "included").length;
     t("power: every rack-fed balun takes one outlet for its PSU, 12 W max, labelled for its TV",
       nb > 0 && bl.length === nb && bl.every(l => l.outlets === 1 && l.maxW === 12 && /PSU \(/.test(l.what) && /PoH/.test(l.why)), JSON.stringify(bl[0]));

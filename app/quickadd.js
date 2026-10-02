@@ -30,9 +30,41 @@ const SPOKEN = [
   [/\bsound\s+bar(\s*(and|\+|with)?\s*sub)?\b/g, (m, sub) => sub ? "soundbar-sub" : "soundbar"],
 ];
 
+// spelled-out numbers ("sixty five inch", "landscape eight", "four speakers") → digits.
+// Runs after SPOKEN, so "five one" / "seven one four" are already speaker setups.
+const ONES = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12,
+  thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 };
+const TENS = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
+function wordsToDigits(t) {
+  const W = `(?:${[...Object.keys(TENS), ...Object.keys(ONES)].join("|")})`;
+  // "one hundred (and) twenty", "a hundred", "one twenty" (a projector screen) are rare; handle hundreds plainly
+  t = t.replace(new RegExp(`\\b(?:a|one)\\s+hundred(?:\\s+and)?(?:\\s+(${W})(?:[\\s-]+(${W}))?)?\\b`, "g"), (m, a, b) =>
+    String(100 + (TENS[a] ?? ONES[a] ?? 0) + (b ? ONES[b] ?? 0 : 0)));
+  // "one twenty" / "one ten" — how a projector screen is said out loud
+  t = t.replace(new RegExp(`\\bone\\s+(ten|${Object.keys(TENS).join("|")})\\b`, "g"), (m, a) => String(100 + (a === "ten" ? 10 : TENS[a])));
+  t = t.replace(new RegExp(`\\b(${Object.keys(TENS).join("|")})(?:[\\s-]+(${Object.keys(ONES).filter(k => ONES[k] && ONES[k] < 10).join("|")}))?\\b`, "g"),
+    (m, a, b) => String(TENS[a] + (b ? ONES[b] : 0)));
+  return t.replace(new RegExp(`\\b(${Object.keys(ONES).join("|")})\\b`, "g"), (m, a) => String(ONES[a]));
+}
+// the ways people say a speaker setup or a TV size that the readers below don't (Ryan 2026-10-02:
+// "65 inch" and "two channel" must just work)
+const PHRASES = [
+  [/\b(\d{2,3})\s*-?\s*(?:inches|inch|in\.|in(?=\s|$)|''|"|”)(?=[\s,]|$)/g, (m, n) => n],    // 65 inch / 65-inch / 65 in. / 65"
+  [/\b(?:2|two)[\s-]*(?:channel|ch)\b/g, "2.0"], [/\b(?:5|five)[\s-]*(?:channel|ch)\b/g, "5.1"],
+  [/\b(?:7|seven)[\s-]*(?:channel|ch)\b/g, "7.1"], [/\b2\s*ch\b/g, "2.0"],
+  [/\bstereo\s+pair\b/g, "stereo"], [/\b(?:dolby\s+)?atmos\b/g, "7.1.4"], [/\b7\.2\.4\b/g, "7.1.4"], [/\b5\.2\b/g, "5.1"], [/\b7\.2\b/g, "7.1"],
+  [/\b(?:surround(?:\s+sound)?)\b/g, "__surround"],
+  [/\btv\s+only\b/g, "tv"],
+  [/\b(\d{1,2})\s+(?:(?:in-?)?ceiling|in-?wall|wall|outdoor|rock|bookshelf)\s+(speakers?)\b/g, (m, n, w) => `${n} ${w}`],
+];
+
 export function parseQuickZone(text) {
   let t = " " + String(text || "").toLowerCase().trim() + " ";
   for (const [re, sub] of SPOKEN) t = t.replace(re, (...m) => " " + (typeof sub === "function" ? sub(...m) : sub) + " ");
+  t = wordsToDigits(t);
+  for (const [re, sub] of PHRASES) t = t.replace(re, m => " " + m.replace(re, sub) + " ");
+  // a bare "surround" is a 5.1 unless a setup was also given ("surround 7.1")
+  t = /(^|\s)(5\.1|5\.1\.2|7\.1|7\.1\.4)(\s|$)/.test(t) ? t.replace(/__surround/g, " ") : t.replace(/__surround/, " 5.1 ").replace(/__surround/g, " ");
   // protect a numbered room name from the TV-size reader: "suite 101" → "suite #101"
   t = t.replace(NUMBERED_ROOM, (m, w, n) => `${w} #${n}`);
   const chips = [];
@@ -73,6 +105,7 @@ export function parseQuickZone(text) {
     chips.push({ kind: "hint", label: (zone.remote === "appletv" ? "Apple TV" : zone.remote === "factory" ? "factory" : zone.remote) + " remote" });
   }
   const noTv = !!eat(/\bno\s*tv\b|\baudio\s*only\b/);
+  eat(/\bno\s+speakers?\b|\bvideo\s+only\b/);              // said on purpose: a TV-only room (the suggestions stop asking)
 
   // landscape with optional sat count: "landscape 8" / "landscape"
   const land = eat(/\blandscape\s*(\d{1,2})?\b/);
@@ -101,7 +134,8 @@ export function parseQuickZone(text) {
   // inch suffix ("75in", "75\"", "75 inch")
   const size = eat(/(?<![#\d])\b(3[2-9]|[4-9]\d|1\d\d|2[0-2]\d)(?:\s*(?:in|inch|inches|"))?(?![\d.])/);
   if (proj) tv = { displayType: "projector", size: +(proj[1] || proj[2] || size?.[1] || 120) };
-  else if (!noTv && (size || brand || eat(/\btv\b/))) tv = { displayType: "tv", size: size ? +size[1] : null, brand };
+  else { const saidTv = !!eat(/\btv\b/);   // "tv" is never part of the room's name ("65 inch tv")
+    if (!noTv && (size || brand || saidTv)) tv = { displayType: "tv", size: size ? +size[1] : null, brand }; }
   if (tv && brand && !tv.brand) tv.brand = brand;
 
   // leftover words = zone name
@@ -120,7 +154,7 @@ export function parseQuickZone(text) {
     if (ep.config === "stereo" && !ep.count) ep.count = 2;
     zone.endpoints.push(ep);
     // chip words match the editor's (names.js); landscape adds its count
-    const cfgLabel = ep.config === "landscape" ? `Landscape ${ep.satCount}+1` : SPEAKER_SETUP[ep.config] || ep.config;
+    const cfgLabel = ep.config === "landscape" ? `Landscape ${ep.satCount}+1` : ep.config === "stereo" && ep.count && ep.count !== 2 ? `${ep.count} speakers` : SPEAKER_SETUP[ep.config] || ep.config;
     chips.push({ kind: "spk", label: cfgLabel + (ofe ? " · OFE" : "") });
   }
   if (tv) {
@@ -142,6 +176,23 @@ export function parseQuickZone(text) {
   // a room with no speakers and no TV has nothing to draw — say so before Add skips it
   if (!zone.endpoints.length) chips.push({ kind: "warn", label: "nothing to add — give it a setup or a TV size" });
   return { zone, chips, empty: !zone.endpoints.length };
+}
+
+/* what the room being typed still needs, as tappable suggestions (Ryan 2026-10-02: "select the
+   bubbles to confirm instead of typing it all out"). Each item's `add` is appended to the text. */
+export function quickSuggest(text) {
+  const segs = String(text || "").split(/,|\bthen\b|\n/);
+  const last = segs[segs.length - 1];
+  if (!last.trim()) return null;
+  const p = parseQuickZone(last), low = " " + last.toLowerCase() + " ";
+  const has = type => p.zone.endpoints.some(e => e.type === type);
+  const out = { room: p.zone.name, groups: [] };
+  if (!has("speakers") && !/\bno\s+speakers?\b|\bvideo\s+only\b/.test(low))
+    out.groups.push({ label: "Speakers", items: [["Stereo", "stereo"], ["5.1", "5.1"], ["7.1", "7.1"], ["Atmos", "7.1.4"], ["Soundbar", "soundbar"], ["Landscape", "landscape"], ["No speakers", "no speakers"]] });
+  if (!has("display") && !/\bno\s*tv\b|\baudio\s*only\b/.test(low))
+    out.groups.push({ label: "TV", items: [["55″", "55"], ["65″", "65"], ["75″", "75"], ["85″", "85"], ["Projector", "projector"], ["No TV", "no tv"]] });
+  if (p.zone.endpoints.length) out.groups.push({ label: "", items: [["＋ Next room", ", "]], next: true });
+  return out.groups.length ? out : null;
 }
 
 export function parseQuick(text) {

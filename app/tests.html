@@ -469,6 +469,27 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
   }
   t("quickadd: garbage input parses empty, never throws",
     parseQuickZone("").empty && parseQuickZone("xyzzy").empty === false ? parseQuickZone("xyzzy").empty === false : true);
+  /* plain English (Ryan 2026-10-02: "65 inch" and "two channel" must just work) */
+  const sz = t => one(t).endpoints.find(e => e.type === "display")?.size, cfg = t => one(t).endpoints.find(e => e.type === "speakers")?.config;
+  t("quickadd: '65 inch' / '65 inches' / '65-inch tv' / '65 in.' / '65in' are a 65″ TV and leave the name alone",
+    ["master bedroom 65 inch", "master bedroom 65 inches", "master bedroom 65-inch tv", "master bedroom 65 in. tv", "master bedroom 65in", 'master bedroom 65"']
+      .every(x => sz(x) === 65 && one(x).name === "Master Bedroom"), ["master bedroom 65 inch", "master bedroom 65 inches"].map(x => one(x).name).join(" | "));
+  t("quickadd: 'two channel' / '2 channel' / '2ch' / 'two-channel' / 'stereo pair' are a stereo pair",
+    ["master bed two channel", "master bed 2 channel", "master bed 2ch", "master bed two-channel", "master bed stereo pair"].every(x => cfg(x) === "stereo" && one(x).name === "Master Bed"));
+  t("quickadd: five channel / surround → 5.1, atmos / 7.2.4 → 7.1.4",
+    cfg("den five channel") === "surround-5.1" && cfg("den surround 75") === "surround-5.1" && cfg("theater dolby atmos") === "surround-7.1.4" && cfg("theater 7.2.4") === "surround-7.1.4" && cfg("den surround 7.1") === "surround-7.1");
+  t("quickadd: spelled-out numbers — sixty five inch, landscape eight, four speakers, projector one twenty",
+    sz("master bedroom sixty five inch tv") === 65 && one("patio landscape eight").endpoints[0].satCount === 8 && one("kitchen four speakers").endpoints[0].count === 4
+    && sz("theater projector one twenty") === 120 && one("theater projector one twenty").name === "Theater" && one("bedroom two stereo 55").name === "Bedroom 2");
+  t("quickadd: '4 ceiling speakers' is 4 speakers; 'tv only' isn't part of the name",
+    one("gym 4 ceiling speakers").endpoints[0].count === 4 && one("guest room tv only 50 inch").name === "Guest Room");
+  {
+    const { quickSuggest } = await import("./quickadd.js");
+    const a = quickSuggest("master bedroom"), b = quickSuggest("master bedroom stereo 65"), c = quickSuggest("kitchen stereo no tv"), d = quickSuggest("den 55 no speakers");
+    t("quickadd suggestions: a bare room name offers speakers and TV; a finished room offers only the next room",
+      a.room === "Master Bedroom" && a.groups.map(g => g.label).join() === "Speakers,TV" && b.groups.length === 1 && b.groups[0].next
+      && c.groups.length === 1 && c.groups[0].next && d.groups.length === 1 && d.groups[0].next && quickSuggest("family room 5.1 75, ") === null);
+  }
 }
 
 /* ---------- print pages 2–4 (per approved mock-pages.svg) ---------- */
@@ -2458,10 +2479,10 @@ for (const [name, raw] of Object.entries(fixtures)) {
   { const { job: jj, ix } = loadJob(job); const p = place(jj, ix), rt = route(jj, ix, p);
     const mid = p.zones.filter(z => z.band === "mid"), rack = p.racks[0], aud = p.zones.filter(z => z.band === "audio");
     t("grouping (default): a TV-only room sits in the mid band — right of the rack, above the speaker-only rooms",
-      mid.map(z => z.name).join() === "Guest Tv" && mid.every(z => z.x >= rack.x + rack.w && aud.every(a => z.y + z.h < a.y)), mid.map(z => z.name).join());
+      mid.map(z => z.name).join() === "Guest"   /* "tv" is never part of the name (2026-10-02) */ && mid.every(z => z.x >= rack.x + rack.w && aud.every(a => z.y + z.h < a.y)), mid.map(z => z.name).join());
     t("grouping (default): the mid band routes clean", !rt.warnings.some(w => /unrouted|fallback/.test(w.code)), rt.warnings.map(w => w.msg).join(" | ")); }
   const ord = structuredClone(job); ord.job.zoneGrouping = "order";
-  t("grouping 'order': zones stay in the order they were added", topOrder(ord).join() === "Guest Tv,Kitchen,Family Room,Patio,Theater", topOrder(ord).join());
+  t("grouping 'order': zones stay in the order they were added", topOrder(ord).join() === "Guest,Kitchen,Family Room,Patio,Theater", topOrder(ord).join());
   const od = structuredClone(job); od.job.zoneGrouping = "type-outdoor";
   { const { job: jj, ix } = loadJob(od); const p = place(jj, ix), rt = route(jj, ix, p);
     const cl = p.zones.filter(z => z.band === "cluster").map(z => z.name).sort();

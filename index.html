@@ -200,6 +200,13 @@
   .portchip { font: inherit; font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid #c7d6ea; background: #eef3fa; color: #23507e; cursor: pointer; }
   .portchip.none { background: #fff6e0; border-color: #e2c78a; color: #7a5a12; }
   .jacks { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 2px 0 6px 80px; font-size: 11px; color: #777; }
+  #qaChips .qsug { width: 100%; padding: 6px 0 2px; border-top: 1px dashed #d6dbe2; margin-top: 2px; }
+  #qaChips .qsh { font-size: 11px; color: #6a7380; margin-bottom: 4px; }
+  #qaChips .qsg { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-bottom: 5px; }
+  #qaChips .qsl { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #8a929c; width: 62px; }
+  #qaChips .qs { font: inherit; font-size: 12.5px; padding: 0 11px; min-height: 32px; border-radius: 999px; border: 1px solid #c7d6ea; background: #fff; color: #23507e; cursor: pointer; }
+  #qaChips .qs:hover { background: #eef4fb; border-color: var(--accent); }
+  #qaChips .qs.next { border-style: dashed; color: #555; border-color: #b9c0c9; }
   #qaChips .qroom { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; padding: 4px 0; border-top: 1px solid #eef0f3; }
   #qaChips .qroom:first-child { border-top: 0; }
   #qaChips .qc.feed { background: #e9f6ec; color: #1f6b33; border-color: #b9dfc2; }
@@ -493,25 +500,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002193742",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002193742",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002193742",
-    "./app/ports.js": "./app/ports.js?v=20261002193742",
-    "./app/commands.js": "./app/commands.js?v=20261002193742",
-    "./app/engine.js": "./app/engine.js?v=20261002193742",
-    "./app/exports.js": "./app/exports.js?v=20261002193742",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002193742",
-    "./app/hookup.js": "./app/hookup.js?v=20261002193742",
-    "./app/importers.js": "./app/importers.js?v=20261002193742",
-    "./app/library.js": "./app/library.js?v=20261002193742",
-    "./app/names.js": "./app/names.js?v=20261002193742",
-    "./app/network.js": "./app/network.js?v=20261002193742",
-    "./app/pages.js": "./app/pages.js?v=20261002193742",
-    "./app/power.js": "./app/power.js?v=20261002193742",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002193742",
-    "./app/rack.js": "./app/rack.js?v=20261002193742",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002193742",
-    "./app/starters.js": "./app/starters.js?v=20261002193742"
+    "./app/ai.js": "./app/ai.js?v=20261002194327",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002194327",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002194327",
+    "./app/ports.js": "./app/ports.js?v=20261002194327",
+    "./app/commands.js": "./app/commands.js?v=20261002194327",
+    "./app/engine.js": "./app/engine.js?v=20261002194327",
+    "./app/exports.js": "./app/exports.js?v=20261002194327",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002194327",
+    "./app/hookup.js": "./app/hookup.js?v=20261002194327",
+    "./app/importers.js": "./app/importers.js?v=20261002194327",
+    "./app/library.js": "./app/library.js?v=20261002194327",
+    "./app/names.js": "./app/names.js?v=20261002194327",
+    "./app/network.js": "./app/network.js?v=20261002194327",
+    "./app/pages.js": "./app/pages.js?v=20261002194327",
+    "./app/power.js": "./app/power.js?v=20261002194327",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002194327",
+    "./app/rack.js": "./app/rack.js?v=20261002194327",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002194327",
+    "./app/starters.js": "./app/starters.js?v=20261002194327"
 } }
 </script>
 <script>
@@ -689,7 +696,7 @@ import { specFor, specNum, tidyPort, NET_ROLE_NAME } from "./app/network.js";
 import { assignPorts, jacksOf, plugCandidates, familyName } from "./app/ports.js";
 import { startAsBuilt, asBuiltChanges, changeMarks, isAsBuilt, installRows, installCSV, tidyMac } from "./app/asbuilt.js";
 import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV, labelsCSV, rackFrontSVG, rackData, wireLabels } from "./app/pages.js";
-import { parseQuick } from "./app/quickadd.js";
+import { parseQuick, quickSuggest } from "./app/quickadd.js";
 import { STARTERS, applyStarter, starterFromJob, listStarters, duplicateStarter } from "./app/starters.js";
 import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/commands.js";
 import { askClaude, handoffPrompt, extractProposal, jobSummary, assess, loadConn, saveConn, connReady, MODELS } from "./app/ai.js";
@@ -726,7 +733,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002193742").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002194327").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -2954,8 +2961,19 @@ function wirePanel(body) {
         });
       } catch (e) { /* the preview stays as typed; Add reports anything wrong */ }
       // one line per room: what it is, then what feeds it
+      const sug = quickSuggest(qaInput.value);
       chipsEl.innerHTML = parses.map(p => `<div class="qroom">${[...p.chips.filter(c => c.kind !== "hint" || !/fed from the rack|AV receiver feeds|own apps/.test(c.label)), ...(feeds.get(p) || [])]
-            .map(c => `<span class="qc ${c.kind}">${esc(c.label)}</span>`).join("")}</div>`).join("");
+            .map(c => `<span class="qc ${c.kind}">${esc(c.label)}</span>`).join("")}</div>`).join("")
+        // what the room being typed still needs — tap instead of typing it
+        + (sug ? `<div class="qsug"><div class="qsh">Add to ${esc(sug.room)}:</div>${sug.groups.map(g => `<div class="qsg">${g.label ? `<span class="qsl">${esc(g.label)}</span>` : ""}${g.items.map(([label, add]) =>
+            `<button type="button" class="qs${g.next ? " next" : ""}" data-add="${esc(add)}">${esc(label)}</button>`).join("")}</div>`).join("")}</div>` : "");
+      chipsEl.querySelectorAll(".qs").forEach(b => b.onmousedown = e => e.preventDefault());   // keep the keyboard up on a phone
+      chipsEl.querySelectorAll(".qs").forEach(b => b.onclick = () => {
+        const add = b.dataset.add, v = qaInput.value.replace(/\s+$/, "");
+        qaInput.value = add === ", " ? v + ", " : `${v} ${add}`;
+        qaInput.focus(); qaInput.setSelectionRange(qaInput.value.length, qaInput.value.length);
+        drawChips();
+      });
     };
     qaInput.oninput = drawChips;
     const commit = () => {

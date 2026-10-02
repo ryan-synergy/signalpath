@@ -459,25 +459,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002032206",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002032206",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002032206",
-    "./app/ports.js": "./app/ports.js?v=20261002032206",
-    "./app/commands.js": "./app/commands.js?v=20261002032206",
-    "./app/engine.js": "./app/engine.js?v=20261002032206",
-    "./app/exports.js": "./app/exports.js?v=20261002032206",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002032206",
-    "./app/hookup.js": "./app/hookup.js?v=20261002032206",
-    "./app/importers.js": "./app/importers.js?v=20261002032206",
-    "./app/library.js": "./app/library.js?v=20261002032206",
-    "./app/names.js": "./app/names.js?v=20261002032206",
-    "./app/network.js": "./app/network.js?v=20261002032206",
-    "./app/pages.js": "./app/pages.js?v=20261002032206",
-    "./app/power.js": "./app/power.js?v=20261002032206",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002032206",
-    "./app/rack.js": "./app/rack.js?v=20261002032206",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002032206",
-    "./app/starters.js": "./app/starters.js?v=20261002032206"
+    "./app/ai.js": "./app/ai.js?v=20261002041054",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002041054",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002041054",
+    "./app/ports.js": "./app/ports.js?v=20261002041054",
+    "./app/commands.js": "./app/commands.js?v=20261002041054",
+    "./app/engine.js": "./app/engine.js?v=20261002041054",
+    "./app/exports.js": "./app/exports.js?v=20261002041054",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002041054",
+    "./app/hookup.js": "./app/hookup.js?v=20261002041054",
+    "./app/importers.js": "./app/importers.js?v=20261002041054",
+    "./app/library.js": "./app/library.js?v=20261002041054",
+    "./app/names.js": "./app/names.js?v=20261002041054",
+    "./app/network.js": "./app/network.js?v=20261002041054",
+    "./app/pages.js": "./app/pages.js?v=20261002041054",
+    "./app/power.js": "./app/power.js?v=20261002041054",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002041054",
+    "./app/rack.js": "./app/rack.js?v=20261002041054",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002041054",
+    "./app/starters.js": "./app/starters.js?v=20261002041054"
 } }
 </script>
 <script>
@@ -649,7 +649,7 @@
 import { loadJob, normalizeJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock, trunkMode, boxUsage } from "./app/engine.js";
 import { importAny, mergeHouse, drawFromWalk, decodeHandoff, stripUnsafe } from "./app/importers.js";
 import { sheetGroups, sheetJob } from "./app/sheets.js";
-import { LIB_TYPES, typeLabel, SIGNALS as LIB_SIGNALS, TYPE_IO, LIB_SECTIONS, SELECTS, BEHAVIOURS, tagsOf, newId, blankDevice, duplicateDevice, checkEntry, exportLibrary, planImport, applyImport } from "./app/library.js";
+import { LIB_TYPES, typeLabel, SIGNALS as LIB_SIGNALS, TYPE_IO, LIB_SECTIONS, SELECTS, BEHAVIOURS, tagsOf, newId, blankDevice, duplicateDevice, checkEntry, exportLibrary, planImport, applyImport, tidyStarterStore } from "./app/library.js";
 import { planQueueFiles, aiReviewMarkdown } from "./app/exports.js";
 import { RACK_SIZES, DEFAULT_RACK_U } from "./app/rack.js";
 import { specFor, specNum, tidyPort, NET_ROLE_NAME } from "./app/network.js";
@@ -693,7 +693,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002032206").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002041054").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -714,8 +714,7 @@ let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   }
 }
 // starter kits: yours, plus the picker's order and hidden list (shipped kits stay in starters.js)
-{ const st = SETTINGS.starters; SETTINGS.starters = st && typeof st === "object" ? st : {};
-  const K = SETTINGS.starters; if (!K.mine || typeof K.mine !== "object") K.mine = {}; if (!Array.isArray(K.order)) K.order = []; if (!Array.isArray(K.hidden)) K.hidden = []; }
+SETTINGS.starters = tidyStarterStore(SETTINGS.starters && typeof SETTINGS.starters === "object" ? SETTINGS.starters : {});   // kits by id, order, hidden — whatever was stored
 /* shipped catalog → this browser's catalog. New entries join; an entry the
    user never edited follows the shipped one (spec corrections must reach
    everyone); an edited entry is kept and listed as "differs from shipped".

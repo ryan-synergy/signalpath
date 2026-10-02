@@ -3723,6 +3723,27 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t("typed counts: a picked product's own ports win over a typed count", p?.copper === 6); }
 }
 
+/* ---------- hardening pass 2026-10-02: every bug the mutation fuzz found stays found ---------- */
+{
+  const CAT = await (await fetch("./catalog.json")).json(), Pg = await import("./pages.js"), I = await import("./importers.js"), LB2 = await import("./library.js"), St2 = await import("./starters.js");
+  const drawAll = raw => { const { job, ix } = loadJob(raw); validate(job, ix); const a = advise(job, ix, CAT); Pg.renderExtraPages(job, ix, a, { solution: 0, catalog: CAT });
+    const o = { trunks: "bundle", wireLabels: Pg.wireLabels(job, ix, { solution: 0 }) }, p = enginePlace(job, ix, o); return render(job, ix, p, engineRoute(job, ix, p, o), o); };
+  const tryDraw = raw => { try { const svg = drawAll(raw); return /NaN|undefined|\[object Object\]/.test(svg) ? "bad text" : "ok"; } catch (e) { return e.message; } };
+  const r = structuredClone(fixtures.residence);
+  r.house.zones[0].endpoints.find(e => e.type === "speakers").config = 12;        // number where text belongs
+  r.house.zones[1].endpoints.find(e => e.type === "display").confirm = "size";    // one word, not a list
+  r.job.stage = 1; r.job.revisions = "rev 1"; r.solutions[0].platforms = "savant"; // wrong types
+  r.house.areas = [{ id: "a1", name: 7 }]; r.house.zones[0].area = "a1";
+  t("hardening: wrong-type values (number config, one-word confirm, number stage, text revisions/platforms, number area name) draw every page", tryDraw(r) === "ok", tryDraw(structuredClone(r)));
+  const r2 = structuredClone(fixtures.residence); r2.job.revisions = [{ rev: { a: 1 }, date: "2026-10-02", description: ["x"], by: "SP" }];
+  t("hardening: a revision with object values prints no [object Object]", tryDraw(r2) === "ok");
+  const r3 = structuredClone(fixtures.residence); delete r3.generator;
+  t("hardening: a file without the SignalPath marker is refused at the import gate, not after it's saved", (() => { try { I.assertJobShape(r3); return false; } catch (e) { return /not a SignalPath/.test(e.message); } })());
+  t("hardening: a library file whose devices are null is refused cleanly", (() => { try { LB2.planImport({}, { kind: "signalpath-library", devices: null }, JSON.stringify); return false; } catch (e) { return /isn't a SignalPath library/.test(e.message); } })());
+  const junkStores = [{ mine: "x", order: 5, hidden: true }, { mine: [1, 2], order: {}, hidden: "a" }, { mine: { a: 1, b: { devices: "no" } }, order: [1, "mxnet", null], hidden: [{}] }, null, "store"];
+  t("hardening: a damaged kit store still lists every shipped kit (never throws)", junkStores.every(st => { try { return St2.listStarters(st).length === St2.STARTERS.length; } catch { return false; } }));
+}
+
 document.getElementById("summary").innerHTML =
   fail === 0 ? `<span class="pass">ALL ${pass} TESTS PASS</span>` : `<span class="fail">${fail} FAILED</span> · ${pass} passed`;
 document.title = fail === 0 ? `✓ ${pass} pass` : `✗ ${fail} fail`;

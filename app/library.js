@@ -172,16 +172,27 @@ export function exportLibrary(devices, shipped, stableStr, today = new Date().to
     file.starters = { mine: starters.mine || {}, order: starters.order || [], hidden: starters.hidden || [] };
   return file;
 }
+// the kit store (SETTINGS.starters) as it should be — kits by id, an order list, a hidden list — whatever
+// a bad import or a hand edit left there (hardening pass 2026-10-02); fixes it in place
+export function tidyStarterStore(st) {
+  if (!st || typeof st !== "object") return { mine: {}, order: [], hidden: [] };
+  const plain = v => v && typeof v === "object" && !Array.isArray(v);
+  if (!plain(st.mine)) st.mine = {};
+  for (const [id, k] of Object.entries(st.mine)) if (!plain(k) || !Array.isArray(k.devices)) delete st.mine[id]; else k.id = id;
+  for (const key of ["order", "hidden"]) st[key] = Array.isArray(st[key]) ? st[key].filter(x => typeof x === "string") : [];
+  return st;
+}
 // what importing a library file would do (added / updated / unchanged), and doing it
 export function planImport(devices, file, stableStr, starters = null) {
-  if (!file || file.kind !== "signalpath-library" || typeof file.devices !== "object") throw new Error("That isn't a SignalPath library file.");
+  if (!file || file.kind !== "signalpath-library" || !file.devices || typeof file.devices !== "object" || Array.isArray(file.devices)) throw new Error("That isn't a SignalPath library file.");
   const plan = { added: [], updated: [], same: [], kitsAdded: [], kitsUpdated: [] };
   for (const [id, e] of Object.entries(file.devices)) {
     if (!/^[A-Za-z0-9_.:-]{1,80}$/.test(id) || !e || typeof e !== "object") continue;
     if (!devices[id]) plan.added.push(id); else if (stableStr(devices[id]) !== stableStr(e)) plan.updated.push(id); else plan.same.push(id);
   }
   const mine = starters?.mine || {};
-  for (const [id, k] of Object.entries(file.starters?.mine || {})) {
+  const theirs = file.starters?.mine;
+  for (const [id, k] of Object.entries(theirs && typeof theirs === "object" && !Array.isArray(theirs) ? theirs : {})) {
     if (!/^[A-Za-z0-9_.:-]{1,80}$/.test(id) || !k || typeof k !== "object" || !Array.isArray(k.devices)) continue;
     if (!mine[id]) plan.kitsAdded.push(id); else if (stableStr(mine[id]) !== stableStr(k)) plan.kitsUpdated.push(id);
   }
@@ -191,7 +202,7 @@ export function planImport(devices, file, stableStr, starters = null) {
 export function applyImport(devices, file, plan, starters = null) {
   for (const id of [...plan.added, ...plan.updated]) devices[id] = structuredClone(file.devices[id]);
   if (starters) {
-    starters.mine ||= {}; starters.order ||= [];
+    tidyStarterStore(starters);
     for (const id of [...(plan.kitsAdded || []), ...(plan.kitsUpdated || [])]) starters.mine[id] = structuredClone(file.starters.mine[id]);
     for (const id of plan.kitsAdded || []) if (!starters.order.includes(id)) starters.order.push(id);
   }

@@ -1,3 +1,4 @@
+import { tidyStarterStore } from "./library.js";
 /* ---------- starters.js — rack starting points for a new job ----------
    Most jobs start from one of a handful of racks. A starter fills the rack
    with its gear (linked to the catalog, named by product) and the patching
@@ -339,7 +340,8 @@ export function starterFromJob(job, solIndex = 0, { name = "My starter", blurb =
 }
 // the kits the new-job picker offers: shipped ones and yours, in your order, each marked
 export function listStarters(store = {}) {
-  const mine = Object.values(store.mine || {}), hidden = new Set(store.hidden || []);
+  store = tidyStarterStore(store);                     // a damaged store lists the shipped kits, never throws
+  const mine = Object.values(store.mine), hidden = new Set(store.hidden);
   const all = [...STARTERS.map(s => ({ ...s, shipped: true })), ...mine], byId = new Map(all.map(s => [s.id, s]));
   // your order first; a kit it doesn't mention (a kit added to the app later, or a new one of yours)
   // slots in right after the kit that comes before it in the natural order, so it doesn't sink below Blank

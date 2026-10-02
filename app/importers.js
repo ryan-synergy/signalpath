@@ -35,6 +35,7 @@ export function assertJobShape(job) {
   const bad = m => { throw new Error("SignalPath file rejected: " + m); };
   const list = (o, k, where) => { if (o[k] == null) o[k] = []; else if (!Array.isArray(o[k])) bad(`${where}${k} is not a list`); return o[k]; };
   const idOk = (x, what) => { if (!x || typeof x !== "object" || typeof x.id !== "string" || !SAFE_ID.test(x.id)) bad(`${what} has a missing or invalid id`); };
+  if (job.generator !== "SignalPath") bad("not a SignalPath file");   // loadJob refuses it too — say so at the door
   if (job.schemaVersion !== 1) bad("unsupported schemaVersion " + job.schemaVersion);
   if (!job.job || typeof job.job !== "object") bad("missing job block");
   if (!job.house || !Array.isArray(job.house.zones)) bad("missing house.zones");

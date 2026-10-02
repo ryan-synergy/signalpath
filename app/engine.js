@@ -164,20 +164,35 @@ export function normalizeJob(job) {
   if (typeof job.job.name !== "string") job.job.name = job.job.name == null || typeof job.job.name === "object" ? "Untitled job" : String(job.job.name);
   if (job.job.client != null && typeof job.job.client !== "object") job.job.client = { name: String(job.job.client) };
   for (const k of ["name", "address"]) if (job.job.client && job.job.client[k] != null && typeof job.job.client[k] === "object") delete job.job.client[k];
+  for (const k of ["stage", "trunkStyle", "danteStyle", "drawnBy"]) if (job.job[k] != null && typeof job.job[k] !== "string") delete job.job[k];
+  // the title block prints each revision's rev / date / description / by — plain values only
+  list(job.job, "revisions").forEach(r => { for (const k of Object.keys(r)) if (r[k] != null && typeof r[k] === "object") delete r[k]; });
   if (!job.house || typeof job.house !== "object") job.house = {};
-  list(job.house, "areas");
   // plain-value fields that arrive as a list or object print "[object Object]" everywhere — drop them
   const SCALAR = ["name", "type", "size", "count", "satCount", "channels", "brand", "model", "config", "status", "scope", "displayType", "signal", "units", "partNo",
                   "rackUnits", "powerTypicalW", "powerMaxW", "outlets", "switchPorts", "hdmiIn", "hdmiOut"];
-  const scalars = o => { for (const k of SCALAR) if (o[k] != null && typeof o[k] === "object") delete o[k]; };
+  // …and text fields that arrive as a number or true/false ("config": 12, "stage": 1) would throw at the first
+  // .startsWith / .toLowerCase — they become text (hardening pass 2026-10-02: 3,000 mutated jobs)
+  const TEXT = new Set(["name", "type", "brand", "model", "config", "status", "scope", "displayType", "signal", "channels", "partNo", "sourceType", "area", "zone", "catalogRef", "serves", "from", "to", "homeRack"]);
+  const scalars = o => { for (const k of SCALAR) if (o[k] != null && typeof o[k] === "object") delete o[k];
+    for (const k of TEXT) if (typeof o[k] === "number" || typeof o[k] === "boolean") o[k] = String(o[k]); };
+  list(job.house, "areas").forEach((a, i) => { scalars(a); if (typeof a.name !== "string" || !a.name.trim()) a.name = `Area ${i + 1}`; });
   list(job.house, "zones").forEach((z, i) => {
     scalars(z);
     if (typeof z.name !== "string" || !z.name.trim()) z.name = `Zone ${i + 1}`;
-    list(z, "endpoints").forEach(scalars);
+    list(z, "endpoints").forEach(e => {
+      scalars(e);
+      // "confirm" is a list of what to check ("size"); one word or junk becomes a list or goes
+      if (typeof e.confirm === "string") e.confirm = [e.confirm];
+      if (e.confirm != null) { e.confirm = Array.isArray(e.confirm) ? e.confirm.filter(x => typeof x === "string") : []; if (!e.confirm.length) delete e.confirm; }
+    });
   });
   list(job, "solutions");
   if (!job.solutions.length) job.solutions.push({ id: "sol-1", name: "Solution 1" });
   for (const sol of job.solutions) {
+    if (typeof sol.name !== "string") sol.name = sol.name == null || typeof sol.name === "object" ? "" : String(sol.name);
+    sol.platforms = Array.isArray(sol.platforms) ? sol.platforms.filter(x => typeof x === "string") : [];
+    if (sol.audioNetwork != null && typeof sol.audioNetwork !== "string") delete sol.audioNetwork;
     for (const k of ["racks", "localDevices", "companions", "connections", "annotations"]) list(sol, k);
     sol.racks.forEach((r, i) => { scalars(r); if (typeof r.name !== "string" || !r.name.trim()) r.name = i ? `Rack ${i + 1}` : "Equipment Rack"; list(r, "devices").forEach(scalars); });
     for (const k of ["localDevices", "companions", "connections"]) sol[k].forEach(scalars);
@@ -220,7 +235,7 @@ export function effectiveHouse(house, sol) {
     if (!p) return obj;
     const { id, endpoints, ...rest } = p;
     const out = { ...obj, ...rest };
-    if (out.confirm?.length) {                    // an override answers its own confirm flag
+    if (Array.isArray(out.confirm) && out.confirm.length) {   // an override answers its own confirm flag
       out.confirm = out.confirm.filter(f => !(f in rest));
       if (!out.confirm.length) delete out.confirm;
     }

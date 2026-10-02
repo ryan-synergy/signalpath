@@ -4481,9 +4481,11 @@ export function advise(job, ix = indexJob(job), catalog = null) {
           out.notes.push({ code: "control-lan-only", solution: sol.id, msg: `${d.model || d.id}: LAN is control/DSP only — no Dante/audio-over-IP on this box` });
       }
       // current-gen AVB/IP audio gear rides the network — and Savant makes no AVB switch of its own
-      if (sol.audioNetwork !== "dante" && Object.values(s.devices).some(d => catalog.devices[d.catalogRef]?.flags?.includes("avb")))
+      // …said only while the job has no AVB switch picked from the catalog (one typed in by name may not be certified)
+      const avbSwitchPicked = Object.values(s.devices).some(d => d.type === "avbSwitch" && catalog.devices[d.catalogRef]);
+      if (sol.audioNetwork !== "dante" && !avbSwitchPicked && Object.values(s.devices).some(d => d.type !== "avbSwitch" && catalog.devices[d.catalogRef]?.flags?.includes("avb")))
         out.notes.push({ code: "avb-switch", solution: sol.id,
-          msg: "AVB/IP audio gear on this job — requires an Avnu-certified AVB switch (e.g. Netgear M4250 AV Line); an uncertified switch breaks AVB stream sync silently" });
+          msg: "AVB/IP audio gear on this job — requires an Avnu-certified AVB switch (MOTU AVB Switch for small systems, Savant ESN-AVB12E or a Netgear M4250 AV Line for bigger ones); an uncertified switch breaks AVB stream sync silently" });
       // controllers: MXNet needs its control box; a Dante system needs AVPro's Dante controller
       const flagsOf = d => catalog.devices[d.catalogRef]?.flags || [];
       const rackAndLocal = [...Object.values(s.devices), ...Object.values(s.locals)];

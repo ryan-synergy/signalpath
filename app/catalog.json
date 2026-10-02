@@ -1269,6 +1269,59 @@
         "UDM-SE"
       ]
     },
+    "motu-avb-switch": {
+      "brand": "MOTU",
+      "model": "AVB Switch",
+      "type": "avbSwitch",
+      "outputs": {
+        "gbe": 6
+      },
+      "flags": [
+        "avb"
+      ],
+      "verified": true,
+      "partNo": "MOTU AVB",
+      "powerMaxW": 9,
+      "desktop": true,
+      "notes": "5 AVB ports + 1 standard (non-AVB) Ethernet port, 1G, Avnu-certified; on Savant's IP Audio supported-switch list ('MOTU AVB Switch'). Desktop box (≈5.75 × 3.6 × 1.1 in), external 8–18 V DC 0.5 A supply, no PoE. Synergy's small AVB switch (Ryan 2026-10-01). Sources: Savant IP Audio deployment manual (supported AVB/TSN switches); fullcompass.com / motu.com specs."
+    },
+    "savant-esn-avb12e": {
+      "brand": "Savant",
+      "model": "ESN-AVB12E-00",
+      "type": "avbSwitch",
+      "outputs": {
+        "gbe": 12,
+        "sfp": 4
+      },
+      "flags": [
+        "avb"
+      ],
+      "verified": true,
+      "partNo": "ESN-AVB12E-00",
+      "rackUnits": 1,
+      "rackUnitsConfirm": true,
+      "notes": "Savant's 12-port AVB switch = Extreme Networks X440-G2-12T (Savant lists it as ESN-AVB12E4SFP): 12× 1G copper + 4 SFP, no PoE (the PoE sibling is ESN-AVB12POE), pre-licensed and pre-configured for Savant AVB, rack mount, side-to-side airflow. For bigger IP Audio systems. Rack height drawn 1U — confirm. Sources: Savant IP Audio deployment manual (supported AVB/TSN switches); Savant dealer listings."
+    },
+    "netgear-m4250-10g2f-poe": {
+      "brand": "Netgear",
+      "model": "M4250-10G2F-PoE+",
+      "type": "avbSwitch",
+      "outputs": {
+        "gbe": 10,
+        "sfp": 2
+      },
+      "poeBudgetW": 125,
+      "flags": [
+        "avb",
+        "poe"
+      ],
+      "verified": true,
+      "partNo": "GSM4212P-100NAS",
+      "partNoUnsure": true,
+      "notInPlanQueue": true,
+      "rackUnits": 1,
+      "notes": "Netgear AV Line M4250: 8× 1G PoE+ + 2× 1G RJ45 + 2× 1G SFP, 125 W PoE, 1U rack. Avnu-compliant AVB, license-free from AV firmware 13.0.4.17 (Nov 2023). Ryan 2026-10-01: 'a bigger Netgear switch, I believe 8-port PoE' — model to confirm (the 8-port M4250s are the 10G2F-PoE+ GSM4212P, 9G1F-PoE+ GSM4210PD 110 W, 8G2XF-PoE+ GSM4210PX 220 W). Not on Savant's IP Audio supported list (Extreme, MOTU, generic AVB). Sources: netgear.com M4250 datasheet; kb.netgear.com AV Line."
+    },
     "ubiquiti-usw-pro-24-poe": {
       "brand": "Ubiquiti",
       "model": "Pro 24 PoE",

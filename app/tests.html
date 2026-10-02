@@ -1118,6 +1118,20 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t("advisor: current-gen PAV gear triggers the Avnu-certified-switch note (once, solution-tagged)",
       notes.length === 1 && notes[0].solution === "sol-a" && notes[0].msg.includes("Avnu"));
   }
+  rawA.solutions[0].racks[0].devices.find(d => d.type === "avbSwitch").catalogRef = "motu-avb-switch";
+  {
+    const { job, ix } = loadJob(rawA), a = advise(job, ix, cat), sw = a.network.find(p => p.role === "avb");
+    t("advisor: an AVB switch picked from the catalog (MOTU) silences the Avnu note and gets real ports (5 AVB + 1)",
+      !a.notes.some(n => n.code === "avb-switch") && sw?.known && sw.copper === 6, JSON.stringify(sw && { used: sw.used, copper: sw.copper }));
+  }
+  t("catalog: Synergy's AVB switches — MOTU AVB Switch (PlanQueue SKU 'MOTU AVB'), Savant ESN-AVB12E-00 (12 + 4 SFP), Netgear M4250 8-port PoE+ (to confirm)",
+    cat.devices["motu-avb-switch"]?.partNo === "MOTU AVB" && cat.devices["savant-esn-avb12e"]?.outputs.gbe === 12 &&
+    cat.devices["netgear-m4250-10g2f-poe"]?.partNoUnsure === true && ["motu-avb-switch", "savant-esn-avb12e", "netgear-m4250-10g2f-poe"].every(k => cat.devices[k].type === "avbSwitch"));
+  {
+    const St = await import("./starters.js");
+    t("kits: every Savant AVB kit starts with the MOTU AVB Switch, not a nameless box",
+      St.STARTERS.filter(k => k.solution?.audioNetwork === "avb").every(k => k.devices.filter(d => d.type === "avbSwitch").every(d => d.catalogRef === "motu-avb-switch")));
+  }
 }
 
 /* ---------- BOM comparison page: side-by-side solutions ---------- */

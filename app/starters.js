@@ -28,7 +28,7 @@ export const STARTERS = [
       dev("cbx", "controlBox", "avpro-mxnet-cbox-ha"),
       dev("sav-in", "audioInputModule", "savant-pav-aim7c"),
       dev("sav-out", "audioOutputModule", "savant-pav-aom8c"),
-      { id: "avb", type: "avbSwitch", model: "AVB switch (Avnu-certified)", status: "new" },
+      { id: "avb", type: "avbSwitch", catalogRef: "motu-avb-switch", status: "new" },   // Synergy's small AVB switch (Ryan 2026-10-01)
       dev("amp", "amp", "anthem-mdx-16", null, { zones: 8 }),
       // sized for a whole house (Ryan 2026-10-01): the 18-outlet WattBox and a house LAN switch
       // (every TV, the networked rack gear and the AV switch uplinks land on it)
@@ -120,7 +120,7 @@ export const STARTERS = [
       dev("matrix", "videoMatrix", "avpro-ac-axion-8"),   // Ryan 2026-09-30: when it's a matrix, it's an AXION
       dev("sav-in", "audioInputModule", "savant-pav-aim7c"),
       dev("sav-out", "audioOutputModule", "savant-pav-aom8c"),
-      { id: "avb", type: "avbSwitch", model: "AVB switch (Avnu-certified)", status: "new" },
+      { id: "avb", type: "avbSwitch", catalogRef: "motu-avb-switch", status: "new" },   // Synergy's small AVB switch (Ryan 2026-10-01)
       dev("amp", "amp", "anthem-mdx-16", null, { zones: 8 }),
       dev("power", "power", "wattbox-800-ipvm-12"),
     ],
@@ -151,7 +151,7 @@ export const STARTERS = [
       dev("sav-in", "audioInputModule", "savant-pav-aim7c"),
       dev("sav-out", "audioOutputModule", "savant-pav-aom8c"),
       dev("sav-out2", "audioOutputModule", "savant-pav-aom8c"),
-      { id: "avb", type: "avbSwitch", model: "AVB switch (Avnu-certified)", status: "new" },
+      { id: "avb", type: "avbSwitch", catalogRef: "motu-avb-switch", status: "new" },   // Synergy's small AVB switch (Ryan 2026-10-01)
       dev("amp", "amp", "anthem-mdx-16", null, { zones: 8 }),
       dev("amp2", "amp", "anthem-mdx-16", null, { zones: 8 }),
       dev("lan", "networkSwitch", "ubiquiti-usw-pro-max-48-poe"),

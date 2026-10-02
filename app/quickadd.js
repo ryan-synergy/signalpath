@@ -46,6 +46,9 @@ export function parseQuickZone(text) {
   if (eat(/\bofe\b|\bexisting\b|\bowner\b(?!'s|s\b)/)) ofe = true;   // "owner's suite" is a room, not OFE
   if (eat(/\blocal\b/)) local = true;
   if (eat(/\bmatrix\b|\bdistributed\b/)) matrix = true;
+  // "apps": the TV plays its own apps — no feed from the rack (a whole-home rack feeds every other TV)
+  let apps = false;
+  if (eat(/\b(?:tv\s+)?apps\b|\bsmart\s*tv\b/)) apps = true;
   // "avr" / "receiver": one AV receiver drives this zone's TV and speakers
   if (eat(/\bav\s?rs?\b|\breceiver\b/)) avr = true;
   // "bullet" / "bullet train": the TV's run is an AVPro Bullet Train fiber HDMI
@@ -124,16 +127,18 @@ export function parseQuickZone(text) {
     const ep = { id: zone.id + "-tv", type: "display", displayType: tv.displayType, brand: tv.brand || "",
       size: tv.size || 65, status: ofe ? "ofe" : "new" };
     if (!tv.size) ep.confirm = ["size"];
+    if (apps && !local) ep.ownApps = true;                 // remembered: no rack feed on purpose (not an unwired TV)
     zone.endpoints.push(ep);
     chips.push({ kind: "tv", label: `${tv.brand || (tv.displayType === "projector" ? "Projector" : "TV")} ${ep.size}"${ep.confirm ? " ?" : ""}${ofe ? " · OFE" : ""}` });
   }
   if (local && tv) chips.push({ kind: "hint", label: "TV fed by a source in the zone" });
   if (matrix && tv) chips.push({ kind: "hint", label: "TV fed from the rack" });
+  if (apps && tv) chips.push({ kind: "hint", label: "TV plays its own apps — no rack feed" });
   if (avr) chips.push({ kind: "hint", label: tv && spk ? "AV receiver feeds the TV + speakers" : tv ? "AV receiver feeds the TV" : "AV receiver feeds the speakers" });
   if (dante) chips.push({ kind: "hint", label: director ? "Dante → Director amp" : "sound over Dante" });
   if (bullet && tv) chips.push({ kind: "hint", label: "Bullet Train fiber HDMI to the TV" });
   if (zone.reach || zone.runFt) chips.push({ kind: "hint", label: zone.runFt ? `${zone.runFt} ft from the rack` : `${zone.reach} from the rack` });
-  zone._hints = { local, matrix, avr, dante, director, bullet };
+  zone._hints = { local, matrix, apps, avr, dante, director, bullet };
   // a room with no speakers and no TV has nothing to draw — say so before Add skips it
   if (!zone.endpoints.length) chips.push({ kind: "warn", label: "nothing to add — give it a setup or a TV size" });
   return { zone, chips, empty: !zone.endpoints.length };
@@ -177,6 +182,7 @@ export function zoneToQuick(zone, sol = {}) {
   if (tf?.dev?.type === "avr" || (!tv && sf?.dev?.type === "avr")) words.push("avr");
   else if (tf?.local || (tv && (sol.localDevices || []).some(d => d.zone === zone.id && d.type === "source"))) words.push("local");
   else if (tf?.dev) words.push("matrix");
+  else if (tv && !tf && (tv.ownApps || (sol.racks || []).some(r => (r.devices || []).some(d => d.type === "videoMatrix" || d.type === "avSwitch")))) words.push("apps");   // left off the rack on purpose
   if (conns.some(c => c.dante && (c.from.startsWith(zone.id) || comps.some(k => k.id === c.from && eps.some(e => e.id === k.serves))))) words.push("dante");
   if (tf?.bullet) words.push("bullet");
   if (zone.runFt) words.push(`${zone.runFt}ft`); else if (zone.reach === "far") words.push("far"); else if (zone.reach === "short") words.push("short run");

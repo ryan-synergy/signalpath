@@ -49,6 +49,12 @@
   #rulesChip { border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 600; border: 1px solid transparent; }
   #rulesChip.ok { background: #14301c; color: #7fd695; border-color: #2f7a3a; }
   #rulesChip.bad { background: #33150f; color: #ff9d8e; border-color: #b32017; cursor: pointer; }
+  #rulesChip.warn { background: #3a2c0c; color: #f3c969; border-color: #8a6a1c; cursor: pointer; }
+  .fixbtn { font: inherit; font-size: 12px; font-weight: 600; padding: 4px 10px; margin: 4px 6px 0 0; border-radius: 999px; border: 1px solid #2f7a3a;
+    background: #eaf6ec; color: #1f6b33; cursor: pointer; min-height: 30px; }
+  .fixbtn:hover { background: #d7efdc; }
+  .advfix { padding: 0 16px 10px 40px; margin-top: -4px; }
+  .zfix { margin-top: 2px; }
   #jobName { background: transparent; border: none; color: #fff; font-size: 14px; font-weight: 600; min-width: 130px; }
   #jobName:focus { outline: 1px solid var(--accent); border-radius: 4px; }
   /* narrower screens (iPad): nothing squeezes or wraps inside a button; the
@@ -186,6 +192,9 @@
   .portchip { font: inherit; font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid #c7d6ea; background: #eef3fa; color: #23507e; cursor: pointer; }
   .portchip.none { background: #fff6e0; border-color: #e2c78a; color: #7a5a12; }
   .jacks { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 2px 0 6px 80px; font-size: 11px; color: #777; }
+  #qaChips .qroom { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; padding: 4px 0; border-top: 1px solid #eef0f3; }
+  #qaChips .qroom:first-child { border-top: 0; }
+  #qaChips .qc.feed { background: #e9f6ec; color: #1f6b33; border-color: #b9dfc2; }
   #qaChips .qc.warn { background: #fdecea; color: #8f1d14; border-color: #efb4ad; }
   #qa .ex { font-size: 10.5px; color: #999; margin-top: 5px; }
 
@@ -463,25 +472,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002153816",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002153816",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002153816",
-    "./app/ports.js": "./app/ports.js?v=20261002153816",
-    "./app/commands.js": "./app/commands.js?v=20261002153816",
-    "./app/engine.js": "./app/engine.js?v=20261002153816",
-    "./app/exports.js": "./app/exports.js?v=20261002153816",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002153816",
-    "./app/hookup.js": "./app/hookup.js?v=20261002153816",
-    "./app/importers.js": "./app/importers.js?v=20261002153816",
-    "./app/library.js": "./app/library.js?v=20261002153816",
-    "./app/names.js": "./app/names.js?v=20261002153816",
-    "./app/network.js": "./app/network.js?v=20261002153816",
-    "./app/pages.js": "./app/pages.js?v=20261002153816",
-    "./app/power.js": "./app/power.js?v=20261002153816",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002153816",
-    "./app/rack.js": "./app/rack.js?v=20261002153816",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002153816",
-    "./app/starters.js": "./app/starters.js?v=20261002153816"
+    "./app/ai.js": "./app/ai.js?v=20261002181528",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002181528",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002181528",
+    "./app/ports.js": "./app/ports.js?v=20261002181528",
+    "./app/commands.js": "./app/commands.js?v=20261002181528",
+    "./app/engine.js": "./app/engine.js?v=20261002181528",
+    "./app/exports.js": "./app/exports.js?v=20261002181528",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002181528",
+    "./app/hookup.js": "./app/hookup.js?v=20261002181528",
+    "./app/importers.js": "./app/importers.js?v=20261002181528",
+    "./app/library.js": "./app/library.js?v=20261002181528",
+    "./app/names.js": "./app/names.js?v=20261002181528",
+    "./app/network.js": "./app/network.js?v=20261002181528",
+    "./app/pages.js": "./app/pages.js?v=20261002181528",
+    "./app/power.js": "./app/power.js?v=20261002181528",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002181528",
+    "./app/rack.js": "./app/rack.js?v=20261002181528",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002181528",
+    "./app/starters.js": "./app/starters.js?v=20261002181528"
 } }
 </script>
 <script>
@@ -665,7 +674,7 @@ import { STARTERS, applyStarter, starterFromJob, listStarters, duplicateStarter 
 import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/commands.js";
 import { askClaude, handoffPrompt, extractProposal, jobSummary, assess, loadConn, saveConn, connReady, MODELS } from "./app/ai.js";
 import { setDanteAudio, danteAmpFor } from "./app/hookup.js";
-import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, nextFreeOutputs, outputsNeeded,
+import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, quickFixes, nextFreeOutputs, outputsNeeded,
          VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS, REACH, bulletFor } from "./app/hookup.js";
 import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME, AUDIO_NET_NAME,
          signalName, describeNode, humanizeWireIds, productName, productSku, ADAPTER, isOutdoorZone, ZONE_GROUPING_NAME } from "./app/names.js";
@@ -697,7 +706,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002153816").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002181528").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -823,7 +832,8 @@ function refresh(save = true) {
                    usage: boxUsage(whole.job, whole.ix, effectiveCatalog(), a, S.sol),   // the lit windows on every box (whole-job counts)
                    sheet: `${S.sheet + 1} of ${sheetTotal(whole.job, whole.ix, a, { solution: S.sol, rawJob: S.job, schematicSheets: sheets.length })}` };
     if (trunkMode(job)) opts.wireLabels = wireLabels(job, ix, { solution: S.sol, portMap: S.portMap });
-    if (S.job.house.zones.length) {
+    // a kit's rack draws the moment it's picked — rooms join it as they're added
+    if (S.job.house.zones.length || job.solutions[S.sol]?.racks?.some(r => r.devices?.length)) {
       const p = place(job, ix, opts);
       const rt = route(job, ix, p, opts);
       // an as-built shows its revision clouds on screen (the service packet prints them too)
@@ -838,15 +848,11 @@ function refresh(save = true) {
   $("#printBtn").hidden = ab; $("#printMenu").hidden = !ab;           // as-built jobs print two packets
   $("#startAsBuilt").hidden = ab;                                    // an as-built isn't copied again
   $("#exportInstall").hidden = !ab;
-  $("#canvas").innerHTML = svg || `<div style="color:#888;padding:60px;text-align:center">Add a zone to start drawing${err ? "<br><small>" + esc(err.message) + "</small>" : ""}</div>`;
+  $("#canvas").innerHTML = svg || `<div style="color:#888;padding:60px;text-align:center">Add rooms on the left to start drawing${err ? "<br><small>" + esc(err.message) + "</small>" : ""}</div>`;
   hideTip(); applySel(); syncGlow();
   const activeSolId = S.job.solutions[S.sol]?.id;
   const mine = e => !e.solution || e.solution === activeSolId;   // advisor speaks for the ACTIVE solution only
   const errs = (v?.errors || []).filter(mine), warns = (v?.warnings || []).filter(mine);
-  const chip = $("#rulesChip");
-  if (err) { chip.className = "bad"; chip.textContent = "engine error"; }
-  else if (errs.length) { chip.className = "bad"; chip.textContent = `✗ ${errs.length} issue${errs.length > 1 ? "s" : ""}`; }
-  else { chip.className = "ok"; chip.textContent = `✓ valid${warns.length ? " · " + warns.length + "⚠" : ""}`; }
 
   const vsol = S.view?.job?.solutions[S.sol];
   const wname = t => S.view ? humanizeWireIds(S.view.job, vsol, t) : t;
@@ -855,9 +861,10 @@ function refresh(save = true) {
   // opens into a list — each item a short title, one line of detail, and a
   // jump to its room or box when it names one (UI refresh 2026-09-30)
   const adv = [], ref = [];
-  const A = (lvl, msg, r = null) => adv.push({ lvl, msg, ref: r }), R = (msg, r = null) => ref.push({ lvl: "i", msg, ref: r });
-  for (const e of errs) A("e", e.msg, e.ref);
-  for (const w of warns) A("w", w.msg, w.ref);
+  const A = (lvl, msg, r = null, code = null) => adv.push({ lvl, msg, ref: r, code }), R = (msg, r = null) => ref.push({ lvl: "i", msg, ref: r });
+  S.fixes = [];                                              // this render's one-click fixes (buttons point in by index)
+  for (const e of errs) A("e", e.msg, e.ref, e.code);
+  for (const w of warns) A("w", w.msg, w.ref, w.code);
   // the router knows when a drawing is compromised — say so instead of leaving a wire through a box unexplained
   for (const w of routeWarn.filter(w => w.code === "unrouted")) A("e", `Wire not drawn — ${wname(w.msg).replace(/^no route class for /, "")}`);
   const fb = routeWarn.filter(w => w.code === "route-fallback").map(w => wname(w.msg));
@@ -879,10 +886,16 @@ function refresh(save = true) {
     for (const w of lic.warns || []) A("w", `${PLATFORM_NAME[lic.platform] || lic.platform} — ${w}`);
   }
   for (const n of (a?.notes || []).filter(mine)) {
-    if (ACTION_NOTES.has(n.code) || (n.code === "savant-host" && /exceeds/.test(n.msg))) A("w", n.msg, n.ref);
+    if (ACTION_NOTES.has(n.code) || (n.code === "savant-host" && /exceeds/.test(n.msg))) adv.push({ lvl: "w", msg: n.msg, ref: n.ref, code: n.code, add: n.add, rack: n.rack });
     else R(n.msg, n.ref);
   }
   S.adv = { adv, ref };
+  // one count, the same everywhere: the top-bar chip says what the bottom strip says, and opens it
+  const chip = $("#rulesChip"), worstLvl = adv.some(x => x.lvl === "e") ? "e" : "w";
+  if (err) { chip.className = "bad"; chip.textContent = "engine error"; }
+  else if (adv.length) { chip.className = worstLvl === "e" ? "bad" : "warn"; chip.textContent = `${worstLvl === "e" ? "✗" : "⚠"} ${adv.length} to check`; }
+  else { chip.className = "ok"; chip.textContent = "✓ ready"; }
+  chip.onclick = adv.length ? () => { try { localStorage.setItem("sp.advOpen", "1"); } catch {} drawAdvisor(); } : null;
   drawAdvisor();
   S.findings = collectFindings(errs, warns, a, mine);
   // the advisor's port counts (a trunk can carry several channels) win over counting rows
@@ -918,7 +931,8 @@ function drawAdvisor() {
   let open = false; try { open = localStorage.getItem("sp.advOpen") === "1"; } catch {}
   const worst = adv.some(x => x.lvl === "e") ? "e" : "w";
   const item = x => { const { title, detail } = splitMsg(x.msg); const tag = x.ref ? "button" : "div";
-    return `<${tag} class="advitem ${x.lvl}"${x.ref ? ` data-ref="${esc(x.ref)}"` : ""}><span class="dot"></span><span class="x"><span class="tt">${esc(title)}</span>${detail ? `<span class="dd">${esc(detail)}</span>` : ""}</span>${x.ref ? `<span class="go">Go to ›</span>` : ""}</${tag}>`; };
+    const fx = fixButtons(x);
+    return `<${tag} class="advitem ${x.lvl}"${x.ref ? ` data-ref="${esc(x.ref)}"` : ""}><span class="dot"></span><span class="x"><span class="tt">${esc(title)}</span>${detail ? `<span class="dd">${esc(detail)}</span>` : ""}</span>${x.ref ? `<span class="go">Go to ›</span>` : ""}</${tag}>${fx ? `<div class="advfix">${fx}</div>` : ""}`; };
   $("#advisor").innerHTML = `<div class="advbar">
       ${adv.length ? `<button class="advcount ${worst}" data-adv="toggle">${worst === "e" ? "✗" : "⚠"} ${adv.length} to check</button>` : `<span class="advcount ok">✓ Nothing to check</span>`}
       ${ref.length ? `<button class="advnotes" data-adv="toggle">${ref.length} note${ref.length > 1 ? "s" : ""}</button>` : ""}
@@ -928,11 +942,27 @@ function drawAdvisor() {
   $("#advisor").querySelectorAll("[data-adv=toggle]").forEach(b => b.onclick = () => { try { localStorage.setItem("sp.advOpen", open ? "0" : "1"); } catch {} drawAdvisor(); });
   $("#advisor").querySelectorAll("button.advitem").forEach(b => b.onclick = () => goToRef(b.dataset.ref));
 }
+// the fixes the app knows for a finding, as buttons (hookup.js quickFixes); "" when none
+function fixButtons(f) {
+  if (!f?.code) return "";
+  let fx = [];
+  try { fx = quickFixes(S.job, S.job.solutions[S.sol], f, effectiveCatalog()); } catch (e) { console.warn("fixes", e); }
+  return fx.map(x => { (S.fixes ||= []).push(x); return `<button class="fixbtn" data-fix="${S.fixes.length - 1}">${esc(x.label)}</button>`; }).join("");
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest(".fixbtn"); if (!b) return;
+  e.stopPropagation();
+  const fx = S.fixes?.[+b.dataset.fix]; if (!fx) return;
+  pushUndo(fx.label);
+  fx.run(S.job, S.job.solutions[S.sol]);
+  refresh();
+  toast(`Done: ${fx.label}`, true);
+});
 
 function collectFindings(errs, warns, a, mine) {
   const byZone = new Map(), byDev = new Map();
   const ix = S.view?.ix, sol = S.view?.job?.solutions[S.sol];
-  const push = (m, k, level, msg) => { if (k == null) return; (m.get(k) ?? m.set(k, []).get(k)).push({ level, msg }); };
+  const push = (m, k, level, msg, code, ref) => { if (k == null) return; (m.get(k) ?? m.set(k, []).get(k)).push({ level, msg, code, ref }); };
   const zoneOfRef = ref => {
     if (!ix || ref == null) return null;
     if (ix.zonesById[ref]) return ref;
@@ -942,7 +972,7 @@ function collectFindings(errs, warns, a, mine) {
   };
   const isDev = ref => (sol?.racks || []).some(r => r.devices.some(d => d.id === ref));
   for (const [list, level] of [[errs, "e"], [warns, "w"]])
-    for (const f of list) isDev(f.ref) ? push(byDev, f.ref, level, f.msg) : push(byZone, zoneOfRef(f.ref), level, f.msg);
+    for (const f of list) isDev(f.ref) ? push(byDev, f.ref, level, f.msg, f.code, f.ref) : push(byZone, zoneOfRef(f.ref), level, f.msg, f.code, f.ref);
   for (const n of a?.notes || []) if (n.code === "earc-extender" && mine(n)) push(byZone, zoneOfRef(n.ref), "w", n.msg);
   for (const n of a?.notes || []) if (n.code === "amp-sub-outs" && mine(n)) push(byDev, n.ref, "w", n.msg);
   for (const n of a?.notes || []) if (n.code === "no-port" && mine(n)) isDev(n.ref) ? push(byDev, n.ref, "w", n.msg) : push(byZone, zoneOfRef(n.ref), "w", n.msg);
@@ -1819,7 +1849,7 @@ function zonesHTML() {
     <label><input type="radio" name="escope" value="sol" ${scopeSol ? "checked" : ""}> ${esc(sol.name)} only</label>
     <span class="mini" title="Zone names and adding/removing zones, speakers or displays always edit the House.">ⓘ</span></div>` : "";
   const qa = `<div id="qa">
-    <div class="line"><input id="qaInput" placeholder="Add rooms — e.g. ${esc(S.qaHint || "family room 5.1 75 sony matrix")}" autocomplete="off">
+    <div class="line"><input id="qaInput" placeholder="Add rooms — e.g. ${esc(S.qaHint || "family room 5.1 75 sony, kitchen stereo")}" autocomplete="off">
       <button id="qaMic" title="Dictate">🎤</button><button id="qaGo">Add</button></div>
     <div id="qaChips"></div>
     <div class="ex">Name, setup, TV size, brand — commas for more rooms. <details><summary>How quick-add works</summary>
@@ -1864,7 +1894,7 @@ function zonesHTML() {
     const moreKey = "more:" + z.id;
     return `<div class="row ${open ? "open" : ""}" data-zid="${esc(z.id)}">${head}
       <div class="fields">
-        ${found.length ? `<div class="zissues">${found.map(f => `<div class="${f.level}">${esc(f.msg)}</div>`).join("")}</div>` : ""}
+        ${found.length ? `<div class="zissues">${found.map(f => { const fx = fixButtons(f); return `<div class="${f.level}">${esc(f.msg)}${fx ? `<div class="zfix">${fx}</div>` : ""}</div>`; }).join("")}</div>` : ""}
         ${(() => {   // the setups used most as chips; the rest behind More (UI refresh 2026-09-30)
           const main = ZSPK.filter(([v]) => SPK_MAIN.includes(v) || v === spkCfg);
           const inner = chips("spkcfg", main, spkCfg).replace(/<\/div>$/, `<button type="button" class="chip more" data-more="spkcfg">More ▾</button></div>`);
@@ -1920,8 +1950,8 @@ function hookupHTML(z, sol, multi) {
   const rows = [];
   const byDev = id => devs.find(d => d.id === id);
   if (h.tv) {
-    const cur = h.video?.from || "";
-    rows.push(field("TV video", `<select class="hvfrom" data-sub="${esc(jackSub(sol, h.video?.from, h.video?.via || h.tv.id, "video"))}">${opt("", "— not connected —", cur)}
+    const cur = h.video?.from || (h.tv.ownApps ? "__apps" : "");
+    rows.push(field("TV video", `<select class="hvfrom" data-sub="${esc(jackSub(sol, h.video?.from, h.video?.via || h.tv.id, "video"))}">${opt("", "— not connected —", cur)}${opt("__apps", "TV's own apps (no rack feed)", cur)}
       <optgroup label="In the rack">${devOpts(VIDEO_FROM, cur)}</optgroup>
       ${locals.length ? `<optgroup label="In this zone">${locals.map(d => opt(d.id, nm(d.id), cur)).join("")}</optgroup>` : ""}
       <optgroup label="Add">${opt("__new_avr", "＋ New AV receiver…", "")}</optgroup></select>`));
@@ -2010,7 +2040,7 @@ function gearHTML() {
           <div class="zsum">${esc(DEV_TYPE_LABEL[d.type] || d.type)}${d.zones ? ` · ${esc(d.zones)} zones` : ""} · ${ins.length} in · ${outs.length} out${cap.short ? " · " + esc(cap.short) : ""}</div>
           ${issue && !open ? `<div class="ziss ${issue.level}">${esc(issue.msg)}</div>` : ""}</div></div>
       <div class="fields">
-        ${found.length ? `<div class="zissues">${found.map(f => `<div class="${f.level}">${esc(f.msg)}</div>`).join("")}</div>` : ""}
+        ${found.length ? `<div class="zissues">${found.map(f => { const fx = fixButtons(f); return `<div class="${f.level}">${esc(f.msg)}${fx ? `<div class="zfix">${fx}</div>` : ""}</div>`; }).join("")}</div>` : ""}
         ${field("Product", `<button class="pickbtn dcatbtn">${catOf(d) ? `${esc(productName(catOf(d)))}${productSku(catOf(d)) ? ` <span class="mini">· ${esc(productSku(catOf(d)))}</span>` : ""}` : `<span class="mini">Pick a product…</span>`} ▾</button>`)}
         ${catOf(d) && SETTINGS.catalog.devices[d.catalogRef] ? `<div style="text-align:right;margin:-4px 0 4px"><button class="libedit" data-cat="${esc(d.catalogRef)}" style="font-size:11.5px;padding:3px 8px;border:none;background:none;color:var(--accent);cursor:pointer">Edit this product in the library →</button></div>` : ""}
         ${field("Name", `<input class="dmodel" value="${esc(d.model || "")}" title="What the drawing and paperwork call this box — follows the product you pick">`)}
@@ -2754,8 +2784,11 @@ function wirePanel(body) {
     return model ? addRackDevice(S.job, sol, type, model) : null;
   };
   body.querySelectorAll(".hvfrom").forEach(el => el.onchange = () => hook(el, (z, sol) => {
-    let v = el.value; if (v.startsWith("__new_")) { v = newDev(sol, v); if (!v) return; }
+    let v = el.value;
+    if (v === "__apps") { setVideo(S.job, sol, z, null); const tv = z.endpoints.find(e => e.type === "display"); if (tv) tv.ownApps = true; return; }
+    if (v.startsWith("__new_")) { v = newDev(sol, v); if (!v) return; }
     setVideo(S.job, sol, z, v || null);
+    if (!v) delete z.endpoints.find(e => e.type === "display")?.ownApps;
   }));
   body.querySelectorAll(".hsfrom").forEach(el => el.onchange = () => hook(el, (z, sol) => {
     let v = el.value; if (v.startsWith("__new_")) { v = newDev(sol, v); if (!v) return; }
@@ -2795,9 +2828,29 @@ function wirePanel(body) {
         chipsEl.innerHTML = planHTML(plan, { acts: false }) + `<span class="mini">${plan.steps.some(x => x.ok) ? "Enter to apply" : "Nothing to apply"}</span>`;
         return;
       }
-      chipsEl.innerHTML = parseQuick(qaInput.value)
-        .flatMap((p, i) => [...(i ? ['<span class="mini" style="align-self:center">|</span>'] : []),
-          ...p.chips.map(c => `<span class="qc ${c.kind}">${esc(c.label)}</span>`)]).join("");
+      const parses = parseQuick(qaInput.value);
+      // dry-run the add so the preview says what will feed each room before it's committed
+      const feeds = new Map();
+      try {
+        const plan = planCommands(S.job, S.sol, [{ op: "add_zones", text: qaInput.value }], effectiveCatalog());
+        const pj = plan.job, ps = pj.solutions[S.sol], had = new Set(S.job.house.zones.map(z => z.id));
+        const before = new Set((S.job.solutions[S.sol].racks || []).flatMap(r => (r.devices || []).map(d => d.id)));
+        const added = pj.house.zones.filter(z => !had.has(z.id));
+        const name = id => `${(ps.racks || []).some(r => r.devices?.some(d => d.id === id)) && !before.has(id) ? "new " : ""}${describeNode(pj, ps, id).short}`;
+        parses.filter(p => !p.empty).forEach((p, k) => {
+          const z = added[k]; if (!z) return;
+          const h = readHookup(pj, ps, z), out = [];
+          const tv = z.endpoints?.some(e => e.type === "display"), spk = z.endpoints?.some(e => e.type === "speakers");
+          if (tv) out.push(h.video ? { kind: "feed", label: `TV ← ${name(h.video.from)}${h.video.run === "dec" ? " (decoder)" : h.video.run === "balun" ? " (balun)" : ""}` }
+            : z.endpoints.find(e => e.type === "display").ownApps ? { kind: "feed", label: "TV plays its own apps" } : { kind: "warn", label: "TV not wired yet" });
+          if (spk) out.push(h.speakers ? { kind: "feed", label: h.speakers.from === "__tv" ? "speakers ← the TV (eARC)" : `speakers ← ${name(h.speakers.from)}${h.speakers.channels ? ` ${h.speakers.channels}` : ""}` }
+            : h.dante ? { kind: "feed", label: "speakers ← Dante" } : { kind: "warn", label: "speakers not wired yet" });
+          feeds.set(p, out);
+        });
+      } catch (e) { /* the preview stays as typed; Add reports anything wrong */ }
+      // one line per room: what it is, then what feeds it
+      chipsEl.innerHTML = parses.map(p => `<div class="qroom">${[...p.chips.filter(c => c.kind !== "hint" || !/fed from the rack|AV receiver feeds|own apps/.test(c.label)), ...(feeds.get(p) || [])]
+            .map(c => `<span class="qc ${c.kind}">${esc(c.label)}</span>`).join("")}</div>`).join("");
     };
     qaInput.oninput = drawChips;
     const commit = () => {

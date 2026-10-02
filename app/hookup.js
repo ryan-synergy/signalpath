@@ -7,7 +7,7 @@
    Pure functions over the raw job — no DOM. Everything writes plain
    connections/companions; the engine needs nothing new. */
 
-import { SPEAKER_SETUP, AUDIO_BACK_NAME } from "./names.js";
+import { SPEAKER_SETUP, AUDIO_BACK_NAME, productName } from "./names.js";
 
 // what can do each job
 export const VIDEO_FROM = ["avr", "videoMatrix", "avSwitch", "splitter", "source"];
@@ -93,6 +93,7 @@ const isReceiver = (sol, id) => rackDevices(sol).some(d => d.id === id && d.type
 export function setVideo(job, sol, zone, from, run, earc) {
   const { tv } = endpointsOf(zone); if (!tv) return;
   sol.connections ||= []; sol.companions ||= [];
+  if (from) delete tv.ownApps;                             // a real feed replaces "its own apps"
   const prev = readHookup(job, sol, zone);
   if (earc === undefined) earc = prev.video?.from === from ? prev.earc : !prev.ret;   // an existing optical-only choice stays optical-only
   if (!isReceiver(sol, from)) earc = false;
@@ -226,7 +227,9 @@ export function avrFor(spk) {
 
 /* a new box in the first rack, named plainly; returns its id */
 export function addRackDevice(job, sol, type, model, extra = {}) {
-  const rack = (sol.racks ||= [])[0] || (sol.racks[0] = { id: "rack-main", name: "Equipment Rack", devices: [] });
+  const want = extra.rackId && (sol.racks || []).find(r => r.id === extra.rackId);   // a named rack (a pool house's WattBox), else the first
+  delete extra.rackId;
+  const rack = want || (sol.racks ||= [])[0] || (sol.racks[0] = { id: "rack-main", name: "Equipment Rack", devices: [] });
   const id = freeId(job, sol, extra.idBase || (type === "avr" ? "avr" : type === "amp" ? "amp" : type));
   delete extra.idBase;
   rack.devices.push({ id, type, model, status: "new", ...(type === "amp" ? { zones: 8 } : {}), ...extra });
@@ -338,6 +341,20 @@ function feedReceiver(job, sol, m, avr, sc) {
   sol.connections.push({ from: m.id, to: dec.id, signal: "video", ...sc }, { from: dec.id, to: avr, signal: "video", ...sc });
 }
 
+/* an amp quick-add just gave speakers to, with nothing playing into it: on an MXNet rack its
+   sound comes off the network — a decoder at the rack de-embeds the MXNet audio to its analog
+   inputs (what the estate's pool house does). Other racks are left to the advisor's fix. */
+export function feedAmp(job, sol, ampId) {
+  const conns = (sol.connections ||= []);
+  if (conns.some(c => c.to === ampId && !["network", "speaker", "audioReturn"].includes(c.signal))) return null;
+  const sw = rackDevices(sol).find(d => d.type === "avSwitch" && !d.danteSwitch);
+  if (!sw) return null;
+  const dec = { id: freeId(job, sol, `dec-audio-${ampId}`), type: "dec", variant: "audio-deembed", serves: ampId, auto: true };
+  (sol.companions ||= []).push(dec);
+  conns.push({ from: sw.id, to: dec.id, signal: "video" }, { from: dec.id, to: ampId, signal: "audio" });
+  return dec.id;
+}
+
 /* quick-add: wire a new zone from its shorthand hints */
 export function autoHookup(job, sol, zone, hints = {}) {
   const { tv, spk } = endpointsOf(zone);
@@ -345,8 +362,16 @@ export function autoHookup(job, sol, zone, hints = {}) {
   // "local": the Apple TV quick-add put in the room feeds this TV directly
   const loc = hints.local && tv && (sol.localDevices || []).find(d => d.zone === zone.id && d.type === "source");
   if (loc) setVideo(job, sol, zone, loc.id);
-  // a pre-wire TV is its run back to the rack — to the video distributor, like a live one
-  const tvFromRack = !loc && (hints.matrix || (zone.scope === "prewire" && !hints.avr));
+  // a whole-home rack (a matrix / MXNet switch) feeds every TV unless the room says "local"
+  // (Ryan 2026-10-02: rooms wire themselves — no "matrix" keyword needed); a pre-wire TV is
+  // its run back to the rack, to the video distributor, like a live one
+  const distributor = devs.find(d => d.type === "videoMatrix") || devs.find(d => d.type === "avSwitch" && !d.danteSwitch);
+  const tvFromRack = !loc && !hints.apps && (hints.matrix || (zone.scope === "prewire" && !hints.avr) || (!!distributor && !hints.avr));
+  // a surround room that's part of this job gets its own receiver — added automatically
+  // (5.1 → MRX 540, 7.1 → 740, Atmos → 1140) — unless it's a Dante job (Hyperion / Director)
+  const included = (zone.scope || "included") === "included";
+  if (!hints.avr && included && /^surround/.test(spk?.config || "") && !hints.dante && !isDanteJob(sol)
+      && !(sol.connections || []).some(c => c.to === spk.id)) hints = { ...hints, avr: true };
   // a powered soundbar plays its TV's sound (HDMI eARC) unless a receiver drives it
   const barOffTv = () => { if (tv && /^soundbar/.test(spk?.config || "") && !readHookup(job, sol, zone).speakers) setSpeakers(job, sol, zone, "__tv"); };
   if ((hints.dante || isDanteJob(sol)) && !hints.avr) {
@@ -370,14 +395,14 @@ export function autoHookup(job, sol, zone, hints = {}) {
     // receiver is the room's source switch and feeds the TV itself.
     const m = devs.find(d => d.type === "videoMatrix") || devs.find(d => d.type === "avSwitch" && !d.danteSwitch);
     if (m) {
-      if (tv) setVideo(job, sol, zone, m.id, hints.bullet && m.type !== "avSwitch" ? "bullet" : undefined);
+      if (tv && !loc && !hints.apps) setVideo(job, sol, zone, m.id, hints.bullet && m.type !== "avSwitch" ? "bullet" : undefined);
       if (spk) setSpeakers(job, sol, zone, avr);
       if (!(sol.connections || []).some(c => c.to === avr && c.signal !== "network" && c.signal !== "audioReturn"))   // the TV's return isn't a source
         feedReceiver(job, sol, m, avr, scopeOf(zone));
       tvBackToReceiver(job, sol, zone, avr);
       return;
     }
-    if (tv) setVideo(job, sol, zone, avr, hints.bullet ? "bullet" : "balun", true);   // eARC back over the HDMI — the default, no extra run
+    if (tv && !loc) setVideo(job, sol, zone, avr, hints.bullet ? "bullet" : "balun", true);   // eARC back over the HDMI — the default, no extra run
     if (spk) setSpeakers(job, sol, zone, avr);
     return;
   }
@@ -400,10 +425,83 @@ export function autoHookup(job, sol, zone, hints = {}) {
     } else if (!/^soundbar/.test(cfg)) {
       const used = id => (sol.connections || []).filter(c => c.from === id && c.signal === "speaker").length;
       const amp = rackDevices(sol).find(d => d.type === "amp" && used(d.id) < (d.zones || 8));
-      if (amp) setSpeakers(job, sol, zone, amp.id);
+      if (amp) { setSpeakers(job, sol, zone, amp.id); if (included) feedAmp(job, sol, amp.id); }
     }
   }
   barOffTv();
 }
 
 export const speakerSetupName = spk => SPEAKER_SETUP[spk?.config || "stereo"] || spk?.config;
+
+/* ---------- one-click fixes (Ryan 2026-10-02: "a friendlier building experience") ----------
+   A finding the app knows how to fix gets buttons: an unfed TV → the rack's video, an Apple TV
+   at the TV, or its own apps; unfed speakers → the right receiver / the next free amp zone /
+   a new amp; an amp with no source on an MXNet rack → its audio decoder. Each fix is the same
+   hookup call a tech would make by hand. `run(job, sol)` works on whatever copy it's given
+   (the caller pushes undo first); fixes are looked up by ids, never by object, so they survive
+   a re-render. */
+export function quickFixes(job, sol, f, catalog = null) {
+  const out = [];
+  if (!f?.code) return out;
+  // the advisor already sized the box it wants (a WattBox, a LAN switch): add it — or swap it in
+  if (f.add?.ref && catalog?.devices?.[f.add.ref]) {
+    const c = catalog.devices[f.add.ref], name = productName(c), qty = Math.max(1, f.add.qty || 1);
+    out.push({ label: `${f.add.swap ? "Swap in" : "Add"} ${qty > 1 ? `${qty} × ` : "a "}${name}`, run: (j, s) => {
+      if (f.add.swap) for (const r of s.racks || []) if (!f.rack || r.id === f.rack) r.devices = r.devices.filter(d => d.type !== f.add.type);
+      for (let k = 0; k < qty; k++) addRackDevice(j, s, f.add.type, name, { catalogRef: f.add.ref, ...(f.rack ? { rackId: f.rack } : {}) });
+    } });
+    return out;
+  }
+  if (!f.ref) return out;
+  const devs = rackDevices(sol);
+  const zoneOf = j => (j.house?.zones || []).find(z => (z.endpoints || []).some(e => e.id === f.ref));
+  const zone = zoneOf(job);
+  if (f.code === "orphan-endpoint" && zone && (zone.scope || "included") === "included") {
+    const ep = zone.endpoints.find(e => e.id === f.ref);
+    const m = devs.find(d => d.type === "videoMatrix") || devs.find(d => d.type === "avSwitch" && !d.danteSwitch);
+    const busy = new Set((sol.connections || []).filter(c => c.signal === "speaker").map(c => c.from));
+    if (ep.type === "display") {
+      if (m) out.push({ label: `Feed it from the ${m.model || "rack"}`, run: (j, s) => setVideo(j, s, zoneOf(j), m.id) });
+      const avr = (sol.connections || []).find(c => c.signal === "speaker" && zone.endpoints.some(e => e.id === c.to) && devs.some(d => d.id === c.from && d.type === "avr"))?.from;
+      if (avr && !m) out.push({ label: `Feed it from the ${devs.find(d => d.id === avr).model}`, run: (j, s) => setVideo(j, s, zoneOf(j), avr, "balun", true) });
+      out.push({ label: "Add an Apple TV at the TV", run: (j, s) => {
+        const z = zoneOf(j), id = freeId(j, s, `${z.id}-src`);
+        (s.localDevices ||= []).push({ id, type: "source", sourceType: "appletv", model: "Apple TV", status: "new", zone: z.id, location: "at-display" });
+        setVideo(j, s, z, id);
+      } });
+      out.push({ label: "It plays its own apps", run: j => { const e = zoneOf(j).endpoints.find(e => e.id === f.ref); if (e) e.ownApps = true; } });
+    } else if (ep.type === "speakers") {
+      const cfg = ep.config || "stereo";
+      if (/^soundbar/.test(cfg)) {
+        if (zone.endpoints.some(e => e.type === "display")) out.push({ label: "Play it from the TV (eARC)", run: (j, s) => setSpeakers(j, s, zoneOf(j), "__tv") });
+      } else if (/^surround/.test(cfg)) {
+        const free = devs.find(d => d.type === "avr" && !busy.has(d.id));
+        const a = avrFor(ep);
+        out.push({ label: free ? `Drive them from the ${free.model}` : `Add an ${a.model}`, run: (j, s) => {
+          const z = zoneOf(j), id = free?.id || addRackDevice(j, s, "avr", a.model, { catalogRef: a.catalogRef });
+          setSpeakers(j, s, z, id);
+          const mm = rackDevices(s).find(d => d.type === "videoMatrix") || rackDevices(s).find(d => d.type === "avSwitch" && !d.danteSwitch);
+          const tv = z.endpoints.find(e => e.type === "display");
+          if (mm && !(s.connections || []).some(c => c.to === id && c.signal === "video")) feedReceiver(j, s, mm, id, {});
+          else if (!mm && tv && !(s.connections || []).some(c => c.to === tv.id)) setVideo(j, s, z, id, "balun", true);
+        } });
+      } else {
+        const used = id => (sol.connections || []).filter(c => c.from === id && c.signal === "speaker").length;
+        const amp = devs.find(d => d.type === "amp" && used(d.id) < (d.zones || 8));
+        out.push(amp ? { label: `Use the ${amp.model}`, run: (j, s) => { setSpeakers(j, s, zoneOf(j), amp.id); feedAmp(j, s, amp.id); } }
+          : { label: "Add an Anthem MDX-16", run: (j, s) => { const id = addRackDevice(j, s, "amp", "Anthem MDX-16", { catalogRef: "anthem-mdx-16" }); setSpeakers(j, s, zoneOf(j), id); feedAmp(j, s, id); } });
+      }
+    }
+  }
+  if (f.code === "no-input") {
+    const d = devs.find(x => x.id === f.ref);
+    if (d?.type === "amp" && devs.some(x => x.type === "avSwitch" && !x.danteSwitch))
+      out.push({ label: "Feed it from the MXNet switch", run: (j, s) => feedAmp(j, s, d.id) });
+    else if (d?.type === "amp") {
+      // no network audio: the receiver's line out (whole-house audio off the theater), or a rack source
+      for (const src of [devs.find(x => x.type === "avr"), devs.find(x => x.type === "source")].filter(Boolean))
+        out.push({ label: `Feed it from the ${src.model}${src.type === "avr" ? " line out" : ""}`, run: (j, s) => (s.connections ||= []).push({ from: src.id, to: d.id, signal: "audio" }) });
+    }
+  }
+  return out;
+}

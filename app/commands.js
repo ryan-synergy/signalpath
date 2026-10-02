@@ -17,7 +17,7 @@ import { parseQuick } from "./quickadd.js";
 /* ---------- the vocabulary (also what the AI is told) ---------- */
 export const OPS = {
   add_zones:   { args: "text", eg: `{"op":"add_zones","text":"theater 7.1 85 sony avr, kitchen stereo"}`,
-                 about: "Add zones in quick-add shorthand: name + speaker setup (stereo, 2.1, 5.1, 7.1, soundbar, landscape 8) + TV size + brand; 'matrix' feeds the TV from the rack's matrix, 'avr' gives the zone its own receiver; 'ofe', 'prewire', 'future', 'no tv'. Comma = next zone. New zones are wired automatically where the rack allows." },
+                 about: "Add zones in quick-add shorthand: name + speaker setup (stereo, 2.1, 5.1, 7.1, soundbar, landscape 8) + TV size + brand; a TV is fed from the rack's matrix / MXNet switch automatically ('local' = an Apple TV at the TV, 'apps' = the TV's own apps, no rack feed); a surround zone gets its own receiver automatically ('avr' = the receiver also feeds the TV); 'ofe', 'prewire', 'future', 'no tv'. Comma = next zone. New zones are wired automatically where the rack allows." },
   set_zone:    { args: "zone, name?, speakers?, display?, tv_size?, brand?, scope?, speakers_status?, tv_status?, remote?, confirm_size?",
                  eg: `{"op":"set_zone","zone":"patio","tv_size":75,"tv_status":"ofe"}`,
                  about: "Change a zone. speakers: none|mono|stereo|2.1|5.1|7.1|7.1.4|soundbar|soundbar-sub|landscape. display: none|tv|projector. scope: included|prewire|future. statuses: new|ofe. remote: none|savant|appletv|josh|factory." },

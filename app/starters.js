@@ -20,7 +20,7 @@ export const STARTERS = [
     id: "mxnet-savant",
     name: "MXNet + Savant audio",
     blurb: "The usual system: MXNet EV2 video (AVDM encoders break each source's audio out as stereo for the Savant input module), Savant AVB audio into a multi-zone amp.",
-    tip: "family room 5.1 75 sony matrix, kitchen stereo 55 matrix, patio landscape 8",
+    tip: "family room 5.1 75 sony, kitchen stereo 55, patio landscape 8",
     solution: { platforms: ["savant"], audioNetwork: "avb" },
     devices: [
       src("atv1", "Apple TV 1"), src("atv2", "Apple TV 2"), src("cablebox", "Cable Box"),
@@ -54,7 +54,7 @@ export const STARTERS = [
     id: "dante-director",
     name: "MXNet + Dante",
     blurb: "MXNet video + Dante audio: Director amps, Dante decoders (DANTE-DV2) at MXNet TVs, AXIS2/AXIS16 elsewhere, Dante CBOX + its own switch.",
-    tip: "kitchen stereo 55 matrix, family room 5.1 75 matrix, office stereo 43 matrix, theater 7.1 85 matrix",
+    tip: "kitchen stereo 55, family room 5.1 75, office stereo 43, theater 7.1 85",
     solution: { audioNetwork: "dante" },
     devices: [
       src("atv1", "Apple TV 1"), src("atv2", "Apple TV 2"), src("cablebox", "Cable Box"),
@@ -83,7 +83,7 @@ export const STARTERS = [
     id: "mxnet",
     name: "MXNet + MDX-16",
     blurb: "For a smaller system: sources on MXNet EV2 encoders into a switch, decoders at each TV, the speaker rooms on an Anthem MDX-16.",
-    tip: "family room 5.1 75 sony matrix, master bed stereo 65 matrix",
+    tip: "family room 5.1 75 sony, master bed stereo 65",
     devices: [
       src("atv1", "Apple TV 1"), src("atv2", "Apple TV 2"), src("cablebox", "Cable Box"),
       dev("sw", "avSwitch", "avpro-mxnet-sw12"),
@@ -113,7 +113,7 @@ export const STARTERS = [
     id: "savant-whole-home",
     name: "HDMI matrix (AXION) + Savant audio",
     blurb: "Rare nowadays: an AXION matrix to the TVs (its audio outs downmix to stereo for the Savant input module), Savant AVB audio into a multi-zone amp.",
-    tip: "family room 5.1 75 sony matrix, kitchen stereo, patio landscape 8",
+    tip: "family room 5.1 75 sony, kitchen stereo, patio landscape 8",
     solution: { platforms: ["savant"], audioNetwork: "avb" },
     devices: [
       src("cablebox", "Cable Box"), src("atv", "Apple TV"),
@@ -141,7 +141,7 @@ export const STARTERS = [
     id: "mxnet-10g-estate",
     name: "MXNet 10G estate + Savant audio",
     blurb: "A large house: MXNet 10G (encoders become 10G transceivers), Kaleidescape, Savant AVB audio through two output modules into two MDX-16s, a 48-port house switch.",
-    tip: "bedroom 4 stereo 55 matrix, wine room stereo",
+    tip: "bedroom 4 stereo 55, wine room stereo",
     solution: { platforms: ["savant"], audioNetwork: "avb" },
     devices: [
       src("atv1", "Apple TV 1"), src("atv2", "Apple TV 2"), src("cablebox", "Cable Box"),
@@ -172,14 +172,14 @@ export const STARTERS = [
       { from: "avb", to: "music", signal: "network" }, { from: "avb", to: "sav-in", signal: "network" },
       { from: "avb", to: "sav-out", signal: "network" }, { from: "avb", to: "sav-out2", signal: "network" },
       { from: "sav-out", to: "amp", signal: "audio" }, { from: "sav-out2", to: "amp2", signal: "audio" }],
-    rooms: "family room 7.1.4 85 sony matrix, primary suite 5.1 77 lg matrix, theater 7.1.4 projector 135 matrix, kitchen stereo 65 matrix, office stereo 50 matrix, " +
+    rooms: "family room 7.1.4 85 sony, primary suite 5.1 77 lg, theater 7.1.4 projector 135, kitchen stereo 65, office stereo 50, " +
       "gym 65 matrix, bedroom 2 stereo 55 matrix, bedroom 3 stereo 55 matrix, dining room stereo, primary bath stereo, patio landscape 8, pool landscape 12",
   },
   {
     id: "condo",
     name: "Condo — MXNet + MDX-8",
     blurb: "A small system: two sources on MXNet EV2 into an 8-port switch, a Sonos Port streaming into an MDX-8 for the speaker rooms, a receiver for the living room's surround.",
-    tip: "guest room 50 matrix, balcony stereo",
+    tip: "guest room 50, balcony stereo",
     devices: [
       src("atv1", "Apple TV"), src("cablebox", "Cable Box"),
       dev("music", "source", "sonos-port"),   // streaming into the MDX-8
@@ -195,7 +195,7 @@ export const STARTERS = [
     ],
     connections: [v("atv1", "enc-atv1"), v("enc-atv1", "sw"), v("cablebox", "enc-cable"), v("enc-cable", "sw"), { from: "cbx", to: "sw", signal: "network" },
       { from: "music", to: "amp", signal: "audio" }],
-    rooms: "living room 5.1 75 sony matrix, primary bedroom stereo 55 matrix, kitchen stereo, office 43 matrix",
+    rooms: "living room 5.1 75 sony, primary bedroom stereo 55, kitchen stereo, office 43",
   },
   {
     id: "sonos",
@@ -214,7 +214,7 @@ export const STARTERS = [
     id: "josh-dante",
     name: "Josh.ai + MXNet + Dante",
     blurb: "Josh.ai control with Josh remotes; MXNet EV2 video, Dante audio into a Director amp, Dante decoders at the TVs, Dante CBOX on its own switch.",
-    tip: "guest room stereo 50 matrix josh remote",
+    tip: "guest room stereo 50 josh remote",
     solution: { audioNetwork: "dante", platforms: ["josh"] },
     devices: [
       src("atv1", "Apple TV 1"), src("atv2", "Apple TV 2"), src("cablebox", "Cable Box"),
@@ -238,7 +238,7 @@ export const STARTERS = [
       { from: "music", to: "dante-in", signal: "audio" },
       { from: "dante-in", to: "director", signal: "audio", dante: true },
       { from: "dante-cbox", to: "dante-sw", signal: "network" }, { from: "dante-sw", to: "director", signal: "network" }],
-    rooms: "family room 5.1 75 sony matrix josh remote, kitchen stereo 55 matrix josh remote, primary suite stereo 65 matrix josh remote, office stereo 43 matrix josh remote",
+    rooms: "family room 5.1 75 sony josh remote, kitchen stereo 55 josh remote, primary suite stereo 65 josh remote, office stereo 43 josh remote",
   },
   {
     id: "outdoor",
@@ -262,7 +262,7 @@ export const STARTERS = [
     connections: [v("atv1", "enc-atv1"), v("enc-atv1", "sw"), v("cablebox", "enc-cable"), v("enc-cable", "sw"), { from: "cbx", to: "sw", signal: "network" },
       { from: "music", to: "land", signal: "audio" }, { from: "music2", to: "amp", signal: "audio" }],
     // landscapes first: quick-add fills amps in rack order, so the Sonance takes them and the MDX-8 the stereo areas
-    rooms: "pool landscape 12, front yard landscape 6, patio stereo 65 sunbrite matrix, outdoor kitchen stereo 55 sunbrite matrix, fire pit stereo",
+    rooms: "pool landscape 12, front yard landscape 6, patio stereo 65 sunbrite, outdoor kitchen stereo 55 sunbrite, fire pit stereo",
   },
   {
     id: "dedicated-theater",

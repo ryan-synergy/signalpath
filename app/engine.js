@@ -442,6 +442,7 @@ export function validate(job, ix = indexJob(job)) {
     for (const eid of Object.keys(ix.endpointsById)) {
       if (fed.has(eid)) continue;
       if (ix.endpointsById[eid].type === "display" && localFedZones.has(ix.endpointZone[eid])) continue;
+      if (ix.endpointsById[eid].ownApps) continue;          // "apps": the TV plays its own apps, left off the rack on purpose
       const scope = ix.zonesById[ix.endpointZone[eid]]?.scope || "included";
       if (scope === "future" || (scope === "prewire" && !rackGear)) continue;
       if (scope === "prewire") { W("orphan-endpoint", `${nm(eid)} (pre-wire) isn't wired to the rack yet — its cable has no home run`, eid); continue; }
@@ -1137,6 +1138,9 @@ function placeOnce(job, ix, opts, variant) {
           { x: dev.x + dev.w / 2 - PL.chip.w / 2, y: dev.y + dev.h + 8 }, // tucked below
           { x: bx, y: cy - 26 },                                   // beside, staggered up
         ];
+        // an amp's audio decoder (MXNet audio de-embed) steps down beside its amp first: level with
+        // it, it plugs the gap the neighbouring receiver's speaker runs use to reach the rooms
+        if (comp.variant === "audio-deembed") candidates.unshift(candidates.splice(2, 1)[0]);
         const pick = candidates.find(p => chipFits({ ...p, w: PL.chip.w, h: PL.chip.h }));
         if (pick) { chip.x = pick.x; chip.y = pick.y; }
         else { chip.x = bx; chip.y = cy; out.warnings.push({ code: "chip-crowded", ref: comp.id, msg: `${describeNode(job, s.sol, comp.id).short} had no clear spot — it may overlap on the drawing` }); }
@@ -4717,8 +4721,8 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       msg: `${p.model}: ${p.used} connections need ${p.used} ports — it has ${p.copper + p.sfp}; add a second switch or step up a size` });
     if (p.virtual) {
       const sug = suggestLanSwitch(catalog, p.used);
-      out.notes.push({ code: "lan-no-switch", solution: p.solution,
-        msg: `${p.used} Ethernet ports needed on the house network (every TV, the networked rack gear, the AV switch uplinks) — no LAN switch on this job${sug ? `; a ${sug.model} (${sug.ports} ports) covers it with spare` : ""}` });
+      out.notes.push({ code: "lan-no-switch", solution: p.solution, add: sug ? { type: "networkSwitch", ref: sug.ref } : null,
+        msg: `No LAN switch on this job — ${p.used} Ethernet ports needed on the house network (every TV, the networked rack gear, the AV switch uplinks)${sug ? `; a ${sug.model} (${sug.ports} ports) covers it with spare` : ""}` });
     }
     if (p.needsInjector) out.notes.push({ code: "switch-no-poe", solution: p.solution, ref: p.switch,
       msg: `${p.model} doesn't power PoE — ${p.needsInjector} PoE device${p.needsInjector > 1 ? "s" : ""} on it need${p.needsInjector > 1 ? "" : "s"} an injector or local power supply` });
@@ -4739,9 +4743,9 @@ export function advise(job, ix = indexJob(job), catalog = null) {
     const who = p.multi ? p.rackName : "Rack", R = { solution: p.solution, rack: p.rack };
     const pick = p.pick ? `${p.pick.qty > 1 ? `${p.pick.qty} × ` : ""}${p.pick.model} (${p.pick.outlets} outlets${p.pick.qty > 1 ? " each" : ""})` : "a WattBox";
     if (!p.units.length)
-      out.notes.push({ code: "power-none", ...R, msg: `${p.multi ? `${p.rackName}: ` : ""}${p.need} rack outlet${p.need === 1 ? "" : "s"} needed (${p.loads.length} boxes${p.poe.length ? `, ${p.poe.length} more on PoE` : ""}) — no power conditioner ${p.multi ? "in this rack" : "on the job"}; spec ${pick}` });
+      out.notes.push({ code: "power-none", ...R, add: p.pick ? { type: "power", ref: p.pick.ref, qty: p.pick.qty } : null, msg: `${p.multi ? `${p.rackName}: ` : ""}${p.need} rack outlet${p.need === 1 ? "" : "s"} needed (${p.loads.length} boxes${p.poe.length ? `, ${p.poe.length} more on PoE` : ""}) — no power conditioner ${p.multi ? "in this rack" : "on the job"}; spec ${pick}` });
     else if (p.short)
-      out.notes.push({ code: "power-short", ...R, msg: `${who} power: ${p.need} outlets needed, ${p.supply} on the power conditioner — ${p.short} short; step up to ${pick}` });
+      out.notes.push({ code: "power-short", ...R, add: p.pick ? { type: "power", ref: p.pick.ref, qty: p.pick.qty, swap: true } : null, msg: `${who} power: ${p.need} outlets needed, ${p.supply} on the power conditioner — ${p.short} short; step up to ${pick}` });
     else if (p.tight)
       out.notes.push({ code: "power-tight", ...R, msg: `${who} power: ${p.need} of ${p.supply} outlets used — under ${p.spare} spare for the ISP modem, router and add-ons` });
     if (p.cooling) out.notes.push({ code: "rack-heat", ...R,

@@ -1704,6 +1704,62 @@ for (const [name, raw] of Object.entries(fixtures)) {
       t(`starter ${st.name}: routes clean`, !rt.warnings.some(w => /unrouted|fallback/.test(w.code)) && !through);
     } else t("starter Blank rack: zones added but not wired say so", orphans.length > 0);
   }
+  /* rooms wire themselves (Ryan 2026-10-02): no "matrix" keyword — on a whole-home rack every TV is fed
+     from the rack, a surround room gets its own receiver, an amp on an MXNet rack gets its audio decoder */
+  {
+    const C2 = await import("./commands.js");
+    const PLAIN = "family room 5.1 75 sony, master bed stereo 65, kitchen stereo, patio landscape";
+    const build = (id, text = PLAIN) => C2.planCommands(applyStarter(blank(), STARTERS.find(s => s.id === id), CAT), 0, [{ op: "add_zones", text }], CAT).job;
+    const j = build("mxnet"), L = loadJob(j), v = validate(L.job, L.ix), sol = j.solutions[0];
+    const from = to => sol.connections.find(c => c.to === to)?.from;
+    t("rooms wire themselves: plain rooms on the MXNet kit — no errors, no warnings",
+      v.errors.length === 0 && v.warnings.length === 0, [...v.errors, ...v.warnings].map(e => e.msg).join(" | "));
+    t("rooms wire themselves: each TV comes off the MXNet switch through its decoder",
+      ["z-family-room-tv", "z-master-bed-tv"].every(tv => sol.companions.some(c => c.serves === tv && c.type === "dec" && from(c.id) === "sw")) || ["z-family-room-tv", "z-master-bed-tv"].every(tv => sol.companions.some(c => c.serves === tv && c.type === "dec")));
+    const avr = sol.racks[0].devices.find(d => d.type === "avr");
+    t("rooms wire themselves: the 5.1 room gets an MRX 540 driving its speakers", avr?.model === "Anthem MRX 540" && from("z-family-room-spk") === avr.id);
+    const amp = sol.racks[0].devices.find(d => d.type === "amp");
+    const adec = sol.companions.find(c => c.serves === amp?.id && c.variant === "audio-deembed");
+    t("rooms wire themselves: the MDX-16 gets an MXNet audio decoder at the rack", !!adec && sol.connections.some(c => c.from === adec.id && c.to === amp.id && c.signal === "audio"));
+    const ja = build("mxnet", "office stereo 43 apps, den 55 local");
+    t("rooms wire themselves: 'apps' leaves the TV off the rack, 'local' still uses an Apple TV at the TV",
+      !ja.solutions[0].connections.some(c => c.to === "z-office-tv" || ja.solutions[0].companions.some(k => k.serves === "z-office-tv"))
+      && ja.solutions[0].localDevices.some(d => d.zone === "z-den" && ja.solutions[0].connections.some(c => c.from === d.id && c.to === "z-den-tv")));
+    const jp = build("mxnet", "bonus room prewire 5.1 65");
+    t("rooms wire themselves: a pre-wire surround room adds no receiver to the quote", !jp.solutions[0].racks[0].devices.some(d => d.type === "avr"));
+    const jd = build("dante-director", "family room 5.1 75");
+    t("rooms wire themselves: a Dante job's surround room stays on Dante amps (no Anthem receiver)", !jd.solutions[0].racks[0].devices.some(d => d.type === "avr"));
+    for (const id of ["mxnet-savant", "mxnet", "savant-whole-home", "mxnet-10g-estate", "dante-director"]) {
+      const Lk = loadJob(build(id)), vk = validate(Lk.job, Lk.ix);
+      t(`rooms wire themselves: kit ${id} + plain rooms → no errors`, vk.errors.length === 0, vk.errors.map(e => e.msg).join(" | "));
+    }
+    t("rooms wire themselves: kit tips no longer teach the 'matrix' keyword", STARTERS.every(s => !/\bmatrix\b/.test(s.tip || "")));
+
+    /* one-click fixes: every button must clear the finding it sits on */
+    const errsOf = jj => { const Lx = loadJob(structuredClone(jj)); return validate(Lx.job, Lx.ix); };
+    const applyFix = (jj, f, label) => { const fx = H.quickFixes(jj, jj.solutions[0], f, CAT).find(x => !label || x.label === label); if (fx) fx.run(jj, jj.solutions[0]); return fx; };
+    const jb = build("blank", "family room 5.1 75 sony, kitchen stereo, den 55");
+    t("fixes: on a blank rack the 5.1 room still gets its receiver (and its TV) automatically",
+      !errsOf(jb).errors.some(e => /Family Room/.test(e.msg)) && jb.solutions[0].racks[0].devices.some(d => d.model === "Anthem MRX 540"));
+    const fk = applyFix(jb, { code: "orphan-endpoint", ref: "z-kitchen-spk" });
+    t("fixes: unfed stereo speakers → 'Add an Anthem MDX-16' and they're fed", fk?.label === "Add an Anthem MDX-16" && !errsOf(jb).errors.some(e => /Kitchen/.test(e.msg)));
+    const tvFx = H.quickFixes(jb, jb.solutions[0], { code: "orphan-endpoint", ref: "z-den-tv" }, CAT).map(x => x.label);
+    t("fixes: an unfed TV offers an Apple TV at the TV or its own apps", tvFx.includes("Add an Apple TV at the TV") && tvFx.includes("It plays its own apps"), tvFx.join(" | "));
+    applyFix(jb, { code: "orphan-endpoint", ref: "z-den-tv" }, "It plays its own apps");
+    t("fixes: 'its own apps' clears the unfed-TV error", errsOf(jb).errors.length === 0, errsOf(jb).errors.map(e => e.msg).join(" | "));
+    const ampId = jb.solutions[0].racks[0].devices.find(d => d.type === "amp").id;
+    t("fixes: the new amp with no source is flagged, and its fix (receiver line out) clears it",
+      errsOf(jb).warnings.some(w => w.code === "no-input" && w.ref === ampId) && !!applyFix(jb, { code: "no-input", ref: ampId }, "Feed it from the Anthem MRX 540 line out")
+      && !errsOf(jb).warnings.some(w => w.code === "no-input"));
+    const lanNote = (() => { const Lx = loadJob(structuredClone(jb)); return advise(Lx.job, Lx.ix, CAT).notes.find(n => n.code === "lan-no-switch"); })();
+    t("fixes: 'no LAN switch' adds the switch the advisor sized, and the note goes away",
+      /^No LAN switch on this job/.test(lanNote?.msg) && !!applyFix(jb, lanNote) && (() => { const Lx = loadJob(structuredClone(jb)); return !advise(Lx.job, Lx.ix, CAT).notes.some(n => n.code === "lan-no-switch"); })());
+    const ee = structuredClone(fixtures.estate);
+    const pn = (() => { const Lx = loadJob(structuredClone(ee)); return advise(Lx.job, Lx.ix, CAT).notes.find(n => n.code === "power-none" && n.rack === "rack-pool"); })();
+    applyFix(ee, pn);
+    t("fixes: a pool house rack's missing WattBox is added to the pool house rack, sized for it",
+      ee.solutions[0].racks[1].devices.some(d => d.type === "power" && d.catalogRef === pn.add.ref) && !ee.solutions[0].racks[0].devices.some(d => d.type === "power"));
+  }
 }
 
 /* ---------- a linked box is called by its product's name (2026-09-27) ---------- */
@@ -2260,7 +2316,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const blank = () => ({ generator: "SignalPath", schemaVersion: 1, job: { name: "d", client: { name: "c" }, revisions: [] },
     house: { areas: [], zones: [] }, solutions: [{ id: "s", name: "A", platforms: ["savant"], racks: [{ id: "rack-main", name: "Rack", devices: [] }], localDevices: [], companions: [], connections: [], annotations: [] }] });
   const j0 = S.applyStarter(blank(), S.STARTERS.find(x => x.id === "dante-director"), CAT);
-  const r = C.planCommands(j0, 0, [{ op: "add_zones", text: "kitchen stereo 55 matrix, office stereo 43, family room 5.1 75 matrix, theater 7.1 85 matrix, den 5.1 65 matrix director" }], CAT);
+  const r = C.planCommands(j0, 0, [{ op: "add_zones", text: "kitchen stereo 55 matrix, office stereo 43 apps, family room 5.1 75 matrix, theater 7.1 85 matrix, den 5.1 65 matrix director" }], CAT);
   const sol = r.job.solutions[0], comp = id => sol.companions.find(c => c.id === id);
   const feed = spk => sol.connections.find(c => c.to === spk && c.signal === "speaker");
   const devOf = id => sol.racks[0].devices.find(d => d.id === id);
@@ -2276,8 +2332,8 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("dante: 'director' puts a 5.1 on the Director across 4 zones (C and LFE on their own)",
     /m6800d/.test(devOf(feed("z-den-spk").from)?.catalogRef) && expandChannels(feed("z-den-spk").channels).length === 8);
   const { job, ix } = loadJob(r.job), v = validate(job, ix), a = advise(job, ix, CAT), codes = a.notes.map(n => n.code);
-  t("dante: the whole house validates (the one error: the Office TV was given no video on purpose)",
-    v.errors.length === 1 && /Office TV/.test(v.errors[0].msg), v.errors.map(e => e.msg).join(" | "));
+  t("dante: the whole house validates (the Office TV plays its own apps — 'apps' — so it isn't an error)",
+    v.errors.length === 0, v.errors.map(e => e.msg).join(" | "));
   t("dante: Director zones count the surround set as 4 (kitchen 1 + office 1 + den 4 = 6 of 8)",
     a.amps.find(x => /M6800D/.test(x.model))?.zonesUsed === 6);
   t("dante: advisor explains DANTE-DV2 (source audio, not TV apps), VLAN 99, AXIS2 → PCM, switch checklist; no AVB note",
@@ -2413,7 +2469,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   // the starters bring their own house LAN switch since 2026-10-01 — taken out here so the virtual one shows
   const withLan = C.planCommands(structuredClone(j0), 0, [{ op: "add_zones", text: "kitchen stereo 55 matrix, family room 5.1 75 matrix" }], CAT).job;
   j0.solutions[0].racks[0].devices = j0.solutions[0].racks[0].devices.filter(d => d.id !== "lan");
-  const job = C.planCommands(j0, 0, [{ op: "add_zones", text: "kitchen stereo 55 matrix, family room 5.1 75 matrix, office stereo 43, guest prewire tv 50" }], CAT).job;
+  const job = C.planCommands(j0, 0, [{ op: "add_zones", text: "kitchen stereo 55 matrix, family room 5.1 75 matrix, office stereo 43 apps, guest prewire tv 50" }], CAT).job;
   { const L = loadJob(withLan), aw = advise(L.job, L.ix, CAT);
     t("network: the MXNet starters bring a house LAN switch (Ubiquiti Pro 24 PoE) — the TVs land on it, the Dante switch keeps the Dante gear",
       aw.network.some(p => p.switch === "lan" && p.rows.some(r => /TV/.test(r.what || r.where || ""))) && !aw.network.some(p => p.virtual) && aw.network.some(p => p.switch === "dante-sw")); }
@@ -2501,7 +2557,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const blank = () => ({ generator: "SignalPath", schemaVersion: 1, job: { name: "r", client: { name: "c" }, revisions: [] },
     house: { areas: [], zones: [] }, solutions: [{ id: "s", name: "A", platforms: [], racks: [{ id: "rack-main", name: "Rack", devices: [] }], localDevices: [], companions: [], connections: [], annotations: [] }] });
   const job = C.planCommands(S.applyStarter(blank(), S.STARTERS.find(x => x.id === "dante-director"), CAT), 0,
-    [{ op: "add_zones", text: "kitchen stereo 55 matrix, family room 5.1 75 matrix, office stereo 43, theater 7.1 85 matrix" }], CAT).job;
+    [{ op: "add_zones", text: "kitchen stereo 55 matrix, family room 5.1 75 matrix, office stereo 43 apps, theater 7.1 85 matrix" }], CAT).job;
   const { job: J, ix } = loadJob(job);
   const a = advise(J, ix, CAT);
   const r = a.racks[0], kinds = r.items.map(i => i.kind);

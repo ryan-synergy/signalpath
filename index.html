@@ -110,6 +110,10 @@
   details.more { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 6px; }
   details.more > summary { font-size: 11.5px; color: var(--accent); cursor: pointer; padding: 4px 0; list-style: none; }
   details.more > summary::before { content: "▸ "; } details.more[open] > summary::before { content: "▾ "; }
+  details.more.wiring { margin-top: 4px; border-top: 0; padding-top: 0; }
+  details.more.wiring > summary { color: #5a6470; font-size: 12px; }
+  details.more.wiring > summary::after { content: " · change"; color: var(--accent); }
+  details.more.wiring[open] > summary::after { content: ""; }
   .ports { margin: 4px 0 8px; }
   .ports .cap { font-size: 11px; color: #777; margin: 0 2px 5px; }
   .ports .row { margin-bottom: 5px; }
@@ -485,25 +489,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002192136",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002192136",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002192136",
-    "./app/ports.js": "./app/ports.js?v=20261002192136",
-    "./app/commands.js": "./app/commands.js?v=20261002192136",
-    "./app/engine.js": "./app/engine.js?v=20261002192136",
-    "./app/exports.js": "./app/exports.js?v=20261002192136",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002192136",
-    "./app/hookup.js": "./app/hookup.js?v=20261002192136",
-    "./app/importers.js": "./app/importers.js?v=20261002192136",
-    "./app/library.js": "./app/library.js?v=20261002192136",
-    "./app/names.js": "./app/names.js?v=20261002192136",
-    "./app/network.js": "./app/network.js?v=20261002192136",
-    "./app/pages.js": "./app/pages.js?v=20261002192136",
-    "./app/power.js": "./app/power.js?v=20261002192136",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002192136",
-    "./app/rack.js": "./app/rack.js?v=20261002192136",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002192136",
-    "./app/starters.js": "./app/starters.js?v=20261002192136"
+    "./app/ai.js": "./app/ai.js?v=20261002192502",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002192502",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002192502",
+    "./app/ports.js": "./app/ports.js?v=20261002192502",
+    "./app/commands.js": "./app/commands.js?v=20261002192502",
+    "./app/engine.js": "./app/engine.js?v=20261002192502",
+    "./app/exports.js": "./app/exports.js?v=20261002192502",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002192502",
+    "./app/hookup.js": "./app/hookup.js?v=20261002192502",
+    "./app/importers.js": "./app/importers.js?v=20261002192502",
+    "./app/library.js": "./app/library.js?v=20261002192502",
+    "./app/names.js": "./app/names.js?v=20261002192502",
+    "./app/network.js": "./app/network.js?v=20261002192502",
+    "./app/pages.js": "./app/pages.js?v=20261002192502",
+    "./app/power.js": "./app/power.js?v=20261002192502",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002192502",
+    "./app/rack.js": "./app/rack.js?v=20261002192502",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002192502",
+    "./app/starters.js": "./app/starters.js?v=20261002192502"
 } }
 </script>
 <script>
@@ -719,7 +723,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002192136").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002192502").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1973,10 +1977,11 @@ function zonesHTML() {
           return chips("tvsize", list.map(n => [String(n), n + "″"]), String(cur)).replace(/<\/div>$/, `<button type="button" class="chip more" data-other="tvsize">Other…</button></div>`);
         })(), "endpoints", tvH.id, "size") : ""}
         ${tv ? fieldO("Brand", `<input class="tvbrand" value="${esc(tv.brand || "")}" placeholder="e.g. Sony">`, "endpoints", tvH.id, "brand") : ""}
-        ${tv ? fieldO("Model", `<input class="tvmodel" value="${esc(tv.model || "")}" placeholder="${tv.displayType === "projector" ? "e.g. Epson LS12000 — blank quotes “Unspecified Projector”" : "e.g. K-85XR90 — blank quotes “Unspecified TV”"}" autocorrect="off" spellcheck="false">`, "endpoints", tvH.id, "model") : ""}
         ${hookupHTML(z, sol, multi)}
-        <details class="more" data-more="${esc(moreKey)}" ${S.openRows.has(moreKey) ? "open" : ""}><summary>More — name, scope, status, remote${tv ? ", size check" : ""}</summary>
+        <details class="more" data-more="${esc(moreKey)}" ${S.openRows.has(moreKey) ? "open" : ""}><summary>More — name, scope, status, remote${tv ? ", model, size check" : ""}</summary>
           ${field("Name", `<input class="zname" value="${esc(z.name)}">`)}
+        ${tv ? fieldO("Model", `<input class="tvmodel" value="${esc(tv.model || "")}" placeholder="${tv.displayType === "projector" ? "e.g. Epson LS12000 — blank quotes “Unspecified Projector”" : "e.g. K-85XR90 — blank quotes “Unspecified TV”"}" autocorrect="off" spellcheck="false">`, "endpoints", tvH.id, "model") : ""}
+
           ${fieldO("Scope", chips("zscope", ["included", "prewire", "future"].map(k => [k, SCOPE_LABEL[k]]), zEff.scope || "included", "seg"), "zones", z.id, "scope")}
           ${fieldO("Remote", sel("zremote", ["none", "savant", "appletv", "josh", "factory"], zEff.remote || "none", REMOTE_LABEL), "zones", z.id, "remote")}
           ${field("Outdoor", sel("zoutdoor", ["auto", "yes", "no"], typeof z.outdoor === "boolean" ? (z.outdoor ? "yes" : "no") : "auto",
@@ -2013,7 +2018,7 @@ function hookupHTML(z, sol, multi) {
   const devOpts = (types, cur) => devs.filter(d => types.includes(d.type))
     .sort((a, b) => types.indexOf(a.type) - types.indexOf(b.type)).map(d => opt(d.id, nm(d.id), cur)).join("");
   const locals = (sol.localDevices || []).filter(d => d.zone === z.id);
-  const rows = [];
+  const rows = [], fine = [], gist = [];   // what feeds it up front; how (run, distance, outputs, audio back) folded under one line
   const byDev = id => devs.find(d => d.id === id);
   if (h.tv) {
     const cur = h.video?.from || (h.tv.ownApps ? "__apps" : "");
@@ -2022,13 +2027,14 @@ function hookupHTML(z, sol, multi) {
       ${locals.length ? `<optgroup label="In this zone">${locals.map(d => opt(d.id, nm(d.id), cur)).join("")}</optgroup>` : ""}
       <optgroup label="Add">${opt("__new_avr", "＋ New AV receiver…", "")}</optgroup></select>`));
     if (byDev(cur)) {
-      rows.push(field("Run to TV", chips("hvrun", Object.entries(RUNS), h.video.run, "seg")));
+      fine.push(field("Run to TV", chips("hvrun", Object.entries(RUNS), h.video.run, "seg")));
+      gist.push(RUNS[h.video.run] || h.video.run, z.runFt ? `${z.runFt} ft` : `${(REACH[z.reach || "average"] || "").toLowerCase()} run`);
       // rough distance to the rack (exact footage is optional) — sizes a Bullet Train
-      rows.push(field("Distance", chips("hreach", Object.entries(REACH), z.runFt ? "" : z.reach || "average", "seg")
+      fine.push(field("Distance", chips("hreach", Object.entries(REACH), z.runFt ? "" : z.reach || "average", "seg")
         + `<input class="hrunft" inputmode="numeric" style="width:64px;margin-left:6px" placeholder="ft" value="${esc(z.runFt ?? "")}" aria-label="Exact run in feet">`));
       if (h.video.run === "bullet") {
         const b = bulletFor(z);
-        rows.push(`<div class="mini" style="margin:-2px 0 6px 80px">${b.m
+        fine.push(`<div class="mini" style="margin:-2px 0 6px 80px">${b.m
           ? `Bullet Train AC-BTSSF-10KUHD-${String(b.m).padStart(2, "0")} (${b.m} m) · ${b.earc ? "eARC back over the cable" : "ARC back only (eARC stops at 10 m)"} · source head at the rack, display head at the TV`
           : `~${b.need} m is past the longest Bullet Train (40 m) — use the balun or MXNet`}</div>`);
       }
@@ -2041,8 +2047,9 @@ function hookupHTML(z, sol, multi) {
       ${bar ? `<optgroup label="In this zone">${opt("__tv", "The TV — powered bar on HDMI eARC", h.speakers?.viaTv ? "__tv" : cur)}</optgroup>` : ""}
       <optgroup label="In the rack">${devOpts(SPEAKERS_FROM, cur)}</optgroup>
       <optgroup label="Add">${opt("__new_avr", "＋ New AV receiver…", "")}${opt("__new_amp", "＋ New multi-zone amp…", "")}</optgroup></select>`));
+    if (byDev(cur)?.type === "amp") gist.push(`outputs ${h.speakers.channels || "?"}`);
     if (byDev(cur)?.type === "amp")
-      rows.push(field("Amp outputs", `<input class="hsch" value="${esc(h.speakers.channels || "")}" placeholder="e.g. ${esc(nextFreeOutputs(sol, cur, outputsNeeded(h.spk) || 2, h.spk.id))}">`));
+      fine.push(field("Amp outputs", `<input class="hsch" value="${esc(h.speakers.channels || "")}" placeholder="e.g. ${esc(nextFreeOutputs(sol, cur, outputsNeeded(h.spk) || 2, h.spk.id))}">`));
   }
   if (h.tv) {
     // eARC rides the receiver's HDMI (default); optical is a pulled Toslink run,
@@ -2051,33 +2058,39 @@ function hookupHTML(z, sol, multi) {
     const cur = h.audioBack === "optical" ? `optical:${h.ret.to}` : h.audioBack;
     const kitElsewhere = h.audioBack === "earc-kit" && h.ret.to !== rcv?.id;   // the kit into a receiver that no longer feeds the TV
     const optTargets = devs.filter(d => RETURN_TO.includes(d.type));
-    rows.push(field("TV audio back", `<select class="hret">
+    gist.push(h.audioBack === "optical" ? "optical back" : h.audioBack === "none" || !h.audioBack ? "no audio back" : (AUDIO_BACK[h.audioBack] || h.audioBack).replace(/\s*\(.*\)$/, ""));
+    fine.push(field("TV audio back", `<select class="hret">
       ${rcv ? opt("earc", `${AUDIO_BACK.earc} (to ${rcv.model || rcv.id})`, cur) + opt("earc+optical", `${AUDIO_BACK["earc+optical"]} (to ${rcv.model || rcv.id})`, cur)
         + opt("earc-kit", `${AUDIO_BACK["earc-kit"]} (to ${rcv.model || rcv.id})`, cur) : ""}
       ${optTargets.map(d => opt(`optical:${d.id}`, `Optical only → ${nm(d.id)}`, cur)).join("")}
       ${kitElsewhere ? opt("earc-kit", `${AUDIO_BACK["earc-kit"]} (to ${nm(h.ret.to)})`, cur) : ""}
       ${opt("none", AUDIO_BACK.none, cur)}</select>`));
     if (h.audioBack === "earc-kit")
-      rows.push(`<div class="mini" style="margin:-2px 0 6px 80px">AVPro AC-AEX-DEARC-KIT: TX on the TV's eARC HDMI port, one Cat6A home, RX into a receiver HDMI input (RX DIP 2 = HDMI OUT). Video goes into another TV input.</div>`);
+      fine.push(`<div class="mini" style="margin:-2px 0 6px 80px">AVPro AC-AEX-DEARC-KIT: TX on the TV's eARC HDMI port, one Cat6A home, RX into a receiver HDMI input (RX DIP 2 = HDMI OUT). Video goes into another TV input.</div>`);
     if (h.earc && !h.ret && (h.video.run === "balun" || h.video.run === "dec"))
-      rows.push(`<div class="mini" style="margin:-2px 0 6px 80px">Confirm the ${h.video.run === "balun" ? "HDBaseT balun" : "MXNet decoder"} passes eARC — many extenders don't. The optical backup covers it.</div>`);
+      fine.push(`<div class="mini" style="margin:-2px 0 6px 80px">Confirm the ${h.video.run === "balun" ? "HDBaseT balun" : "MXNet decoder"} passes eARC — many extenders don't. The optical backup covers it.</div>`);
   }
   // Dante: how this TV's sound gets on the network, and who listens
   if (h.dante) {
     const lis = h.dante.to.map(id => nm(id)).join(", ") || "no amp yet";
-    rows.push(field("Dante", `<span class="mini" style="line-height:1.5">${esc(ADAPTER[h.dante.type]?.name || h.dante.type)} → ${esc(lis)}${h.dante.type === "ddec" ? " · the source's audio (audio follows video)" : h.dante.type === "axis" ? " · set the TV to stereo PCM" : " · decodes Atmos/DTS-HD"}</span>`));
+    fine.push(field("Dante", `<span class="mini" style="line-height:1.5">${esc(ADAPTER[h.dante.type]?.name || h.dante.type)} → ${esc(lis)}${h.dante.type === "ddec" ? " · the source's audio (audio follows video)" : h.dante.type === "axis" ? " · set the TV to stereo PCM" : " · decodes Atmos/DTS-HD"}</span>`));
     if (h.dante.type === "ddec")
-      rows.push(`<div style="margin:-2px 0 6px 80px"><button class="addbtn hdante" data-how="axis">Use an AXIS2 instead (TV's own apps too)</button></div>`);
+      fine.push(`<div style="margin:-2px 0 6px 80px"><button class="addbtn hdante" data-how="axis">Use an AXIS2 instead (TV's own apps too)</button></div>`);
   } else if ((sol.audioNetwork === "dante" || h.spk) && (h.tv || h.spk) && sol.audioNetwork !== "avb" && !/^soundbar/.test(h.spk?.config || ""))
-    rows.push(`<div style="margin:2px 0 6px 80px"><button class="addbtn hdante" data-how="auto">Put this zone on Dante${sol.audioNetwork === "dante" ? "" : " (makes this a Dante job)"}</button></div>`);
+    fine.push(`<div style="margin:2px 0 6px 80px"><button class="addbtn hdante" data-how="auto">Put this zone on Dante${sol.audioNetwork === "dante" ? "" : " (makes this a Dante job)"}</button></div>`);
   // one receiver for the whole zone is the common case — offer to finish it
   const vDev = byDev(h.video?.from), sDev = byDev(h.speakers?.from);
   let nudge = "";
-  if (h.tv && sDev?.type === "avr" && h.video?.from !== sDev.id)
+  // Synergy feeds the TV and the receiver separately from the matrix — the receiver driving the TV
+  // is only offered when nothing feeds the TV yet (Ryan 2026-09-30: receiver → TV isn't the default)
+  if (h.tv && sDev?.type === "avr" && !h.video && !h.tv.ownApps)
     nudge = `<button class="addbtn hsame sug" data-what="video" data-dev="${esc(sDev.id)}"><span aria-hidden="true">✦</span><span class="t">Feed the TV from ${esc(sDev.model || sDev.id)} too</span><span class="ap">Apply</span></button>`;
   else if (h.spk && vDev?.type === "avr" && h.speakers?.from !== vDev.id)
     nudge = `<button class="addbtn hsame sug" data-what="speakers" data-dev="${esc(vDev.id)}"><span aria-hidden="true">✦</span><span class="t">Drive the speakers from ${esc(vDev.model || vDev.id)} too</span><span class="ap">Apply</span></button>`;
-  return `<div class="sect">WHAT FEEDS THIS ROOM${multi ? ` <span class="mini">${esc(sol.name)}</span>` : ""}</div>${rows.join("")}${nudge}`;
+  const wk = "wire:" + z.id;
+  if (h.dante) gist.push("Dante");
+  const details = fine.length ? `<details class="more wiring" data-more="${esc(wk)}" ${S.openRows.has(wk) ? "open" : ""}><summary>${esc(gist.filter(Boolean).join(" · ") || "Wiring details")}</summary>${fine.join("")}</details>` : "";
+  return `<div class="sect">WHAT FEEDS THIS ROOM${multi ? ` <span class="mini">${esc(sol.name)}</span>` : ""}</div>${rows.join("")}${nudge}${details}`;
 }
 
 function gearHTML() {

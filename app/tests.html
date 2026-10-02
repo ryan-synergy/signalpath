@@ -2527,6 +2527,17 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t("power: a WattBox in the main rack covers only the main rack",
       !a3.notes.some(n => n.code === "power-none" && n.rack === "rack-main") && a3.notes.some(n => n.code === "power-none" && n.rack === "rack-pool")
       && u3["wb-main"]?.outlets?.used === 8, JSON.stringify(u3["wb-main"]));
+    // network: a LAN switch in each rack — the pool house TV lands on the pool house switch
+    const e4 = structuredClone(fixtures.estate), r4 = e4.solutions[0].racks;
+    r4[0].devices.push({ id: "lan-main", type: "networkSwitch", catalogRef: "ubiquiti-usw-pro-24-poe", model: "USW Pro 24 PoE" });
+    r4[1].devices.push({ id: "lan-pool", type: "networkSwitch", catalogRef: "ubiquiti-usw-pro-24-poe", model: "USW Pro 24 PoE" });
+    const L4 = loadJob(e4), n4 = advise(L4.job, L4.ix, CAT).network;
+    const lm = n4.find(p => p.switch === "lan-main"), lp = n4.find(p => p.switch === "lan-pool");
+    const tvs = p => (p?.rows || []).filter(r => / TV$/.test(r.what)).map(r => r.what);
+    t("network: with a LAN switch in each rack, each TV lands on its own rack's switch",
+      tvs(lp).length === 1 && /Pool House/.test(tvs(lp)[0]) && tvs(lm).length === 2 && !tvs(lm).some(w => /Pool House/.test(w)), JSON.stringify([tvs(lm), tvs(lp)]));
+    t("network: the pool house amp's LAN port is on the pool house switch",
+      (lp?.rows || []).some(r => /MDX-8/.test(r.what)) && !(lm?.rows || []).some(r => /MDX-8/.test(r.what)));
     const one = advise(loadJob(fixtures.residence).job, loadJob(fixtures.residence).ix, CAT);
     t("power: a one-rack job reads as before (no rack name in the note)",
       one.power.length === 1 && one.notes.some(n => n.code === "power-none" && /no power conditioner on the job/.test(n.msg) && /^\d/.test(n.msg)));

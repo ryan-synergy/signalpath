@@ -9,6 +9,7 @@
    page prints it, the AI export lists it. */
 
 import { adapterName, adapterTag, describeNode } from "./names.js";
+import { zoneRacks } from "./sheets.js";
 
 export const SWITCH_TYPES = new Set(["avSwitch", "avbSwitch", "networkSwitch", "gateway"]);
 // the house LAN stand-in when a job needs Ethernet ports but has no LAN switch yet
@@ -151,15 +152,22 @@ export function networkPlan(job, ix, catalog) {
       lanSw = { id: HOUSE_LAN, type: "networkSwitch", model: "House LAN switch (to add)", virtual: true };
       switches.push(lanSw); members.set(HOUSE_LAN, new Map());
     }
-    for (const id of lanNeeds) add(lanSw.id, id, { lan: true });
+    // more than one rack, each with its own LAN switch (a pool house): a TV or box lands on
+    // the LAN switch in the rack that serves it; with only one LAN switch, everything goes there
+    const lanSws = switches.filter(d => role(d) === "lan" && d.type !== "gateway");
+    const { rackOf, zoneRack } = zoneRacks({ house: job.house, solutions: [sol] }, 0);
+    const rackOfNeed = id => rackOf[id] ?? zoneRack[ix.endpointZone[id] ?? s.locals[id]?.zone];
+    const lanFor = id => (lanSws.length > 1 && lanSws.find(sw => rackOf[sw.id] && rackOf[sw.id] === rackOfNeed(id))) || lanSw;
+    for (const id of lanNeeds) add(lanFor(id).id, id, { lan: true });
     // each AV network reaches the house LAN over one uplink (stacked switches share it)
     if (lanSw) {
       const linked = new Set();
       for (const sw of switches) {
         if (sw === lanSw || !["mxnet", "avb"].includes(role(sw))) continue;
         const stack = [...members.get(sw.id).keys()].filter(id => s.devices[id] && role(s.devices[id]) === role(sw));
-        if (members.get(lanSw.id).has(sw.id) || stack.some(id => linked.has(id))) { linked.add(sw.id); continue; }
-        add(lanSw.id, sw.id); add(sw.id, lanSw.id); linked.add(sw.id);
+        const lan = lanFor(sw.id);
+        if (members.get(lan.id).has(sw.id) || stack.some(id => linked.has(id))) { linked.add(sw.id); continue; }
+        add(lan.id, sw.id); add(sw.id, lan.id); linked.add(sw.id);
       }
     }
     if (!switches.length) continue;

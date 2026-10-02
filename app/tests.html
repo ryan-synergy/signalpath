@@ -3883,6 +3883,42 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t("rack drawing: every item is named beside the rack on a leader line, with its height", (svgOn.match(/<polyline /g) || []).length === r.items.length && /Anthem MDX-16 <tspan[^>]*>· 2U</.test(svgOn));
     t("rack drawing: the rail height is dimensioned (U and inches)", svgOn.includes(`${r.size}U · ${(r.size * 1.75).toFixed(1)}" of rail`));
   }
+  {   // the rack page: drag to arrange, in a rack or across racks (Ryan 2026-10-02)
+    const RK = await import("./rack.js");
+    const est = structuredClone(fixtures.estate), sol = est.solutions[0];
+    const plans = () => { const Lx = loadJob(structuredClone(est)); return advise(Lx.job, Lx.ix, CAT).racks; };
+    const P0 = plans(), main0 = P0.find(p => p.rack === "rack-main");
+    t("rack page: every box has a key and a row; spacers have neither key; nothing overlaps",
+      main0.items.every(i => Number.isInteger(i.row)) && main0.items.filter(i => i.kind === "device").every(i => i.key === i.id)
+      && main0.items.every((a, k) => main0.items.every((b, j) => j === k || a.row + a.u <= b.row || b.row + b.u <= a.row)));
+    const sw0 = main0.items.find(i => i.key === "sw-main").row;
+    let m = RK.moveRackItem(sol, P0, { from: "rack-main", key: "mrx540", to: "rack-main", row: 20 });
+    const P1 = plans(), main1 = P1.find(p => p.rack === "rack-main");
+    t("rack page: a box dropped at a row stays there; the rest of the rack stays put",
+      m.ok && main1.manual && main1.items.find(i => i.key === "mrx540").row === 20 && main1.items.find(i => i.key === "sw-main").row === sw0);
+    const kitKey = main1.items.find(i => i.kit)?.key;
+    m = RK.moveRackItem(sol, P1, { from: "rack-main", key: kitKey, to: "rack-pool", row: 10 });
+    t("rack page: an encoder kit won't leave its sources' rack (it says why)", !m.ok && /stays with its sources/.test(m.msg));
+    m = RK.moveRackItem(sol, plans(), { from: "rack-main", key: "mdx16", to: "rack-pool", row: 12 });
+    const P2 = plans(), pool2 = P2.find(p => p.rack === "rack-pool");
+    const Lp = loadJob(structuredClone(est)), pw = advise(Lp.job, Lp.ix, CAT).power;
+    t("rack page: dragged to the pool house rack, the amp moves there for real — the layout, and its power load, follow",
+      m.ok && sol.racks[1].devices.some(d => d.id === "mdx16") && !sol.racks[0].devices.some(d => d.id === "mdx16")
+      && pool2.items.find(i => i.key === "mdx16")?.row === 12 && pw.find(p => p.rack === "rack-pool").loads.some(l => /MDX-16/.test(l.what)));
+    t("rack page: gaps fill with vents around the moved amp", pool2.items.some(i => i.kind === "vent" && i.row + i.u === 12) && pool2.items.some(i => i.kind === "vent" && i.row === 14));
+    const mdx8row = pool2.items.find(i => i.key === "mdx8").row;
+    m = RK.moveRackItem(sol, P2, { from: "rack-pool", key: "mdx16", to: "rack-pool", row: mdx8row });
+    const P3 = plans(), pool3 = P3.find(p => p.rack === "rack-pool");
+    t("rack page: dropped on a box the same height, the two swap", pool3.items.find(i => i.key === "mdx16").row === mdx8row && pool3.items.find(i => i.key === "mdx8").row === 12);
+    RK.moveRackItem(sol, P3, { from: "rack-pool", key: "mdx8", to: "rack-pool", row: mdx8row - 2 });
+    const pool4 = plans().find(p => p.rack === "rack-pool");
+    t("rack page: two amps stacked with no gap → a spacing warning, not a block", pool4.spacing.some(w => /no vent (above|below)/.test(w)), pool4.spacing.join(" | "));
+    RK.resetRackLayout(sol, "rack-pool");
+    t("rack page: Reset to auto goes back to the build-order stack", !sol.racks[1].layout && !plans().find(p => p.rack === "rack-pool").manual);
+    const bad = structuredClone(fixtures.estate); bad.solutions[0].racks[0].layout = { mdx16: "top", mrx540: -3, "sw-main": 2.5, cbx: 7 };
+    const nb = loadJob(bad).job.solutions[0].racks[0].layout;
+    t("rack page: a saved layout keeps whole rows only (junk dropped on load)", JSON.stringify(nb) === JSON.stringify({ cbx: 7 }));
+  }
   {   // floor-rack quick reference (Middle Atlantic + Strong, makers' sheets, on casters)
     const RS = await import("./racksizes.js"), q = RS.rackReference(42);
     const ma = q.models.filter(m => m.brand === "Middle Atlantic"), st = q.models.filter(m => m.brand === "Strong");

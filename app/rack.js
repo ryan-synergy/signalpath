@@ -54,6 +54,77 @@ function spaceRack(items, size) {
   items.splice(0, items.length, ...out);
 }
 
+// a stable handle for each box on the rack page: a device by its id, a shelf by its first box,
+// a rack kit and a patch panel by their place among their kind
+function keyItems(items) {
+  const seen = {};
+  for (const i of items) {
+    if (i.kind === "device") i.key = i.id;
+    else if (i.kind === "shelf" && !i.kit) i.key = i.memberIds?.length ? `shelf:${i.memberIds[0]}` : `shelf:${seen.shelf = (seen.shelf || 0) + 1}`;
+    else if (i.kit) i.key = `kit:${i.kit}:${seen[i.kit] = (seen[i.kit] || 0) + 1}`;
+    else if (i.kind === "patch") i.key = `patch:${seen.patch = (seen.patch || 0) + 1}`;
+  }
+}
+// the build-order stack: gear dresses the top; receivers, amps and power sit on the floor
+// (only when it all fits — an over-full rack just stacks in order)
+function autoRows(items, size) {
+  const used = items.reduce((n, i) => n + i.u, 0);
+  const low = used > size ? [] : items.filter(i => i.tier >= 4);
+  let row = 0;
+  for (const it of items) {
+    if (it === low[0]) row = size - low.reduce((n, i) => n + i.u, 0);
+    it.row = row; row += it.u;
+  }
+}
+/* the rack as arranged by hand: each box at its saved row (rows from the top); a box with no saved
+   row (added since) takes the first free space — from the floor up for receivers / amps / power,
+   from the top down for the rest. Then the spacers fill each gap the way spaceRack would (brush plate
+   under the patch panels and the router, vents round hot and warm gear; a short gap is all vent),
+   and a rule the arrangement breaks comes back as a warning instead of being forced. */
+function manualRows(items, size, layout) {
+  const real = items.filter(i => i.key), taken = new Set();
+  const free = (row, u) => { if (row < 0) return false; for (let k = row; k < row + u; k++) if (taken.has(k)) return false; return true; };
+  const take = (it, row) => { it.row = row; for (let k = row; k < row + it.u; k++) taken.add(k); };
+  const pinned = real.filter(i => Number.isInteger(layout[i.key])).sort((a, b) => layout[a.key] - layout[b.key]);
+  for (const it of pinned) if (free(layout[it.key], it.u)) take(it, layout[it.key]); else it.row = null;
+  for (const it of real.filter(i => i.row == null)) {
+    let row = -1;
+    if (it.tier >= 4) { for (let r = size - it.u; r >= 0 && row < 0; r--) if (free(r, it.u)) row = r; }
+    else for (let r = 0; r + it.u <= size && row < 0; r++) if (free(r, it.u)) row = r;
+    if (row < 0) { row = size; while (!free(row, it.u)) row++; }   // no room: past the floor (shows over-full)
+    take(it, row);
+  }
+  real.sort((a, b) => a.row - b.row);
+  const type = i => i.kind === "device" ? i.type : null;
+  const warmish = i => WARM.has(type(i)) || i.kind === "shelf";
+  const out = [], warnings = [];
+  const spacer = (kind, row, u) => ({ kind, tier: 0, u, row, label: kind === "brush" ? "Brush plate" : "Vent panel" });
+  real.forEach((b, k) => {
+    const a = real[k - 1];
+    if (a) {
+      let r0 = a.row + a.u, gap = b.row - r0;
+      const ta = type(a), tb = type(b);
+      const brush = a.kind === "patch" && b.kind !== "patch" || (ta === "gateway" && SWITCHES.has(tb)) || (tb === "gateway" && SWITCHES.has(ta));
+      const below = HOT.has(ta) || warmish(a), above = HOT.has(tb);
+      if (gap <= 0) {
+        if (HOT.has(ta)) warnings.push(`${a.label}: no vent below it`);
+        else if (warmish(a)) warnings.push(`${a.label}: no space after it — it runs warm`);
+        if (above) warnings.push(`${b.label}: no vent above it`);
+      } else {
+        if (brush) { out.push(spacer("brush", r0, 1)); r0++; gap--; }
+        if (gap > 0 && gap <= 4) { while (gap > 0) { const u = gap >= 2 ? 2 : 1; out.push(spacer("vent", r0, u)); r0 += u; gap -= u; } }
+        else if (gap > 4) {   // a big open stretch: vent next to the gear that needs it, open space between
+          if (below) { out.push(spacer("vent", r0, 1)); }
+          if (above) { out.push(spacer("vent", b.row - 2, 2)); }
+        }
+      }
+    }
+    out.push(b);
+  });
+  items.splice(0, items.length, ...out.sort((x, y) => x.row - y.row));
+  return warnings;
+}
+
 export function rackPlans(job, ix, catalog) {
   const out = [];
   const cat = ref => ref ? catalog?.devices?.[ref] : null;
@@ -68,7 +139,7 @@ export function rackPlans(job, ix, catalog) {
     (sol.racks || []).forEach((r, ri) => {
       // 1–60U: a typo'd 4200 would draw 4,200 rows and stall the page
       const size = Math.min(60, Math.max(1, Math.floor(+r.units || +job.job?.rackUnits || DEFAULT_RACK_U) || DEFAULT_RACK_U));
-      const items = [], unknown = [], rear = [], small = [], cboxes = [];
+      const items = [], unknown = [], rear = [], small = [], cboxes = [], smallIds = [], cboxIds = [];
       const cat6 = cat6runs.filter(x => (x.racks?.length ? x.racks : [main]).includes(r.id)).reduce((n, x) => n + x.count, 0);
       if (cat6) for (let k = 0; k < Math.ceil(cat6 / PATCH_PORTS); k++)
         items.push({ kind: "patch", tier: 0, u: 1, label: `Cat6 patch panel ${PATCH_PORTS}-port${Math.ceil(cat6 / PATCH_PORTS) > 1 ? ` (${k + 1})` : ""}` });
@@ -79,8 +150,8 @@ export function rackPlans(job, ix, catalog) {
         const u = typeof c?.rackUnits === "number" ? c.rackUnits : null;
         const tier = TIER[d.type] ?? 2;
         // an MXNet control box rides the platform's rack kit when there is one (placed below)
-        if (u == null && d.type === "controlBox" && /CBOX/i.test(`${d.model || ""} ${c?.model || ""}`)) { cboxes.push(name); continue; }
-        if (u == null && (d.type === "source" || c?.desktop)) { small.push(name); continue; }
+        if (u == null && d.type === "controlBox" && /CBOX/i.test(`${d.model || ""} ${c?.model || ""}`)) { cboxes.push(name); cboxIds.push(d.id); continue; }
+        if (u == null && (d.type === "source" || c?.desktop)) { small.push(name); smallIds.push(d.id); continue; }
         // no height in the catalog, or one the catalog marks to confirm (Ryan 2026-10-01: Savant PAV
         // modules drawn 1U, flagged "need to confirm") — either way the elevation shows it and the advisor asks
         const confirm = u == null || !!c?.rackUnitsConfirm;
@@ -97,14 +168,14 @@ export function rackPlans(job, ix, catalog) {
         const ce = cat(companionRef(comp, tenG));
         const label = `${ce?.model || "Encoder"} (${host.model || host.id})`;
         const g = ce?.gen?.startsWith("1g") ? "1g" : ce?.gen || null;
-        if (g) (byGen[g] ||= []).push({ label, model: ce?.model || "" }); else small.push(label);
+        if (g) (byGen[g] ||= []).push({ label, model: ce?.model || "" }); else { small.push(label); smallIds.push(null); }
       }
       const kits = Object.entries(catalog?.devices || {}).filter(([, c]) => c.rackKit && typeof c.rackUnits === "number");
       for (const [g, members] of Object.entries(byGen)) {
         const fit = kits.filter(([, c]) => c.rackKit.gen === g).sort((x, y) => x[1].rackKit.holds - y[1].rackKit.holds);
         // an endpoint a kit won't take (AVPro: Dante encoders don't fit the 1G racks) rides a shelf
         const fits = m => fit.length && !fit.every(([, c]) => c.rackKit.excludes && m.model.toUpperCase().includes(c.rackKit.excludes));
-        small.push(...members.filter(m => !fits(m)).map(m => m.label));
+        for (const m of members.filter(m => !fits(m))) { small.push(m.label); smallIds.push(null); }
         let rest = members.filter(fits).map(m => m.label);
         // a big MXNet system starts with the big kit (Ryan 2026-10-02: "start with an AC-MXNET-1G-R15") —
         // more than two R2s' worth of endpoints goes in the largest kit first (the control box rides in its own place)
@@ -123,18 +194,19 @@ export function rackPlans(job, ix, catalog) {
       }
       // the control box goes in a kit already in the rack (AVPro: the R15 and 10G-HDRACK have a CBOX
       // place beyond their slots; the R2 takes it in a slot) — else it rides a shelf like before
-      for (const cb of cboxes) {
+      for (const [ci, cb] of cboxes.entries()) {
         const kitItems = items.filter(i => i.kitSpec);
         const extra = kitItems.find(i => i.kitSpec.cbox === "extra" && !i.cbox);
         const slot = kitItems.find(i => i.kitSpec.cbox === "slot" && i.members.length < i.kitSpec.holds);
         const home = extra || slot;
-        if (!home) { small.push(cb); continue; }
+        if (!home) { small.push(cb); smallIds.push(cboxIds[ci]); continue; }
         home.members.push(cb); if (home === extra) home.cbox = cb;
         const n = home.members.length - (home.cbox ? 1 : 0);
         home.label = `${home.kit} (${n}/${home.kitSpec.holds}${home.cbox ? " + control box" : ""}): ${home.members.join(", ")}`;
       }
       for (let k = 0; k < small.length; k += PER_SHELF)
-        items.push({ kind: "shelf", tier: 3, u: SHELF_U, label: `Shelf: ${small.slice(k, k + PER_SHELF).join(", ")}`, members: small.slice(k, k + PER_SHELF) });
+        items.push({ kind: "shelf", tier: 3, u: SHELF_U, label: `Shelf: ${small.slice(k, k + PER_SHELF).join(", ")}`, members: small.slice(k, k + PER_SHELF),
+          memberIds: smallIds.slice(k, k + PER_SHELF).filter(Boolean) });
       items.sort((a, b) => a.tier - b.tier);   // stable by tier
       // half-width boxes pair up side by side
       for (let i = 0; i < items.length; i++) {
@@ -143,8 +215,13 @@ export function rackPlans(job, ix, catalog) {
         const j = items.findIndex((b, k) => k > i && b.half && !b.pairedWith && b.u === a.u);
         if (j > 0) { a.pairedWith = items[j].label; items.splice(j, 1); a.label = `${a.label} | ${a.pairedWith}`; }
       }
-      spaceRack(items, size);
+      keyItems(items);
+      // arranged by hand on the rack page (rack.layout = { key: row from the top }) — the gear goes
+      // where it was put and the spacers fill in around it; otherwise the build-order stack
+      const manual = r.layout && typeof r.layout === "object" && Object.keys(r.layout).length > 0;
+      const spacing = manual ? manualRows(items, size, r.layout) : (spaceRack(items, size), autoRows(items, size), []);
       const used = items.reduce((n, i) => n + i.u, 0);
+      const bottom = items.reduce((n, i) => Math.max(n, i.row + i.u), 0);
       // the rack hardware the elevation implies — part numbers come from the job
       // (RACK tab) or a kit's catalog entry; anything nobody has filled in is "?"
       const parts = job.job?.rackParts || {};
@@ -161,9 +238,55 @@ export function rackPlans(job, ix, catalog) {
       for (const i of items.filter(i => i.kit)) kitQty[i.kit] = (kitQty[i.kit] || 0) + 1;
       for (const [kit, qty] of Object.entries(kitQty)) hardware.push({ key: "kit", item: `MXNet rack kit, ${items.find(i => i.kit === kit).u}U`, qty, partNo: kit });
       out.push({ solution: sol.id, rack: r.id, name: r.name || "Equipment Rack", size, used, spare: size - used,
-        over: Math.max(0, used - size), items, unknown, rear, cat6,
+        over: Math.max(0, manual ? bottom - size : used - size), items, unknown, rear, cat6, manual, spacing,
         hardware: hardware.filter(h => h.qty > 0) });
     });
   }
   return out;
 }
+
+/* ---------- the rack page: drag a box to a row, in its rack or another (Ryan 2026-10-02) ----------
+   `plans` = this solution's rack plans (advise().racks). The first move in a rack freezes the
+   rest of that rack where it stands, so only what was dragged moves. Dropped onto a box the same
+   height → the two swap; onto anything else → what was there makes room (it re-flows to the
+   nearest free space). Into another rack → the device moves there for real (wiring, power and
+   patch counts follow); a shelf takes its boxes along; an encoder kit follows its sources, and a
+   patch panel follows the runs — those two only move within their rack. Returns a message. */
+export function moveRackItem(sol, plans, { from, key, to, row }) {
+  const rackOf = id => (sol.racks || []).find(r => r.id === id);
+  const fromR = rackOf(from), toR = rackOf(to), fromP = plans.find(p => p.rack === from), toP = plans.find(p => p.rack === to);
+  if (!fromR || !toR || !fromP || !toP) return { ok: false, msg: "That rack isn't on this solution" };
+  const it = fromP.items.find(i => i.key === key);
+  if (!it) return { ok: false, msg: "Nothing to move there" };
+  row = Math.max(0, Math.round(row));
+  const freeze = (r, p) => { if (!r.layout || !Object.keys(r.layout).length) { r.layout = {}; for (const i of p.items) if (i.key) r.layout[i.key] = i.row; } };
+  freeze(fromR, fromP); freeze(toR, toP);
+  if (from !== to) {
+    const ids = it.kind === "device" ? [it.id] : it.kind === "shelf" && !it.kit ? it.memberIds || [] : null;
+    if (!ids || !ids.length) return { ok: false, msg: it.kit ? "An encoder kit stays with its sources' rack" : "A patch panel follows the runs — it stays in its rack" };
+    for (const id of ids) {
+      const k = fromR.devices.findIndex(d => d.id === id);
+      if (k >= 0) toR.devices.push(...fromR.devices.splice(k, 1));
+    }
+    delete fromR.layout[key];
+  }
+  // what's in the way at the drop
+  const hits = toP.items.filter(i => i.key && i.key !== key && i.row < row + it.u && row < i.row + i.u);
+  if (hits.length === 1 && hits[0].u === it.u && hits[0].row === row && from === to) toR.layout[hits[0].key] = it.row;   // swap
+  else {   // make room: each box in the way goes to the nearest free space — just below the drop first, then above
+    const taken = new Set();
+    for (const i of toP.items) if (i.key && i.key !== key && !hits.includes(i)) for (let k = i.row; k < i.row + i.u; k++) taken.add(k);
+    for (let k = row; k < row + it.u; k++) taken.add(k);
+    const free = (r0, u) => r0 >= 0 && r0 + u <= toP.size && [...Array(u).keys()].every(k => !taken.has(r0 + k));
+    for (const h of hits) {
+      let at = null;
+      for (let d = 0; d <= toP.size && at == null; d++) { if (free(row + it.u + d, h.u)) at = row + it.u + d; else if (free(row - h.u - d, h.u)) at = row - h.u - d; }
+      if (at == null) { delete toR.layout[h.key]; continue; }
+      toR.layout[h.key] = at; for (let k = at; k < at + h.u; k++) taken.add(k);
+    }
+  }
+  toR.layout[key] = row;
+  return { ok: true, msg: from === to ? `Moved ${it.label}` : `Moved ${it.label} to ${toR.name}` };
+}
+// back to the build-order stack
+export function resetRackLayout(sol, rackId) { const r = (sol.racks || []).find(x => x.id === rackId); if (r) delete r.layout; }

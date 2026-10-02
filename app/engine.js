@@ -195,7 +195,12 @@ export function normalizeJob(job) {
     sol.platforms = Array.isArray(sol.platforms) ? sol.platforms.filter(x => typeof x === "string") : [];
     if (sol.audioNetwork != null && typeof sol.audioNetwork !== "string") delete sol.audioNetwork;
     for (const k of ["racks", "localDevices", "companions", "connections", "annotations"]) list(sol, k);
-    sol.racks.forEach((r, i) => { scalars(r); if (typeof r.name !== "string" || !r.name.trim()) r.name = i ? `Rack ${i + 1}` : "Equipment Rack"; list(r, "devices").forEach(scalars); });
+    sol.racks.forEach((r, i) => { scalars(r); if (typeof r.name !== "string" || !r.name.trim()) r.name = i ? `Rack ${i + 1}` : "Equipment Rack"; list(r, "devices").forEach(scalars);
+      // a rack arranged by hand on the rack page: { key: row from the top } — whole rows only
+      if (r.layout != null) {
+        if (typeof r.layout !== "object" || Array.isArray(r.layout)) delete r.layout;
+        else for (const [k, v] of Object.entries(r.layout)) if (!Number.isInteger(v) || v < 0 || v > 120) delete r.layout[k];
+      } });
     for (const k of ["localDevices", "companions", "connections"]) sol[k].forEach(scalars);
     sol.connections = sol.connections.filter(c => c.from != null && c.to != null);
   }
@@ -4733,6 +4738,8 @@ export function advise(job, ix = indexJob(job), catalog = null) {
   for (const r of out.racks) {
     if (r.over) out.notes.push({ code: "rack-full", solution: r.solution, ref: r.rack,
       msg: `${r.name}: ${r.used}U of gear, shelves, vents and patch panels in a ${r.size}U rack — ${r.over}U over; a bigger rack or a second one` });
+    // arranged by hand on the rack page: a spacing rule the arrangement breaks (amp with no vent…)
+    for (const w of r.spacing || []) out.notes.push({ code: "rack-spacing", solution: r.solution, rack: r.rack, msg: `${r.name}: ${w}` });
     if (r.unknown.length) out.notes.push({ code: "rack-unknown-u", solution: r.solution, ref: r.rack,
       msg: `${r.name}: rack height needs to be confirmed for ${r.unknown.join(", ")} — drawn as 1U on the elevation` });
   }

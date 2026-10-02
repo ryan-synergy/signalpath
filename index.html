@@ -296,6 +296,19 @@
   .libov .it:hover { background: #eef1f5; }
   .libov .it.on { background: #e6eef9; border-left-color: var(--accent); }
   .libov .it .m { font-size: 13px; } .libov .it .s { font-size: 11px; color: #888; margin-top: 1px; }
+  /* the rack page: racks side by side, to scale, every box draggable (Ryan 2026-10-02) */
+  #rackEd .card { width: min(1500px, 98vw); height: 94vh; }
+  #rackEd .rkbody { flex: 1; overflow: auto; display: flex; gap: 28px; padding: 16px 20px; align-items: flex-start; background: #fafbfc; }
+  #rackEd .rkcol { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; flex: none; max-width: 100%; }
+  #rackEd .rkhd { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  #rackEd .rkhd b { font-size: 14px; margin-right: auto; }
+  #rackEd .rkhd .badge { font-size: 11px; }
+  #rackEd .rkwarn { font-size: 12px; color: #a45a12; margin-top: 6px; max-width: 520px; }
+  #rackEd .rkwarn.over { color: var(--bad); font-weight: 600; }
+  #rackEd .rk-item:hover rect:first-child { stroke: #e8842c; stroke-width: 1.6; }
+  #rackEd .rk-item.dragging { opacity: .35; }
+  #rkGhost { position: fixed; z-index: 70; pointer-events: none; border: 2px solid #e8842c; background: rgba(232,132,44,.18); border-radius: 3px;
+    font: 600 12px/1.2 inherit; color: #6b3a0e; padding: 2px 6px; display: none; overflow: hidden; white-space: nowrap; }
   /* kit list: an eye per kit shows or hides it in ＋ New job (Ryan 2026-10-02) */
   .libov .it.kit { display: flex; align-items: center; gap: 8px; } .libov .it.kit .tx { flex: 1; min-width: 0; }
   .libov .it .eye { min-height: 0; width: 44px; height: 44px; padding: 0; border: 1px solid transparent; background: transparent; border-radius: 8px; display: grid; place-items: center; color: #556; flex: none; }
@@ -500,25 +513,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002222600",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002222600",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002222600",
-    "./app/ports.js": "./app/ports.js?v=20261002222600",
-    "./app/commands.js": "./app/commands.js?v=20261002222600",
-    "./app/engine.js": "./app/engine.js?v=20261002222600",
-    "./app/exports.js": "./app/exports.js?v=20261002222600",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002222600",
-    "./app/hookup.js": "./app/hookup.js?v=20261002222600",
-    "./app/importers.js": "./app/importers.js?v=20261002222600",
-    "./app/library.js": "./app/library.js?v=20261002222600",
-    "./app/names.js": "./app/names.js?v=20261002222600",
-    "./app/network.js": "./app/network.js?v=20261002222600",
-    "./app/pages.js": "./app/pages.js?v=20261002222600",
-    "./app/power.js": "./app/power.js?v=20261002222600",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002222600",
-    "./app/rack.js": "./app/rack.js?v=20261002222600",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002222600",
-    "./app/starters.js": "./app/starters.js?v=20261002222600"
+    "./app/ai.js": "./app/ai.js?v=20261002231625",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002231625",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002231625",
+    "./app/ports.js": "./app/ports.js?v=20261002231625",
+    "./app/commands.js": "./app/commands.js?v=20261002231625",
+    "./app/engine.js": "./app/engine.js?v=20261002231625",
+    "./app/exports.js": "./app/exports.js?v=20261002231625",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002231625",
+    "./app/hookup.js": "./app/hookup.js?v=20261002231625",
+    "./app/importers.js": "./app/importers.js?v=20261002231625",
+    "./app/library.js": "./app/library.js?v=20261002231625",
+    "./app/names.js": "./app/names.js?v=20261002231625",
+    "./app/network.js": "./app/network.js?v=20261002231625",
+    "./app/pages.js": "./app/pages.js?v=20261002231625",
+    "./app/power.js": "./app/power.js?v=20261002231625",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002231625",
+    "./app/rack.js": "./app/rack.js?v=20261002231625",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002231625",
+    "./app/starters.js": "./app/starters.js?v=20261002231625"
 } }
 </script>
 <script>
@@ -656,6 +669,12 @@
   <div class="ft"><button id="stCancel">Cancel</button></div>
 </div></div>
 
+<div id="rackEd" class="libov" role="dialog" aria-modal="true" aria-labelledby="rkTitle"><div class="card">
+  <div class="hd"><div class="t" id="rkTitle">Rack page — drag gear to arrange it</div>
+    <span class="mini" id="rkHint">Drag a box up or down, or onto another rack. Drop on a box the same height to swap. Vents and brush plates fill in on their own.</span>
+    <button id="rkUndo">↶ Undo</button><button class="primary" id="rkClose">Done</button></div>
+  <div class="rkbody" id="rkBody"></div>
+</div></div>
 <div id="library" class="libov"><div class="card">
   <div class="hd"><div class="t">Device library</div>
     <input id="libQ" type="search" placeholder="Search brand, model, part #" autocomplete="off">
@@ -691,11 +710,11 @@ import { importAny, mergeHouse, drawFromWalk, decodeHandoff, stripUnsafe } from 
 import { sheetGroups, sheetJob } from "./app/sheets.js";
 import { LIB_TYPES, typeLabel, SIGNALS as LIB_SIGNALS, TYPE_IO, LIB_SECTIONS, SELECTS, BEHAVIOURS, tagsOf, newId, blankDevice, duplicateDevice, checkEntry, exportLibrary, planImport, applyImport, tidyStarterStore } from "./app/library.js";
 import { planQueueFiles, aiReviewMarkdown } from "./app/exports.js";
-import { RACK_SIZES, DEFAULT_RACK_U } from "./app/rack.js";
+import { RACK_SIZES, DEFAULT_RACK_U, moveRackItem, resetRackLayout } from "./app/rack.js";
 import { specFor, specNum, tidyPort, NET_ROLE_NAME } from "./app/network.js";
 import { assignPorts, jacksOf, plugCandidates, familyName } from "./app/ports.js";
 import { startAsBuilt, asBuiltChanges, changeMarks, isAsBuilt, installRows, installCSV, tidyMac } from "./app/asbuilt.js";
-import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV, labelsCSV, rackFrontSVG, rackData, wireLabels } from "./app/pages.js";
+import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV, labelsCSV, rackFrontSVG, rackEditSVG, rackData, wireLabels } from "./app/pages.js";
 import { parseQuick, quickSuggest } from "./app/quickadd.js";
 import { rackReference } from "./app/racksizes.js";
 import { STARTERS, applyStarter, starterFromJob, listStarters, duplicateStarter } from "./app/starters.js";
@@ -734,7 +753,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002222600").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002231625").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -786,7 +805,7 @@ function syncShippedCatalog() {
   return changed;
 }
 // advisor notes that ask for a fix (the rest are reference: setup checklists, budgets)
-const ACTION_NOTES = new Set(["no-port", "tv-apps-no-surround", "input-module-idle", "bullet-too-far", "bullet-arc", "run-too-long", "downres-surround", "amp-sub-outs", "earc-extender", "mxnet-no-cbox", "dante-no-controller", "mxnet-cbox-per-platform", "net-mismatch", "net-mixed",
+const ACTION_NOTES = new Set(["rack-spacing", "no-port", "tv-apps-no-surround", "input-module-idle", "bullet-too-far", "bullet-arc", "run-too-long", "downres-surround", "amp-sub-outs", "earc-extender", "mxnet-no-cbox", "dante-no-controller", "mxnet-cbox-per-platform", "net-mismatch", "net-mixed",
   "dante-multicast", "pcm-only", "switch-ports-full", "switch-no-poe", "lan-no-switch", "power-none", "power-short", "power-tight",
   "power-circuit", "power-peak", "rack-full", "rack-unknown-u", "rack-heat"]);
 const saveSettings = () => dbPut({ id: "__settings", updated: Date.now(), settings: SETTINGS });
@@ -1714,7 +1733,7 @@ $("#canvas").addEventListener("click", e => {
   if (zc) { clearSel(); openZone(zc.dataset.zone); return; }
   // a rack's name opens the RACK tab at that rack (size, elevation, power)
   const rl = e.target.closest("[data-rack]");
-  if (rl) { clearSel(); switchTab("rack"); renderPanel(); flashRow(`[data-rackid="${CSS.escape(rl.dataset.rack)}"]`); return; }
+  if (rl) { clearSel(); switchTab("rack"); renderPanel(); openRackEd(); return; }   // a rack's name opens the rack page
   // the title block (client, project, revisions) opens the JOB tab at the client
   const svg = $("#canvas svg"), m = svg.getScreenCTM?.();
   if (m) {
@@ -2258,7 +2277,7 @@ function rackHTML(o = {}) {
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       ${field("Rack size", `<select class="rsize" data-rack="${esc(rr.id)}">${RACK_SIZES.map(n => `<option value="${n}" ${(+rr.units || +S.job.job.rackUnits || DEFAULT_RACK_U) === n ? "selected" : ""}>${n}U</option>`).join("")}</select>`)}
       ${r ? `<div class="mini" style="margin:4px 0">${r.used}U used · ${r.over ? `<b style="color:#b32017">${r.over}U over</b>` : `${r.spare}U spare`}${r.cat6 ? ` · ${r.cat6} Cat6 home runs` : ""}${r.unknown.length ? ` · <span style="color:#a45a12">${r.unknown.length} height${r.unknown.length > 1 ? "s" : ""} unknown (?)</span>` : ""}</div>
-      <div class="rackview" style="background:#fff;border-radius:6px;padding:6px;margin:6px 0">${rackFrontSVG(r, 300, { kindColor: $("#kindColor").checked })}</div>
+      <div class="rackview rkopen" title="Open the rack page — drag to arrange" style="background:#fff;border-radius:6px;padding:6px;margin:6px 0;cursor:zoom-in">${rackFrontSVG(r, 300, { kindColor: $("#kindColor").checked })}</div>
       ${(() => { const ref = rackReference(r.size), n1 = v => String(Math.round(v * 10) / 10);   // floor racks this size, on casters
         return `<div class="mini" style="margin:6px 0 2px"><b>Floor racks — ${r.size}U</b> (${n1(ref.railIn)}" of rail) · outside, on casters</div>` + ref.models.map(m =>
           `<div class="mini" style="margin:2px 0 2px 8px${m.fit !== "exact" ? ";color:#888" : ""}">${esc(m.brand === "Middle Atlantic" ? "MA" : "Strong")} ${esc(m.model)}${m.fit !== "exact" ? ` <i>(${m.u}U — nearest ${m.fit})</i>` : ""}: ${n1(m.hc)}" H · ${n1(m.w)}" W · ${esc(m.depths.map(([o]) => n1(o)).join(" / "))}" D</div>`).join(""); })()}` : ""}
@@ -2302,6 +2321,67 @@ function encAudioHTML(sol, d) {
       ${t.local.length ? `<optgroup label="In a room">${t.local.map(x => o(x.id, x.label)).join("")}</optgroup>` : ""}</select>`);
   }).join("");
 }
+/* ---- the rack page (Ryan 2026-10-02): every rack of the solution side by side, to scale; drag a box
+   up / down or onto another rack. rack.js does the move (moveRackItem) and the re-layout; this is the
+   gesture: a ghost that snaps to whole U over whichever rack is under the finger. ---- */
+function openRackEd() { $("#rackEd").classList.add("show"); renderRackEd(); }
+function renderRackEd() {
+  if (!$("#rackEd").classList.contains("show")) return;
+  const { job, ix } = loadJob(effectiveJob(S.job, S.sol));
+  const a = advise(job, ix, effectiveCatalog()), solId = ix.solutions[S.sol]?.sol.id;
+  S.rkPlans = (a.racks || []).filter(r => r.solution === solId);
+  $("#rkUndo").disabled = !S.undo.length;
+  $("#rkBody").innerHTML = S.rkPlans.length ? S.rkPlans.map(r => `<div class="rkcol">
+      <div class="rkhd"><b>${esc(r.name)}</b><span class="badge">${r.used}U / ${r.size}U</span>
+        ${r.manual ? `<button class="rkreset" data-rack="${esc(r.rack)}" title="Back to the build-order stack">Reset to auto</button>` : `<span class="mini">auto — build order</span>`}</div>
+      ${rackEditSVG(r, { kindColor: $("#kindColor").checked })}
+      ${r.over ? `<div class="rkwarn over">Over by ${r.over}U — move something to another rack, or pick a bigger rack on the Rack tab</div>` : ""}
+      ${(r.spacing || []).map(w => `<div class="rkwarn">⚠ ${esc(w)}</div>`).join("")}</div>`).join("")
+    : `<div class="mini" style="padding:20px">No rack on this solution yet.</div>`;
+  $("#rkBody").querySelectorAll(".rkreset").forEach(b => b.onclick = () => {
+    pushUndo("reset rack layout"); resetRackLayout(S.job.solutions[S.sol], b.dataset.rack); refresh(); renderRackEd();
+  });
+  $("#rkBody").querySelectorAll(".rk-item").forEach(g => g.onpointerdown = rkStart);
+}
+function rkStart(e) {
+  if (e.button > 0) return;
+  e.preventDefault();
+  const g = e.currentTarget, box = g.querySelector("rect").getBoundingClientRect();
+  const it = S.rkPlans.find(p => p.rack === g.dataset.rack)?.items.find(i => i.key === g.dataset.key);
+  let ghost = $("#rkGhost");
+  if (!ghost) { ghost = document.createElement("div"); ghost.id = "rkGhost"; document.body.appendChild(ghost); }
+  ghost.textContent = it?.label || ""; ghost.style.display = "block";
+  Object.assign(ghost.style, { left: box.left + "px", top: box.top + "px", width: box.width + "px", height: box.height + "px" });
+  const drag = { key: g.dataset.key, from: g.dataset.rack, u: +g.dataset.u, row0: +g.dataset.row, dy: e.clientY - box.top, moved: false, target: null };
+  g.classList.add("dragging");
+  const move = ev => {
+    drag.moved ||= Math.abs(ev.clientY - (box.top + drag.dy)) > 3;
+    const svg = document.elementsFromPoint(ev.clientX, ev.clientY).map(el => el.closest?.("svg.rkedit")).find(Boolean);
+    if (!svg) { drag.target = null; Object.assign(ghost.style, { left: ev.clientX - box.width / 2 + "px", top: ev.clientY - drag.dy + "px", borderColor: "#b32017" }); return; }
+    const m = svg.getScreenCTM(), inv = m.inverse(), top = +svg.dataset.top, uPx = +svg.dataset.upx;
+    const p = new DOMPoint(ev.clientX, ev.clientY - drag.dy).matrixTransform(inv);
+    const row = Math.max(0, Math.min(+svg.dataset.rows + 2, Math.round((p.y - top) / uPx)));
+    const a = new DOMPoint(+svg.dataset.rx, top + row * uPx).matrixTransform(m), b = new DOMPoint(+svg.dataset.rx + +svg.dataset.rw, top + (row + drag.u) * uPx).matrixTransform(m);
+    drag.target = { to: svg.dataset.rackid, row };
+    Object.assign(ghost.style, { left: a.x + "px", top: a.y + "px", width: b.x - a.x + "px", height: b.y - a.y + "px", borderColor: "#e8842c" });
+  };
+  const up = () => {
+    removeEventListener("pointermove", move); removeEventListener("pointerup", up); removeEventListener("pointercancel", up);
+    ghost.style.display = "none"; g.classList.remove("dragging");
+    const t = drag.target;
+    if (!drag.moved || !t || (t.to === drag.from && t.row === drag.row0)) return;
+    pushUndo("arrange rack");
+    const res = moveRackItem(S.job.solutions[S.sol], S.rkPlans, { from: drag.from, key: drag.key, to: t.to, row: t.row });
+    if (!res.ok) { S.undo.pop(); syncUndo(); toast(res.msg); return; }
+    refresh(); renderRackEd(); toast(res.msg, true);
+  };
+  addEventListener("pointermove", move); addEventListener("pointerup", up); addEventListener("pointercancel", up);
+}
+$("#rkClose").onclick = () => { $("#rackEd").classList.remove("show"); renderPanel(); };
+$("#rkUndo").onclick = () => { undo(); renderRackEd(); };
+document.addEventListener("click", e => { if (e.target.closest(".rkopen")) { e.preventDefault(); openRackEd(); } });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#rackEd").classList.contains("show")) $("#rkClose").click(); });
+
 /* RACK tab (build order, Ryan 2026-10-02): one place per rack — its boxes first (what used to be
    GEAR: each box, its product, its connections), then the elevation, heights / cords / watts,
    rack hardware and power & heat folded under one line. */
@@ -2312,7 +2392,7 @@ function rackTabHTML() {
   const strip = h => h.replace(/^\s*<div class="sect" data-rackid="[^"]*">[\s\S]*?<\/div>/, "");   // the rack's name already heads its boxes
   return g.driftBar + sol.racks.map(r => {
     const key = "rk:" + r.id;
-    return g.parts[r.id] + `<details class="more rackdet" data-more="${esc(key)}" ${S.openRows.has(key) ? "open" : ""}><summary>Elevation · heights · power${k.badge[r.id] ? ` — ${esc(k.badge[r.id])}` : ""}</summary>${strip(k.parts[r.id] || "")}</details>`;
+    return g.parts[r.id] + `<button class="addbtn rkopen" style="margin:4px 0">⤢ Open the rack page — drag to arrange${k.badge[r.id] ? ` (${esc(k.badge[r.id])})` : ""}</button><details class="more rackdet" data-more="${esc(key)}" ${S.openRows.has(key) ? "open" : ""}><summary>Elevation · heights · power${k.badge[r.id] ? ` — ${esc(k.badge[r.id])}` : ""}</summary>${strip(k.parts[r.id] || "")}</details>`;
   }).join("") + k.rest + g.footer;
 }
 

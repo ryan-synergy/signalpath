@@ -778,9 +778,9 @@ function rackTag(it) {
   if (it.kind !== "device") return "";
   return String(it.label).replace(BRAND, "").replace(/\s*\(Dante\)$/, "");
 }
-function drawRack(r, x0, top, uPx, { kindColor = true, bw = false, labelW = 280, fs = 11.5, dims = true } = {}) {
+function drawRack(r, x0, top, uPx, { kindColor = true, bw = false, labelW = 280, fs = 11.5, dims = true, interactive = false } = {}) {
   const out = [];
-  const rows = Math.max(r.size, r.used), ppi = uPx / 1.75;
+  const rows = Math.max(r.size, ...r.items.map(i => (i.row ?? 0) + i.u)), ppi = uPx / 1.75;
   const railW = 19 * ppi, frameW = 22 * ppi, rx = x0 + (frameW - railW) / 2, h = rows * uPx;
   out.push(`<rect x="${x0}" y="${top - uPx * 0.8}" width="${frameW}" height="${h + uPx * 1.6}" rx="3" fill="${bw ? "#444" : "#2b2e33"}"/>`);
   out.push(`<rect x="${rx}" y="${top}" width="${railW}" height="${h}" fill="#f4f5f7"/>`);
@@ -796,15 +796,13 @@ function drawRack(r, x0, top, uPx, { kindColor = true, bw = false, labelW = 280,
     out.push(`<g stroke="#8a93a3" stroke-width="0.8"><line x1="${dx}" y1="${top}" x2="${dx}" y2="${top + r.size * uPx}"/><line x1="${dx - 4}" y1="${top}" x2="${dx + 4}" y2="${top}"/><line x1="${dx - 4}" y1="${top + r.size * uPx}" x2="${dx + 4}" y2="${top + r.size * uPx}"/></g>
 <text transform="translate(${dx - 6} ${mid}) rotate(-90)" text-anchor="middle" font-size="${fs - 1}" fill="#555">${r.size}U · ${(r.size * 1.75).toFixed(1)}" of rail</text>`);
   }
-  // gear dresses the top; amps, receivers and power sit on the floor of the rack
-  // (only when it all fits — an over-full rack just stacks in order)
-  const low = r.over ? [] : r.items.filter(i => i.tier >= 4);
-  const lowStart = top + (r.size - low.reduce((n, i) => n + i.u, 0)) * uPx;
-  let y = top;
+  // each item sits at its row (rack.js: the build-order stack, or where it was put on the rack page)
   const marks = [];
   for (const it of r.items) {
-    if (it === low[0]) y = lowStart;
+    const y = top + (it.row ?? 0) * uPx;
     const ih = it.u * uPx, quiet = it.kind === "vent" || it.kind === "brush";
+    // on the rack page each box is a drag handle (spacers fill in on their own)
+    if (interactive && it.key) out.push(`<g class="rk-item" data-key="${esc(it.key)}" data-rack="${esc(r.rack)}" data-row="${it.row}" data-u="${it.u}" style="cursor:grab">`);
     const st = it.boxKind && KIND_STYLE[it.boxKind];
     const dark = it.kind === "device" && kindColor && !bw && st;
     const fill = dark ? st.tint : RACK_FILL[it.kind] || (it.kind === "device" ? "#fff" : TIER_FILL[it.tier] || "#fff");
@@ -814,8 +812,8 @@ function drawRack(r, x0, top, uPx, { kindColor = true, bw = false, labelW = 280,
     if (it.kind === "brush") out.push(`<rect x="${rx + railW * 0.18}" y="${y + ih / 2 - Math.min(2.5, ih * 0.18)}" width="${railW * 0.64}" height="${Math.min(5, ih * 0.36)}" rx="1.5" fill="#3a3d42"/>`);
     const tag = rackTag(it), tfs = Math.min(fs - 1, ih * 0.6, railW / Math.max(6, tag.length) * 1.75);
     if (tag && ih >= 9 && tfs >= 6) out.push(`<text x="${rx + railW / 2}" y="${y + ih / 2 + tfs * 0.36}" text-anchor="middle" font-size="${tfs.toFixed(1)}" font-weight="600" fill="${dark ? "#fff" : "#222"}">${esc(tag)}</text>`);
+    if (interactive && it.key) out.push(`</g>`);
     marks.push({ y: y + ih / 2, it, quiet });
-    y += ih;
   }
   // the labels column: in order, never closer than a line apart; pulled back up if they'd run past the rack
   const lx = x0 + frameW + 34, lh = fs + 3, maxCh = Math.floor(labelW / (fs * 0.55));
@@ -829,7 +827,15 @@ function drawRack(r, x0, top, uPx, { kindColor = true, bw = false, labelW = 280,
     out.push(`<polyline points="${rx + railW},${m.y} ${lx - 22},${m.y} ${lx - 5},${ly}" fill="none" stroke="${m.quiet ? "#d0d4da" : "#8a93a3"}" stroke-width="0.7"/>`);
     out.push(`<text x="${lx}" y="${ly + fs * 0.36}" font-size="${fs}" fill="${m.quiet ? "#9aa1ab" : "#222"}"${it.kind === "device" ? ' font-weight="600"' : ""}>${esc(name)} <tspan font-weight="400" fill="${it.guess ? "#a45a12" : "#999"}">· ${it.guess ? "?U" : it.u + "U"}</tspan></text>`);
   });
-  return { svg: out, width: lx - x0 + labelW, height: h + uPx * 2 };
+  return { svg: out, width: lx - x0 + labelW, height: h + uPx * 2, rails: { x: rx, w: railW, top, uPx, rows } };
+}
+// the rack page (drag to arrange): the same drawing, bigger, every box a handle; the SVG carries
+// where its rails are so a drop can be turned into a row
+export function rackEditSVG(r, look = {}) {
+  const rows = Math.max(r.size, ...r.items.map(i => (i.row ?? 0) + i.u));
+  const uPx = Math.max(9, Math.min(17, Math.floor(700 / (rows + 2)))), top = uPx + 4;
+  const d = drawRack(r, 46, top, uPx, { ...look, labelW: 250, fs: 11.5, interactive: true });
+  return `<svg class="rkedit" data-rackid="${esc(r.rack)}" data-top="${top}" data-upx="${uPx}" data-rows="${rows}" data-size="${r.size}" data-rx="${d.rails.x}" data-rw="${d.rails.w}" viewBox="0 0 ${46 + d.width + 6} ${d.height + 10}" width="${46 + d.width + 6}" style="touch-action:none;max-width:100%;height:auto" font-family="'Avenir Next', Avenir, 'Helvetica Neue', sans-serif">${d.svg.join("")}</svg>`;
 }
 // a standalone front view for the editor's RACK tab — the same drawing, sized for the panel
 export function rackFrontSVG(r, rw = 300, look = {}) {

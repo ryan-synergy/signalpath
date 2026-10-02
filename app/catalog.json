@@ -191,7 +191,8 @@
         }
       ],
       "portsSource": "https://www.sarte-audio.com/sites/default/files/manuales/MDX_Manual.pdf (Anthem MDX-16/MDX-8 Operating Manual) (high confidence, rear-panel audit 2026-09-29)",
-      "goTo": true
+      "goTo": true,
+      "powerUnpublished": true
     },
     "anthem-mdx-8": {
       "brand": "Anthem",
@@ -282,7 +283,8 @@
         }
       ],
       "portsSource": "https://www.sarte-audio.com/sites/default/files/manuales/MDX_Manual.pdf (Anthem MDX-16/MDX-8 Operating Manual) (high confidence, rear-panel audit 2026-09-29)",
-      "goTo": true
+      "goTo": true,
+      "powerUnpublished": true
     },
     "anthem-mrx-540-8k": {
       "brand": "Anthem",
@@ -2945,14 +2947,15 @@
         "wifiOrEthernet"
       ],
       "verified": true,
-      "notes": "One stereo zone, 2 amplified channels. 125W/ch RMS @8Ω (0.1% THD), roughly doubles into 4Ω (4Ω minimum load) — GOTCHA: several retailers title the SKU '250W' (125x2 summed, not per-channel); don't let that inflate a per-channel power figure in capacity math. 1x HDMI **ARC** input (not eARC) for TV sound — note the Amp is 2-channel only, so even over ARC it plays TV audio as a stereo downmix, no Atmos object/height decoding (contrast with the Arc Ultra/Beam Gen 2 soundbars below, which DO decode Atmos because they have the driver array for it). 1x stereo RCA line-in (turntable/CD), shareable/groupable to play on other Sonos rooms subject to the same 75ms line-in buffering as the Port (see headline note above). Auto-detecting sub output, adjustable 50–110Hz crossover. Dual 10/100 Ethernet (NOT gigabit — irrelevant for the Amp's own low-bitrate audio stream, but a hard ceiling if daisy-chaining other gear off it) or WiFi. Each of the 2 channels can drive 2 pairs of 8Ω speakers wired in parallel (4Ω net) — i.e. up to 4 speakers total (2 pairs) off one Amp, but they're all ONE volume zone; a second physical area needing independent volume needs its own Amp or a volume-control speaker selector downstream. NO 70V/100V capability — confirmed absent from every spec source found; Sonos amps are low-Z consumer-grade only, never spec this for a 70V distributed run. AUDIT 2026-09-27: optical in only via the Sonos Optical Audio Adapter (sold separately) on the HDMI port. POWER/RU 2026-09-27: 15W at 1/8 power, 7.3W idle; no rated max; shelf (Middle Atlantic RSHA-SONOS-AMP2/4) — Sonos support articles",
+      "notes": "One stereo zone, 2 amplified channels. 125W/ch RMS @8Ω (0.1% THD), roughly doubles into 4Ω (4Ω minimum load) — GOTCHA: several retailers title the SKU '250W' (125x2 summed, not per-channel); don't let that inflate a per-channel power figure in capacity math. 1x HDMI **ARC** input (not eARC) for TV sound — note the Amp is 2-channel only, so even over ARC it plays TV audio as a stereo downmix, no Atmos object/height decoding (contrast with the Arc Ultra/Beam Gen 2 soundbars below, which DO decode Atmos because they have the driver array for it). 1x stereo RCA line-in (turntable/CD), shareable/groupable to play on other Sonos rooms subject to the same 75ms line-in buffering as the Port (see headline note above). Auto-detecting sub output, adjustable 50–110Hz crossover. Dual 10/100 Ethernet (NOT gigabit — irrelevant for the Amp's own low-bitrate audio stream, but a hard ceiling if daisy-chaining other gear off it) or WiFi. Each of the 2 channels can drive 2 pairs of 8Ω speakers wired in parallel (4Ω net) — i.e. up to 4 speakers total (2 pairs) off one Amp, but they're all ONE volume zone; a second physical area needing independent volume needs its own Amp or a volume-control speaker selector downstream. NO 70V/100V capability — confirmed absent from every spec source found; Sonos amps are low-Z consumer-grade only, never spec this for a 70V distributed run. AUDIT 2026-09-27: optical in only via the Sonos Optical Audio Adapter (sold separately) on the HDMI port. POWER/RU 2026-09-27: input from Sonos line current at 120 V: ~25 W at 1/8 power (0.21 A), ~121 W full power into 3 Ω (1.01 A), 7.3 W idle (the 16 W \"1/8 power\" figure Sonos lists is heat dissipated, not input; verified 2026-10-02); shelf (Middle Atlantic RSHA-SONOS-AMP2/4) — Sonos support articles",
       "partNo": "Amp",
-      "powerTypicalW": 15,
+      "powerTypicalW": 25,
       "powerIdleW": 7.3,
       "desktop": true,
       "aliases": [
         "Amp (Gen 2, AMPG1US1)"
-      ]
+      ],
+      "powerMaxW": 121
     },
     "sonos-port": {
       "brand": "Sonos",
@@ -3376,7 +3379,8 @@
           "conn": "dante"
         }
       ],
-      "portsSource": "https://www.avproglobal.com/products/acp-hype-tetra (connections inferred identical to Hepta manual) (medium confidence, rear-panel audit 2026-09-29)"
+      "portsSource": "https://www.avproglobal.com/products/acp-hype-tetra (connections inferred identical to Hepta manual) (medium confidence, rear-panel audit 2026-09-29)",
+      "powerUnpublished": true
     },
     "audiocontrol-hype-penta": {
       "brand": "AudioControl",
@@ -3506,7 +3510,8 @@
           "conn": "dante"
         }
       ],
-      "portsSource": "https://www.avproglobal.com/products/acp-hype-penta (connections inferred identical to Hepta manual) (medium confidence, rear-panel audit 2026-09-29)"
+      "portsSource": "https://www.avproglobal.com/products/acp-hype-penta (connections inferred identical to Hepta manual) (medium confidence, rear-panel audit 2026-09-29)",
+      "powerUnpublished": true
     },
     "audiocontrol-hype-hepta": {
       "brand": "AudioControl",
@@ -3676,7 +3681,8 @@
           "conn": "dante"
         }
       ],
-      "portsSource": "https://avproglobal.egnyte.com/dd/QP7mhmT7VbCY (Hyperion Hepta manual) ; https://www.avproglobal.com/products/acp-hype-hepta (high confidence, rear-panel audit 2026-09-29)"
+      "portsSource": "https://avproglobal.egnyte.com/dd/QP7mhmT7VbCY (Hyperion Hepta manual) ; https://www.avproglobal.com/products/acp-hype-hepta (high confidence, rear-panel audit 2026-09-29)",
+      "powerUnpublished": true
     },
     "avpro-mxnet-sw24e": {
       "brand": "AVPro Edge",
@@ -4508,8 +4514,9 @@
       "rackKit": {
         "gen": "1g",
         "holds": 2,
-        "excludes": "DANTE"
-      , "cbox": "slot"},
+        "excludes": "DANTE",
+        "cbox": "slot"
+      },
       "partNo": "AC-MXNET-1G-R2",
       "notes": "1U kit, 2 MXNet 1G/USP endpoints (or a CBOX-HA) side by side; passive — no PSU (AVPro). Not for AC-MXNET-1G-DANTE-E. avproglobal.com/products/ac-mxnet-1g-r2",
       "notInPlanQueue": true
@@ -4526,8 +4533,9 @@
       "rackKit": {
         "gen": "1g",
         "holds": 15,
-        "excludes": "DANTE"
-      , "cbox": "extra"},
+        "excludes": "DANTE",
+        "cbox": "extra"
+      },
       "partNo": "AC-MXNET-1G-R15",
       "notes": "6U heavy-duty rack, 15 vertical numbered slots for MXNet 1G/USP endpoints + CBOX; 2 blanks included; passive (no PSU mentioned). AC-MXNET-1G-DANTE-E does NOT fit (AC-EZRACK-15). avproglobal.com/products/ac-mxnet-1g-r15"
     },
@@ -4542,8 +4550,9 @@
       "rackUnits": 6,
       "rackKit": {
         "gen": "10g",
-        "holds": 12
-      , "cbox": "extra"},
+        "holds": 12,
+        "cbox": "extra"
+      },
       "partNo": "AC-MXNET-10G-HDRACK",
       "notes": "6U heavy-duty rack, 12 MXNet 10G transceivers + control box; passive (power not mentioned). avproglobal.com/products/ac-mxnet-10g-hdrack"
     },
@@ -4858,7 +4867,7 @@
       "powerMaxW": 24,
       "flags": [],
       "verified": true,
-      "notes": "TV audio back to the rack, audio only (no video). TX at the TV on its eARC HDMI port (DIP 2-3 = eARC); one Cat6A (Cat5e min, 100m) AP-LINK run; RX in the rack. RX DIP 2: 0 = eARC OUT (acts as a TV on an eARC port \u2014 on an AVR that's the HDMI out the video uses), 1 = HDMI OUT (audio-only HDMI into any receiver HDMI input) \u2014 SignalPath lands it on an HDMI input. eARC: PCM 2.0 / LPCM 5.1 & 7.1 / DD / DD+ / TrueHD / Atmos / DTS / DTS-HD MA / DTS:X; optical/ARC: PCM 2.0 / DD / DTS 5.1; analog 2.0. Does NOT downmix (set the TV to stereo for 2ch use). One 12V 2A PSU powers both ends over the cable (PoC); 24W max total. Bidirectional IR / RS-232 / CEC. avproglobal.com/products/ac-aex-dearc-kit + user manual, 2026-09-30",
+      "notes": "TV audio back to the rack, audio only (no video). TX at the TV on its eARC HDMI port (DIP 2-3 = eARC); one Cat6A (Cat5e min, 100m) AP-LINK run; RX in the rack. RX DIP 2: 0 = eARC OUT (acts as a TV on an eARC port — on an AVR that's the HDMI out the video uses), 1 = HDMI OUT (audio-only HDMI into any receiver HDMI input) — SignalPath lands it on an HDMI input. eARC: PCM 2.0 / LPCM 5.1 & 7.1 / DD / DD+ / TrueHD / Atmos / DTS / DTS-HD MA / DTS:X; optical/ARC: PCM 2.0 / DD / DTS 5.1; analog 2.0. Does NOT downmix (set the TV to stereo for 2ch use). One 12V 2A PSU powers both ends over the cable (PoC); 24W max total. Bidirectional IR / RS-232 / CEC. avproglobal.com/products/ac-aex-dearc-kit + user manual, 2026-09-30",
       "ports": [
         {
           "label": "TX: eARC IN",
@@ -4907,7 +4916,7 @@
       "flags": [],
       "verified": true,
       "lengthM": 5,
-      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 5 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. eARC back over the cable (eARC works up to 10 m). Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5\u201340 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
+      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 5 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. eARC back over the cable (eARC works up to 10 m). Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5–40 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
     },
     "avpro-ac-btssf-10kuhd-10": {
       "brand": "AVPro Edge",
@@ -4928,7 +4937,7 @@
       "flags": [],
       "verified": true,
       "lengthM": 10,
-      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 10 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. eARC back over the cable (eARC works up to 10 m). Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5\u201340 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
+      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 10 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. eARC back over the cable (eARC works up to 10 m). Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5–40 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
     },
     "avpro-ac-btssf-10kuhd-15": {
       "brand": "AVPro Edge",
@@ -4949,7 +4958,7 @@
       "flags": [],
       "verified": true,
       "lengthM": 15,
-      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 15 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. ARC only back over the cable (eARC only up to 10 m) \u2014 Atmos from the TV apps needs the AC-AEX-DEARC-KIT. Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5\u201340 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
+      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 15 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. ARC only back over the cable (eARC only up to 10 m) — Atmos from the TV apps needs the AC-AEX-DEARC-KIT. Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5–40 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
     },
     "avpro-ac-btssf-10kuhd-20": {
       "brand": "AVPro Edge",
@@ -4970,7 +4979,7 @@
       "flags": [],
       "verified": true,
       "lengthM": 20,
-      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 20 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. ARC only back over the cable (eARC only up to 10 m) \u2014 Atmos from the TV apps needs the AC-AEX-DEARC-KIT. Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5\u201340 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
+      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 20 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. ARC only back over the cable (eARC only up to 10 m) — Atmos from the TV apps needs the AC-AEX-DEARC-KIT. Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5–40 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
     },
     "avpro-ac-btssf-10kuhd-30": {
       "brand": "AVPro Edge",
@@ -4991,7 +5000,7 @@
       "flags": [],
       "verified": true,
       "lengthM": 30,
-      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 30 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. ARC only back over the cable (eARC only up to 10 m) \u2014 Atmos from the TV apps needs the AC-AEX-DEARC-KIT. Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5\u201340 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
+      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 30 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. ARC only back over the cable (eARC only up to 10 m) — Atmos from the TV apps needs the AC-AEX-DEARC-KIT. Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5–40 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
     },
     "avpro-ac-btssf-10kuhd-40": {
       "brand": "AVPro Edge",
@@ -5012,7 +5021,7 @@
       "flags": [],
       "verified": true,
       "lengthM": 40,
-      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 40 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. ARC only back over the cable (eARC only up to 10 m) \u2014 Atmos from the TV apps needs the AC-AEX-DEARC-KIT. Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5\u201340 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
+      "notes": "Bullet Train 10K 48Gbps AOC fiber HDMI, 40 m. Directional: source head at the rack, display head at the TV. 48Gbps / FRL / VRR, 4K120 / 8K / 10K, HDR / Dolby Vision, HDCP 2.2, CEC. Audio: 7.1 / Dolby (incl. Atmos) / DTS. ARC only back over the cable (eARC only up to 10 m) — Atmos from the TV apps needs the AC-AEX-DEARC-KIT. Powered from the HDMI port's 5V (50mA); some ports need AVPro's 5V USB dongle at the head. CMP / plenum, in-wall rated. Lengths 5–40 m (60/80/100 m discontinued). avproglobal.com/products/10k-48gbps-aoc-hdmi-cable, 2026-09-30"
     },
     "avpro-ac-ex70-444-rne": {
       "brand": "AVPro Edge",
@@ -5028,7 +5037,7 @@
       "powerMaxW": 12,
       "flags": [],
       "verified": true,
-      "notes": "HDBaseT RECEIVER only \u2014 the TV end, for AVPro's HDBaseT matrices (AXION): the matrix's HDBaseT output is the transmitter and powers it over the cable (PoH), so no TX and no PSU in the rack. 18Gbps with ICT, 4K60 4:4:4, HDR10 / HDR10+ / Dolby Vision / HLG; 70 m 4K / 100 m 1080p on Cat6A. HDMI audio passes everything (Atmos / TrueHD / DTS:X); its extracted 2ch port is PCM only, no downmix. No ARC/eARC back. 12 W max. avproglobal.com/products/ac-ex70-444-rne, 2026-09-30",
+      "notes": "HDBaseT RECEIVER only — the TV end, for AVPro's HDBaseT matrices (AXION): the matrix's HDBaseT output is the transmitter and powers it over the cable (PoH), so no TX and no PSU in the rack. 18Gbps with ICT, 4K60 4:4:4, HDR10 / HDR10+ / Dolby Vision / HLG; 70 m 4K / 100 m 1080p on Cat6A. HDMI audio passes everything (Atmos / TrueHD / DTS:X); its extracted 2ch port is PCM only, no downmix. No ARC/eARC back. 12 W max. avproglobal.com/products/ac-ex70-444-rne, 2026-09-30",
       "ports": [
         {
           "label": "HDBaseT IN (PoH)",

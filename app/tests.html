@@ -2538,6 +2538,8 @@ for (const [name, raw] of Object.entries(fixtures)) {
       tvs(lp).length === 1 && /Pool House/.test(tvs(lp)[0]) && tvs(lm).length === 2 && !tvs(lm).some(w => /Pool House/.test(w)), JSON.stringify([tvs(lm), tvs(lp)]));
     t("network: the pool house amp's LAN port is on the pool house switch",
       (lp?.rows || []).some(r => /MDX-8/.test(r.what)) && !(lm?.rows || []).some(r => /MDX-8/.test(r.what)));
+    t("power: an amp whose maker publishes no draw is named as such (pool house MDX-8), not just '?'",
+      pp.unpublished?.some(w => /MDX-8/.test(w)) && CAT.devices["sonos-amp"].powerMaxW === 121);
     const one = advise(loadJob(fixtures.residence).job, loadJob(fixtures.residence).ix, CAT);
     t("power: a one-rack job reads as before (no rack name in the note)",
       one.power.length === 1 && one.notes.some(n => n.code === "power-none" && /no power conditioner on the job/.test(n.msg) && /^\d/.test(n.msg)));

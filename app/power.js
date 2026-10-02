@@ -52,7 +52,7 @@ export function powerPlan(job, ix, catalog, netPlans = []) {
       if (d.type === "power") { units.push({ rack: rackOf[d.id], id: d.id, model: d.model || c?.model || d.id, outlets: c?.outlets ?? null, controlled: c?.controlledOutlets ?? null, amps: c?.amps ?? 15 }); continue; }
       if (poeRow(d.id)) { poe.push({ rack: rackOf[d.id], id: d.id, what: d.model || d.id }); continue; }
       const n = Math.min(48, Math.max(1, Math.floor(+c?.outlets || 1)));   // specFor vetted a typed-in count
-      loads.push({ rack: rackOf[d.id], id: d.id, what: d.model || d.id, outlets: n, why: n > 1 ? `${n} power cords` : "", ...switchWatts(d, c) });
+      loads.push({ rack: rackOf[d.id], id: d.id, what: d.model || d.id, outlets: n, unpublished: !!c?.powerUnpublished, why: n > 1 ? `${n} power cords` : "", ...switchWatts(d, c) });
     }
     // adapters that live in the rack: MXNet encoders on the rack sources
     for (const comp of Object.values(s.companions)) {
@@ -116,11 +116,14 @@ function rackPower(loads, poe, units, models) {
   const typicalW = Math.round(loads.reduce((n, l) => n + (l.typicalW ?? l.maxW ?? 0), 0));
   const maxW = Math.round(loads.reduce((n, l) => n + (l.maxW ?? l.typicalW ?? 0), 0));
   const noWatts = loads.filter(l => l.typicalW == null && l.maxW == null).map(l => l.what);
+  // the maker publishes no figure at all (Anthem MDX, AudioControl Hyperion, checked 2026-10-02):
+  // the number has to come off the unit's rear-panel label or a meter, not the web
+  const unpublished = loads.filter(l => l.unpublished && l.typicalW == null && l.maxW == null).map(l => l.what);
   // heat: what the rack draws at typical load stays in the rack as heat (1 W = 3.412 BTU/hr);
   // conservative for amps, whose speaker output leaves the room
   const heatW = typicalW, btu = Math.round(heatW * 3.412);
   const cooling = heatW > HEAT_ROOM_W ? "room" : heatW > HEAT_FAN_W ? "fan" : null;
-  return { loads, poe, units, need, supply, spare, pick, circuitW, circuitA: amps, circuits, typicalW, maxW, noWatts, heatW, btu, cooling,
+  return { loads, poe, units, need, supply, spare, pick, circuitW, circuitA: amps, circuits, typicalW, maxW, noWatts, unpublished, heatW, btu, cooling,
     short: supply != null && units.length ? Math.max(0, need - supply) : null,
     tight: supply != null && units.length && supply >= need && supply < need + spare };
 }

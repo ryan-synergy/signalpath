@@ -856,6 +856,7 @@ function rackPages(job, ix, adviseResult, opts, label) {
         [{ label: "Device", dx: 14 }, { label: "Outlets", dx: 520 }, { label: "Typ W", dx: 610 }, { label: "Max W", dx: 700 }, { label: "Note", dx: 790 }], rows);
       const notes = [];
       if (power.noWatts.length) notes.push([`? = no wattage on file for ${power.noWatts.length} box${power.noWatts.length > 1 ? "es" : ""} — totals are a floor until filled in (RACK tab)`, "#a45a12"]);
+      if (power.unpublished?.length) notes.push([clip(`Not published by the maker: ${power.unpublished.join(", ")} — read the rear-panel label (W or A × 120) or meter it`, 120), "#a45a12"]);
       if (power.cooling) notes.push([power.cooling === "room" ? "Heat: plan room cooling (HVAC supply + return or a dedicated unit) plus rack fans" : "Heat: plan a top-exhaust rack fan and a vented door or closet", "#a45a12", true]);
       if (notes.length) text(notes);
     }

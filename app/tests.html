@@ -373,6 +373,24 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     cxOf(kitchen) < cxOf(office));
 }
 
+/* estate wire schedule: two racks — every run starts in the rack it really comes from,
+   and the link between the buildings is a run of its own (it used to be left off) */
+{
+  const { job, ix } = loadJob(fixtures.estate);
+  const runs = wireRuns(job, ix, {});
+  const x = runs.filter(r => r.prefix === "X");
+  t("wire schedule: the main → pool house rack link is pulled (X-01)",
+    x.length === 1 && x[0].id === "X-01" && x[0].from.startsWith("Main Equipment Rack") && x[0].to.startsWith("Pool House Rack") && /Network uplink/.test(x[0].carries), JSON.stringify(x));
+  const pool = ["Pool House", "Patio 1", "Patio 2"];
+  const poolRuns = runs.filter(r => pool.some(n => r.to.startsWith(n + " — ")));
+  t("wire schedule: pool house rooms' runs come from the Pool House Rack",
+    poolRuns.length >= 5 && poolRuns.every(r => r.from.startsWith("Pool House Rack")), JSON.stringify(poolRuns.map(r => [r.id, r.from])));
+  t("wire schedule: main house runs still come from the main rack",
+    runs.filter(r => r.prefix !== "X" && !poolRuns.includes(r)).every(r => r.from.startsWith("Main Equipment Rack")));
+  const one = loadJob(fixtures.residence);
+  t("wire schedule: a one-rack job has no rack-to-rack runs", !wireRuns(one.job, one.ix, {}).some(r => r.prefix === "X"));
+}
+
 /* ---------- hide-signals view (tech-view slice: hide network wires) ---------- */
 {
   const { job, ix } = loadJob(fixtures.residence);
@@ -478,7 +496,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
   t("takeoff: NEW / OFE grouping with confirm + prewire boxes",
     tk.includes("NEW — Supplied") && tk.includes("OWNER FURNISHED") && tk.includes(">Turn Table<") &&
     tk.includes("NEEDS CONFIRMATION") && tk.includes("verify before ordering") && tk.includes("reserved"));
-  t("takeoff: licensing box carries catalog date", tk.includes("catalog as of"));
+  t("takeoff: licensing box carries catalog date", tk.includes("Catalog as of") && !/[Pp]rice/.test(tk));
   const items = takeoffItems(job, ix);
   t("takeoff: baluns rolled up as an auto-added pair",
     items.some(i => /balun/i.test(i.label) && i.qty === 2));

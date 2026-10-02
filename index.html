@@ -463,25 +463,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002141955",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002141955",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002141955",
-    "./app/ports.js": "./app/ports.js?v=20261002141955",
-    "./app/commands.js": "./app/commands.js?v=20261002141955",
-    "./app/engine.js": "./app/engine.js?v=20261002141955",
-    "./app/exports.js": "./app/exports.js?v=20261002141955",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002141955",
-    "./app/hookup.js": "./app/hookup.js?v=20261002141955",
-    "./app/importers.js": "./app/importers.js?v=20261002141955",
-    "./app/library.js": "./app/library.js?v=20261002141955",
-    "./app/names.js": "./app/names.js?v=20261002141955",
-    "./app/network.js": "./app/network.js?v=20261002141955",
-    "./app/pages.js": "./app/pages.js?v=20261002141955",
-    "./app/power.js": "./app/power.js?v=20261002141955",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002141955",
-    "./app/rack.js": "./app/rack.js?v=20261002141955",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002141955",
-    "./app/starters.js": "./app/starters.js?v=20261002141955"
+    "./app/ai.js": "./app/ai.js?v=20261002145134",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002145134",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002145134",
+    "./app/ports.js": "./app/ports.js?v=20261002145134",
+    "./app/commands.js": "./app/commands.js?v=20261002145134",
+    "./app/engine.js": "./app/engine.js?v=20261002145134",
+    "./app/exports.js": "./app/exports.js?v=20261002145134",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002145134",
+    "./app/hookup.js": "./app/hookup.js?v=20261002145134",
+    "./app/importers.js": "./app/importers.js?v=20261002145134",
+    "./app/library.js": "./app/library.js?v=20261002145134",
+    "./app/names.js": "./app/names.js?v=20261002145134",
+    "./app/network.js": "./app/network.js?v=20261002145134",
+    "./app/pages.js": "./app/pages.js?v=20261002145134",
+    "./app/power.js": "./app/power.js?v=20261002145134",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002145134",
+    "./app/rack.js": "./app/rack.js?v=20261002145134",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002145134",
+    "./app/starters.js": "./app/starters.js?v=20261002145134"
 } }
 </script>
 <script>
@@ -697,7 +697,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002141955").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002145134").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1339,7 +1339,7 @@ async function showReview(res) {
   const j = res.job, sol = j.solutions[0];
   const KINDS = { sitewalk: "SiteWalk / AVWalk survey", blueprinted: "Blueprinted takeoff (old Savant system)" };
   $("#rvTitle").textContent = `Import review — ${KINDS[res.kind] || res.kind}`;
-  $("#rvSub").textContent = `${j.job.name} · ${j.house.zones.length} zones · ${sol.racks[0].devices.length} rack devices · ${sol.connections.length} connections${sol.platforms.length ? " · platform: " + sol.platforms[0] : ""}`;
+  $("#rvSub").textContent = `${j.job.name} · ${j.house.zones.length} zones · ${sol.racks.reduce((n, r) => n + (r.devices || []).length, 0)} rack devices${sol.racks.length > 1 ? ` in ${sol.racks.length} racks` : ""} · ${sol.connections.length} connections${sol.platforms.length ? " · platform: " + sol.platforms[0] : ""}`;
   const zoneRow = z => {
     const spk = z.endpoints.filter(e => e.type === "speakers").map(e => SPEAKER_SETUP[e.config] || e.config).join(" + ");
     const tv = z.endpoints.find(e => e.type === "display");

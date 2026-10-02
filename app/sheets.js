@@ -11,12 +11,14 @@
 
 const clone = o => JSON.parse(JSON.stringify(o));
 
-export function sheetGroups(job, solIndex = 0) {
+// which rack each box sits in (companions ride with the gear they serve) and which rack
+// each room is fed from: its area's home rack, else the rack most of its wires come from
+export function zoneRacks(job, solIndex = 0) {
   const sol = job.solutions?.[solIndex];
   const racks = sol?.racks || [];
-  if (racks.length < 2) return null;
-  const main = racks[0].id;
-  const rackOf = {};
+  const main = racks[0]?.id;
+  const rackOf = {}, zoneRack = {};
+  if (!sol) return { racks, main, rackOf, zoneRack };
   for (const r of racks) for (const d of r.devices || []) rackOf[d.id] = r.id;
   const comps = sol.companions || [], conns = (sol.connections || []).filter(c => !c.dante);
   for (const c of comps) if (rackOf[c.serves]) rackOf[c.id] = rackOf[c.serves];
@@ -35,13 +37,19 @@ export function sheetGroups(job, solIndex = 0) {
   };
   const home = {};
   for (const a of job.house?.areas || []) if (a.homeRack && racks.some(r => r.id === a.homeRack)) home[a.id] = a.homeRack;
-  const zoneRack = {};
   for (const z of zones) {
     if (home[z.area]) { zoneRack[z.id] = home[z.area]; continue; }
     const votes = {};
     for (const c of conns) if (zoneOfNode[c.to] === z.id && !zoneOfNode[c.from]) { const r = upstream(c.from); if (r) votes[r] = (votes[r] || 0) + 1; }
     zoneRack[z.id] = Object.entries(votes).sort((a, b) => b[1] - a[1])[0]?.[0] || main;
   }
+  return { racks, main, rackOf, zoneRack };
+}
+
+export function sheetGroups(job, solIndex = 0) {
+  const { racks, main, zoneRack } = zoneRacks(job, solIndex);
+  if (racks.length < 2) return null;
+  const zones = job.house?.zones || [];
   const own = racks.filter(r => r.id === main || zones.some(z => zoneRack[z.id] === r.id));
   if (own.length < 2) return null;
   const sheetOf = id => own.some(r => r.id === id) ? id : main;

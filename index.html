@@ -227,7 +227,11 @@
   #canvas svg { width: calc(100% * var(--zoom, 1)); max-width: none; height: auto; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.18); border-radius: 3px; }
 
   /* ---- interactive sheet: wire tracing + card jump ---- */
-  #canvas svg .wirehit, #canvas svg .zcard .hit, #canvas svg .devtile { cursor: pointer; }
+  #canvas svg .wirehit, #canvas svg .zcard .hit, #canvas svg .devtile, #canvas svg .chiptile, #canvas svg .racklabel { cursor: pointer; }
+  #canvas svg .chiptile:hover rect { stroke: #e8842c; stroke-width: 1.5; }
+  #canvas svg .racklabel:hover { fill: #e8842c; }
+  #canvas svg .devtile:hover rect:first-of-type { stroke: #e8842c99; stroke-width: 2; }
+  #canvas svg .zcard:hover > rect.hit { stroke: #e8842c66; stroke-width: 1.6; }
   #canvas svg.wiresel path.wire:not(.sel) { opacity: .13; }
   #canvas svg path.wire.sel { stroke-width: 3.6; }
   #canvas svg.wiresel g.trunks { opacity: .13; }
@@ -472,25 +476,25 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261002181528",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002181528",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261002181528",
-    "./app/ports.js": "./app/ports.js?v=20261002181528",
-    "./app/commands.js": "./app/commands.js?v=20261002181528",
-    "./app/engine.js": "./app/engine.js?v=20261002181528",
-    "./app/exports.js": "./app/exports.js?v=20261002181528",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002181528",
-    "./app/hookup.js": "./app/hookup.js?v=20261002181528",
-    "./app/importers.js": "./app/importers.js?v=20261002181528",
-    "./app/library.js": "./app/library.js?v=20261002181528",
-    "./app/names.js": "./app/names.js?v=20261002181528",
-    "./app/network.js": "./app/network.js?v=20261002181528",
-    "./app/pages.js": "./app/pages.js?v=20261002181528",
-    "./app/power.js": "./app/power.js?v=20261002181528",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261002181528",
-    "./app/rack.js": "./app/rack.js?v=20261002181528",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261002181528",
-    "./app/starters.js": "./app/starters.js?v=20261002181528"
+    "./app/ai.js": "./app/ai.js?v=20261002182627",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261002182627",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261002182627",
+    "./app/ports.js": "./app/ports.js?v=20261002182627",
+    "./app/commands.js": "./app/commands.js?v=20261002182627",
+    "./app/engine.js": "./app/engine.js?v=20261002182627",
+    "./app/exports.js": "./app/exports.js?v=20261002182627",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261002182627",
+    "./app/hookup.js": "./app/hookup.js?v=20261002182627",
+    "./app/importers.js": "./app/importers.js?v=20261002182627",
+    "./app/library.js": "./app/library.js?v=20261002182627",
+    "./app/names.js": "./app/names.js?v=20261002182627",
+    "./app/network.js": "./app/network.js?v=20261002182627",
+    "./app/pages.js": "./app/pages.js?v=20261002182627",
+    "./app/power.js": "./app/power.js?v=20261002182627",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261002182627",
+    "./app/rack.js": "./app/rack.js?v=20261002182627",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261002182627",
+    "./app/starters.js": "./app/starters.js?v=20261002182627"
 } }
 </script>
 <script>
@@ -659,7 +663,7 @@
 </div></div>
 
 <script type="module">
-import { loadJob, normalizeJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock, trunkMode, boxUsage } from "./app/engine.js";
+import { loadJob, normalizeJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock, trunkMode, boxUsage, SHEET } from "./app/engine.js";
 import { importAny, mergeHouse, drawFromWalk, decodeHandoff, stripUnsafe } from "./app/importers.js";
 import { sheetGroups, sheetJob } from "./app/sheets.js";
 import { LIB_TYPES, typeLabel, SIGNALS as LIB_SIGNALS, TYPE_IO, LIB_SECTIONS, SELECTS, BEHAVIOURS, tagsOf, newId, blankDevice, duplicateDevice, checkEntry, exportLibrary, planImport, applyImport, tidyStarterStore } from "./app/library.js";
@@ -706,7 +710,7 @@ const dbDel = id => DB
   : (MEM.delete(id), Promise.resolve());
 
 /* ============ settings + catalog (user-editable; catalog.json is the shipped seed) ============ */
-const SHIPPED = await fetch("./app/catalog.json?v=20261002181528").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261002182627").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1638,8 +1642,28 @@ $("#canvas").addEventListener("click", e => {
   }
   const dev = e.target.closest("[data-device]");
   if (dev) { clearSel(); openGear(dev.dataset.device); return; }
+  // an adapter chip opens what it serves: the room (a DEC / balun at a TV) or the box (an ENC on a source)
+  const chipEl = e.target.closest("[data-chip]");
+  if (chipEl) {
+    clearSel();
+    const comp = (S.job.solutions[S.sol].companions || []).find(c => c.id === chipEl.dataset.chip);
+    const z = comp && S.view?.ix?.endpointZone?.[comp.serves];
+    if (z) openZone(z); else if (comp && S.job.solutions[S.sol].racks.some(r => r.devices.some(d => d.id === comp.serves))) openGear(comp.serves);
+    return;
+  }
   const zc = e.target.closest("[data-zone]");
   if (zc) { clearSel(); openZone(zc.dataset.zone); return; }
+  // a rack's name opens the RACK tab at that rack (size, elevation, power)
+  const rl = e.target.closest("[data-rack]");
+  if (rl) { clearSel(); switchTab("rack"); renderPanel(); flashRow(`[data-rackid="${CSS.escape(rl.dataset.rack)}"]`); return; }
+  // the title block (client, project, revisions) opens the JOB tab at the client
+  const svg = $("#canvas svg"), m = svg.getScreenCTM?.();
+  if (m) {
+    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse()), tb = SHEET.titleBlock;
+    if (pt.x >= tb.x && pt.x <= tb.x + tb.w && pt.y >= tb.y && pt.y <= tb.y + tb.h) {
+      clearSel(); switchTab("job"); renderPanel(); flashRow(".jclient"); setTimeout(() => $("#panelBody .jclient")?.focus(), 350); return;
+    }
+  }
   clearSel();
 });
 
@@ -2159,7 +2183,7 @@ function rackHTML() {
     }).join("");
     const hw = (r?.hardware || []).map(h => `<tr><td>${esc(h.item)}</td><td>${h.qty}</td><td>${h.key === "kit" ? esc(h.partNo)
       : `<input class="rpart" data-key="${h.key}" data-rack="${esc(rr.id)}" value="${esc(h.partNo || "")}" placeholder="?" style="width:130px">`}</td></tr>`).join("");
-    return `<div class="sect">${esc(rr.name || "Equipment Rack")} ${r ? `<span class="badge">${r.used}U / ${r.size}U</span>` : ""}</div>
+    return `<div class="sect" data-rackid="${esc(rr.id)}">${esc(rr.name || "Equipment Rack")} ${r ? `<span class="badge">${r.used}U / ${r.size}U</span>` : ""}</div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       ${field("Rack size", `<select class="rsize" data-rack="${esc(rr.id)}">${RACK_SIZES.map(n => `<option value="${n}" ${(+rr.units || +S.job.job.rackUnits || DEFAULT_RACK_U) === n ? "selected" : ""}>${n}U</option>`).join("")}</select>`)}
       ${r ? `<div class="mini" style="margin:4px 0">${r.used}U used · ${r.over ? `<b style="color:#b32017">${r.over}U over</b>` : `${r.spare}U spare`}${r.cat6 ? ` · ${r.cat6} Cat6 home runs` : ""}${r.unknown.length ? ` · <span style="color:#a45a12">${r.unknown.length} height${r.unknown.length > 1 ? "s" : ""} unknown (?)</span>` : ""}</div>

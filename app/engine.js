@@ -4209,7 +4209,7 @@ export function render(job, ix, P, rt, opts = {}) {
   if (trunkWires.length) push(drawTrunks(trunkWires, TRK, opts.wireLabels || {}, mergedTags, rt.wires.filter(w => !(TRK && w.cls === "trunk")),
     [...P.zones, ...P.chips, ...P.racks.flatMap(r => r.devices)]));
   // rack titles again, over the wiring with a white halo: a riser climbing out of the rack top can't cut them
-  for (const r of P.racks) push(`<text x="${r.x + 14}" y="${r.y + 24}" font-size="20" font-weight="700" fill="#111" paint-order="stroke" stroke="#fff" stroke-width="5" stroke-linejoin="round">${esc(r.name)}</text>`);
+  for (const r of P.racks) push(`<text class="racklabel" data-rack="${esc(r.id)}" x="${r.x + 14}" y="${r.y + 24}" font-size="20" font-weight="700" fill="#111" paint-order="stroke" stroke="#fff" stroke-width="5" stroke-linejoin="round">${esc(r.name)}</text>`);
   if (rt.danteTags?.length) push(drawDanteTags(job, ix, sol, s, P, rt.danteTags, bw));
   // a tag reads beside its run — on whichever side no other wire runs alongside
   const segsAll = rt.wires.flatMap(w => w.pts.slice(1).map((q, i) => [w.pts[i], q]));
@@ -4234,10 +4234,10 @@ export function render(job, ix, P, rt, opts = {}) {
   }
 
   /* companion chips */
-  for (const c of P.chips) {
-    push(`<rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="2" fill="#1e1e1e"/>`);
+  for (const c of P.chips) {   // a tap on a chip opens what it serves (the app's click-to-edit)
+    push(`<g class="chiptile" data-chip="${esc(c.id)}"><rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="2" fill="#1e1e1e"/>`);
     push(`<text x="${c.x + c.w / 2}" y="${c.y + 13}" text-anchor="middle" font-size="10" fill="#eee">${esc(adapterTag(c))}</text>`);
-    push(`<circle cx="${c.x + c.w - 6}" cy="${c.y + c.h / 2}" r="1.8" fill="#3fbf5a"/>`);
+    push(`<circle cx="${c.x + c.w - 6}" cy="${c.y + c.h / 2}" r="1.8" fill="#3fbf5a"/></g>`);
   }
 
   /* invisible fat twins over every wire: 12px tap targets for click-to-trace

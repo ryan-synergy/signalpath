@@ -1757,6 +1757,11 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const ee = structuredClone(fixtures.estate);
     const pn = (() => { const Lx = loadJob(structuredClone(ee)); return advise(Lx.job, Lx.ix, CAT).notes.find(n => n.code === "power-none" && n.rack === "rack-pool"); })();
     applyFix(ee, pn);
+    {   // click-to-edit: every adapter chip and rack name on the sheet is a tap target
+      const Le = loadJob(structuredClone(fixtures.estate)), pe = place(Le.job, Le.ix), svgE = render(Le.job, Le.ix, pe, route(Le.job, Le.ix, pe));
+      t("click-to-edit: each chip is a tappable group naming its adapter, each rack name names its rack",
+        pe.chips.every(c => svgE.includes(`data-chip="${c.id}"`)) && pe.racks.every(r => svgE.includes(`class="racklabel" data-rack="${r.id}"`)) && !new DOMParser().parseFromString(svgE, "image/svg+xml").querySelector("parsererror"));
+    }
     t("fixes: a pool house rack's missing WattBox is added to the pool house rack, sized for it",
       ee.solutions[0].racks[1].devices.some(d => d.type === "power" && d.catalogRef === pn.add.ref) && !ee.solutions[0].racks[0].devices.some(d => d.type === "power"));
   }

@@ -4586,6 +4586,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       if ((z.scope || "included") !== "included") continue;
       const tv = (z.endpoints || []).find(e => e.type === "display"), spk = (z.endpoints || []).find(e => e.type === "speakers");
       if (!tv || !/^surround/.test(spk?.config || "")) continue;
+      if (tv.displayType === "projector") continue;           // a projector has no apps of its own — nothing to bring back
       const drive = (sol.connections || []).find(c => c.to === spk.id && c.signal === "speaker");
       const rcv = drive && s.devices[drive.from]?.type === "avr" ? drive.from : null;
       if (!rcv) continue;
@@ -4717,7 +4718,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
   /* -- switch ports: every box on a switch takes a port (the Network page prints the plan) -- */
   out.network = catalog?.devices ? networkPlan(job, ix, catalog) : [];
   for (const p of out.network) {
-    if (p.over) out.notes.push({ code: "switch-ports-full", solution: p.solution, ref: p.switch,
+    if (p.over) out.notes.push({ code: "switch-ports-full", solution: p.solution, ref: p.switch, need: p.used,
       msg: `${p.model}: ${p.used} connections need ${p.used} ports — it has ${p.copper + p.sfp}; add a second switch or step up a size` });
     if (p.virtual) {
       const sug = suggestLanSwitch(catalog, p.used);

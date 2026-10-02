@@ -87,7 +87,7 @@ export function tidyPort(v) {
 }
 const portBase = p => String(p).replace(" (RJ45 module)", "");
 
-const portsOf = c => {
+export const portsOf = c => {
   const o = c?.outputs || {};
   return { copper: (o.gbe || 0) + (o.gbe25 || 0) + (o.gbe10 || 0), sfp: (o.sfp || 0) + (o.sfpPlus || 0) };
 };

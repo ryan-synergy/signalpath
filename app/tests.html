@@ -1795,6 +1795,24 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const ee = structuredClone(fixtures.estate);
     const pn = (() => { const Lx = loadJob(structuredClone(ee)); return advise(Lx.job, Lx.ix, CAT).notes.find(n => n.code === "power-none" && n.rack === "rack-pool"); })();
     applyFix(ee, pn);
+    {   // a dictated whole house on the small MXNet kit outgrows its 8-port switch → step up; a projector theater isn't nagged about TV apps
+      const PARA = "Family room, 5.1 surround with a 75-inch Sony. Master bedroom, 65-inch TV, two-channel stereo. Kitchen stereo, no TV. Office with a 43-inch TV. Back patio, landscape with eight speakers. Theater, 7.1.4 Atmos, 120-inch projector. Guest room, 55-inch TV, no speakers.";
+      const jm = build("mxnet", PARA);
+      const notes = jj => { const Lx = loadJob(structuredClone(jj)); return advise(Lx.job, Lx.ix, CAT).notes; };
+      t("projector theater: no 'TV's own apps' note (a projector has no apps)", !notes(jm).some(n => n.code === "tv-apps-no-surround" && /Theater/.test(n.msg)));
+      const full = notes(jm).find(n => n.code === "switch-ports-full");
+      const fx = full && H.quickFixes(jm, jm.solutions[0], full, CAT)[0];
+      if (fx) fx.run(jm, jm.solutions[0]);
+      t("switch out of ports → 'Step up to' the next MXNet switch that fits, and the note clears",
+        !!full && /^Step up to the AVPro Edge AC-MXNET-SW24/.test(fx?.label) && !notes(jm).some(n => n.code === "switch-ports-full"), fx?.label);
+      const js = build("sonos", "Theater, 7.1.4 Atmos, 120-inch projector.");
+      const avr = js.solutions[0].racks[0].devices.find(d => d.type === "avr");
+      const ni = (() => { const Lx = loadJob(structuredClone(js)); return validate(Lx.job, Lx.ix).warnings.find(w => w.code === "no-input" && w.ref === avr?.id); })();
+      const rf = ni ? H.quickFixes(js, js.solutions[0], ni, CAT) : [];
+      if (rf[0]) rf[0].run(js, js.solutions[0]);
+      t("a receiver with nothing plugged in offers a rack source (or a new Apple TV), and the warning clears",
+        !!ni && rf.some(x => x.label === "Add an Apple TV in the rack") && (() => { const Lx = loadJob(structuredClone(js)); return !validate(Lx.job, Lx.ix).warnings.some(w => w.code === "no-input" && w.ref === avr.id); })(), rf.map(x => x.label).join(" | "));
+    }
     {   // an encoder's analog out goes where you choose: the AIM (default), straight to an amp, a room, or nowhere
       const je = build("mxnet-savant", "family room 5.1 75 sony, kitchen stereo"), se = je.solutions[0];
       const amp = se.racks[0].devices.find(d => d.type === "amp"), aim = se.racks[0].devices.find(d => d.type === "audioInputModule");

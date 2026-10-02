@@ -8,6 +8,7 @@
    connections/companions; the engine needs nothing new. */
 
 import { SPEAKER_SETUP, AUDIO_BACK_NAME, productName } from "./names.js";
+import { portsOf } from "./network.js";
 
 // what can do each job
 export const VIDEO_FROM = ["avr", "videoMatrix", "avSwitch", "splitter", "source"];
@@ -502,10 +503,32 @@ export function quickFixes(job, sol, f, catalog = null) {
       out.push({ label: "Add the eARC kit (Atmos from the apps)", run: (j, s) => setReturn(j, s, zoneOf(j), drive.from, false, true) });
     }
   }
+  // a switch out of ports: step up to the smallest switch of its own kind (same MXNet generation,
+  // or a plain LAN switch) that holds what's on it with room to spare; its connections stay
+  if (f.code === "switch-ports-full" && catalog?.devices) {
+    const d = devs.find(x => x.id === f.ref), cur = d && catalog.devices[d.catalogRef];
+    if (cur) {
+      const mx = (cur.flags || []).includes("mxnet"), need = (f.need || 0) + 2;
+      const total = c => { const p = portsOf(c); return p.copper + p.sfp; };
+      const up = Object.entries(catalog.devices).filter(([, c]) => (c.type === "avSwitch" || c.type === "networkSwitch") && !(c.flags || []).includes("legacy")
+          && ((c.flags || []).includes("mxnet") === mx) && (!mx || c.gen === cur.gen) && total(c) >= need && total(c) > total(cur))
+        .sort((a, b) => total(a[1]) - total(b[1]))[0];
+      if (up) out.push({ label: `Step up to the ${productName(up[1])} (${total(up[1])} ports)`, run: (j, s) => {
+        const dev = rackDevices(s).find(x => x.id === d.id); if (!dev) return;
+        dev.catalogRef = up[0]; dev.model = productName(up[1]); if (up[1].type) dev.type = up[1].type;
+      } });
+    }
+  }
   if (f.code === "no-input") {
     const d = devs.find(x => x.id === f.ref);
     if (d?.type === "amp" && devs.some(x => x.type === "avSwitch" && !x.danteSwitch))
       out.push({ label: "Feed it from the MXNet switch", run: (j, s) => feedAmp(j, s, d.id) });
+    else if (d?.type === "avr") {
+      // a receiver nothing plays into (no matrix on the rack): a rack source, or a new Apple TV
+      const srcs = devs.filter(x => x.type === "source").slice(0, 2);
+      for (const src of srcs) out.push({ label: `Feed it from the ${src.model}`, run: (j, s) => (s.connections ||= []).push({ from: src.id, to: d.id, signal: "video" }) });
+      out.push({ label: "Add an Apple TV in the rack", run: (j, s) => { const id = addRackDevice(j, s, "source", "Apple TV", { sourceType: "appletv", idBase: "atv" }); s.connections.push({ from: id, to: d.id, signal: "video" }); } });
+    }
     else if (d?.type === "amp") {
       // no network audio: the receiver's line out (whole-house audio off the theater), or a rack source
       for (const src of [devs.find(x => x.type === "avr"), devs.find(x => x.type === "source")].filter(Boolean))

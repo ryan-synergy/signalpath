@@ -120,6 +120,16 @@ function quoteRooms(job, sol, catalog, adv) {
       add(floor, room, "included", fromCatalog(c));
     }
   }
+  // a second rack wired to another one (a pool house, a guest house) gets Synergy's rack-to-rack
+  // pre-wire item, once per remote rack, in that rack's section (Ryan 2026-10-02)
+  const rackOfDev = {};
+  (sol.racks || []).forEach(r => (r.devices || []).forEach(d => { rackOfDev[d.id] = r.id; }));
+  for (const c of sol.companions || []) if (rackOfDev[c.serves]) rackOfDev[c.id] = rackOfDev[c.serves];
+  (sol.racks || []).forEach((r, i) => {
+    if (!i) return;                                            // the main rack is the one the others run back to
+    const linked = (sol.connections || []).some(c => !c.dante && rackOfDev[c.from] && rackOfDev[c.to] && rackOfDev[c.from] !== rackOfDev[c.to] && (rackOfDev[c.from] === r.id || rackOfDev[c.to] === r.id));
+    if (linked) add(areaName(r.area) || "Floor 1", r.name || "Equipment Rack", "included", SYN("Prewire - Rack Interconnect"));
+  });
   // the control platform's host/controller, as the licensing advisor picked it
   for (const lic of adv?.licensing || []) {
     if (!lic.pick || lic.solution !== sol.id) continue;

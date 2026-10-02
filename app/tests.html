@@ -3751,6 +3751,10 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const est = X.planQueueFiles(structuredClone(fixtures.estate), 0, CAT).map(f => typeof f === "string" ? f : f.text ?? f.content ?? "").join("\n");
   t("planqueue: every MXNet decoder is quoted — the rack's decoders into the MRX-540 and the pool MDX-8 included (5 DV2, 3 EV2)",
     qtyOf(est, "AC-MXNET-1G-DV2") === 5 && qtyOf(est, "AC-MXNET-1G-EV2") === 3, `DV2 ${qtyOf(est, "AC-MXNET-1G-DV2")} EV2 ${qtyOf(est, "AC-MXNET-1G-EV2")}`);
+  const res = X.planQueueFiles(structuredClone(fixtures.residence), 0, CAT).map(f => typeof f === "string" ? f : f.text ?? f.content ?? "").join("\n");
+  const poolSection = est.split("\n## ").find(sec => sec.startsWith("Pool House Rack")) || "";
+  t("planqueue: a second rack wired to the main one quotes one Prewire - Rack Interconnect, in its own section; a one-rack job none",
+    qtyOf(est, "Prewire - Rack Interconnect") === 1 && /\| Synergy \| Prewire - Rack Interconnect/.test(poolSection) && qtyOf(res, "Prewire - Rack Interconnect") === 0);
 }
 
 document.getElementById("summary").innerHTML =

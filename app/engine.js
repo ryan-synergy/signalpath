@@ -65,23 +65,32 @@ const LIGHT_OVER = "#e5484d";
 const pipWidth = (cap, rows, maxPer, pitch, w) => { const per = Math.max(1, Math.ceil(cap / (maxPer * rows))); return Math.ceil(Math.ceil(cap / per) / rows) * pitch - (pitch - w); };
 // what the lights say in words (hover on screen): "HDMI inputs: 2 of 7 used · 5 open"
 const lightsTitle = (what, used, cap, res = 0) => `<title>${what}: ${used} of ${cap} used${res ? ` · ${res} reserved` : ""}${used > cap ? ` · ${used - cap} over` : ` · ${cap - used - res} open`}</title>`;
-function pipField(cx, y, { used = 0, cap, res = 0 }, { lit = "#3b82c4", bw = false, rows = 1, maxPer = 12, w = 5, h = 6, pitch = 7, label = "", shape = "rect", what = "" } = {}) {
+// shapes: "rect" windows · "jack" dots · "outlet" · "rj" a network jack (w × h plus its tab; `group` = a gap every N) ·
+// "rca" a stereo pair (white ring over red, one column per jack). noTail: the caller prints the count itself.
+const pipGroupW = (perRow, pitch, w, group, gap = 4) => perRow * pitch - (pitch - w) + (group ? Math.floor((perRow - 1) / group) * gap : 0);
+function pipField(cx, y, { used = 0, cap, res = 0 }, { lit = "#3b82c4", bw = false, rows = 1, maxPer = 12, w = 5, h = 6, pitch = 7, label = "", shape = "rect", what = "", group = 0, noTail = false } = {}) {
   if (!(cap > 0)) return "";
   const per = Math.max(1, Math.ceil(cap / (maxPer * rows)));
   const n = Math.ceil(cap / per), perRow = Math.ceil(n / rows);
   const litN = Math.min(n, Math.ceil(used / per)), resN = Math.min(n - litN, Math.ceil(res / per));
-  const fw = pipWidth(cap, rows, maxPer, pitch, w), x0 = cx - fw / 2;
+  const fw = group ? pipGroupW(perRow, pitch, w, group) : pipWidth(cap, rows, maxPer, pitch, w), x0 = cx - fw / 2;
   const on = bw ? "#e6e6e6" : lit, over = used > cap;
   let s = "";
   for (let i = 0; i < n; i++) {
-    const x = x0 + (i % perRow) * pitch, yy = y + Math.floor(i / perRow) * (h + 2);
+    const col = i % perRow, x = +(x0 + col * pitch + (group ? Math.floor(col / group) * 4 : 0)).toFixed(1), yy = +(y + Math.floor(i / perRow) * (h + (shape === "rj" ? 4 : 2))).toFixed(1);
     const st = i < litN ? (over && i === n - 1 ? "over" : "on") : i < litN + resN ? "res" : "open";
     const fill = st === "over" ? (bw ? "#fff" : LIGHT_OVER) : st === "on" ? on : st === "res" ? "#8c8c8c" : "none";
     const stroke = st === "open" ? ` stroke="#6e6e6e" stroke-width="0.8"` : "";
+    if (shape === "rj") { const c = st === "open" ? "#6e6e6e" : fill, t = +(w * 0.27).toFixed(1);
+      s += `<path d="M${x} ${yy}h${w}v${h}h-${t}v1.4h-${+(w - 2 * t).toFixed(1)}v-1.4h-${t}z" fill="${st === "open" ? "#0b0d0f" : fill}" stroke="${c}" stroke-width="0.7"/>`; continue; }
+    if (shape === "rca") { const r = w / 2;
+      for (const [k, ring] of [[0, bw ? "#e6e6e6" : "#f2f2f2"], [1, bw ? "#e6e6e6" : "#e5484d"]]) { const c = st === "on" ? ring : st === "over" ? LIGHT_OVER : st === "res" ? "#8c8c8c" : "#6e7686";
+        s += `<circle cx="${+(x + r).toFixed(1)}" cy="${+(yy + r + k * (w + 2.6)).toFixed(1)}" r="${r}" fill="#0d1626" stroke="${c}" stroke-width="1.3"/><circle cx="${+(x + r).toFixed(1)}" cy="${+(yy + r + k * (w + 2.6)).toFixed(1)}" r="${+(r * 0.34).toFixed(2)}" fill="${st === "open" ? "#6e7686" : c}"/>`; }
+      continue; }
     s += shape === "jack" ? `<circle cx="${x + w / 2}" cy="${yy + h / 2}" r="${w / 2}" fill="${fill}"${stroke}/>`
        : `<rect x="${x}" y="${yy}" width="${w}" height="${h}" rx="${shape === "outlet" ? 1.2 : 0.6}" fill="${fill}"${stroke}/>`;
   }
-  const tail = over ? `+${used - cap}` : per > 1 ? `${used}/${cap}` : "";
+  const tail = noTail ? "" : over ? `+${used - cap}` : per > 1 ? `${used}/${cap}` : "";
   if (tail) s += `<text x="${x0 + fw + 3}" y="${y + h - 0.5}" font-size="7" fill="${over && !bw ? LIGHT_OVER : "#aab"}">${tail}</text>`;
   if (label) s += `<text x="${x0 - 3}" y="${y + h - 0.5}" text-anchor="end" font-size="6.5" letter-spacing=".3" fill="#8a8f98">${label}</text>`;
   return what ? `<g class="lights">${lightsTitle(what, used, cap, res)}${s}</g>` : s;
@@ -4178,7 +4187,13 @@ export function render(job, ix, P, rt, opts = {}) {
           const o = u.outlets || { used: 0, cap: 0 };
           if (o.cap) push(pipField(d.x + d.w - 34, d.y + d.h / 2 - 6, o, { ...L, rows: 2, maxPer: 9, w: 4.5, h: 5, pitch: 6.5, shape: "outlet", what: "Outlets" }));
           else push([0, 1].map(i => `<rect x="${d.x + d.w - 34 + i * 12}" y="${d.y + d.h / 2 - 5}" width="9" height="10" rx="2" fill="none" stroke="#8f8f8f" stroke-width="0.9"/>`).join(""));
-        } else if (dev.type === "avbSwitch" && u.ports) push(pipField(d.x + d.w - 30, d.y + d.h / 2 - 6, u.ports, { ...L, rows: 2, maxPer: 8, w: 4.5, h: 5, pitch: 6, what: "Ports" }));
+        } else if (dev.type === "avbSwitch") {
+          // an AVB switch: a little wave (audio on the network) and its ports as jacks, lit as they fill
+          const cyA = d.y + d.h / 2, pp = u.ports || { used: 0, cap: 4 }, two = pp.cap > 8, perRow = two ? Math.ceil(Math.min(pp.cap, 16) / 2) : pp.cap;
+          const jp = Math.min(8.2, 62 / perRow), jw = Math.min(6, jp - 1.6), fw = perRow * jp - (jp - jw);
+          push(`<path d="M${d.x + 17} ${cyA}q2.5 -9 5 0t5 0t5 0" fill="none" stroke="${bw ? "#e6e6e6" : L.lit}" stroke-width="1.3" stroke-linecap="round"/>`);
+          push(pipField(d.x + d.w - 7 - fw / 2, cyA - (two ? 6.8 : 3.4), pp, { ...L, rows: two ? 2 : 1, maxPer: 8, w: jw, h: two ? 3.6 : 5, pitch: jp, shape: "rj", noTail: true, what: u.ports ? "Ports" : "" }));
+        }
         else push(faceGlyph(dev, d.x + d.w - 18, d.y + d.h / 2));
         push(fitText(d.x + d.w / 2, d.y + d.h + 15, d.model, 12, "#161616", d.w + 36, { bold: 600 }));
       } else if (d.kind === "amp") {
@@ -4258,16 +4273,23 @@ export function render(job, ix, P, rt, opts = {}) {
           } else for (let gi = 0; gi < 3; gi++) for (let gj = 0; gj < 3; gj++)
             push(`<circle cx="${d.x + d.w / 2 - 6 + gj * 6}" cy="${my - 6 + gi * 6}" r="1.3" fill="${dim}"/>`);
         } else if (fk === "mxnet" || fk === "network" || fk === "avb") {
-          // switch: its ports (two rows); MXNet adds a play mark — ports carrying video
-          const cx = d.x + d.w / 2 + (fk === "mxnet" ? 6 : 0);
-          if (u.ports) push(pipField(cx, my - 8, u.ports, { ...L, rows: 2, maxPer: 12, what: "Ports" }));
-          else for (let gi = 0; gi < 2; gi++) for (let gj = 0; gj < 6; gj++)
-            push(`<rect x="${cx - 19 + gj * 7}" y="${my - 8 + gi * 8}" width="5" height="6" rx="0.6" fill="none" stroke="${dim}" stroke-width="0.8"/>`);
-          if (fk === "mxnet") {
-            const fw = u.ports ? pipWidth(u.ports.cap, 2, 12, 7, 5) : 40;
-            const tx = cx - fw / 2 - 12;
-            push(`<path d="M${tx} ${my - 6}l7 4.5-7 4.5z" fill="${bw ? "#e6e6e6" : lit}"/>`);
-          }
+          // a switch's front (Ryan 2026-10-03, from two concept rounds): its ports as little network jacks in blocks of six,
+          // lit as they fill; fiber slots when the switch has them; used/total beside them. An MXNet switch leads with a
+          // white play arrow on a solid disc — it's the one carrying video.
+          const snap = job.job?.catalogSnapshot?.devices?.[dev.catalogRef]?.outputs || {}, hasSfp = !!(snap.sfp || snap.sfpPlus);
+          const pitch = fk === "mxnet" ? 6.2 : 7.2, jw = fk === "mxnet" ? 4.8 : 5.6, disc = fk === "mxnet" ? 26 : 0;
+          // the jacks are the copper ports; the fiber ones are the slots beside them (counted in used/total)
+          const sfpN = Math.min((+snap.sfp || 0) + (+snap.sfpPlus || 0), Math.max(0, (u.ports?.cap || 0) - 4));
+          const cap = Math.max(1, (u.ports?.cap || 24) - sfpN), per = Math.max(1, Math.ceil(cap / 24)), perRow = Math.ceil(Math.ceil(cap / per) / 2);
+          const jacksU = u.ports ? { ...u.ports, cap, used: Math.min(u.ports.used, u.ports.used > u.ports.cap ? cap + 1 : cap) } : { used: 0, cap };
+          const fw = pipGroupW(perRow, pitch, jw, 6), cnt = u.ports ? 19 : 0, total = disc + fw + (hasSfp ? 14 : 0) + cnt;
+          const x0 = d.x + 9 + Math.max(0, (d.w - 18 - total) / 2), accent = bw ? "#e6e6e6" : lit;
+          if (fk === "mxnet") push(`<circle cx="${+(x0 + 10.5).toFixed(1)}" cy="${my - 1}" r="10.5" fill="${accent}"/><path d="M${+(x0 + 7).toFixed(1)} ${my - 6.8}l9.5 5.8-9.5 5.8z" fill="${bw ? "#111" : "#fff"}"/>`);
+          const field = pipField(x0 + disc + fw / 2, my - 9, jacksU, { ...L, rows: 2, maxPer: 12, w: jw, h: 5, pitch, shape: "rj", group: 6, noTail: true });
+          push(u.ports ? `<g class="lights">${lightsTitle("Ports", u.ports.used, u.ports.cap, u.ports.res || 0)}${field}</g>` : field);   // the hover says the real total, fiber included
+          if (hasSfp) push([0, 1].map(k => `<rect x="${+(x0 + disc + fw + 4).toFixed(1)}" y="${my - 8.5 + k * 9}" width="10" height="5.5" rx="1" fill="#0b0d0f" stroke="#8a8a8a" stroke-width="0.8"/>`).join(""));
+          if (u.ports) { const over = u.ports.used > u.ports.cap;
+            push(`<text x="${+(x0 + disc + fw + (hasSfp ? 14 : 0) + 4).toFixed(1)}" y="${my + 1.5}" font-size="6.2" font-weight="600" fill="${over && !bw ? LIGHT_OVER : bw ? "#cfcfcf" : lighten(lit, 0.5)}">${over ? `+${u.ports.used - u.ports.cap}` : `${u.ports.used}/${u.ports.cap}`}</text>`); }
         } else if (fk === "control") {
           // the brains of the job
           const c = bw || !kind ? "#cfcfcf" : lit, bx = d.x + d.w / 2, by = my - 1;
@@ -4276,22 +4298,16 @@ export function render(job, ix, P, rt, opts = {}) {
             `<path d="M${bx + 0.8} ${by - 7}C${bx + 5} ${by - 9} ${bx + 9.5} ${by - 6} ${bx + 8.5} ${by - 2.5}C${bx + 11} ${by} ${bx + 9.5} ${by + 5} ${bx + 6} ${by + 5.5}C${bx + 5} ${by + 8} ${bx + 1.5} ${by + 8.5} ${bx + 0.8} ${by + 6}Z"/>` +
             `<path d="M${bx - 6} ${by - 3}q2.5 0.5 2.5 3M${bx - 4.5} ${by + 2.5}q2 -0.5 3.2 1.5M${bx + 6} ${by - 3}q-2.5 0.5 -2.5 3M${bx + 4.5} ${by + 2.5}q-2 -0.5 -3.2 1.5"/></g>`);
         } else if (dev.type === "audioInputModule" || dev.type === "audioOutputModule") {
-          // mirrored module cues: jack field sits on the side the signals live —
-          // input = left cluster with an arrow flowing IN, output = right
-          // cluster with the arrow flowing OUT (matches where wires attach);
-          // each jack lights when a run lands on it
-          const inMod = dev.type === "audioInputModule";
-          if (u.jacks) {
-            const per = Math.ceil(Math.min(u.jacks.cap, 16) / 2), fw = per * 6 - 1.8;
-            push(pipField(inMod ? d.x + 26 + fw / 2 : d.x + d.w - 26 - fw / 2, my - 6, u.jacks, { ...L, rows: 2, maxPer: 8, w: 4.2, h: 4.2, pitch: 6, shape: "jack", what: inMod ? "Audio inputs" : "Audio outputs" }));
-          } else {
-            const jx = inMod ? d.x + 26 : d.x + d.w - 44;
-            for (let gi = 0; gi < 2; gi++) for (let gj = 0; gj < 4; gj++)
-              push(`<circle cx="${jx + gj * 6}" cy="${my - 3 + gi * 6}" r="1.4" fill="${dim}"/>`);
-          }
-          const ax = inMod ? d.x + 10 : d.x + d.w - 20;
-          push(`<line x1="${ax}" y1="${my}" x2="${ax + 9}" y2="${my}" stroke="${dim}" stroke-width="1.1"/>`);
-          push(`<path d="M${ax + 9} ${my}l-3.2 -2.4v4.8z" fill="${dim}"/>`);
+          // input vs output at a glance (Ryan 2026-10-03, concept 1): an IN badge on the left with chevrons flowing toward
+          // the jacks; on an output module the jacks come first and the chevrons flow out to an OUT badge on the right.
+          // Each jack is a stereo pair — white ring over red — lit when a run lands on it.
+          const inMod = dev.type === "audioInputModule", accent = bw ? "#e6e6e6" : lit, cap = Math.min(u.jacks?.cap || 8, 16);
+          const jp = cap <= 8 ? 10.5 : 84 / cap, jw = cap <= 8 ? 6.4 : Math.min(6.4, jp - 1.4), fw = cap * jp - (jp - jw);
+          const badge = (x, t, w) => `<rect x="${x}" y="${my - 10}" width="${w}" height="11" rx="2" fill="${accent}"/><text x="${x + w / 2}" y="${my - 1.7}" text-anchor="middle" font-size="7" font-weight="800" fill="${bw ? "#111" : "#fff"}">${t}</text>`;
+          const chev = x => [0, 1, 2].map(k => `<path d="M${x + k * 6} ${my - 9}l4.5 4.5-4.5 4.5" fill="none" stroke="${bw ? "#cfcfcf" : lighten(lit, 0.45)}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="${(0.45 + k * 0.27).toFixed(2)}"/>`).join("");
+          const field = cx => pipField(cx, my - 12.2, u.jacks || { used: 0, cap }, { ...L, rows: 1, maxPer: 16, w: jw, h: jw, pitch: jp, shape: "rca", noTail: true, what: u.jacks ? (inMod ? "Audio inputs" : "Audio outputs") : "" });
+          if (inMod) push(badge(d.x + 8, "IN", 15) + chev(d.x + 27) + field(d.x + 49 + fw / 2));
+          else push(field(d.x + 13 + fw / 2) + chev(d.x + 101) + badge(d.x + 122, "OUT", 21));
         }
         push(fitText(d.x + d.w / 2, d.y + d.h - 9, restName.join(" "), 12, "#fff", d.w - 40, { bold: true }));   // clear of the status light
         push(`<circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 10}" r="4" fill="#3fbf5a" fill-opacity="0.25"/><circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 10}" r="2.2" fill="#3fbf5a"/>`);

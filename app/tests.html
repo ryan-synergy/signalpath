@@ -2611,17 +2611,18 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const p = place(job, ix);
   const svg = render(job, ix, p, route(job, ix, p));
   const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
-  const tileArrows = id => {
+  // (2026-10-03 look: an IN / OUT badge, three chevrons showing the flow, each jack a stereo pair of rings)
+  const tileFace = id => {
     const g = [...doc.querySelectorAll("g.devtile")].find(t2 => t2.dataset.device === id);
-    return { jacks: g.querySelectorAll('circle[r="1.4"]').length, arrows: g.querySelectorAll("path[d*='l-3.2']").length,
-             firstJackX: +([...g.querySelectorAll('circle[r="1.4"]')][0]?.getAttribute("cx") || 0) };
+    const badge = [...g.querySelectorAll("text")].find(x => /^(IN|OUT)$/.test(x.textContent)), rings = [...g.querySelectorAll('circle[stroke-width="1.3"]')].filter(c => c.getAttribute("fill") === "#0d1626");
+    return { badge: badge?.textContent, badgeX: +badge?.getAttribute("x"), jacks: rings.length / 2, chev: g.querySelectorAll('path[d*="l4.5 4.5-4.5 4.5"]').length,
+      minX: Math.min(...rings.map(c => +c.getAttribute("cx"))), maxX: Math.max(...rings.map(c => +c.getAttribute("cx"))) };
   };
-  const inm = tileArrows("sav-in"), outm = tileArrows("sav-out");
-  const tin = p.racks.flatMap(r => r.devices).find(d => d.id === "sav-in");
-  t("modules: input module wears a left jack field + inward arrow",
-    inm.jacks === 8 && inm.arrows === 1 && inm.firstJackX < tin.x + tin.w / 2);
-  t("modules: output module mirrors it — right jack field + outward arrow",
-    outm.jacks === 8 && outm.arrows === 1 && outm.firstJackX > tin.x + tin.w / 2);
+  const inm = tileFace("sav-in"), outm = tileFace("sav-out");
+  t("modules: an input module leads with an IN badge and chevrons flowing toward its jacks",
+    inm.badge === "IN" && inm.chev === 3 && inm.jacks >= 4 && inm.badgeX < inm.minX, JSON.stringify(inm));
+  t("modules: an output module mirrors it — jacks first, chevrons flowing out to an OUT badge",
+    outm.badge === "OUT" && outm.chev === 3 && outm.jacks >= 4 && outm.badgeX > outm.maxX, JSON.stringify(outm));
 }
 
 /* ---------- source feeds always exit RIGHT (user redline 2026-09-21) ---------- */
@@ -2662,6 +2663,15 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const w0 = rS.wires.find(w => w.from === srcs[1].id), stub = w0 && sS.includes(`d="M${w0.pts[0][0]} ${w0.pts[0][1]}L${pk.x + pk.w - pk.puck} ${w0.pts[0][1]}"`);
     t("source faces: a puck keeps its full slot for routing, is drawn narrower and centred, and its wire runs on in to the puck's edge",
       pk.puck > 0 && pk.w === other.w && +rect.getAttribute("width") === pk.w - pk.puck * 2 && +rect.getAttribute("x") === pk.x + pk.puck && !!stub, JSON.stringify([pk, w0?.pts[0]]));
+  }
+  { // switch faces (Ryan 2026-10-03, option 1 + concept 1): ports are little network jacks in blocks of six, fiber as slots; MXNet leads with a play disc
+    const tj = await (await fetch("./test-fixtures/test-job-1.json")).json(), CATs = await (await fetch("./catalog.json")).json();
+    const Ls = loadJob(effectiveJob(tj, 0)), as = advise(Ls.job, Ls.ix, CATs), ps = enginePlace(Ls.job, Ls.ix), Us = boxUsage(Ls.job, Ls.ix, CATs, as, 0);
+    const ds = new DOMParser().parseFromString(render(Ls.job, Ls.ix, ps, engineRoute(Ls.job, Ls.ix, ps), { usage: Us }), "image/svg+xml");
+    const g = id => ds.querySelector(`g.devtile[data-device="${id}"]`), jacks = id => g(id).querySelectorAll('path[d*="v1.4h-"]').length;
+    t("switch faces: a 24-port switch shows 24 jacks and two fiber slots, and reads used/total; the MXNet switch leads with a play arrow on a disc; the AVB switch has its wave",
+      jacks("lan") === 24 && g("lan").querySelectorAll('rect[width="10"][height="5.5"]').length === 2 && [...g("lan").querySelectorAll("text")].some(x => x.textContent === `${Us.lan.ports.used}/${Us.lan.ports.cap}`) &&
+      jacks("sw") === 24 && !!g("sw").querySelector('circle[r="10.5"]') && !g("lan").querySelector('circle[r="10.5"]') && !!g("avb").querySelector('path[d*="q2.5 -9 5 0"]'), `${jacks("lan")} ${jacks("sw")}`);
   }
   { // the speaker look Ryan picked from concepts (2026-10-03): yellow cone, thin dark rim, sound lines per group, a glint on the TV
     const svgB = render(job, ix, p, route(job, ix, p), { grayscale: true });

@@ -3443,6 +3443,15 @@ for (const [name, raw] of Object.entries(fixtures)) {
       if (name === "belair" || name === "stress") // (5%, not 10%: each TV row keeps a spare lane and a little room for its return since 2026-10-03 — stress in Bands went
       // 0.54 → 0.50 for it, and Bundle / Ribbon came level with Classic on best-effort wires)
       t(`layout — ${name} (${layout}): prints at least 5% bigger than Classic (${C.p.fitScale.toFixed(2)} → ${p.fitScale.toFixed(2)})`, p.fitScale >= C.p.fitScale * 1.05);
+      { // trunks off: every feed is its own line down the channel beside the rooms, so the channel widens with the feeds
+        const off = lay(raw, layout, { trunks: "off" }), offFb = off.rt.warnings.filter(w => w.code === "route-fallback").length, cap = name === "belair" ? 2 : 0;
+        t(`layout — ${name} (${layout}, trunks off): best-effort wires ≤ ${cap} (${offFb})`, offFb <= cap && !off.rt.warnings.some(w => w.code === "unrouted"));
+      }
+      if (name === "stress") { // a big amp trunk gathers on the side its jacks face — never wraps round the amp to a riser behind it
+        const devs = p.racks.flatMap(r => r.devices), last = Math.max(...devs.map(d => d.x));
+        const wrapped = rt.wires.filter(w => { const d = devs.find(d => d.id === w.from); return d && d.x === last && /spk/.test(w.to) && (w.pts || []).some(q => q[0] < d.x - 2); });
+        t(`layout — stress (${layout}): no speaker run doubles back behind its amp`, wrapped.length === 0, wrapped.slice(0, 3).map(w => w.id).join(", "));
+      }
       if (layout === "bands") {
         const inBand = z => p.bands.some(b => z.x >= b.x && z.x + z.w <= b.x + b.w && z.y >= b.y && z.y + z.h <= b.y + b.h);
         t(`layout — ${name} (bands): every room sits inside a labelled band, bands don't overlap, areas show as a tag`,

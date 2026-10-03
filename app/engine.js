@@ -195,6 +195,9 @@ export function normalizeJob(job) {
     sol.platforms = Array.isArray(sol.platforms) ? sol.platforms.filter(x => typeof x === "string") : [];
     if (sol.audioNetwork != null && typeof sol.audioNetwork !== "string") delete sol.audioNetwork;
     for (const k of ["racks", "localDevices", "companions", "connections", "annotations"]) list(sol, k);
+    // how a PoE box on a switch that can't power it gets power: { box id: "injector" | "psu" }
+    if (sol.poePower != null) { if (typeof sol.poePower !== "object" || Array.isArray(sol.poePower)) delete sol.poePower;
+      else for (const [k, v] of Object.entries(sol.poePower)) if (!["injector", "psu"].includes(v)) delete sol.poePower[k]; }
     sol.racks.forEach((r, i) => { scalars(r); if (typeof r.name !== "string" || !r.name.trim()) r.name = i ? `Rack ${i + 1}` : "Equipment Rack"; list(r, "devices").forEach(scalars);
       // the space it has to fit (inches) and the rack picked for it
       if (r.space != null) { if (typeof r.space !== "object" || Array.isArray(r.space)) delete r.space;
@@ -4737,7 +4740,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       out.notes.push({ code: "lan-no-switch", solution: p.solution, add: sug ? { type: "networkSwitch", ref: sug.ref } : null,
         msg: `No LAN switch on this job — ${p.used} Ethernet ports needed on the house network (every TV, the networked rack gear, the AV switch uplinks)${sug ? `; a ${sug.model} (${sug.ports} ports) covers it with spare` : ""}` });
     }
-    if (p.needsInjector) out.notes.push({ code: "switch-no-poe", solution: p.solution, ref: p.switch,
+    if (p.needsInjector) out.notes.push({ code: "switch-no-poe", solution: p.solution, ref: p.switch, ids: p.unpowered,
       msg: `${p.model} doesn't power PoE — ${p.needsInjector} PoE device${p.needsInjector > 1 ? "s" : ""} on it need${p.needsInjector > 1 ? "" : "s"} an injector or local power supply` });
   }
   /* -- rack space: the elevation's U count against the rack's size -- */

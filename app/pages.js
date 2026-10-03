@@ -6,7 +6,7 @@
 import { expandChannels, effectiveJob, indexJob } from "./engine.js";
 import { TYPE_NAME, PLATFORM_NAME, adapterName, describeNode, productName } from "./names.js";
 import { bulletFor, knownRunM } from "./hookup.js";
-import { NET_ROLE_NAME, switchSetup, companionSku } from "./network.js";
+import { NET_ROLE_NAME, switchSetup, companionSku, networkPlan, POE_INJECTOR } from "./network.js";
 import { isAsBuilt, asBuiltChanges, installRows } from "./asbuilt.js";
 import { KIND_STYLE } from "./kinds.js";
 import { zoneRacks } from "./sheets.js";
@@ -312,6 +312,11 @@ export function takeoffItems(job, ix, opts = {}) {
         items.push({ label: `Speakers, ${spkDescr(ep)}`, status: gray ? "prewire" : ep.status || "new", where: z.name });
       }
     }
+  }
+  // PoE injectors picked for boxes on a switch that can't power them (they sit in the rack)
+  if (opts.catalog?.devices) {
+    const inj = networkPlan(job, ix, opts.catalog).filter(p => p.solution === sol.id).reduce((n, p) => n + p.injectors, 0);
+    if (inj) items.push({ label: partName(POE_INJECTOR.ref, `${POE_INJECTOR.mfr} ${POE_INJECTOR.model} PoE injector`), status: "new", where: sol.racks?.[0]?.name || "Equipment Rack", qty: inj });
   }
   // billable room remotes (Apple TV / factory remotes ship with the gear — drawn, never quoted)
   const REMOTE_BOM = { savant: "Savant Pro Remote", josh: "Josh Remote" };

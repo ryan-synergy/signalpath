@@ -738,6 +738,29 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
       ["Den", "Office"].every(n => RH(r.job, sol, zn(n)).video));
     t("blueprinted/savant: powered speakers fed line-level say so on the room",
       /line-level from AOM \(1\)/.test(zn("Patio").note || ""));
+    t("blueprinted/savant: the import says a Savant config doesn't list everything",
+      r.warnings.some(w => /doesn't list everything/.test(w)));
+    // PoE boxes on a switch that can't power them: pick injectors or local supplies, box by box
+    const H = await import("./hookup.js"), XP = await import("./exports.js"), CAT = await (await fetch("./catalog.json")).json();
+    const adv = () => { const L = loadJob(structuredClone(r.job)); return { L, a: advise(L.job, L.ix, CAT) }; };
+    let { a } = adv(); const f = a.notes.find(n => n.code === "switch-no-poe");
+    const fx = f ? H.quickFixes(r.job, sol, f, CAT) : [];
+    t("poe: a non-PoE switch's note lists the boxes and offers injectors or local supplies",
+      f?.ids?.length >= 1 && fx.length === 2 && /injector/i.test(fx[0].label) && /power suppl/i.test(fx[1].label));
+    const outlets0 = a.power.reduce((n, p) => n + p.need, 0);
+    sol.poePower = { [f.ids[0]]: "injector", ...(f.ids[1] ? { [f.ids[1]]: "psu" } : {}) };
+    ({ a } = adv());
+    const row = id => a.network.flatMap(p => p.rows).find(x => x.id === id);
+    t("poe: each box shows how it's powered on the network plan",
+      row(f.ids[0]).power === "PoE injector" && (!f.ids[1] || row(f.ids[1]).power === "Local PSU"));
+    t("poe: the injector takes a rack outlet", a.power.reduce((n, p) => n + p.need, 0) >= outlets0 + (a.power.some(p => p.loads.some(l => l.id === f.ids[0])) ? 0 : 1) &&
+      a.power.some(p => p.loads.some(l => l.why === "PoE injector")));
+    const { L } = adv();
+    t("poe: injectors go on the takeoff and the PlanQueue file (Ubiquiti U-POE-AF)",
+      takeoffItems(L.job, L.ix, { catalog: CAT }).some(i => /U-POE-AF/.test(i.label) && i.qty === 1) &&
+      XP.planQueueFiles(r.job, 0, CAT).some(x => /1 \| Ubiquiti \| U-POE-AF/.test(x.text || x.body || JSON.stringify(x))));
+    sol.poePower = { ...sol.poePower, x: "bogus", [f.ids[0]]: "laser" };
+    t("poe: junk choices are dropped on load", Object.values(loadJob(structuredClone(r.job)).job.solutions[0].poePower || {}).every(v => ["injector", "psu"].includes(v)));
   }
   { // re-import merge: House refreshes, Solutions and endpoint ids survive
     const target = structuredClone(fixtures.residence);

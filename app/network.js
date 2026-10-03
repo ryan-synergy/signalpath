@@ -20,6 +20,11 @@ const NO_LAN_NAME = /\b(turn ?table|record player|phono|cd player|tuner)\b/i;
 export const NET_ROLE_NAME = { mxnet: "MXNet video", dante: "Dante audio", avb: "AVB audio", lan: "Network" };
 
 // the catalog product behind an app-added adapter (exports and the port plan agree)
+/* a PoE box on a switch that can't power it: how the job powers it instead (Ryan 2026-10-02 —
+   "budget sometimes dictates": an injector in the rack or a local power supply at the box) */
+export const POE_CHOICE = { injector: "PoE injector", psu: "Local PSU" };
+export const POE_INJECTOR = { ref: "ubiquiti-u-poe-af", mfr: "Ubiquiti", model: "U-POE-AF" };
+
 export function companionRef(comp, tenG) {
   if (!comp) return null;
   if (comp.type === "axis") return "avpro-acp-axis2";
@@ -217,7 +222,7 @@ export function networkPlan(job, ix, catalog) {
         else if (r === "dante" && d?.type === "controlBox") net = "Dante control";
         else if (r === "lan" && d?.type === "controlBox" && [...members].some(([sw, m]) => sw !== lanSw?.id && m.has(id))) net = "LAN (control port)";
         return { id, what, where, label, rank, zi, order, isSwitch, net,
-                 power: needsPoe ? (swPoe ? "PoE" : "PoE — injector / PSU") : "" };
+                 power: needsPoe ? (swPoe ? "PoE" : POE_CHOICE[sol.poePower?.[id]] || "PoE — injector / PSU") : "" };
       }).sort((a, b) => a.rank - b.rank || a.zi - b.zi || a.order - b.order);
 
       // uplinks take the SFP cages first (SFP 1 up); everything else fills
@@ -258,6 +263,8 @@ export function networkPlan(job, ix, catalog) {
         poeBudgetW: swCat?.poeBudgetW ?? null,
         poeCount: rows.filter(n => n.power === "PoE").length,
         needsInjector: rows.filter(n => n.power.startsWith("PoE —")).length,
+        unpowered: rows.filter(n => n.power.startsWith("PoE —")).map(n => n.id),
+        injectors: rows.filter(n => n.power === POE_CHOICE.injector).length,
         rows,
       });
     }

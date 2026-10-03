@@ -461,6 +461,8 @@ export function importBlueprinted(raw) {
     try { autoHookup(job, sol, z, { avr: !!roomAvr[z.id] }); wired++; } catch (e) { warnings.push(`${z.name}: couldn't wire it automatically (${e.message})`); }
   }
   if (wired) notes.push(`Rooms wired from the rack the way quick-add would — check them against the walk`);
+  // Blueprinted only sees what the Savant config models (Ryan 2026-10-02: "it doesn't have everything")
+  warnings.push("A Savant config doesn't list everything (MXNet control box, PoE injectors, local power supplies, extra amps) — check the original quote or system design");
   if (raw.cameras?.length) sol.auxCounts = { cameras: raw.cameras.length };
 
   return { kind: "blueprinted", job, notes, warnings, unmapped };

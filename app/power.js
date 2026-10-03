@@ -84,6 +84,13 @@ export function powerPlan(job, ix, catalog, netPlans = []) {
       loads.push({ rack: rackOf[k.to], id: `earckit-${k.from}`, what: `${c?.model || "eARC extender"} PSU (${describeNode(job, sol, k.from).short})`,
         outlets: 1, why: "at the RX — powers both ends (PoC)", ...watts(c) });
     }
+    // PoE injectors sit in the rack by the switch and plug into the WattBox — the TV end's box too
+    for (const p of netPlans.filter(p => p.solution === sol.id))
+      for (const row of p.rows.filter(r => r.power === "PoE injector")) {
+        const had = loads.find(l => l.id === row.id);
+        if (had) { had.why = "PoE injector"; continue; }
+        loads.push({ rack: rackOf[p.switch], id: `inj-${row.id}`, what: `PoE injector (${row.label})`, outlets: 1, why: "PoE injector" });
+      }
     const main = sol.racks?.[0]?.id;
     for (const x of [...loads, ...poe, ...units]) x.rack ??= main;
     const multi = (sol.racks || []).length > 1;

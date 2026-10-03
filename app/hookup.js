@@ -454,6 +454,12 @@ export function quickFixes(job, sol, f, catalog = null) {
     return out;
   }
   // a rack over-full / not fitting its space: a taller rack that still fits, or squeeze the spacing
+  // PoE boxes on a switch that can't power them: injectors in the rack, or local power supplies
+  if (f.code === "switch-no-poe" && f.ids?.length) {
+    const n = f.ids.length, set = how => (j, s) => { s.poePower ||= {}; for (const id of f.ids) s.poePower[id] = how; };
+    out.push({ label: `PoE injector${n > 1 ? `s for all ${n}` : ""}`, run: set("injector") });
+    out.push({ label: `Local power suppl${n > 1 ? `ies for all ${n}` : "y"}`, run: set("psu") });
+  }
   if ((f.code === "rack-full" || f.code === "rack-space") && f.rack) {
     const rackOf = s => (s.racks || []).find(r => r.id === f.rack);
     const pick = f.code === "rack-space" ? f.best : f.bigger;

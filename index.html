@@ -524,28 +524,28 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003001249",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003001249",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003001249",
-    "./app/ports.js": "./app/ports.js?v=20261003001249",
-    "./app/commands.js": "./app/commands.js?v=20261003001249",
-    "./app/engine.js": "./app/engine.js?v=20261003001249",
-    "./app/exports.js": "./app/exports.js?v=20261003001249",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003001249",
-    "./app/hookup.js": "./app/hookup.js?v=20261003001249",
-    "./app/importers.js": "./app/importers.js?v=20261003001249",
-    "./app/library.js": "./app/library.js?v=20261003001249",
-    "./app/names.js": "./app/names.js?v=20261003001249",
-    "./app/network.js": "./app/network.js?v=20261003001249",
-    "./app/pages.js": "./app/pages.js?v=20261003001249",
-    "./app/power.js": "./app/power.js?v=20261003001249",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003001249",
-    "./app/rack.js": "./app/rack.js?v=20261003001249",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003001249",
-    "./app/starters.js": "./app/starters.js?v=20261003001249",
-    "./app/kinds.js": "./app/kinds.js?v=20261003001249",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003001249",
-    "./app/sheets.js": "./app/sheets.js?v=20261003001249"
+    "./app/ai.js": "./app/ai.js?v=20261003002018",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003002018",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003002018",
+    "./app/ports.js": "./app/ports.js?v=20261003002018",
+    "./app/commands.js": "./app/commands.js?v=20261003002018",
+    "./app/engine.js": "./app/engine.js?v=20261003002018",
+    "./app/exports.js": "./app/exports.js?v=20261003002018",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003002018",
+    "./app/hookup.js": "./app/hookup.js?v=20261003002018",
+    "./app/importers.js": "./app/importers.js?v=20261003002018",
+    "./app/library.js": "./app/library.js?v=20261003002018",
+    "./app/names.js": "./app/names.js?v=20261003002018",
+    "./app/network.js": "./app/network.js?v=20261003002018",
+    "./app/pages.js": "./app/pages.js?v=20261003002018",
+    "./app/power.js": "./app/power.js?v=20261003002018",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003002018",
+    "./app/rack.js": "./app/rack.js?v=20261003002018",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003002018",
+    "./app/starters.js": "./app/starters.js?v=20261003002018",
+    "./app/kinds.js": "./app/kinds.js?v=20261003002018",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003002018",
+    "./app/sheets.js": "./app/sheets.js?v=20261003002018"
 } }
 </script>
 <script>
@@ -771,7 +771,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003001249").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003002018").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -2316,7 +2316,20 @@ function rackHTML(o = {}) {
       <div class="mini">Heat ~${power.btu.toLocaleString("en-US")} BTU/hr${power.noWatts.length ? ` · <span style="color:#a45a12">${power.noWatts.length} box${power.noWatts.length > 1 ? "es" : ""} with ? watts — totals are a floor</span>` : ""}</div>
       ${power.unpublished?.length ? `<div class="mini" style="color:#a45a12">The maker publishes no power figure for ${esc(power.unpublished.join(", "))} — read the rear-panel label (W, or A × 120) or meter it, and type it in below.</div>` : ""}
       ${notes.map(n => `<div class="mini" style="margin-top:6px;color:#a45a12">⚠ ${esc(n.msg)}</div>`).join("")}
+      ${poeHTML(power)}
     </div></div>`; };
+  // PoE boxes on a switch in this rack that can't power them: an injector in the rack or a local
+  // power supply, box by box (Ryan 2026-10-02: budget sometimes means a couple of each)
+  const rackOfSw = id => (sol.racks || []).find(r => (r.devices || []).some(d => d.id === id))?.id ?? sol.racks?.[0]?.id;
+  const poeHTML = power => (a.network || []).filter(p => p.solution === sol.id && rackOfSw(p.switch) === power.rack).map(p => {
+    const rows = p.rows.filter(r => /^PoE —|^PoE injector$|^Local PSU$/.test(r.power));
+    if (!rows.length) return "";
+    const how = sol.poePower || {};
+    return `<div class="mini" style="margin:10px 0 4px"><b>PoE power</b> — ${esc(p.model)} doesn't power PoE; pick for each box</div>
+      <table class="rtab"><tr><th>Box</th><th>Powered by</th></tr>${rows.map(r => `<tr><td>${esc(r.label)}</td><td><select class="poesel" data-id="${esc(r.id)}">
+        ${[["", "? — pick"], ["injector", "PoE injector (rack)"], ["psu", "Local power supply"]].map(([v, t]) => `<option value="${v}"${(how[r.id] || "") === v ? " selected" : ""}>${t}</option>`).join("")}
+      </select></td></tr>`).join("")}</table>`;
+  }).join("");
   const rs = sol.racks || [];
   // each rack's power & heat sits under that rack; a plan with no rack match (none) trails
   const placed = new Set();
@@ -3455,6 +3468,11 @@ function wirePanel(body) {
     const k = el.dataset.k, v = el.value.trim();
     const base = specFor({ ...d, [k]: null }, effectiveCatalog())?.[k];
     if (v === "" || (base != null && +v === +base) || specNum(k, v) == null) delete d[k]; else d[k] = +v;
+  });
+  on(".poesel", el => {
+    const sol = S.job.solutions[S.sol];
+    if (el.value) (sol.poePower ||= {})[el.dataset.id] = el.value;
+    else if (sol.poePower) { delete sol.poePower[el.dataset.id]; if (!Object.keys(sol.poePower).length) delete sol.poePower; }
   });
   on(".jgroup", el => { if (el.value === "type") delete S.job.job.zoneGrouping; else S.job.job.zoneGrouping = el.value; });
   on(".solname", el => { S.job.solutions[S.sol].name = el.value; });

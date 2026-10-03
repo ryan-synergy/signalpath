@@ -21,7 +21,7 @@ import { loadJob, validate, advise, effectiveJob, expandChannels } from "./engin
 import { wireRuns } from "./pages.js";
 import { readHookup, bulletFor } from "./hookup.js";
 import { vocabularyText } from "./commands.js";
-import { NET_ROLE_NAME, companionSku } from "./network.js";
+import { NET_ROLE_NAME, companionSku, POE_INJECTOR } from "./network.js";
 import { isAsBuilt, asBuiltChanges } from "./asbuilt.js";
 import { describeNode, adapterName, isOutdoorZone, SPEAKER_SETUP, STATUS_NAME, SCOPE_NAME, PLATFORM_NAME, AUDIO_NET_NAME, signalName } from "./names.js";
 
@@ -119,6 +119,11 @@ function quoteRooms(job, sol, catalog, adv) {
       const c = cat(companionSku(e, sol, catalog));
       add(floor, room, "included", fromCatalog(c));
     }
+  }
+  // PoE injectors picked for boxes on a switch that can't power them, by the switch's rack
+  for (const p of (adv?.network || []).filter(p => p.solution === sol.id && p.injectors)) {
+    const r = (sol.racks || []).find(r => (r.devices || []).some(d => d.id === p.switch)) || sol.racks?.[0];
+    add(areaName(r?.area) || "Floor 1", r?.name || "Equipment Rack", "included", { mfr: POE_INJECTOR.mfr, model: POE_INJECTOR.model }, { qty: p.injectors });
   }
   // a second rack wired to another one (a pool house, a guest house) gets Synergy's rack-to-rack
   // pre-wire item, once per remote rack, in that rack's section (Ryan 2026-10-02)

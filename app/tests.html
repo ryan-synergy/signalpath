@@ -494,6 +494,16 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     ["Guest room. 50-inch TV. No speakers.", ["Guest Room | TV 50\""]],
     ["Bedroom 2 with a 55-inch TV and a pair of speakers.", ["Bedroom 2 | Stereo pair | TV 55\""]],
     ["Primary suite, 85 inch Sony, stereo, then gym, four ceiling speakers.", ["Primary Suite | Stereo pair | Sony 85\"", "Gym | 4 speakers"]],
+    // parser round 2 (harden/nl-corpus/30-haiku-round2.json): fixes, "same as", counts, negatives, voicemail filler
+    ["kitchen 55 no wait 65 inch", ["Kitchen | TV 65\""]],
+    ["den 2.1 no actually 5.1 wait maybe 7.1, 65 screen", ["Den | 7.1 surround | TV 65\""]],
+    ["office stereo 55, den same as office", ["Office | Stereo pair | TV 55\"", "Den | Stereo pair | TV 55\""]],
+    ["conference room and then training room both 65 soundbar", ["Conference Room | Soundbar | TV 65\"", "Training Room | Soundbar | TV 65\""]],
+    ["level 2 has two 43 inch bedrooms stereo", ["Bedroom 1 | Stereo pair | TV 43\"", "Bedroom 2 | Stereo pair | TV 43\""]],
+    ["mudroom 32 inch but no audio components", ["Mudroom | TV 32\""]],
+    ["bathroom 32 with just a single speaker", ["Bathroom | Mono (1 speaker) | TV 32\""]],
+    ["okay so uh master bedroom 65 inch with um 7.1 also don't forget the bathroom 32 TV no audio", ["Master Bedroom | 7.1 surround | TV 65\"", "Bathroom | TV 32\""]],
+    ["upstairs bath 32", ["Upstairs Bath | TV 32\""]],
   ];
   for (const [x, want] of D) t(`quickadd dictation: "${x}"`, rooms(x).join(" ‖ ") === want.join(" ‖ "), rooms(x).join(" ‖ "));
   t("quickadd dictation: punctuation stuck to a word ('soundbar:', '50 inch!', '3.1:') is ignored — found by harden/today.mjs",

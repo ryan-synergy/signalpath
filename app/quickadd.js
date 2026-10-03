@@ -65,7 +65,17 @@ const PHRASES = [
 // words a sentence wraps around a room that aren't its name (Wispr Flow / dictation writes full sentences)
 const FILLER = new Set(["the", "a", "an", "with", "and", "in", "on", "of", "has", "have", "had", "is", "are", "was", "will", "be", "gets", "get",
   "wants", "want", "needs", "need", "would", "like", "also", "plus", "only", "just", "audio", "sound", "speakers", "speaker", "system", "screen", "display", "television", "monitor", "oled", "qled", "led", "lcd", "uhd", "4k", "8k", "bravia", "neo", "frame", "smart",
-  "it", "its", "it's", "there", "that", "which", "for", "to", "some", "set", "setup", "up", "we", "they", "i", "it'll", "going", "goes", "using", "use"]);
+  "it", "its", "it's", "there", "that", "which", "for", "to", "some", "set", "setup", "up", "we", "they", "i", "it'll", "going", "goes", "using", "use",
+  // spoken filler (voicemail-style dictation: "okay so uh master bedroom um …") and leftovers of fixes / "both"
+  "uh", "uhh", "um", "umm", "er", "okay", "ok", "so", "oh", "yeah", "right", "well", "basically", "let", "me", "don't", "dont", "forget",
+  "both", "all", "each", "but", "not", "maybe", "actually", "wait", "sorry", "pretty", "we've", "got", "here", "at", "about", "around"]);
+
+// a floor said as a heading ("upstairs we have …", "level 2 has three bedrooms") isn't part of a room's name.
+// Glued to one room ("upstairs bath") it stays — that's how the crew tells two baths apart.
+const FLOOR = "(?:upstairs|downstairs|main\\s+(?:level|floor)|(?:first|second|third|ground|top|lower|upper|1st|2nd|3rd)\\s+(?:floor|level)|(?:floor|level)\\s+(?:\\d|one|two|three))";
+// dictation's false starts: "55 no wait 65", "5.1 actually make it 7.1", "not 50 sorry 43" — the last thing said wins
+const VAL = "(?:\\d{1,3}(?:\\.\\d){0,2}|__surround|stereo|mono|soundbar(?:-sub)?|projector|tv|speakers?)";
+const FIXUP = new RegExp(`(?:\\bno\\s+)?(?:\\baudio\\s+)?\\b${VAL}(?:\\s+tv)?\\s+(?:no\\s+wait|no\\s+actually|actually(?:\\s+make\\s+(?:it|that))?|wait|sorry|i\\s+mean|scratch\\s+that|make\\s+(?:it|that))\\s+(?:maybe\\s+|make\\s+(?:it|that)\\s+|just\\s+)?(?=(?:a\\s+)?(?:no\\s+|single\\s+)?${VAL}\\b)`, "g");
 
 export function parseQuickZone(text) {
   let t = " " + String(text || "").toLowerCase().trim() + " ";
@@ -76,13 +86,26 @@ export function parseQuickZone(text) {
   for (const [re, sub] of PHRASES) t = t.replace(re, m => " " + m.replace(re, sub) + " ");
   // a bare "surround" is a 5.1 unless a setup was also given ("surround 7.1")
   t = /(^|\s)(5\.1|5\.1\.2|7\.1|7\.1\.4)(\s|$)/.test(t) ? t.replace(/__surround/g, " ") : t.replace(/__surround/, " 5.1 ").replace(/__surround/g, " ");
+  for (let i = 0; i < 4 && FIXUP.test(t); i++) t = t.replace(FIXUP, " ");
+  t = t.replace(/\b(\d{2,3})\s+no\s+(?=\d{2,3}\b)/g, " ")                      // "77 no 75"
+    .replace(/\b(?:soundbar|stereo|mono)\s+(?:uh|um)\s+(?=soundbar|stereo|mono)/g, " ");   // "soundbar uh soundbar with sub"
+  // a floor as a heading: "upstairs we have", "level 2 has three bedrooms", "upstairs: loft …"
+  t = t.replace(new RegExp(`\\b${FLOOR}\\s+(?=(?:we\\s+have|we've\\s+got|there\\s+(?:are|is)|there's|has|have|is|:|[2-9]\\s+[a-z]))`, "g"), " ");
+  // "full setup" / "the whole works" is praise, not a name
+  t = t.replace(/\b(?:pretty\s+)?full\s+(?:setup|system)\b|\bthe\s+works\b/g, " ");
   // protect a numbered room name from the TV-size reader: "suite 101" → "suite #101"
   t = t.replace(NUMBERED_ROOM, (m, w, n) => `${w} #${n}`);
   const chips = [];
   const zone = { scope: "included" };
+  // "den same as the office" / "guest suite same setup" / "lounge ditto": the gear comes from that room (parseQuick copies it)
+  const same = t.match(/\bsame\s+(?:thing\s+)?as\s+(?:the\s+)?(.+?)\s*$|\b(?:the\s+)?(?:exact(?:ly)?\s+)?(?:the\s+)?same(?:\s+(?:setup|thing|gear|deal|as\s+(?:above|before)))?\b|\bditto\b|\bidentical\b|\bmatch(?:es)?\s+(?:it|that)\b|\bcopy\s+(?:that|it)\b/);
+  if (same) { zone._same = (same[1] || "").trim(); t = t.replace(same[0], " "); }
+  // "both 65 …" / "all 43 inch": this gear goes to the rooms just named too
+  if (/\b(?:both|all|each)\b/.test(t)) zone._both = true;
   let spk = null, tv = null, ofe = false, local = false, matrix = false, avr = false;
 
   const eat = re => { const m = t.match(re); if (m) t = t.replace(re, " "); return m; };
+  const eatAll = re => { let m = null; for (let i = 0; i < 4; i++) { const x = eat(re); if (!x) break; m = m || x; } return m; };
 
   if (eat(/\bprewire(d)?\b|\bpre-wire(d)?\b/)) { zone.scope = "prewire"; chips.push({ kind: "scope", label: SCOPE_NAME.prewire }); }
   if (eat(/\bfuture\b/)) { zone.scope = "future"; chips.push({ kind: "scope", label: SCOPE_NAME.future }); }
@@ -115,13 +138,21 @@ export function parseQuickZone(text) {
     zone.remote = k === "savant" ? "savant" : k === "josh" ? "josh" : (k === "factory" || k === "oem") ? "factory" : "appletv";
     chips.push({ kind: "hint", label: (zone.remote === "appletv" ? "Apple TV" : zone.remote === "factory" ? "factory" : zone.remote) + " remote" });
   }
-  const noTv = !!eat(/\bno\s*(?:video\s*)?(?:tv|display|screen|television|video)\b|\baudio\s*only\b|\bwithout (?:a )?(?:tv|display|screen)\b/);
-  eat(/\bno\s+speakers?\b|\bvideo\s+only\b/);              // said on purpose: a TV-only room (the suggestions stop asking)
+  // "nothing else", "no nothing", "nothing in there": said, not a name
+  eat(/\bno\s+nothing\b|\bnothing(?:\s+(?:else|in\s+there|at\s+all))?\b/);
+  // "audio only" is speakers and no TV
+  t = t.replace(/\b(audio|music)\s*only\b/g, (m, w) => ` ${w} no tv `);     // ("two speakers only" = just the pair)
+  // "a six foot screen": a width, not a size — not a name either
+  t = t.replace(/\b\d{1,2}\s*(?:foot|feet|ft)\s+(?:wide\s+)?(?:screen|wide)\b/g, " ");
+  const noTv = !!eatAll(/\bno\s*(?:video\s*)?(?:tv|display|screen|television|video)s?\b|\bwithout (?:a )?(?:tv|display|screen)\b|\bskip\s+(?:the\s+)?(?:tv|display|screen|video)\b|\bno\s+room\s+for\s+(?:a\s+)?(?:tv|screen|display)\b/);
+  // said on purpose: a TV-only room (the suggestions stop asking) — "no audio", "no sound system", "TV only"
+  const noSpk = !!eatAll(/\bno\s+(?:speakers?|audio|sound|music)(?:\s+(?:system|components?|speakers?|equipment))?\b|\bvideo\s+only\b|\b(?:skip|without)\s+(?:the\s+)?(?:speakers?|audio|sound)\b/);
 
   // landscape with optional sat count: "landscape 8" / "landscape"
   const land = eat(/\blandscape\s*(\d{1,2})?\b/);
   if (land) {
     // "landscape with eight speakers" — the count can come later in the sentence
+    eat(/\bpairs?\b/);
     const n = land[1] || eat(/\b(\d{1,2})\s*(?:x\s*)?(?:speakers?|satellites?|sats?)\b/)?.[1];
     spk = { config: "landscape", satCount: n ? +n : 6, buriedSub: true };
   }
@@ -151,7 +182,9 @@ export function parseQuickZone(text) {
     if (n && +n[1] > 0 && ["stereo", "mono"].includes(spk.config)) spk = { config: "stereo", count: +n[1] };
     eat(/\bspeakers?\b/); }                                   // "7.1.4 with 6 ceiling speakers": the count isn't a name either
   // "N speakers" / "pair"
-  if (!spk) {
+  // "just a single speaker" / "one speaker": a mono speaker
+  if (!spk && !noSpk && eat(/\b(?:a\s+)?(?:single|1|lone)\s+speaker\b/)) spk = { config: "mono" };
+  if (!spk && !noSpk) {
     const pairs = eat(/\b(\d{1,2})\s*(x\s*)?pairs?\b/);
     const m = pairs ? [null, String(+pairs[1] * 2)]
       : eat(/\b(\d{1,2})\s*(x\s*)?(speakers?|spk)\b/) || (eat(/\bpair\b/) && [null, "2"]);
@@ -245,19 +278,53 @@ export function quickSuggest(text) {
 export function roomTexts(text) {
   const clauses = String(text || "")
     .replace(/(\d)\.(\d)/g, (m, a, b) => `${a}\u2024${b}`)                           // keep 5.1 / 7.1.4 whole while sentences split
-    .split(/[,;\n]|\.(?=\s|$)|\bthen\b|\bnext\b/i)
-    .map(x => x.replace(/\u2024/g, ".").replace(/^\s*(and|also|plus)\b/i, "").trim()).filter(Boolean);
+    // "… and two guest rooms 50 each": a count of rooms after "and" starts its own room ("and 4 speakers" doesn't)
+    .replace(/\band\s+(?=(?:[2-9]|two|three|four|five|six|seven|eight|nine)\s+(?!speakers?|pairs?|subs?|ceiling|in\b|in-|wall|outdoor|rock|channels?|ch\b|point|one\b|oh\b|zero|x\b|inch|tvs?\b)[a-z])/gi, ",")
+    // "also don't forget the bathroom", "and uh the theater", "oh and the patio": a new room is starting
+    // (a clause that names no room still joins the one before — "and the sub" stays with its soundbar)
+    .split(/[,;\n]|\.(?=\s|$)|\bthen\b|\bnext\b|\balso\b|\boh\s+and\b|\band\s+(?:(?:uh|um)\s+)?the\b|\band\s+(?:uh|um)\b/i)
+    .map(x => x.replace(/\u2024/g, ".").replace(/^\s*(and|also|plus|oh)\b/i, "").trim()).filter(Boolean);
   const rooms = [];
+  let lead = "";   // "so we also need …": an opener that names nothing goes with the room after it
   for (const c of clauses) {
     const named = parseQuickZone(c).named;
     if (!named && rooms.length) rooms[rooms.length - 1] += " " + c;
-    else rooms.push(c);
+    else if (!named && !parseQuickZone(c).zone.endpoints.length) lead += c + " ";
+    else { rooms.push(lead + c); lead = ""; }
   }
+  if (lead && !rooms.length) rooms.push(lead.trim());
   return rooms;
 }
 
+// the same gear under another name: new ids, the name chip swapped
+function cloneAs(src, name, scope) {
+  const id = "z-" + slug(name), zone = JSON.parse(JSON.stringify(src.zone));
+  Object.assign(zone, { name, id, scope: scope || zone.scope });
+  delete zone._same; delete zone._both;
+  zone.endpoints = zone.endpoints.map(e => ({ ...e, id: id + "-" + e.id.split("-").pop() }));
+  return { ...src, zone, chips: [{ kind: "name", label: name }, ...src.chips.filter(c => c.kind !== "name")], empty: !zone.endpoints.length, named: true };
+}
+const keyOf = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
 export function parseQuick(text) {
-  return roomTexts(text).map(parseQuickZone);
+  const out = [];
+  for (const p of roomTexts(text).map(parseQuickZone)) {
+    const z = p.zone;
+    // "den same as the office": that room's gear (the room named, else the one before)
+    if (z._same !== undefined && !z.endpoints.length) {
+      const want = keyOf(z._same), done = out.filter(o => !o.empty);
+      const src = want ? done.find(o => keyOf(o.zone.name) === want) || done.find(o => keyOf(o.zone.name).includes(want) || want.includes(keyOf(o.zone.name))) : done[done.length - 1];
+      if (src) { out.push(cloneAs(src, z.name, z.scope !== "included" ? z.scope : null)); continue; }
+    }
+    // "conference room and then training room both 65 …": the rooms just named with nothing yet get it too
+    if (z._both && z.endpoints.length) for (let i = out.length - 1; i >= 0 && out[i].empty; i--) out[i] = cloneAs(p, out[i].zone.name);
+    // "two bedrooms 50 stereo" / "three 43 inch bedrooms": that many rooms, numbered
+    const many = z.name.match(/^([2-9]) (.*[a-z])s$/i);
+    if (many && !/ss$/i.test(z.name)) { for (let i = 1; i <= +many[1]; i++) out.push(cloneAs(p, `${many[2]} ${i}`)); continue; }
+    delete z._same; delete z._both;
+    out.push(p);
+  }
+  return out;
 }
 
 /* a room back as quick-add text (starter kits keep their starting rooms this way — readable,

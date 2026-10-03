@@ -3,7 +3,7 @@
    the same job graph the schematic draws; no run or item exists here that
    is not on Sheet 1. Pure string builders, no DOM. */
 
-import { expandChannels, effectiveJob, indexJob } from "./engine.js";
+import { expandChannels, effectiveJob, indexJob, titleBlockSvg } from "./engine.js";
 import { TYPE_NAME, PLATFORM_NAME, adapterName, describeNode, productName, soundbarKind, SONOS_BARS } from "./names.js";
 import { bulletFor, knownRunM } from "./hookup.js";
 import { NET_ROLE_NAME, switchSetup, companionSku, networkPlan, POE_INJECTOR } from "./network.js";
@@ -36,29 +36,10 @@ function frame(title, subtitle, sheetLabel) {
 <text x="40" y="90" font-size="13" fill="#666">${esc(subtitle)}</text>
 <text x="1592" y="64" text-anchor="end" font-size="13" fill="#555">${esc(sheetLabel)}</text>`;
 }
+// the same title block as the schematic's, as a full-width bar (customer, project, revisions, sheet number, stage stamp)
 function footer(job, opts, sheetLabel) {
-  const J = job.job || {};
-  const co = { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
-    info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv", ...(opts.company || {}) };
-  const infoLines = String(co.info).split("·").map(s => s.trim());
-  const revs = J.revisions || [];
-  const last = revs[revs.length - 1] || {};
-  const stage = (J.stage || "proposal") === "asBuilt" ? "AS-BUILT" : "PROPOSAL";
-  return `<g transform="translate(0,940)">
-<rect x="10" y="0" width="1612" height="86" fill="#fff" stroke="#444" stroke-width="1.2"/>
-<line x1="360" y1="0" x2="360" y2="86" stroke="#444"/><line x1="700" y1="0" x2="700" y2="86" stroke="#444"/><line x1="1060" y1="0" x2="1060" y2="86" stroke="#444"/>
-<text x="24" y="22" font-size="9" fill="#777">Project</text><text x="24" y="44" font-size="14" fill="#111">${esc(J.name)}</text>
-<text x="24" y="66" font-size="11" fill="#555">AV Schematic Packet · ${stage}</text>
-<text x="374" y="22" font-size="9" fill="#777">Customer</text><text x="374" y="44" font-size="14" fill="#111">${esc(J.client?.name)}</text>
-<text x="374" y="66" font-size="11" fill="#555">${esc(J.client?.address)}</text>
-<text x="714" y="22" font-size="9" fill="#777">Prepared By</text><text x="714" y="40" font-size="13" fill="#111">${esc(J.drawnBy || "SignalPath")}</text>
-<text x="714" y="60" font-size="9" fill="#777">Date Prepared</text><text x="714" y="78" font-size="13" fill="#111">${esc(last.date || "")}</text>
-<text x="880" y="22" font-size="9" fill="#777">Rev</text><text x="880" y="40" font-size="13" fill="#111">${esc(last.rev ?? 1)}</text>
-<text x="1080" y="40" font-size="20" font-weight="700" letter-spacing="5" fill="#111">${esc(co.name)}</text>
-<text x="1080" y="58" font-size="8" letter-spacing="2.4" fill="#444">${esc(co.tagline)}</text>
-${infoLines.slice(0, 3).map((l, i) => `<text x="1400" y="${28 + i * 16}" font-size="9" fill="#666">${esc(l)}</text>`).join("")}
-</g>
-<text x="1590" y="1018" text-anchor="end" font-size="12" fill="#555">${esc(sheetLabel)}</text>`;
+  return titleBlockSvg(job, { x: 10, y: 952, w: 1612, h: 94 }, { company: opts.company, bw: !!opts.grayscale,
+    sheet: String(sheetLabel || "").replace(/^Sheet\s+/i, "") || " ", drawing: "AV Schematic Packet" });
 }
 const openPage = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" font-family="'Avenir Next', Avenir, Futura, 'Helvetica Neue', sans-serif">`;
 
@@ -82,7 +63,7 @@ const heading = (x, y, text, color = "#111") => `<text x="${x}" y="${y}" font-si
 
 /* ---------- pagination ----------
    Page bodies may not run below LIMIT (the footnote line sits at 920 and the
-   footer bar at 940). Long tables split across columns/sheets under a
+   title block bar at 952). Long tables split across columns/sheets under a
    "(cont.)" heading instead of running off the paper. */
 const LIMIT = 900, TOP = 120;
 // place as many rows as fit above LIMIT; returns the drawn part + leftovers

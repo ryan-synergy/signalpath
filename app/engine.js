@@ -4734,9 +4734,19 @@ export function render(job, ix, P, rt, opts = {}) {
     }
   }
 
-  /* title block (Ryan 2026-10-03, picked from concepts): the original plain look, on the left of the bottom strip with the
-     legend beside it — a solid stage stamp under a bolder sheet number, text upright. On screen it can fold to a one-line
-     tab (opts.titleBlock === "tab"); the drawing is the same either way, and paper always gets the full block. */
+  /* title block — left of the bottom strip; on screen it can fold to a one-line tab (opts.titleBlock === "tab") */
+  push(titleBlockSvg(job, P.titleBlock, { company: opts.company, sheet: opts.sheet, bw, mode: opts.titleBlock,
+    drawing: `AV Schematic — ${sol.name || ""}${job.job?.sheetLabel ? ` · ${job.job.sheetLabel}` : ""}` }));
+  push(`</svg>`);
+  return out.join("\n");
+}
+
+/* The title block (Ryan 2026-10-03, picked from concepts): the original plain look — a solid stage stamp under a bolder
+   sheet number, text upright. The schematic draws it on the left of the bottom strip with the legend beside it; the packet
+   pages draw it as a short full-width bar (rect.h < 104 → one row of cells). mode "tab" is the schematic's folded
+   one-line tab on screen, "open" adds its Hide control; paper always gets the full block. */
+export function titleBlockSvg(job, rect, { company, sheet, drawing = "AV Schematic", bw = false, mode } = {}) {
+  const out = [], push = (...x) => out.push(...x);
   const J = job.job || {};
   const stage = (J.stage || "proposal").toLowerCase();
   const stageTxt = stage === "asbuilt" || stage === "as-built" ? "AS-BUILT" : "PROPOSAL";
@@ -4745,13 +4755,12 @@ export function render(job, ix, P, rt, opts = {}) {
   const lastDate = revsAll.length ? revsAll[revsAll.length - 1].date : J.catalogSnapshot?.asOf;
   // logo mark removed for now (text-only wordmark until the authentic logo file lands)
   const co = { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
-    info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv", ...(opts.company || {}) };
-  const sheetTxt = opts.sheet || "1 of 3";
-  const drawingTxt = `AV Schematic — ${sol.name || ""}${J.sheetLabel ? ` · ${J.sheetLabel}` : ""}`;
+    info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv", ...(company || {}) };
+  const sheetTxt = sheet || "1 of 3";
   const fitL = (...a) => fitText(...a).replace('text-anchor="middle"', 'text-anchor="start"');
   const stamp = (x, y, w, h, fs) => `<rect class="stagestamp" x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${stageCol}"/><text x="${x + w / 2}" y="${y + h / 2 + fs * 0.36}" text-anchor="middle" font-size="${fs}" font-weight="800" letter-spacing="${(fs * 0.17).toFixed(1)}" fill="#fff">${stageTxt}</text>`;
-  const TB = P.titleBlock;
-  if (tabbed) {
+  const TB = rect;
+  if (mode === "tab") {
     const tb = { x: TB.x, y: TB.y + TB.h - SHEET.strip.tabH, w: TB.w, h: SHEET.strip.tabH }, ty = tb.y + 17.5;
     push(`<g class="titletab" data-titleblock="show"><rect x="${tb.x}" y="${tb.y}" width="${tb.w}" height="${tb.h}" fill="#fff" stroke="#444" stroke-width="1.2"/>`);
     push(`<text x="${tb.x + 12}" y="${ty}" font-size="12" font-weight="700" letter-spacing="3" fill="#111">${esc(co.name)}</text>`);
@@ -4759,6 +4768,34 @@ export function render(job, ix, P, rt, opts = {}) {
     push(stamp(tb.x + tb.w - 388, tb.y + 5, 80, 16, 9));
     push(`<text x="${tb.x + tb.w - 298}" y="${ty}" font-size="11" fill="#333">${esc([revsAll.length ? `Rev ${revsAll[revsAll.length - 1].rev}` : "", `Sheet ${sheetTxt}`].filter(Boolean).join("  ·  "))}</text>`);
     push(`<text class="noprint" x="${tb.x + tb.w - 12}" y="${ty}" text-anchor="end" font-size="11" font-weight="600" fill="#1f6feb">▴ Show title block</text></g>`);
+  } else if (TB.h < 104) {
+    // a short full-width bar (the packet pages' footer): the same cells in one row
+    const x0 = TB.x, y0 = TB.y, w = TB.w, h = TB.h, cX = [0, 300, 650, 990, w - 230, w].map(v => x0 + v);   // logo · customer · project · revisions · sheet
+    const lab = (x, y, t) => `<text x="${x}" y="${y}" font-size="8.5" fill="#777">${t}</text>`;
+    push(`<g class="titleblock"><rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#fff" stroke="#444" stroke-width="1.2"/>`);
+    push(`<path d="${cX.slice(1, -1).map(x => `M${x} ${y0}V${y0 + h}`).join("")}" stroke="#444" fill="none"/>`);
+    const lx = (cX[0] + cX[1]) / 2, ly = y0 + h / 2;
+    push(fitText(lx, ly + 2, co.name, 25, "#111", 270, { bold: true, caps: 7 }).replace(' style="text-transform:uppercase"', ""));
+    push(`<text x="${lx}" y="${ly + 17}" text-anchor="middle" font-size="8.5" letter-spacing="2.6" fill="#444">${esc(co.tagline)}</text>`);
+    push(fitText(lx, ly + 33, co.info, 7, "#666", 284));
+    push(lab(cX[1] + 12, y0 + 16, "Customer"));
+    push(fitL(cX[1] + 12, y0 + 39, J.client?.name || "", 16, "#111", cX[2] - cX[1] - 24, { bold: true }));
+    push(fitL(cX[1] + 12, y0 + 57, String(J.client?.address || "").replace(/\s*,\s*/g, ", ").trim(), 10.5, "#333", cX[2] - cX[1] - 24));
+    push(lab(cX[2] + 12, y0 + 16, "Project"));
+    push(fitL(cX[2] + 12, y0 + 39, J.name || "", 15, "#111", cX[3] - cX[2] - 24));
+    push(fitL(cX[2] + 12, y0 + 57, drawing, 10.5, "#333", cX[3] - cX[2] - 24));
+    push(`<text x="${cX[2] + 12}" y="${y0 + h - 8}" font-size="7" fill="#999">Design intent only — not engineering / construction documentation</text>`);
+    const revs = revsAll.slice(-3), colW = cX[4] - cX[3] - 24, maxCh = Math.floor((colW - 96) / 5);
+    const revLine = t => { t = String(t || "").replace(/\s+/g, " ").trim(); if (t.length <= maxCh) return t; const cut = t.slice(0, maxCh), sp = cut.lastIndexOf(" "); return (sp > maxCh * 0.5 ? cut.slice(0, sp) : cut.slice(0, maxCh - 1)) + "…"; };
+    push(lab(cX[3] + 12, y0 + 16, "Revisions"));
+    revs.forEach((rv, i) => { const rx = cX[3] + 12, y = y0 + 30 + i * 13.5;
+      push(`<g class="revrow" font-size="9.5" fill="#333"><text x="${rx + 8}" y="${y}" text-anchor="end" font-weight="700" fill="#111">${esc(rv.rev)}</text><text x="${rx + 14}" y="${y}">${fmtDate(rv.date)}</text><text x="${rx + 62}" y="${y}">${esc(revLine(rv.description))}</text><text x="${rx + colW}" y="${y}" text-anchor="end">${esc(rv.by || "")}</text><title>${esc(rv.description || "")}</title></g>`); });
+    push(`<text x="${cX[3] + 12}" y="${y0 + h - 8}" font-size="8.5" fill="#777">Date  <tspan font-size="9.5" font-weight="500" fill="#111">${fmtDate(lastDate)}</tspan>    Drawn by  <tspan font-size="9.5" font-weight="500" fill="#111">${esc(J.drawnBy || "SignalPath")}</tspan></text>`);
+    const sx = (cX[4] + cX[5]) / 2;
+    push(`<text x="${sx}" y="${y0 + 16}" text-anchor="middle" font-size="8.5" fill="#777">Sheet</text>`);
+    push(`<text class="sheetno" x="${sx}" y="${y0 + 45}" text-anchor="middle" font-size="25" font-weight="700" fill="#111">${esc(sheetTxt)}</text>`);
+    push(stamp(sx - 52, y0 + h - 30, 104, 21, 11.5));
+    push(`</g>`);
   } else {
     const x0 = TB.x, y0 = TB.y, w = TB.w, h = TB.h, narrow = w < 860;
     const a = x0 + (narrow ? 210 : 250), c = x0 + w - (narrow ? 150 : 180), b = Math.round(a + (c - a) * 0.52), rowY = y0 + 62;   // logo | customer | project | sheet
@@ -4775,7 +4812,7 @@ export function render(job, ix, P, rt, opts = {}) {
     push(fitL(a + 12, y0 + 53, String(J.client?.address || "").replace(/\s*,\s*/g, ", ").trim(), 10.5, "#333", b - a - 24));
     push(lab(b + 12, y0 + 16, "Project"));
     push(fitL(b + 12, y0 + 37, J.name || "", 15, "#111", c - b - 24));
-    push(fitL(b + 12, y0 + 53, drawingTxt, 10.5, "#333", c - b - 24));
+    push(fitL(b + 12, y0 + 53, drawing, 10.5, "#333", c - b - 24));
     // revisions: the latest ones, in as many rows as the strip is tall and two columns when there's the width;
     // a long description is cut at a word with an ellipsis (the full text is the hover title)
     const rows = Math.max(1, Math.floor((h - 62 - 28) / 13.5)), rcols = c - a >= 500 ? 2 : 1, colW = (c - a - 78) / rcols;
@@ -4792,10 +4829,9 @@ export function render(job, ix, P, rt, opts = {}) {
     push(`<text x="${sx}" y="${sy - 39}" text-anchor="middle" font-size="8.5" fill="#777">Sheet</text>`);
     push(`<text class="sheetno" x="${sx}" y="${sy - 5}" text-anchor="middle" font-size="25" font-weight="700" fill="#111">${esc(sheetTxt)}</text>`);
     push(stamp(sx - 52, sy + 13, 104, 22, 11.5));
-    if (opts.titleBlock === "open") push(`<text class="noprint" data-titleblock="hide" x="${x0 + 8}" y="${y0 + h - 7}" font-size="9.5" font-weight="600" fill="#1f6feb">▾ Hide</text>`);
+    if (mode === "open") push(`<text class="noprint" data-titleblock="hide" x="${x0 + 8}" y="${y0 + h - 7}" font-size="9.5" font-weight="600" fill="#1f6feb">▾ Hide</text>`);
     push(`</g>`);
   }
-  push(`</svg>`);
   return out.join("\n");
 }
 

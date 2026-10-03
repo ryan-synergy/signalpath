@@ -1386,6 +1386,11 @@ for (const [name, raw] of Object.entries(fixtures)) {
       t("title block: on screen it folds to a one-line tab (project, stage, revision, sheet) that opens it — the drawing and the legend are untouched",
         !!dT.querySelector('g.titletab[data-titleblock="show"]') && !dT.querySelector("g.titleblock") && ["SYNERGY", "PROPOSAL", "Sheet", "Show title block"].every(w => dT.querySelector("g.titletab").textContent.includes(w)) &&
         dT.documentElement.getAttribute("viewBox") === dF.documentElement.getAttribute("viewBox") && strip(sTab) === strip(sF));
+      { const PG = await import("./pages.js"), catP = await (await fetch("./catalog.json")).json(), ex = PG.renderExtraPages(Ll.job, Ll.ix, advise(Ll.job, Ll.ix, catP), { rawJob: rl, catalog: catP });
+        const bars = ex.map(pg => new DOMParser().parseFromString(pg.svg, "image/svg+xml").querySelector("g.titleblock"));
+        t("packet pages: every page carries the same title block as the schematic — customer, project, revisions, a bold sheet number, the solid stage stamp — as a bar on the sheet's bottom edge",
+          ex.length >= 4 && bars.every((b, k) => b && ["SYNERGY", "Customer", "Project", "Revisions", "Sheet", "PROPOSAL"].every(w => b.textContent.includes(w)) && /\d+ of \d+/.test(b.querySelector("text.sheetno").textContent) &&
+            b.querySelector("rect.stagestamp").getAttribute("fill") === "#1f6feb" && +b.querySelector("rect").getAttribute("y") + +b.querySelector("rect").getAttribute("height") === 1046 && !ex[k].svg.includes("Prepared By")), ex.map(p => p.title).join(" | ")); }
       t("title block: the open block on screen carries a Hide control; the printed sheet has neither control", sOpen.includes('data-titleblock="hide"') && !sF.includes("data-titleblock") && !sF.includes("noprint"));
     }
     const rc = structuredClone(fixtures.residence); rc.job.legendStyle = "compact";
@@ -2534,7 +2539,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   pages.forEach(pg => {
     const doc = new DOMParser().parseFromString(pg.svg, "image/svg+xml");
     for (const el of doc.querySelectorAll("text, rect")) {
-      if (el.closest("g[transform]") || el.getAttribute("width") === "1612") continue;
+      if (el.closest("g[transform]") || el.closest("g.titleblock") || el.getAttribute("width") === "1612") continue;   // (the title block bar is the page's own)
       const y = +(el.getAttribute("y") || 0) + +(el.getAttribute("height") || 0);
       if (y > 900 && y < 1000 && !(el.tagName === "text" && +el.getAttribute("y") === 920)) overflow ??= `${pg.title}: "${el.textContent.slice(0, 30)}" at y=${y}`;
     }

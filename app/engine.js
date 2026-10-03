@@ -2123,6 +2123,15 @@ function routeOnce(job, ix, placement, opts = {}) {
         return best;
       };
 
+      // inputs into one box: the source farthest from it takes its input first (the outermost), the nearer ones the
+      // next in — the breakouts come in the order of the boxes feeding them (2026-10-03: a theater's cable box landed
+      // above its Apple TV and the two read as tangled at the trunk). Only rack patches swap among their own slots.
+      {
+        const slots = F.members.map((m, k) => m.rack ? k : -1).filter(k => k >= 0);
+        const off = m => Math.abs(m.src.y + m.src.h / 2 - (m.dev.y + m.dev.h / 2));
+        const sorted = slots.map(k => F.members[k]).sort((p, q) => p.dev.id === q.dev.id ? off(q) - off(p) : 0);
+        slots.forEach((k, n) => { F.members[k] = sorted[n]; });
+      }
       for (const m of F.members) {
         if (m.rack) {
           const pts = rackPatch(m);
@@ -2300,6 +2309,11 @@ function routeOnce(job, ix, placement, opts = {}) {
     };
     for (const L of Object.values(links)) {
       const net = nWire++;
+      // the source farthest from the box takes its input first (the outermost one), the nearer ones the next in — so
+      // the inputs come in the same order as the boxes feeding them, no breakout crossing another (2026-10-03: a
+      // theater's cable box landed above its Apple TV, the two looking tangled at the trunk)
+      const mid = m => m.src.y + m.src.h / 2 - (m.dev.y + m.dev.h / 2);
+      L.members.sort((p, q) => Math.abs(mid(q)) - Math.abs(mid(p)));
       const jackYs = L.members.flatMap(m => [m.src.y + m.src.h / 2, m.dev.y + m.dev.h / 2]);
       const y0 = Math.min(...jackYs), y1 = Math.max(...jackYs);
       const ranges = [gapRightOf("A"), gapRightOf("B"), gapRightOf("C"), [westMarginX[0], westMarginX[1]]].filter(r => r[1] > r[0]);
@@ -2502,6 +2516,47 @@ function routeOnce(job, ix, placement, opts = {}) {
         if (!relax && crossesSiblings(cand, westNets)) return null;
         return cand;
       };
+      // under the rack and up the right corridor: when the exit side is walled in (a receiver deep in a 30-room estate's
+      // rack, its room top-left) — down the gap beside it, across a free strip between racks (or under them all), up
+      // the right corridor, along the top band. Tried only when nothing nearer exists, before the band-end gutter and
+      // well before the straight fallback that ran through the source column (2026-10-03 run audit, Bel Air).
+      const tryUnder = relax => {
+        const gapR = d.col === "A" ? gapABx : d.col === "B" ? gapBCx : null;
+        if (!gapR || gapR[0] > gapR[1]) return null;
+        const rs = [...P.racks].sort((a, b) => a.y - b.y), bands = [];
+        for (let i = 0; i < rs.length; i++) {
+          const bot = rs[i].y + rs[i].h, next = rs[i + 1]?.y;
+          if (bot < o.portY) continue;
+          bands.push(next != null ? [bot + 3, next - 3] : [bot + 8, bot + 120]);
+        }
+        // up the left margin (a room at the band's west end — row 2 of the band sits right under row 1, so a riser
+        // east of it runs through those rooms), the right corridor, or the gutter past the whole band
+        const risers = [riserRange, gutter.r, westMarginX];   // the margin last: it's the TV returns' channel too
+        let got = null, gotCost = Infinity;
+        for (const [blo, bhi] of bands) {
+          if (bhi - blo < 2) continue;
+          for (const RR of risers) {
+            if (RR[0] > RR[1]) continue;
+            const x0 = Math.min(RR[0], gapR[0]), x1 = Math.max(RR[1], gapR[1]);
+            const hy = alloc(usedH, blo + 2, x0, x1, nWire, +1, y => segBlocked(x0, y, x1, y, skip), [blo, bhi]);
+            if (hy == null) continue;
+            const gv = alloc(usedV, RR[0] < gapR[0] ? gapR[0] + 4 : gapR[1] - 4, Math.min(o.portY, hy), Math.max(o.portY, hy), nWire, RR[0] < gapR[0] ? +1 : -1,
+              x => segBlocked(x, Math.min(o.portY, hy), x, Math.max(o.portY, hy), skip), gapR);
+            if (gv == null) continue;
+            scanLane(laneHi, -1, [laneLo, laneHi], Math.min(tx, RR[0]), Math.max(tx, RR[1]), nWire, y => {
+              const rv = alloc(usedV, RR[0] < gapR[0] ? RR[1] - 4 : RR[0] + 4, Math.min(y, hy), Math.max(y, hy), nWire, RR[0] < gapR[0] ? -1 : +1,
+                x => segBlocked(x, Math.min(y, hy), x, Math.max(y, hy), skip), RR);
+              if (rv == null) return false;
+              const cand = [[sx, o.portY], [gv, o.portY], [gv, hy], [rv, hy], [rv, y], [tx, y], [tx, land]];
+              if (pathBlocked(cand, skip) || !pathRegisterable(cand, nWire)) return false;
+              if (!relax && crossesSiblings(cand, westNets)) return false;
+              const c = routeCost(cand); if (c < gotCost) { got = cand; gotCost = c; }
+              return true;
+            });
+          }
+        }
+        return got;
+      };
       const plen = c => c.slice(1).reduce((n, q, i) => n + Math.abs(q[0] - c[i][0]) + Math.abs(q[1] - c[i][1]), 0);
       const cost = c => countCrossings(c) * 100 + plen(c) / 10;   // hops dominate, then length
       for (const relax of [false, true]) {
@@ -2520,7 +2575,24 @@ function routeOnce(job, ix, placement, opts = {}) {
           const colPts = tryChannel(rr, relax); if (colPts) opts2.push({ ch: "col", pts: colPts });
           if (rr !== riserRange) { const rp = tryChannel(riserRange, relax); if (rp) opts2.push({ ch: "col", pts: rp }); }
           const lp = tryL(relax); if (lp) opts2.push({ ch: "col", pts: lp });
-          if (!opts2.length) { const gp = tryChannel(gutter.r, relax); if (gp) opts2.push({ ch: "gutter", pts: gp }); }
+          if (!opts2.length) {
+            // nothing nearer: the band-end gutter, or under the rack — whichever is cheaper
+            const gp = tryChannel(gutter.r, relax); if (gp) opts2.push({ ch: "gutter", pts: gp });
+            // the very last resort, and only when the straight best effort would run through rack gear (it reads as
+            // a wire into the wrong box) — one clipping a room card stays short (the random-job audit prefers it)
+            else if (relax) {
+              const rackIds = new Set(P.racks.flatMap(r => (r.devices || []).map(x => x.id)).concat((P.chips || []).map(c => c.id)));
+              const straight = [[sx, o.portY], [tx, o.portY], [tx, land]];
+              // how many boxes the straight line would cut through: a wire through a column of gear (Bel Air: six) is
+              // worth the long way round; grazing one box isn't (the random-job audit counts those detours as waste)
+              const cut = new Set();
+              for (let i = 0; i + 1 < straight.length; i++) { const [a1, b1] = [straight[i], straight[i + 1]];
+                const sx1 = Math.min(a1[0], b1[0]), ex1 = Math.max(a1[0], b1[0]), sy1 = Math.min(a1[1], b1[1]), ey1 = Math.max(a1[1], b1[1]);
+                for (const ob of obstacles) if (!skip.has(ob.id) && rackIds.has(ob.id) && sx1 < ob.x + ob.w - RT.pad && ex1 > ob.x + RT.pad && sy1 < ob.y + ob.h - RT.pad && ey1 > ob.y + RT.pad) cut.add(ob.id); }
+              const hitsGear = cut.size >= 2;
+              if (hitsGear) { const up = tryUnder(relax); if (up) opts2.push({ ch: "col", pts: up }); }
+            }
+          }
           if (opts2.length) { const best = opts2.reduce((a, b) => cost(b.pts) < cost(a.pts) ? b : a); pts = best.pts; usedCh = best.ch; }
         }
         if (pts) { usedRelax = relax; break; }
@@ -2865,8 +2937,13 @@ function routeOnce(job, ix, placement, opts = {}) {
       if (!pts || pts.some(p => p[0] == null || p[1] == null)) continue;
       if (!pathBlocked(pts, skip) && pathRegisterable(pts, nWire)) return commit(conn, cls, pts);
     }
-    const pts = cands.find(Boolean);
-    if (pts && !pts.some(p => p[0] == null || p[1] == null)) {
+    // nothing legal: the drawn best effort is the shortest attempt that crosses the fewest boxes (the first one could
+    // lap a whole column — 2026-10-03 run audit)
+    const sane = cands.filter(p => p && !p.some(q => q[0] == null || q[1] == null));
+    const plen2 = q => q.slice(1).reduce((n, b, i) => n + Math.abs(b[0] - q[i][0]) + Math.abs(b[1] - q[i][1]), 0);
+    const pts = sane.length ? sane.reduce((a, b) => { const ba = !!pathBlocked(a, skip), bb = !!pathBlocked(b, skip);
+      return ba !== bb ? (ba ? b : a) : plen2(b) < plen2(a) ? b : a; }) : null;
+    if (pts) {
       out.warnings.push({ code: "route-fallback", msg: wireId(conn) });
       return commit(conn, cls + "-fallback", pts);
     }
@@ -3161,6 +3238,9 @@ function routeOnce(job, ix, placement, opts = {}) {
         x => segBlocked(x, Math.min(ccy, ty), x, Math.max(ccy, ty), skip), [chipR + 4, b.x - 4]);
       if (mx != null) cands.push([[chipR, ccy], [mx, ccy], [mx, ty], [b.x, ty]]);
     }
+    // the plain jog in the gap between the chip and its box — if all else is taken this is the drawn best effort,
+    // not a lap round the column through a receiver (2026-10-03 run audit: Bel Air's third amp decoder)
+    if (chipR <= b.x && b.x - chipR >= 6) { const jx = (chipR + b.x) / 2; cands.push([[chipR, ccy], [jx, ccy], [jx, ty], [b.x, ty]]); }
     }
     const won = tryCommit(conn, "chip-out", cands, skip);
     // the winner may land at another height: that one is booked, the planned one goes back

@@ -917,6 +917,26 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     const ba = await (await fetch("../mock-system-belair.json")).json();
     const Lb = loadJob(effectiveJob(ba, 0)), vb = validate(Lb.job, Lb.ix), pb = enginePlace(Lb.job, Lb.ix), rb = engineRoute(Lb.job, Lb.ix, pb);
     t("bel air (30 rooms, 4 racks): loads with zero errors", !vb.errors.length, vb.errors.map(e => e.msg).join(" | "));
+    { // wire runs (2026-10-03, Ryan: "not tripping over each other"): in the default style no Bel Air wire runs through
+      // a box, and two wires never land on the same point of one
+      const A2 = await import("./route-audit.js");
+      const pts = w => A2.simplify(w.pts), segsOf = q => q.slice(1).map((b, i) => [q[i], b]);
+      const boxes = [...pb.racks.flatMap(r => r.devices), ...(pb.chips || []), ...pb.zones];
+      const near = (q, o) => q[0] >= o.x - 3 && q[0] <= o.x + o.w + 3 && q[1] >= o.y - 3 && q[1] <= o.y + o.h + 3;
+      const through = rb.wires.filter(w => w.pts?.length > 1 && !w.insideCard).filter(w => boxes.some(o => !near(w.pts[0], o) && !near(w.pts.at(-1), o) &&
+        segsOf(pts(w)).some(([a, b]) => Math.min(a[0], b[0]) < o.x + o.w - 2 && Math.max(a[0], b[0]) > o.x + 2 && Math.min(a[1], b[1]) < o.y + o.h - 2 && Math.max(a[1], b[1]) > o.y + 2)));
+      t("bel air runs: no wire through a box or room card (the walled-in receiver goes under the rack and up)", !through.length, through.map(w => w.id).join(" | "));
+      const ends = rb.wires.filter(w => w.pts?.length > 1).flatMap(w => [w.pts[0], w.pts.at(-1)].map(q => ({ w, k: q.map(Math.round).join(",") })));
+      const dup = ends.filter((e, i) => ends.some((f, k) => k < i && f.k === e.k && f.w.net !== e.w.net));
+      t("bel air runs: no two wires land on the same point", !dup.length, dup.map(e => e.w.id).join(" | ")); }
+    { // inputs into one box come in the order of the boxes feeding them (a theater's cable box under its Apple TV)
+      let jt2 = Sk.applyStarter(Im.skeletonJob("DT"), Sk.STARTERS.find(k => k.id === "dedicated-theater"), CATp);
+      jt2 = Cm.planCommands(jt2, 0, [{ op: "add_zones", text: Sk.STARTERS.find(k => k.id === "dedicated-theater").rooms || "kitchen stereo 55" }], CATp).job;
+      const Lt = loadJob(effectiveJob(jt2, 0)), pt = enginePlace(Lt.job, Lt.ix), rtt = engineRoute(Lt.job, Lt.ix, pt);
+      const into = rtt.wires.filter(w => w.to && pt.racks.flatMap(r => r.devices).some(d => d.id === w.to && d.type === "avr") && w.signal === "video" && w.pts?.length > 1);
+      const srcY = id => { const d = pt.racks.flatMap(r => r.devices).find(x => x.id === id); return d ? d.y : 0; };
+      const order = into.slice().sort((a, b) => srcY(a.from) - srcY(b.from)).map(w => w.pts.at(-1)[1]);
+      t("theater kit: the receiver's inputs land top to bottom in the order of the sources", order.every((y, i) => !i || y >= order[i - 1]), JSON.stringify(into.map(w => [w.from, w.pts.at(-1)[1]]))); }
     t("bel air: every wire is drawn (a crowded staple lane widens, else draws flagged — never vanishes)", !rb.warnings.some(w => w.code === "unrouted"), rb.warnings.filter(w => w.code === "unrouted").map(w => w.msg).join(" | "));
     { // delete the MXNet switch: its decoders go too, and every room it fed says so
       const jd = structuredClone(ba), sd = jd.solutions[0], sw = sd.racks.flatMap(r => r.devices).find(d => d.type === "avSwitch");

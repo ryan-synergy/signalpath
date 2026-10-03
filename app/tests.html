@@ -15,11 +15,14 @@
 <div id="summary">running…</div>
 <ul id="out"></ul>
 <script type="module">
-import { loadJob, validate, advise, place as enginePlace, route as engineRoute, render, routeAlternates as engineAlternates, expandChannels, effectiveHouse, effectiveJob, trunkCount, ribbonLayout, autoLinkCatalog, indexJob, READABILITY_ZONE_CEILING, SHEET, deviceKind, KIND_STYLE, boxUsage, lockCatalog, GLYPH_SCALES } from "./engine.js";
+import { loadJob, validate, advise, place as enginePlaceNow, route as engineRoute, render, routeAlternates as engineAlternates, expandChannels, effectiveHouse, effectiveJob, trunkCount, ribbonLayout, autoLinkCatalog, indexJob, READABILITY_ZONE_CEILING, SHEET, deviceKind, KIND_STYLE, boxUsage, lockCatalog, GLYPH_SCALES } from "./engine.js";
 // Trunks are the app's default (Ryan 2026-09-30). The router regression suite below
 // pins the classic drawing explicitly — it still guards the "Off" choice — and the
 // trunk tests pass trunks: "bundle" / "ribbon" (or call enginePlace/engineRoute bare).
-const place = (job, ix, o = {}) => enginePlace(job, ix, { trunks: false, ...o });
+// (and the classic layout: these wrappers are what the original engine tests were written against — the packed and
+// bands layouts have their own block, and the harnesses run them on every sample)
+const enginePlace = (job, ix, o = {}) => enginePlaceNow(job, ix, { layout: "classic", ...o });   // the project's own wire style, classic layout
+const place = (job, ix, o = {}) => enginePlace(job, ix, { trunks: false, layout: "classic", ...o });
 const route = (job, ix, p, o = {}) => engineRoute(job, ix, p, { trunks: false, ...o });
 const routeAlternates = (job, ix, p, o = {}, wid) => engineAlternates(job, ix, p, { trunks: false, ...o }, wid);
 import { sniff, importAny, importSiteWalk, importBlueprinted, mergeHouse, stripUnsafe, assertJobShape, drawFromWalk, decodeHandoff, encodeHandoff } from "./importers.js";
@@ -3410,6 +3413,53 @@ for (const [name, raw] of Object.entries(fixtures)) {
   }
   t(`twists — 60 random jobs: pairs crossing twice ≤ 70 (${dbl}; about 300 before the untwist pass, 101 before input order, 97 before page-width placement, 77 before bundles moved as one), corner hops ≤ 8 (${cor})`, dbl <= 70 && cor <= 8);
   t("twists — job #65: the red video feed and blue speaker feed no longer wind round each other", !j65.some(d => [d.a, d.b].includes("mx→z0-tv") && [d.a, d.b].includes("amp0→z5-spk")));
+}
+
+/* ---------- the Packed and Bands layouts (Ryan 2026-10-03, picked from concepts; View ▾ → Layout) ----------
+   Packed (the default): racks down the left, every room in rows beside them, by type. Bands: the same, each kind of
+   room in its own labelled band, plus one for rooms marked "not on the system". Classic is the original. */
+{
+  const lay = (raw, layout, o = {}) => { const j = structuredClone(raw); const { job, ix } = loadJob(effectiveJob(j, 0)); const p = enginePlaceNow(job, ix, { layout, ...o }), rt = engineRoute(job, ix, p, o); return { job, ix, p, rt }; };
+  const overlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  const bel = await (await fetch("../mock-system-belair.json")).json();
+  const budget = { residence: 0, estate: 0, stress: 0, belair: 3 };
+  for (const [name, raw] of [["residence", fixtures.residence], ["estate", fixtures.estate], ["stress", fixtures.stress], ["belair", bel]]) {
+    const C = lay(raw, "classic");
+    for (const layout of ["packed", "bands"]) {
+      const { p, rt } = lay(raw, layout), rr = Math.max(...p.racks.map(r => r.x + r.w)), boxes = [...p.zones, ...p.racks];
+      t(`layout — ${name} (${layout}): racks down the left, every room right of them, nothing overlapping`,
+        p.layout === layout && p.racks.every(r => r.x === p.racks[0].x) && p.zones.filter(z => z.band !== "cluster").every(z => z.x >= rr) && !boxes.some((a, i) => boxes.slice(i + 1).some(b => overlap(a, b))),
+        JSON.stringify(boxes.flatMap((a, i) => boxes.slice(i + 1).filter(b => overlap(a, b)).map(b => `${a.id}/${b.id}`)).slice(0, 4)));
+      const fb = rt.warnings.filter(w => w.code === "route-fallback").length, un = rt.warnings.filter(w => w.code === "unrouted").length;
+      t(`layout — ${name} (${layout}): every wire drawn, best-effort wires ≤ ${budget[name]} (${fb})`, un === 0 && fb <= budget[name], `unrouted ${un}`);
+      if (name === "belair" || name === "stress") t(`layout — ${name} (${layout}): prints at least 10% bigger than Classic (${C.p.fitScale.toFixed(2)} → ${p.fitScale.toFixed(2)})`, p.fitScale >= C.p.fitScale * 1.1);
+      if (layout === "bands") {
+        const inBand = z => p.bands.some(b => z.x >= b.x && z.x + z.w <= b.x + b.w && z.y >= b.y && z.y + z.h <= b.y + b.h);
+        t(`layout — ${name} (bands): every room sits inside a labelled band, bands don't overlap, areas show as a tag`,
+          p.bands.length >= 2 && p.zones.every(inBand) && !p.bands.some((a, i) => p.bands.slice(i + 1).some(b => overlap(a, b))) && !p.areaHeaders.length &&
+          ((raw.house.areas || []).length < 2 || p.zones.some(z => z.tag)), p.bands.map(b => b.key).join(","));
+        const segs = rt.wires.flatMap(w => (w.pts || []).slice(1).map((q, i) => [w.pts[i], q]));
+        const hit = p.bands.filter(b => { const L = { x: b.x + 8, y: b.y + 5, w: b.label.length * 10.4 + 10, h: 16 };
+          return segs.some(([a, c]) => Math.min(a[0], c[0]) < L.x + L.w && Math.max(a[0], c[0]) > L.x && Math.min(a[1], c[1]) < L.y + L.h && Math.max(a[1], c[1]) > L.y); });
+        if (name !== "belair") t(`layout — ${name} (bands): no wire runs through a band's heading`, hit.length === 0, hit.map(b => b.key).join(","));
+      }
+    }
+  }
+  const def = loadJob(structuredClone(fixtures.residence)), pd = enginePlaceNow(def.job, def.ix);
+  t("layout: Packed is the default; job.layoutStyle picks Bands or Classic; grouping \"in the order I added them\" keeps the classic arrangement",
+    pd.layout === "packed" && lay({ ...fixtures.residence, job: { ...fixtures.residence.job, layoutStyle: "bands" } }).p.layout === "bands" &&
+    lay({ ...fixtures.residence, job: { ...fixtures.residence.job, layoutStyle: "classic" } }).p.layout === "classic" && lay({ ...fixtures.residence, job: { ...fixtures.residence.job, zoneGrouping: "order" } }).p.layout === "classic");
+  { // a room marked "not on the system": not flagged as unfed, and Bands gives it the dashed band
+    const off = structuredClone(fixtures.residence);
+    off.house.zones.push({ id: "z-guest", name: "Guest Room", scope: "included", offSystem: true, endpoints: [{ id: "z-guest-tv", type: "display", size: 55, status: "new" }] });
+    const plain = structuredClone(off); delete plain.house.zones.at(-1).offSystem;
+    const vOff = validate(...Object.values(loadJob(off))), vOn = validate(...Object.values(loadJob(plain)));
+    t("not on the system: the room's TV isn't flagged as unfed (it is when the switch is off), and it survives a load",
+      !vOff.errors.some(e => /Guest Room/.test(e.msg)) && vOn.errors.some(e => /Guest Room/.test(e.msg)) && loadJob(off).job.house.zones.at(-1).offSystem === true);
+    const B = lay(off, "bands"), ob = B.p.bands.find(b => b.key === "off"), gz = B.p.zones.find(z => z.id === "z-guest");
+    const svgB = render(B.job, B.ix, B.p, B.rt);
+    t("not on the system: Bands draws it in the dashed “Not on the system” band", !!ob && gz.x >= ob.x && gz.y >= ob.y && gz.y + gz.h <= ob.y + ob.h && /data-band="off"><rect[^>]*stroke-dasharray/.test(svgB) && svgB.includes("NOT ON THE SYSTEM"));
+  }
 }
 
 /* ---------- route efficiency (2026-09-27 audit): an independent oracle ----------

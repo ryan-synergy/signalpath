@@ -174,7 +174,7 @@ export function normalizeJob(job) {
   if (typeof job.job.name !== "string") job.job.name = job.job.name == null || typeof job.job.name === "object" ? "Untitled project" : String(job.job.name);
   if (job.job.client != null && typeof job.job.client !== "object") job.job.client = { name: String(job.job.client) };
   for (const k of ["name", "address"]) if (job.job.client && job.job.client[k] != null && typeof job.job.client[k] === "object") delete job.job.client[k];
-  for (const k of ["stage", "trunkStyle", "danteStyle", "legendStyle", "drawnBy"]) if (job.job[k] != null && typeof job.job[k] !== "string") delete job.job[k];
+  for (const k of ["stage", "trunkStyle", "danteStyle", "legendStyle", "layoutStyle", "drawnBy"]) if (job.job[k] != null && typeof job.job[k] !== "string") delete job.job[k];
   // the Auto rack limit (Rack tab): whole U, 8–60
   if (job.job.autoRackMax != null) { const n = Math.floor(+job.job.autoRackMax); if (n >= 8 && n <= 60) job.job.autoRackMax = n; else delete job.job.autoRackMax; }
   // the title block prints each revision's rev / date / description / by — plain values only
@@ -473,6 +473,7 @@ export function validate(job, ix = indexJob(job)) {
       if (fed.has(eid)) continue;
       if (ix.endpointsById[eid].type === "display" && localFedZones.has(ix.endpointZone[eid])) continue;
       if (ix.endpointsById[eid].ownApps) continue;          // "apps": the TV plays its own apps, left off the rack on purpose
+      if (ix.zonesById[ix.endpointZone[eid]]?.offSystem) continue;   // a room marked "not on the system": local gear, on the sheet to be counted, nothing to feed
       const scope = ix.zonesById[ix.endpointZone[eid]]?.scope || "included";
       if (scope === "future" || (scope === "prewire" && !rackGear)) continue;
       if (scope === "prewire") { W("orphan-endpoint", `${nm(eid)} (pre-wire) isn't wired to the rack yet — its cable has no home run`, eid); continue; }
@@ -794,7 +795,7 @@ function placeAt(job, ix, opts, gs) {
   // best-effort wires vs 5)
   const variants = [...[1.35, 1.7, 2.1].map(wrap => ({ wrap })),
     ...[1.15, 1.35, 1.7, 2.1].map(wrap => ({ wrap, sideBySide: true, audioWide: true }))];
-  for (const v of opts.layoutVariants || variants) {
+  for (const v of opts.layoutVariants || (base.layout !== "classic" ? [0.62, 0.8, 1.2, 1.45, 1.75, 2.1, 2.6].map(wrap => ({ wrap })) : variants)) {
     const p = placeOnce(job, ix, opts, { ...v, gs });
     if (p.pickScale > best.pickScale * 1.03) best = p;
   }
@@ -805,6 +806,9 @@ function placeAt(job, ix, opts, gs) {
    On by default since 2026-09-30 (Ryan): a job draws as "bundle" unless it says
    job.job.trunkStyle = "ribbon" or "off". opts.trunks overrides ("bundle" |
    "ribbon" | false / "off" for the classic drawing). */
+const BAND_COLORS = { surround: "#2f3e9e", tvspk: "#7a3fb0", tv: "#4b5563", speakers: "#12806a", outdoor: "#2f7a3a", off: "#6b7280" };
+export const LAYOUT_STYLES = ["packed", "bands", "classic"];
+export const layoutStyle = (job, opts = {}) => { const v = opts.layout ?? job.job?.layoutStyle; return LAYOUT_STYLES.includes(v) ? v : "packed"; };
 export const trunkMode = (job, opts = {}) => {
   const t = opts.trunks !== undefined ? opts.trunks : (job.job?.trunkStyle ?? "bundle");
   return t === "bundle" || t === "ribbon" ? t : null;
@@ -843,9 +847,10 @@ function stableGroups(list, rank, reorder) {
 
 function placeOnce(job, ix, opts, variant) {
   const s = ix.solutions[opts.solution ?? 0];
-  const wrapRight = SHEET.content.x + PL.tuned.w * (variant.wrap || 1) - PL.marginX;   // where rows wrap (layout units)
   if (!s) throw new Error("no solution to place");
   const sol = s.sol;
+  // where rows wrap (layout units): the classic layout on the page it was tuned on, the newer ones on the sheet's real field
+  const wrapRight = SHEET.content.x + (layoutStyle(job, opts) === "classic" ? PL.tuned.w : SHEET.content.w) * (variant.wrap || 1) - PL.marginX;
   // view filter (e.g. hideSignals: ["network"]): hidden wires get no corridor
   // capacity, no ports, no legend row — validation still sees the full system
   const hiddenSignals = new Set(opts.hideSignals || []);
@@ -858,7 +863,13 @@ function placeOnce(job, ix, opts, variant) {
   // + 2-channel/soundbar, then TV only (speaker-only zones are their own band) —
   // optionally with outdoor zones as their own cluster; or plain added order
   const grouping = job.job?.zoneGrouping || "type";
-  let areas = job.house.areas || [];
+  /* the sheet's arrangement (Ryan 2026-10-03, picked from concepts — View ▾ → Layout, saved with the project):
+       "packed"  racks down the left, every room in rows right beside them — by type, speaker rooms in a grid
+       "bands"   the same, with each kind of room in its own labelled band (surround + TV · TV + speakers · TV only ·
+                 speakers only · outdoor · not on the system); other buildings are a tag on the card, not a group
+       "classic" TV rooms along the top, racks below them, speaker rooms bottom-right (the original) */
+  const lstyle = layoutStyle(job, opts), packed = lstyle !== "classic" && grouping !== "order" && (sol.racks || []).some(r => (r.devices || []).length), bandsOn = packed && lstyle === "bands";
+  let areas = bandsOn ? [] : job.house.areas || [];
   const outdoorSplit = grouping === "type-outdoor" && job.house.zones.some(isOutdoorZone) && job.house.zones.some(z => !isOutdoorZone(z));
   if (outdoorSplit) areas = [...(areas.length ? areas : [{ id: "__indoor", name: "Indoor" }]), { id: "__outdoor", name: "Outdoor" }];
   const areaOf = z => outdoorSplit && isOutdoorZone(z) ? "__outdoor" : z.area;
@@ -910,12 +921,18 @@ function placeOnce(job, ix, opts, variant) {
   /* -- pass 1: measure zone cards; count inbound feeds per zone (each wrapped
      row's strip must seat its chips AND its feed lanes — demand-sized) -- */
   const cardOf = {}, zoneInbound = {};
+  const devColOfEarly = id => (sol.racks || []).some(r => (r.devices || []).some(d => d.id === id));
   for (const c of visConns) {
     const zid = ix.endpointZone[c.to] || (s.companions[c.to] && ix.endpointZone[s.companions[c.to].serves]);
     if (!zid || s.locals[c.from]) continue;
     if (ix.endpointsById[c.from] && ix.endpointZone[c.from] === zid) continue; // in-room link needs no strip lane
     if (s.companions[c.from] && ix.endpointsById[s.companions[c.from].serves]) continue; // chip stub
     zoneInbound[zid] = (zoneInbound[zid] || 0) + 1;
+  }
+  // packed / bands: a room's audio return leaves under its card too (classic returns ride the top corridor) — a lane each
+  if (layoutStyle(job, opts) !== "classic") for (const c of visConns) {
+    const zid = ix.endpointZone[c.from] || (s.companions[c.from] && ix.endpointZone[s.companions[c.from].serves]);
+    if (zid && devColOfEarly(c.to)) zoneInbound[zid] = (zoneInbound[zid] || 0) + 1;
   }
   const rowGapFor = rowZones => Math.max(PL.videoRowGapY,
     38 + 12 * (rowZones.reduce((n, z) => n + (zoneInbound[z.id] || 0), 0) + 1));
@@ -931,7 +948,8 @@ function placeOnce(job, ix, opts, variant) {
      speaker-only rooms at the bottom right — the space that used to sit empty.
      Only when the job has a rack and the top band keeps TV rooms with speakers. */
   const primary = clusters[0];
-  const midZones = grouping !== "order" && (sol.racks || []).some(r => (r.devices || []).length) && primary.video.some(z => tvRank(z) < 2)
+  const midZones = packed ? primary.video.slice()
+    : grouping !== "order" && (sol.racks || []).some(r => (r.devices || []).length) && primary.video.some(z => tvRank(z) < 2)
     ? primary.video.filter(z => tvRank(z) === 2) : [];
   if (midZones.length) primary.video = primary.video.filter(z => !midZones.includes(z));
   {
@@ -1010,7 +1028,7 @@ function placeOnce(job, ix, opts, variant) {
   const rightCorridorW = quant(colCRisers * PL.lanePitch + 36, PL.rightCorridorMin);
 
   /* -- racks: left column, stacked, device columns vertically aligned -- */
-  let rackY = topBandBottom + topCorridorH;
+  let rackY = packed ? PL.topY : topBandBottom + topCorridorH;   // packed: no rooms above the racks, so no corridor to leave
   let rackRight = PL.marginX;
   for (const r of sol.racks || []) {
     const cols = { A: rackY + PL.rackPadTop, B: rackY + PL.rackPadTop };
@@ -1084,7 +1102,54 @@ function placeOnce(job, ix, opts, variant) {
      rack (mock rule: speaker runs leave the bottom-anchored amps and flow
      straight right — never through the top half). Rows wrap on their own
      width budget and the block grows UPWARD as zone count rises. */
-  {
+  if (packed) {
+    // rows of rooms from the racks' top edge, wrapping at the page's right edge: the groups in order, each on a shared
+    // cell pitch (the gutters between columns stay clear row to row); a TV row leaves room under it for its adapter
+    // chips and feed lanes, a speaker row only the row gap
+    const bandX = rackRight + rightCorridorW, maxW = Math.max(680, wrapRight - bandX);
+    const hasTv = z => (z.endpoints || []).some(e => e.type === "display");
+    const off = z => !!z.offSystem, outd = z => isOutdoorZone(z);
+    const all = [...midZones, ...primary.audio];
+    const groups = !bandsOn ? [{ zones: midZones }, { zones: primary.audio }] : [
+      { key: "surround", label: "SURROUND + TV", zones: all.filter(z => !off(z) && !outd(z) && hasTv(z) && tvRank(z) === 0) },
+      { key: "tvspk", label: "TV + SPEAKERS", zones: all.filter(z => !off(z) && !outd(z) && hasTv(z) && tvRank(z) === 1) },
+      { key: "tv", label: "TV ONLY", zones: all.filter(z => !off(z) && !outd(z) && hasTv(z) && tvRank(z) === 2) },
+      { key: "speakers", label: "SPEAKERS ONLY", zones: all.filter(z => !off(z) && !outd(z) && !hasTv(z)) },
+      { key: "outdoor", label: "OUTDOOR", zones: all.filter(z => !off(z) && outd(z)) },
+      { key: "off", label: "NOT ON THE SYSTEM — LOCAL GEAR ONLY", zones: all.filter(off) }];
+    out.bands = [];
+    // a band's heading gets a strip of its own above the cards (the router keeps wires off the words), then lane room
+    const HEAD = bandsOn ? 42 : 0, GROUP_GAP = 44;
+    const gapOf = row => row.some(hasTv) ? rowGapFor(row) : PL.rowGapY + 14;
+    let x = bandX, y = PL.topY, rowH = 0, row = [], rowBands = [];
+    const closeRow = () => { for (const b of rowBands) b.rowBottom = Math.max(b.rowBottom || 0, y + HEAD + rowH); const gap = gapOf(row);
+      for (const b of rowBands) b.pad = Math.min(gap - 8, 46);
+      y += HEAD + rowH + gap + (bandsOn ? 12 : 0); x = bandX; rowH = 0; row = []; rowBands = []; };
+    for (const g of groups) {
+      if (!g.zones.length) continue;
+      // speaker-only rooms sit on a shared cell pitch (their feeds dive through the gutters between columns); rows
+      // with TVs take each card at its own width, like the classic top band — their feeds run in the lanes under each row
+      const cell = g.zones.some(hasTv) ? 0 : gridCell(g.zones.map(z => cardOf[z.id].w));
+      const span = c => cell ? Math.max(1, Math.ceil((c.w + PL.cardGapX) / (cell + PL.cardGapX))) * (cell + PL.cardGapX) - PL.cardGapX : c.w;
+      const need = g.zones.reduce((n, z) => n + span(cardOf[z.id]) + PL.cardGapX, -PL.cardGapX);
+      // a short band shares the row with the one before it when all of it fits; otherwise it starts a row of its own
+      // (never beside the tail of a band that wrapped — that band's box spans the full width)
+      if (g.label && x > bandX) { if (!rowBands.some(b => b.wrapped) && x + GROUP_GAP + need <= bandX + maxW) x += GROUP_GAP - PL.cardGapX; else closeRow(); }
+      const band = g.label ? { key: g.key, label: g.label, x: x - 10, y, right: x, wrapped: false } : null;
+      if (band) { out.bands.push(band); rowBands.push(band); }
+      for (const z of g.zones) {
+        const c = cardOf[z.id];
+        if (x + span(c) > bandX + maxW && x > bandX) { if (band) band.wrapped = true; closeRow(); if (band) rowBands.push(band); }
+        placeZone(out, z, c, x, y + HEAD, hasTv(z) ? "mid" : "audio");
+        row.push(z); if (band) band.right = Math.max(band.right, x + c.w); x += span(c) + PL.cardGapX; rowH = Math.max(rowH, c.h);
+      }
+      if (!g.label) closeRow();
+    }
+    if (row.length) closeRow();
+    for (const b of out.bands) { if (b.wrapped) { b.x = bandX - 10; b.right = bandX + maxW; }
+      b.w = Math.max(b.right + 10 - b.x, b.label.length * 10.4 + 30); b.h = b.rowBottom + b.pad - b.y; delete b.right; delete b.rowBottom; delete b.pad; delete b.wrapped; }
+    if (bandsOn) { const an = Object.fromEntries((job.house.areas || []).map(a => [a.id, a.name])); if ((job.house.areas || []).length > 1) for (const pz of out.zones) { const z = ix.zonesById[pz.id]; if (z?.area && an[z.area]) pz.tag = an[z.area]; } }
+  } else {
     const bandX = rackRight + rightCorridorW;
     const pageRight = wrapRight;
     let bandMaxW = Math.max(680, Math.ceil(Math.sqrt(primary.audio.length)) * 170);
@@ -1324,7 +1389,8 @@ function placeOnce(job, ix, opts, variant) {
   // shouldn't sit small in a corner of an 11×17), capped so a one-room job
   // doesn't turn cartoonish; leftover width is split evenly left and right
   out.fitScale = Math.min(PL.growMax, SHEET.content.w / out.bounds.w, (SHEET.content.h - below) / out.bounds.h);
-  out.pickScale = Math.min(PL.growMax, PL.tuned.w / out.bounds.w, (PL.tuned.h - tunedLegendH - 20) / out.bounds.h);
+  out.pickScale = packed ? out.fitScale : Math.min(PL.growMax, PL.tuned.w / out.bounds.w, (PL.tuned.h - tunedLegendH - 20) / out.bounds.h);
+  out.layout = packed ? lstyle : "classic";
   out.fitOffset = { x: Math.max(0, Math.round((SHEET.content.w - out.bounds.w * out.fitScale) / 2)), y: 0 };
   if (out.fitScale < 0.75) out.warnings.push({ code: "scale", msg: `The drawing fits at ${Math.round(out.fitScale * 100)}% — captions may print small` });
 
@@ -1333,7 +1399,7 @@ function placeOnce(job, ix, opts, variant) {
 
 function placeZone(out, zone, card, x, y, band) {
   out.zones.push({
-    id: zone.id, name: zone.name, scope: zone.scope || "included", band, remote: card.remote || null,
+    id: zone.id, name: zone.name, scope: zone.scope || "included", band, remote: card.remote || null, ...(zone.offSystem ? { off: true } : {}),
     x, y, w: card.w, h: card.h, compact: card.compact || false,
     groups: card.groups.map(g => ({ ...g })),
   });
@@ -1431,6 +1497,8 @@ function routeOnce(job, ix, placement, opts = {}) {
     // a small tile's caption (its model, up to 18 px wider than the tile each side) — a wire through it cuts the
     // text. Trunk drawings only: the classic router has less room to move and lost routes to it (2 → 5 fallbacks)
     ...(trunkMode(job, opts) ? P.racks.flatMap(r => r.devices.filter(d => d.kind === "small").map(d => ({ id: d.id + ":caption", x: d.x - 18, y: d.y + d.h + 3, w: d.w + 36, h: 19 }))) : []),   // 19, not 15: a wire along the old bottom edge ran on the caption's baseline
+    // a band's heading (the Bands layout): wires go round the words
+    ...(P.bands || []).map(b => ({ id: "band:" + b.key, x: b.x + 6, y: b.y + 3, w: b.label.length * 10.4 + 14, h: 20 })),
     ...P.chips.map(c => ({ id: c.id, x: c.x, y: c.y, w: c.w, h: c.h })),
     ...P.zones.map(z => ({ id: z.id, x: z.x, y: z.y, w: z.w, h: z.h })),
   ];
@@ -3496,6 +3564,50 @@ function routeOnce(job, ix, placement, opts = {}) {
         if (best) break;
       }
     }
+    // packed / bands layouts: the room sits to the RIGHT of the racks, so one lane west from under the card runs into the
+    // rack's own boxes. The return takes the channel between the racks and the rooms instead: under its card → west to
+    // that channel → up or down it to a clear line across the rack (its top pad, between two rows of boxes, or just
+    // under it) → the A|B gap → the box's left edge. Scoped to returns from those rooms; nothing else moves.
+    if (!best && P.layout && P.layout !== "classic" && P.racks.length) {
+      const pdbg = info => { if (opts.debug) (out.debugPk ||= []).push(info); };
+      pdbg({ w: wireId(conn), pk: 0, fail: "enter" });
+      const rr = Math.max(...P.racks.map(r => r.x + r.w)), side = P.zones.filter(z => z.band === "mid" || z.band === "audio");
+      const zx0 = side.length ? Math.min(...side.map(z => z.x)) : 0;
+      const rack = P.racks.find(r => r.devices.some(d => d.id === b.id));
+      if (rack && pz.x >= rr && zx0 - rr > 24) {
+        const cb = ownChip ? ownChip.y + ownChip.h : pz.y + pz.h, gap = b.col === "C" ? gapBCx : gapABx;
+        const vClear = (x, ya, yb) => !segBlocked(x, Math.min(ya, yb), x, Math.max(ya, yb), skip);
+        for (const p of portCands) {
+          ty = p; reset();
+          for (const [lo, hi] of [[rack.y + 26, rack.y + PL.rackPadTop - 8], [rack.y + PL.rackPadTop, rack.y + rack.h - 8], [rack.y + rack.h + 6, rack.y + rack.h + PL.rackGapY - 6]]) {
+            let n = 0;
+            scanLane(Math.min(Math.max(ty, lo), hi), 0, [lo, hi], gap[0], zx0, nWire, y2 => {
+              const wx = alloc(usedV, (gap[0] + gap[1]) / 2, Math.min(y2, ty), Math.max(y2, ty), nWire, 0, x => !vClear(x, y2, ty), gap);
+              if (wx == null || segBlocked(wx, y2, zx0 - 4, y2, skip)) { pdbg({ w: wireId(conn), pk: y2, fail: wx == null ? "gap" : "across" }); return false; }
+              for (let k = 0; k < 26; k++) {
+                const y1 = laneLo + k * RT.lane;
+                if (conflicts(usedH, y1, rr, sx0, nWire)) { pdbg({ w: wireId(conn), pk: y2, y1, fail: "y1-lane" }); continue; }
+                const cx = alloc(usedV, zx0 - 14, Math.min(y1, y2), Math.max(y1, y2), nWire, -1, x => !vClear(x, y1, y2), [rr + 8, zx0 - 8]);
+                if (cx == null) { pdbg({ w: wireId(conn), pk: y2, y1, fail: "channel" }); continue; }
+                const cand = [[sx0, cb], [sx0, y1], [cx, y1], [cx, y2], [wx, y2], [wx, ty], [b.x, ty]];
+                if (hitsTarget(cand)) continue;
+                if (!firstTry) firstTry = { pts: cand, ty };
+                if (pathBlocked(cand, skip) || !pathRegisterable(cand, nWire)) { pdbg({ w: wireId(conn), pk: y2, y1, cx, fail: pathBlocked(cand, skip) || "registry" }); continue; }
+                const cost = countCrossings(cand) * 100 + pathCongestion(cand);
+                if (cost < bestCost) { best = cand; bestCost = cost; }
+                n++; break;
+              }
+              return n >= 6;
+            });
+          }
+          if (best) break;
+        }
+      }
+    }
+    // nothing even geometrically sane was built (fuzz #116 in the packed layout: every lane and gap refused before a
+    // candidate existed): the plain wrap through the gap is the flagged best effort — a wire is never left off the sheet
+    if (!best && !firstTry) { const g = b.col === "C" ? gapBCx : gapABx, wx = (g[0] + g[1]) / 2, cb = ownChip ? ownChip.y + ownChip.h : pz.y + pz.h;
+      ty = portCands[0]; firstTry = { pts: [[sx0, cb], [sx0, laneLo], [wx, laneLo], [wx, ty], [b.x, ty]], ty }; }
     // every other class draws a flagged best-effort path when the corridor is
     // full; a return used to VANISH instead — the connection disappeared from
     // the schematic. Draw the first sane attempt and let the fallback warning say so.
@@ -4233,6 +4345,12 @@ export function render(job, ix, P, rt, opts = {}) {
 
   for (const h of P.areaHeaders)
     push(`<text x="${h.cx}" y="${h.y}" text-anchor="middle" font-size="13" letter-spacing="4" fill="#8a8a8a" font-weight="600">${esc(h.name)}</text>`);
+  // the Bands layout: each kind of room in its own tinted, labelled band (the rooms that aren't on the system in a dashed one)
+  for (const b of P.bands || []) {
+    const col = bw ? "#555" : BAND_COLORS[b.key] || "#6b7280", off = b.key === "off";
+    push(`<g class="roomband" data-band="${b.key}"><rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="8" fill="${col}" fill-opacity="${off ? 0.04 : 0.055}" stroke="${col}" stroke-opacity="${off ? 0.75 : 0.4}" stroke-width="1.2"${off ? ` stroke-dasharray="7 5"` : ""}/>` +
+      `<text x="${b.x + 12}" y="${b.y + 18}" font-size="14" font-weight="700" letter-spacing="2.2" fill="${col}">${esc(b.label)}</text></g>`);
+  }
 
   /* racks + devices */
   for (const r of P.racks) {
@@ -4429,12 +4547,12 @@ export function render(job, ix, P, rt, opts = {}) {
     push(`<rect class="cardbody" x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="${rr}" fill="#fff" stroke="${gray ? "#c9ccd3" : "#b9bec8"}" stroke-width="1.2"/>`);
     push(`<path class="cardband" data-kind="${rk.key}" d="M${z.x + rr} ${z.y}h${z.w - 2 * rr}a${rr} ${rr} 0 0 1 ${rr} ${rr}v${bandH - rr}h-${z.w}v-${bandH - rr}a${rr} ${rr} 0 0 1 ${rr} -${rr}z" fill="${bandC}"/>`);
     {
-      const hasRem = false, nameFs = z.compact ? 12 : 15, nameW = String(z.name || "").length * nameFs * 0.56, typeW = rk.label.length * 5.4 + 8;
+      const hasRem = false, nameFs = z.compact ? 12 : 15, nameW = String(z.name || "").length * nameFs * 0.56, kindTxt = z.tag ? String(z.tag).toUpperCase() : rk.label, typeW = kindTxt.length * 5.4 + 8;
       const showType = !z.compact && nameW + typeW + 34 + (hasRem ? 22 : 0) < z.w;
       if (z.compact || !showType && nameW + 28 > z.w * 0.8)
         push(`<text x="${z.x + z.w / 2 - (hasRem && z.compact ? 6 : 0)}" y="${z.y + bandH - (z.compact ? 6 : 8)}" text-anchor="middle" font-size="${nameFs}" font-weight="500" fill="#fff"${nameW > z.w - 16 ? ` textLength="${Math.round(z.w - 16)}" lengthAdjust="spacingAndGlyphs"` : ""}>${esc(z.name)}</text>`);
       else push(`<text x="${z.x + 14}" y="${z.y + bandH - 8}" font-size="${nameFs}" font-weight="500" fill="#fff">${esc(z.name)}</text>`);
-      if (showType) push(`<text class="cardkind" x="${z.x + z.w - 12 - (hasRem ? 22 : 0)}" y="${z.y + bandH - 9}" text-anchor="end" font-size="7.6" font-weight="600" letter-spacing="1" fill="#fff" fill-opacity="0.9">${rk.label}</text>`);
+      if (showType) push(`<text class="cardkind" x="${z.x + z.w - 12 - (hasRem ? 22 : 0)}" y="${z.y + bandH - 9}" text-anchor="end" font-size="7.6" font-weight="600" letter-spacing="1" fill="#fff" fill-opacity="0.9">${esc(kindTxt)}</text>`);
     }
     // how the room is run (Ryan 2026-10-03, placement C): a line along the card's bottom — the remote as a small
     // picture of itself and "Local control · Apple TV remote" (a local device's remote) or "Control · Savant remote"

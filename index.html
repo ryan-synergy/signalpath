@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-XavRxRFXo/g9rs0K6+sRBB/zJkrUjf0BQsLJGIe4SRI=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-A86G5DdjT1Pvtxgefk0ANFR66tzVnjG9jde3hIHfqWw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-3ZDplP0d5ktU6OevXcwq6QzQfzMiLqa+LpxcDdC6SuE=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-dc8pXkjWy7G1+bAzloiF0oDX6o2ELIPm2A2L5tAqmaI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -705,29 +705,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003205632",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003205632",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003205632",
-    "./app/ports.js": "./app/ports.js?v=20261003205632",
-    "./app/commands.js": "./app/commands.js?v=20261003205632",
-    "./app/engine.js": "./app/engine.js?v=20261003205632",
-    "./app/exports.js": "./app/exports.js?v=20261003205632",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003205632",
-    "./app/hookup.js": "./app/hookup.js?v=20261003205632",
-    "./app/importers.js": "./app/importers.js?v=20261003205632",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003205632",
-    "./app/library.js": "./app/library.js?v=20261003205632",
-    "./app/names.js": "./app/names.js?v=20261003205632",
-    "./app/network.js": "./app/network.js?v=20261003205632",
-    "./app/pages.js": "./app/pages.js?v=20261003205632",
-    "./app/power.js": "./app/power.js?v=20261003205632",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003205632",
-    "./app/rack.js": "./app/rack.js?v=20261003205632",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003205632",
-    "./app/starters.js": "./app/starters.js?v=20261003205632",
-    "./app/kinds.js": "./app/kinds.js?v=20261003205632",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003205632",
-    "./app/sheets.js": "./app/sheets.js?v=20261003205632"
+    "./app/ai.js": "./app/ai.js?v=20261003212217",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003212217",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003212217",
+    "./app/ports.js": "./app/ports.js?v=20261003212217",
+    "./app/commands.js": "./app/commands.js?v=20261003212217",
+    "./app/engine.js": "./app/engine.js?v=20261003212217",
+    "./app/exports.js": "./app/exports.js?v=20261003212217",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003212217",
+    "./app/hookup.js": "./app/hookup.js?v=20261003212217",
+    "./app/importers.js": "./app/importers.js?v=20261003212217",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003212217",
+    "./app/library.js": "./app/library.js?v=20261003212217",
+    "./app/names.js": "./app/names.js?v=20261003212217",
+    "./app/network.js": "./app/network.js?v=20261003212217",
+    "./app/pages.js": "./app/pages.js?v=20261003212217",
+    "./app/power.js": "./app/power.js?v=20261003212217",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003212217",
+    "./app/rack.js": "./app/rack.js?v=20261003212217",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003212217",
+    "./app/starters.js": "./app/starters.js?v=20261003212217",
+    "./app/kinds.js": "./app/kinds.js?v=20261003212217",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003212217",
+    "./app/sheets.js": "./app/sheets.js?v=20261003212217"
 } }
 </script>
 <script>
@@ -790,6 +790,12 @@
       <label class="chk"><input type="checkbox" id="devPopMode"><span><b>Edit in a pop-up</b><em>Tap a rack box or a room on the drawing: what's connected opens beside it. Off: it opens in the side panel (remembered on this computer)</em></span></label>
       <label class="chk"><input type="checkbox" id="showTitle"><span><b>Show title block</b><em>The full band under the drawing (remembered on this computer). Off: a one-line tab. Print and downloads always carry the full band</em></span></label>
       <label class="chk"><input type="checkbox" id="bwMode"><span><b>Black &amp; white</b><em>Dash patterns carry each signal, for office laser printers</em></span></label>
+      <div class="mgroup" role="group" aria-label="Layout">
+        <div class="mlabel">Layout <em>Saved with the project: how the sheet arranges the racks and rooms</em></div>
+        <label class="chk"><input type="radio" name="layoutStyle" value="packed"><span><b>Packed</b><em>The default: racks down the left, rooms in rows beside them by type</em></span></label>
+        <label class="chk"><input type="radio" name="layoutStyle" value="bands"><span><b>Bands</b><em>The same, each kind of room in its own labelled band — with one for rooms not on the system</em></span></label>
+        <label class="chk"><input type="radio" name="layoutStyle" value="classic"><span><b>Classic</b><em>TV rooms along the top, racks below, speaker rooms bottom-right (the original)</em></span></label>
+      </div>
       <details class="mstyle"><summary><b>Drawing style</b><em>Trunks, harness, Dante labels — how the wires are drawn</em></summary>
       <div class="mgroup" role="group" aria-label="Trunks">
         <div class="mlabel">Trunks <em>Saved with the project: one trunk per signal type, breaking out at each room</em></div>
@@ -992,7 +998,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003205632").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003212217").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1107,6 +1113,7 @@ function refresh(save = true) {
   $("#harnessMode").checked = !!S.job.job.harnessStyle;     // a per-job drawing choice: follows job switches
   $("#splitSheets").checked = !!S.job.job.splitSheets;
   for (const r of document.querySelectorAll('input[name="trunkStyle"]')) r.checked = r.value === (S.job.job.trunkStyle || "bundle");
+  for (const r of document.querySelectorAll('input[name="layoutStyle"]')) r.checked = r.value === (["bands", "classic"].includes(S.job.job.layoutStyle) ? S.job.job.layoutStyle : "packed");
   $("#harnessMode").disabled = !!trunkMode(S.job);          // trunks replace the harness; it applies with trunks off
   $("#danteLabels").checked = S.job.job.danteStyle === "labels";
   $("#legendCompact").checked = S.job.job.legendStyle === "compact";
@@ -1352,6 +1359,10 @@ try { $("#showTitle").checked = localStorage.getItem("signalpath.titleBlock") ==
 const setTitleBlock = on => { $("#showTitle").checked = on; try { localStorage.setItem("signalpath.titleBlock", on ? "on" : "off"); } catch {} refresh(false); };
 $("#showTitle").onchange = e => setTitleBlock(e.target.checked);
 $("#kindColor").onchange = () => { try { localStorage.setItem("signalpath.kindColor", $("#kindColor").checked ? "on" : "off"); } catch {} refresh(false); };
+for (const r of document.querySelectorAll('input[name="layoutStyle"]')) r.onchange = () => {
+  S.editLabel = "layout"; if (r.value === "packed") delete S.job.job.layoutStyle; else S.job.job.layoutStyle = r.value;   // packed is the default
+  refresh();
+};
 for (const r of document.querySelectorAll('input[name="trunkStyle"]')) r.onchange = () => {
   if (r.value === "bundle") delete S.job.job.trunkStyle; else S.job.job.trunkStyle = r.value;   // bundle is the default
   refresh();
@@ -2721,6 +2732,7 @@ function zonesHTML(o = {}) {
           ${!zEff.remote && roomRemote(zEff, sol.localDevices) ? `<div class="mini" style="margin:-2px 0 6px">Set by the Apple TV at this TV — pick another, or None, to change it.</div>` : ""}
           ${field("Outdoor", sel("zoutdoor", ["auto", "yes", "no"], typeof z.outdoor === "boolean" ? (z.outdoor ? "yes" : "no") : "auto",
             { auto: `Auto (${isOutdoorZone({ ...z, outdoor: undefined }) ? "outdoor" : "indoor"})`, yes: "Outdoor", no: "Indoor" }))}
+          <label class="f barrow" title="A room with its own local gear that isn't tied into the rack — it stays on the drawing and the takeoff, isn't flagged as unfed, and the Bands layout groups it under “Not on the system”"><input type="checkbox" class="zoff" ${z.offSystem ? "checked" : ""}> <span>Not on the system (local gear only)</span></label>
           ${(S.job.house.areas || []).length ? field("Area", sel("zarea", ["", ...S.job.house.areas.map(a => a.id)], z.area || "", { "": "No area", ...Object.fromEntries(S.job.house.areas.map(a => [a.id, a.name || a.id])) })) : ""}
           ${spk && !/^(surround|soundbar)/.test(spk.config || "") ? fieldO("Spk count", `<input class="spkcount" type="number" min="1" max="12" value="${esc(spk.count || 2)}">`, "endpoints", spkH.id, "count") : ""}
           ${spk ? fieldO("Speakers are", chips("spkstatus", STATUSES.map(k => [k, STATUS_LABEL[k]]), spk.status || "new"), "endpoints", spkH.id, "status") : ""}
@@ -3898,6 +3910,7 @@ function wirePanel(body) {
     refresh();
   });
   on(".zname", el => { const z = zoneOf(el); if (z) z.name = el.value; });
+  on(".zoff", el => { const z = zoneOf(el); if (!z) return; S.editLabel = "not on the system"; if (el.checked) z.offSystem = true; else delete z.offSystem; });
   on(".zoutdoor", el => { const z = zoneOf(el); if (!z) return; if (el.value === "auto") delete z.outdoor; else z.outdoor = el.value === "yes"; });
   zon(".zscope", el => {
     const z = zoneOf(el); if (!z) return;

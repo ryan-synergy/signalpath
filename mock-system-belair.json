@@ -8,6 +8,7 @@
    "address": "Bel Air, Los Angeles, CA"
   },
   "stage": "proposal",
+  "layoutStyle": "bands",
   "drawnBy": "SignalPath",
   "revisions": [
    {

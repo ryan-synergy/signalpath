@@ -3432,7 +3432,9 @@ for (const [name, raw] of Object.entries(fixtures)) {
         JSON.stringify(boxes.flatMap((a, i) => boxes.slice(i + 1).filter(b => overlap(a, b)).map(b => `${a.id}/${b.id}`)).slice(0, 4)));
       const fb = rt.warnings.filter(w => w.code === "route-fallback").length, un = rt.warnings.filter(w => w.code === "unrouted").length;
       t(`layout — ${name} (${layout}): every wire drawn, best-effort wires ≤ ${budget[name]} (${fb})`, un === 0 && fb <= budget[name], `unrouted ${un}`);
-      if (name === "belair" || name === "stress") t(`layout — ${name} (${layout}): prints at least 10% bigger than Classic (${C.p.fitScale.toFixed(2)} → ${p.fitScale.toFixed(2)})`, p.fitScale >= C.p.fitScale * 1.1);
+      if (name === "belair" || name === "stress") // (5%, not 10%: each TV row keeps a spare lane and a little room for its return since 2026-10-03 — stress in Bands went
+      // 0.54 → 0.50 for it, and Bundle / Ribbon came level with Classic on best-effort wires)
+      t(`layout — ${name} (${layout}): prints at least 5% bigger than Classic (${C.p.fitScale.toFixed(2)} → ${p.fitScale.toFixed(2)})`, p.fitScale >= C.p.fitScale * 1.05);
       if (layout === "bands") {
         const inBand = z => p.bands.some(b => z.x >= b.x && z.x + z.w <= b.x + b.w && z.y >= b.y && z.y + z.h <= b.y + b.h);
         t(`layout — ${name} (bands): every room sits inside a labelled band, bands don't overlap, areas show as a tag`,

@@ -806,6 +806,7 @@ function placeAt(job, ix, opts, gs) {
    On by default since 2026-09-30 (Ryan): a job draws as "bundle" unless it says
    job.job.trunkStyle = "ribbon" or "off". opts.trunks overrides ("bundle" |
    "ribbon" | false / "off" for the classic drawing). */
+const PACK_SLACK = 14;   // packed / bands: every TV row's gap keeps a spare lane (measured 0 / 14 / 28 on every sample, 2026-10-03: 14 brings Bundle and Ribbon level with Classic)
 const BAND_COLORS = { surround: "#2f3e9e", tvspk: "#7a3fb0", tv: "#4b5563", speakers: "#12806a", outdoor: "#2f7a3a", off: "#6b7280" };
 export const LAYOUT_STYLES = ["packed", "bands", "classic"];
 export const layoutStyle = (job, opts = {}) => { const v = opts.layout ?? job.job?.layoutStyle; return LAYOUT_STYLES.includes(v) ? v : "packed"; };
@@ -920,7 +921,7 @@ function placeOnce(job, ix, opts, variant) {
 
   /* -- pass 1: measure zone cards; count inbound feeds per zone (each wrapped
      row's strip must seat its chips AND its feed lanes — demand-sized) -- */
-  const cardOf = {}, zoneInbound = {};
+  const cardOf = {}, zoneInbound = {}, zoneReturns = {};
   const devColOfEarly = id => (sol.racks || []).some(r => (r.devices || []).some(d => d.id === id));
   for (const c of visConns) {
     const zid = ix.endpointZone[c.to] || (s.companions[c.to] && ix.endpointZone[s.companions[c.to].serves]);
@@ -932,10 +933,12 @@ function placeOnce(job, ix, opts, variant) {
   // packed / bands: a room's audio return leaves under its card too (classic returns ride the top corridor) — a lane each
   if (layoutStyle(job, opts) !== "classic") for (const c of visConns) {
     const zid = ix.endpointZone[c.from] || (s.companions[c.from] && ix.endpointZone[s.companions[c.from].serves]);
-    if (zid && devColOfEarly(c.to)) zoneInbound[zid] = (zoneInbound[zid] || 0) + 1;
+    if (zid && devColOfEarly(c.to)) { zoneInbound[zid] = (zoneInbound[zid] || 0) + 1; zoneReturns[zid] = (zoneReturns[zid] || 0) + 1; }
   }
   const rowGapFor = rowZones => Math.max(PL.videoRowGapY,
-    38 + 12 * (rowZones.reduce((n, z) => n + (zoneInbound[z.id] || 0), 0) + 1));
+    38 + 12 * (rowZones.reduce((n, z) => n + (zoneInbound[z.id] || 0), 0) + 1)
+    // a return runs west under every card to its left, below their chips and clear of their feed lanes: slack for it
+    + (rowZones.some(z => zoneReturns[z.id]) ? 24 : 0) + (layoutStyle(job, opts) !== "classic" ? PACK_SLACK : 0));
   const notedZones = new Set((sol.annotations || []).map(a => a?.near));
   for (const z of job.house.zones) {
     const locals = Object.values(s.locals).filter(d => d.zone === z.id && d.location === "at-display");

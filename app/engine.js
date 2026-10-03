@@ -646,7 +646,12 @@ function displaySize(ep, gs = 1) {
   const drawn = Math.min(220, Math.max(24, inches));
   const w = Math.round(drawn * 1.6 * gs), h = Math.round(w * 0.567);
   const brand = [ep.status === "ofe" ? "OFE" : "New", ep.brand].filter(Boolean).join(" ");
-  return { w, h, caption: ep.displayType === "projector" ? "Projector" : "TV", brand, sizeText: `${inches}"` };
+  // the face (2026-10-03): NEW / OFE banner, the brand in bold, the model when there is one, how it's mounted
+  const projector = ep.displayType === "projector", mount = ["articulating", "stand"].includes(ep.mount) ? ep.mount : "flat";
+  const frame = !projector && /samsung/i.test(ep.brand || "") && /\bframe\b/i.test(ep.model || "");
+  const how = { flat: "flat mount", articulating: "articulating", stand: "on a stand" }[mount];
+  return { w, h, caption: projector ? `Projector · ${inches}" screen` : frame ? how[0].toUpperCase() + how.slice(1) : `TV · ${how}`, brand, sizeText: `${inches}"`,
+    status: ep.status === "ofe" ? "OFE" : "NEW", brandName: String(ep.brand || "").trim(), model: String(ep.model || "").trim(), projector, frame, mount: projector ? null : mount };
 }
 
 /* Card geometry: groups run left→right [speakers, display]; a local
@@ -4363,12 +4368,7 @@ export function render(job, ix, P, rt, opts = {}) {
     for (const g of z.groups) {
       const gx = z.x + g.x, gy = z.y + g.y;
       if (g.kind === "display") {
-        const f = Math.min(gls, 1.15);   // the TV's words grow a little with it
-        push(`<rect x="${gx}" y="${gy}" width="${g.w}" height="${g.h}" fill="url(#tvg)" stroke="#556" stroke-width="1.2"/>`);
-        // a quiet reflection in the screen's top-left corner
-        push(`<path d="M${gx + 6} ${gy + 19}L${gx + 21} ${gy + 6}M${gx + 7} ${gy + 29}L${gx + 33} ${gy + 6}" stroke="#fff" stroke-opacity="0.6" stroke-width="1.8" stroke-linecap="round"/>`);
-        push(`<text x="${gx + g.w / 2}" y="${gy + g.h / 2 - 3 * f}" text-anchor="middle" font-size="${+(11 * f).toFixed(1)}" fill="#233">${esc(g.brand)}</text>`);
-        push(`<text x="${gx + g.w / 2}" y="${gy + g.h / 2 + 13 * f}" text-anchor="middle" font-size="${+(12 * f).toFixed(1)}" font-weight="600" fill="#233">${esc(g.sizeText)}</text>`);
+        push(displayFace(g, gx, gy, { bw, gray }));
       } else if (g.kind === "speakers") {
         // the glyphs are drawn at 1× and scaled with their group (TVs + speakers 25% bigger)
         const sg = speakerGlyphs(ix.endpointsById[g.epId], gx, gy, g.w / gls);
@@ -4390,7 +4390,8 @@ export function render(job, ix, P, rt, opts = {}) {
              `<circle cx="${z.x + l.x + l.w - 11}" cy="${z.y + l.y + l.h / 2}" r="2.4" fill="#cfcfcf"/>`);
         push(`<text x="${z.x + l.x + l.w / 2}" y="${z.y + l.y + l.h / 2 + 3}" text-anchor="middle" font-size="8.5" fill="#bbb">${esc(l.label || l.deviceId)}</text>`);
       }
-      if (g.caption) push(`<text x="${z.x + g.cx}" y="${z.y + g.captionY}" text-anchor="middle" font-size="11.5" fill="#333">${esc(g.caption)}</text>`);
+      if (g.caption) push(`<text x="${z.x + g.cx + (g.mount ? 7 : 0)}" y="${z.y + g.captionY}" text-anchor="middle" font-size="11.5" fill="#333">${esc(g.caption)}</text>`);
+      if (g.mount) push(mountBadge(g.mount, z.x + g.cx + 7 - String(g.caption).length * 2.75 - (g.mount === "articulating" ? 24 : g.mount === "stand" ? 18 : 12), z.y + g.captionY - 4, bw));
     }
     push(`</g>`);
   }
@@ -4705,6 +4706,57 @@ export function render(job, ix, P, rt, opts = {}) {
    type so a rack of black boxes passes the squint test */
 // a source's face: its stored sourceType, else read off its name (kit and library boxes
 // carry a model, not a sourceType — an Apple TV from a kit still gets its badge)
+/* a TV or projector's face (Ryan 2026-10-03, from five concept sheets):
+   TV — a dark bezel, a NEW (blue) / OFE (amber) banner across the top, the brand in bold capitals, the model under it
+     when one is entered, then the size. A Samsung Frame is a wood frame with artwork filling the screen.
+   Projector — the projector leads: the brand across its body, a small lens, the model under it, and a short screen
+     across the bottom of its slot carrying the size (wires land on that screen).
+   Everything scales with the slot, which is sized from the inches. */
+function displayFace(g, x, y, { bw = false, gray = false } = {}) {
+  const { w, h } = g, cx = x + w / 2, k = Math.min(w / 120, h / 62), f = v => +v.toFixed(1), E = s => esc(s);
+  const fitFs = (t, maxW, fs, per = 0.72) => f(Math.min(fs, maxW / Math.max(1, String(t).length * per)));
+  const ink = "#16222f", brand = (g.brandName || (g.projector ? "Projector" : "TV")).toUpperCase();
+  if (g.projector) {
+    const bwid = Math.min(w * 0.62, 104), bh = bwid * 0.46, bx = cx - bwid / 2, by = y + Math.max(2, h * 0.06), lr = bh * 0.19;
+    const sh = Math.max(15, Math.min(22, h * 0.2)), sw = w * 0.74, sy = y + h - sh;
+    return `<path d="M${f(cx)} ${f(by + bh * 0.62)}L${f(cx - sw / 2 + 4)} ${f(sy)}H${f(cx + sw / 2 - 4)}Z" fill="${bw ? "#ddd" : "#ffe45c"}" fill-opacity="0.4"/>` +
+      `<rect x="${f(bx)}" y="${f(by)}" width="${f(bwid)}" height="${f(bh)}" rx="${f(bh * 0.17)}" fill="#2a2d33" stroke="#111" stroke-width="1.1"/>` +
+      `<text x="${f(cx)}" y="${f(by + bh * 0.4)}" text-anchor="middle" font-size="${fitFs(brand, bwid - 14, bh * 0.33)}" font-weight="800" letter-spacing="0.5" fill="#fff">${E(brand)}</text>` +
+      `<circle cx="${f(cx)}" cy="${f(by + bh * 0.7)}" r="${f(lr)}" fill="#0d0f12" stroke="#8a93a3" stroke-width="1.1"/><circle cx="${f(cx)}" cy="${f(by + bh * 0.7)}" r="${f(lr * 0.48)}" fill="${bw ? "#ddd" : "#5cc8ff"}"/>` +
+      [-1, 1].map(d => [0.58, 0.7, 0.82].map(t => `<path d="M${f(cx + d * (lr + 5))} ${f(by + bh * t)}H${f(cx + d * (bwid / 2 - 8))}" stroke="#6a7280" stroke-width="0.9" stroke-linecap="round"/>`).join("")).join("") +
+      (g.model ? `<text x="${f(cx)}" y="${f(by + bh + 11)}" text-anchor="middle" font-size="${fitFs(g.model, w - 8, 8.6, 0.6)}" font-weight="700" fill="#222">${E(g.model)}</text>` : "") +
+      `<rect x="${f(cx - sw / 2 - 1.5)}" y="${f(sy - 3.5)}" width="${f(sw + 3)}" height="3.5" rx="1.2" fill="#2a2d33"/><rect x="${f(cx - sw / 2)}" y="${f(sy)}" width="${f(sw)}" height="${f(sh)}" fill="#f3f4f6" stroke="#1b1d22" stroke-width="1.4"/>` +
+      `<text x="${f(cx)}" y="${f(sy + sh / 2 + 4.6)}" text-anchor="middle" font-size="${f(Math.min(13, sh * 0.72))}" font-weight="800" fill="#16181c">${E(g.sizeText)}</text>`;
+  }
+  const bz = g.frame ? 4 : 2.5, ix = x + bz, iy = y + bz, iw = w - bz * 2, ih = h - bz * 2, bh = Math.max(9, 13 * k);
+  const banC = gray ? "#8a8f98" : bw ? (g.status === "OFE" ? "#777" : "#2b2b2b") : g.status === "OFE" ? "#b45309" : "#1f6feb";
+  const hasModel = !!g.model && k >= 0.62, textTop = iy + bh, room = ih - bh;
+  const bFs = fitFs(brand, iw - 8, (hasModel ? 15.5 : 17) * k), sFs = f((hasModel ? 14.5 : 15) * k);
+  const body = g.frame
+    ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5" fill="${bw ? "#9a9a9a" : "#b98a55"}" stroke="${bw ? "#555" : "#8f6537"}" stroke-width="1"/><rect x="${ix}" y="${iy}" width="${iw}" height="${ih}" fill="${bw ? "#f1f1f1" : "#efe9da"}"/>` +
+      // artwork filling the screen, kept pale so the words read over it
+      `<circle cx="${f(ix + iw * 0.78)}" cy="${f(textTop + room * 0.3)}" r="${f(room * 0.17)}" fill="${bw ? "#cfcfcf" : "#e9a23b"}" fill-opacity="0.55"/>` +
+      `<path d="M${ix} ${f(iy + ih)}L${f(ix + iw * 0.24)} ${f(textTop + room * 0.38)}L${f(ix + iw * 0.4)} ${f(textTop + room * 0.7)}L${f(ix + iw * 0.57)} ${f(textTop + room * 0.26)}L${f(ix + iw)} ${f(iy + ih)}Z" fill="${bw ? "#bdbdbd" : "#7d9a86"}" fill-opacity="0.5"/>`
+    : `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2.5" fill="#1b1d22"/><rect x="${ix}" y="${iy}" width="${iw}" height="${ih}" fill="url(#tvg)"/>` +
+      // the quiet reflection in the screen's top-left corner, under the banner
+      `<path d="M${f(ix + 4)} ${f(textTop + 15 * k)}L${f(ix + 4 + 15 * k)} ${f(textTop + 2)}M${f(ix + 5)} ${f(textTop + 25 * k)}L${f(ix + 5 + 26 * k)} ${f(textTop + 2)}" stroke="#fff" stroke-opacity="0.6" stroke-width="1.8" stroke-linecap="round"/>`;
+  const lines = g.frame && hasModel
+    ? `<text x="${f(cx)}" y="${f(textTop + room * 0.36)}" text-anchor="middle" font-size="${fitFs(brand, iw - 8, 12.5 * k)}" font-weight="800" letter-spacing="0.5" fill="${ink}">${E(brand)}</text>` +
+      `<text x="${f(cx)}" y="${f(textTop + room * 0.56)}" text-anchor="middle" font-size="${fitFs(g.model, iw - 8, 7.8 * k, 0.74)}" font-weight="700" letter-spacing="1.1" fill="#2f4660" style="text-transform:uppercase">${E(g.model)}</text>` +
+      `<text x="${f(cx)}" y="${f(textTop + room * 0.86)}" text-anchor="middle" font-size="${f(12 * k)}" font-weight="800" fill="${ink}">${E(g.sizeText)}</text>`
+    : `<text x="${f(cx)}" y="${f(textTop + room * (hasModel ? 0.37 : 0.47))}" text-anchor="middle" font-size="${bFs}" font-weight="800" letter-spacing="0.6" fill="${ink}">${E(brand)}</text>` +
+      (hasModel ? `<text x="${f(cx)}" y="${f(textTop + room * 0.59)}" text-anchor="middle" font-size="${fitFs(g.model, iw - 8, 8.4 * k, 0.72)}" font-weight="700" letter-spacing="0.8" fill="#2f4660" style="text-transform:uppercase">${E(g.model)}</text>` : "") +
+      `<text x="${f(cx)}" y="${f(textTop + room * (hasModel ? 0.92 : 0.86))}" text-anchor="middle" font-size="${sFs}" font-weight="700" fill="${ink}">${E(g.sizeText)}</text>`;
+  return body + `<rect x="${ix}" y="${iy}" width="${iw}" height="${f(bh)}" fill="${banC}"/>` +
+    `<text x="${f(cx)}" y="${f(iy + bh * 0.76)}" text-anchor="middle" font-size="${f(Math.max(6.4, 8.4 * k))}" font-weight="800" letter-spacing="1.6" fill="#fff">${gray ? "PRE-WIRE" : g.status}</text>` + lines;
+}
+// the side view beside a TV's caption: flat on the wall, on an arm off the wall, or on a stand
+function mountBadge(kind, x, y, bw = false) {
+  const ink = "#1b1d22", wall = `<path d="M${x} ${y - 8}v16" stroke="#555" stroke-width="2"/>` + [0, 1, 2, 3].map(i => `<path d="M${x - 4} ${y - 6 + i * 4}l4 -3" stroke="#999" stroke-width="0.9"/>`).join("");
+  if (kind === "articulating") return `<g class="mountbadge" data-mount="articulating">${wall}<path d="M${x} ${y}L${x + 7} ${y - 4}L${x + 13} ${y}" fill="none" stroke="${ink}" stroke-width="1.6" stroke-linejoin="round"/><circle cx="${x + 7}" cy="${y - 4}" r="1.3" fill="#8a93a3" stroke="${ink}" stroke-width="0.6"/><rect x="${x + 13}" y="${y - 7}" width="3" height="14" rx="1" fill="${ink}"/></g>`;
+  if (kind === "stand") return `<g class="mountbadge" data-mount="stand"><path d="M${x - 5} ${y + 8}h19" stroke="#555" stroke-width="2"/><rect x="${x + 3}" y="${y - 8}" width="3" height="13" rx="1" fill="${ink}"/><path d="M${x} ${y + 7}h9M${x + 4.5} ${y + 5}v2" stroke="${ink}" stroke-width="1.6" stroke-linecap="round"/></g>`;
+  return `<g class="mountbadge" data-mount="flat">${wall}<rect x="${x + 2.5}" y="${y - 7}" width="3" height="14" rx="1" fill="${ink}"/></g>`;
+}
 // how an adapter chip is drawn: its outline (encoder → points right, decoder → points left, balun → a lozenge) and its
 // cap color (MXNet magenta, the Dante audio adapters blue, a balun amber)
 const CHIP_TIP = 9;

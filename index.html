@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-s2xSfs79EcpNJ1QUq1N4PvMKnJs+pfMfFQWtwU6AWmc=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-P6Szj605YRpfG4GVEB0wLtjuN7dLOnJyp7rLmJJOHMI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-DkVUHK7hOxXlX7QGMj/nXL/beIKiQMrUf3x+hB5Jecs=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-DsviyXDkU0IgZAF79GlnzlnpP47DRmBoA+/BymqLclg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -653,29 +653,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003175220",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003175220",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003175220",
-    "./app/ports.js": "./app/ports.js?v=20261003175220",
-    "./app/commands.js": "./app/commands.js?v=20261003175220",
-    "./app/engine.js": "./app/engine.js?v=20261003175220",
-    "./app/exports.js": "./app/exports.js?v=20261003175220",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003175220",
-    "./app/hookup.js": "./app/hookup.js?v=20261003175220",
-    "./app/importers.js": "./app/importers.js?v=20261003175220",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003175220",
-    "./app/library.js": "./app/library.js?v=20261003175220",
-    "./app/names.js": "./app/names.js?v=20261003175220",
-    "./app/network.js": "./app/network.js?v=20261003175220",
-    "./app/pages.js": "./app/pages.js?v=20261003175220",
-    "./app/power.js": "./app/power.js?v=20261003175220",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003175220",
-    "./app/rack.js": "./app/rack.js?v=20261003175220",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003175220",
-    "./app/starters.js": "./app/starters.js?v=20261003175220",
-    "./app/kinds.js": "./app/kinds.js?v=20261003175220",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003175220",
-    "./app/sheets.js": "./app/sheets.js?v=20261003175220"
+    "./app/ai.js": "./app/ai.js?v=20261003180942",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003180942",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003180942",
+    "./app/ports.js": "./app/ports.js?v=20261003180942",
+    "./app/commands.js": "./app/commands.js?v=20261003180942",
+    "./app/engine.js": "./app/engine.js?v=20261003180942",
+    "./app/exports.js": "./app/exports.js?v=20261003180942",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003180942",
+    "./app/hookup.js": "./app/hookup.js?v=20261003180942",
+    "./app/importers.js": "./app/importers.js?v=20261003180942",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003180942",
+    "./app/library.js": "./app/library.js?v=20261003180942",
+    "./app/names.js": "./app/names.js?v=20261003180942",
+    "./app/network.js": "./app/network.js?v=20261003180942",
+    "./app/pages.js": "./app/pages.js?v=20261003180942",
+    "./app/power.js": "./app/power.js?v=20261003180942",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003180942",
+    "./app/rack.js": "./app/rack.js?v=20261003180942",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003180942",
+    "./app/starters.js": "./app/starters.js?v=20261003180942",
+    "./app/kinds.js": "./app/kinds.js?v=20261003180942",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003180942",
+    "./app/sheets.js": "./app/sheets.js?v=20261003180942"
 } }
 </script>
 <script>
@@ -935,7 +935,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003175220").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003180942").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -2473,6 +2473,7 @@ function zonesHTML() {
           const list = sizes.includes(cur) ? sizes : [...sizes, cur].sort((a, b) => a - b);
           return chips("tvsize", list.map(n => [String(n), n + "″"]), String(cur)).replace(/<\/div>$/, `<button type="button" class="chip more" data-other="tvsize">Other…</button></div>`);
         })(), "endpoints", tvH.id, "size") : ""}
+        ${tv && tv.displayType !== "projector" ? fieldO("Mount", chips("tvmount", [["flat", "Flat"], ["articulating", "Articulating"], ["stand", "Stand"]], ["articulating", "stand"].includes(tv.mount) ? tv.mount : "flat", "seg"), "endpoints", tvH.id, "mount") : ""}
         ${hookupHTML(z, sol, multi)}
         ${notesHTML(z.id)}
         <details class="more" data-more="${esc(moreKey)}" ${S.openRows.has(moreKey) ? "open" : ""}><summary>More — name, ${tv ? "brand, model, " : ""}scope, remote</summary>
@@ -3722,6 +3723,8 @@ function wirePanel(body) {
   on(".tvmodel", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "model", el.value.trim()); });
   zon(".tvsize", el => { const n = Math.round(+el.value); if (!(n > 0)) return;       // blank / junk: keep the old size
     setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "size", Math.min(220, Math.max(24, n))); });
+  // how the TV is mounted (the side-view badge under it): flat is the default and isn't stored
+  zon(".tvmount", el => { const t = zoneOf(el)?.endpoints.find(e => e.type === "display"); if (!t) return; S.editLabel = "TV mount"; if (el.value === "flat") delete t.mount; else t.mount = el.value; });
   zon(".tvstatus", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "status", el.value); });
   on(".tvconfirm", el => { const t = zoneOf(el)?.endpoints.find(e => e.type === "display"); if (t) { if (el.checked) t.confirm = ["size"]; else delete t.confirm; } });
   body.querySelectorAll(".zdel").forEach(el => el.onclick = () => {

@@ -1152,7 +1152,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const res = mdxG.querySelectorAll('rect[fill="#8c8c8c"]').length;
   t("residence: MDX-16 strip = 5 used / 1 reserved / spares outlined", used === 5 && res === 1, `used=${used} res=${res}`);
   t("residence: annotation renders in red near the Gym", svg.includes("Gym pre-wired only"));
-  t("residence: TV footprints carry brand and size", svg.includes(">New Sony</text>") && svg.includes(">75&quot;</text>"));
+  t("residence: TV footprints carry status, brand and size", svg.includes(">NEW</text>") && svg.includes(">SONY</text>") && svg.includes(">75&quot;</text>"));
 }
 
 {
@@ -2698,6 +2698,22 @@ for (const [name, raw] of Object.entries(fixtures)) {
     // a wire that lands off-centre on a pointed end is carried on to the slant
     const off = rc.wires.filter(w => { const c = pc.chips.find(k => k.id === w.from); return c && Math.abs(w.pts[0][0] - (c.x + c.w)) < 0.6 && Math.abs(w.pts[0][1] - (c.y + c.h / 2)) > 0.6 && /^enc/.test(c.id); });
     t("chips: a wire leaving an encoder's point off-centre is drawn on to the slanted edge", off.length > 0 && off.every(w => new RegExp(`d="M${w.pts[0][0]} ${String(w.pts[0][1]).replace(".", "\\.")}L[\\d.]+ ${String(w.pts[0][1]).replace(".", "\\.")}"`).test(sc)), `${off.length} wires`);
+  }
+  { // TV and projector faces (Ryan 2026-10-03, five concept rounds)
+    const r = structuredClone(fixtures.residence), tvs = r.house.zones.map(z => (z.endpoints || []).find(e => e.type === "display")).filter(Boolean);
+    Object.assign(tvs[0], { brand: "Sony", model: "Bravia 9", status: "new" }); Object.assign(tvs[1], { brand: "Samsung", model: "The Frame", status: "ofe", mount: "articulating" });
+    Object.assign(tvs[2], { displayType: "projector", brand: "Epson", model: "LS12000", size: 120 });
+    const L = loadJob(r), pT = place(L.job, L.ix), sT = render(L.job, L.ix, pT, route(L.job, L.ix, pT)), dT = new DOMParser().parseFromString(sT, "image/svg+xml");
+    const card = id => dT.querySelector(`g.zcard[data-zone="${L.ix.endpointZone[id]}"]`), words = id => [...card(id).querySelectorAll("text")].map(x => x.textContent);
+    t("TV face: a NEW banner, the brand in bold capitals, the model under it, the size; the caption says how it's mounted beside a side-view badge",
+      ["NEW", "SONY", "Bravia 9", `${tvs[0].size}"`, "TV · flat mount"].every(w => words(tvs[0].id).includes(w)) && !!card(tvs[0].id).querySelector('g.mountbadge[data-mount="flat"]') && card(tvs[0].id).innerHTML.includes("#1f6feb"));
+    t("TV face: a Samsung Frame is a wood frame with artwork, OFE in amber, and its caption is just the mount (the picture already says what it is)",
+      ["OFE", "SAMSUNG", "The Frame", "Articulating"].every(w => words(tvs[1].id).includes(w)) && !words(tvs[1].id).some(w => /^TV ·|Frame TV/.test(w)) && card(tvs[1].id).innerHTML.includes("#b98a55") && card(tvs[1].id).innerHTML.includes("#b45309") && !!card(tvs[1].id).querySelector('g.mountbadge[data-mount="articulating"]'));
+    t("projector face: the projector leads with its brand, the model under it, and a screen carrying the size — no mount badge",
+      ["EPSON", "LS12000", '120"', 'Projector · 120" screen'].every(w => words(tvs[2].id).includes(w)) && !card(tvs[2].id).querySelector("g.mountbadge") && !words(tvs[2].id).includes("NEW"));
+    const small = structuredClone(fixtures.residence), st = small.house.zones.map(z => (z.endpoints || []).find(e => e.type === "display")).find(Boolean); Object.assign(st, { size: 32, brand: "Samsung", model: "QN32Q60" });
+    const Ls = loadJob(small), pS2 = place(Ls.job, Ls.ix), sS2 = render(Ls.job, Ls.ix, pS2, route(Ls.job, Ls.ix, pS2));
+    t("TV face: a small TV drops the model line rather than cram it", sS2.includes(">SAMSUNG</text>") && !sS2.includes(">QN32Q60</text>"));
   }
   { // the speaker look Ryan picked from concepts (2026-10-03): yellow cone, thin dark rim, sound lines per group, a glint on the TV
     const svgB = render(job, ix, p, route(job, ix, p), { grayscale: true });
@@ -4385,7 +4401,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
     at(fixtures.residence, { trunks: false }).p.glyphScale === 1 && at(fixtures.residence, { trunks: "bundle", glyphScale: 1.12 }).p.glyphScale === 1.12 && GLYPH_SCALES[0] === 1.25);
   const svg = render(R.job, R.ix, R.p, engineRoute(R.job, R.ix, R.p, { trunks: "bundle" }), { trunks: "bundle" });
   t("glyphs: the speaker glyphs scale with their group and the TV's box is the bigger size",
-    /<g transform="translate\([\d.]+ [\d.]+\) scale\(1\.25\)/.test(svg) && svg.includes(`width="${t1.w}" height="${t1.h}" fill="url(#tvg)"`));
+    /<g transform="translate\([\d.]+ [\d.]+\) scale\(1\.25\)/.test(svg) && svg.includes(`width="${t1.w}" height="${t1.h}" rx="2.5" fill="#1b1d22"`));
   const F = await import("./fuzz-jobs.js"), g = F.jobGenerator(1); let fb1 = 0, fbA = 0, n = 0;
   for (let k = 0; k < 60; k++) { let job, ix; try { ({ job, ix } = loadJob(g(k))); } catch { continue; } n++;
     for (const [o, add] of [[{ trunks: "bundle", glyphScale: 1 }, v => fb1 += v], [{ trunks: "bundle" }, v => fbA += v]]) {

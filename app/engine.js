@@ -2,7 +2,7 @@
    Layers: load → validate → advise → place → route → render(SVG)
    Pure functions, no DOM. Spec: ../DESIGN.md (FROZEN 2026-09-17). */
 
-import { describeNode, adapterName, adapterTag, isOutdoorZone, SIGNAL_SHORT, SCOPE_NAME } from "./names.js";
+import { describeNode, drivesRooms, adapterName, adapterTag, isOutdoorZone, SIGNAL_SHORT, SCOPE_NAME } from "./names.js";
 import { bulletFor, isAtmosRoom, knownRunM, RUN_LIMIT_M } from "./hookup.js";
 import { networkPlan, suggestLanSwitch } from "./network.js";
 import { powerPlan } from "./power.js";
@@ -4035,8 +4035,15 @@ export function render(job, ix, P, rt, opts = {}) {
       } else {
         push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="3" fill="${tint("#262626")}" stroke="#101010"/>`);
         if (kind) push(kindEdge(kind, d.x, d.y, d.h, 3, bw));
-        const [brand, ...restName] = tileName(d.model, job.job?.catalogSnapshot?.devices?.[dev.catalogRef]?.brand);
-        push(fitText(d.x + d.w / 2, d.y + 17, brand, 11, "#ddd", d.w - 12));
+        let [brand, ...restName] = tileName(d.model, job.job?.catalogSnapshot?.devices?.[dev.catalogRef]?.brand);
+        // a receiver's tile says the room it drives on top, the product under it (Ryan 2026-10-02:
+        // "Family Room · Anthem MRX 540") — read from the wiring; an imported "MRX SLM — Great Room" keeps its room
+        if (dev.type === "avr") {
+          const said = String(d.model || "").includes(" — ");
+          const rooms = said ? [String(d.model).split(" — ").slice(1).join(" — ")] : drivesRooms(job, sol, d.id);
+          if (rooms.length) { brand = rooms.join(" · "); restName = [said ? String(d.model).split(" — ")[0] : d.model]; }
+        }
+        push(fitText(d.x + d.w / 2, d.y + 17, brand, 11, dev.type === "avr" && brand !== tileName(d.model)[0] ? "#fff" : "#ddd", d.w - 12));
         // faceplate identity cues (squint-test assists, never the identifier)
         const my = d.y + d.h / 2 + 3;
         const u = usage[d.id] || {}, lit = kind && KIND_STYLE[kind].edge ? KIND_STYLE[kind].edge : "#3b82c4", dim = "#8f8f8f";

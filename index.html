@@ -532,29 +532,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003013034",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003013034",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003013034",
-    "./app/ports.js": "./app/ports.js?v=20261003013034",
-    "./app/commands.js": "./app/commands.js?v=20261003013034",
-    "./app/engine.js": "./app/engine.js?v=20261003013034",
-    "./app/exports.js": "./app/exports.js?v=20261003013034",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003013034",
-    "./app/hookup.js": "./app/hookup.js?v=20261003013034",
-    "./app/importers.js": "./app/importers.js?v=20261003013034",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003013034",
-    "./app/library.js": "./app/library.js?v=20261003013034",
-    "./app/names.js": "./app/names.js?v=20261003013034",
-    "./app/network.js": "./app/network.js?v=20261003013034",
-    "./app/pages.js": "./app/pages.js?v=20261003013034",
-    "./app/power.js": "./app/power.js?v=20261003013034",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003013034",
-    "./app/rack.js": "./app/rack.js?v=20261003013034",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003013034",
-    "./app/starters.js": "./app/starters.js?v=20261003013034",
-    "./app/kinds.js": "./app/kinds.js?v=20261003013034",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003013034",
-    "./app/sheets.js": "./app/sheets.js?v=20261003013034"
+    "./app/ai.js": "./app/ai.js?v=20261003013623",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003013623",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003013623",
+    "./app/ports.js": "./app/ports.js?v=20261003013623",
+    "./app/commands.js": "./app/commands.js?v=20261003013623",
+    "./app/engine.js": "./app/engine.js?v=20261003013623",
+    "./app/exports.js": "./app/exports.js?v=20261003013623",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003013623",
+    "./app/hookup.js": "./app/hookup.js?v=20261003013623",
+    "./app/importers.js": "./app/importers.js?v=20261003013623",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003013623",
+    "./app/library.js": "./app/library.js?v=20261003013623",
+    "./app/names.js": "./app/names.js?v=20261003013623",
+    "./app/network.js": "./app/network.js?v=20261003013623",
+    "./app/pages.js": "./app/pages.js?v=20261003013623",
+    "./app/power.js": "./app/power.js?v=20261003013623",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003013623",
+    "./app/rack.js": "./app/rack.js?v=20261003013623",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003013623",
+    "./app/starters.js": "./app/starters.js?v=20261003013623",
+    "./app/kinds.js": "./app/kinds.js?v=20261003013623",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003013623",
+    "./app/sheets.js": "./app/sheets.js?v=20261003013623"
 } }
 </script>
 <script>
@@ -795,7 +795,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003013034").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003013623").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1593,10 +1593,26 @@ function nodeName(id) {
   return describeNode(v.job, v.job.solutions[S.sol] || v.job.solutions[0], id).label;
 }
 
+let selDev = null;   // a tapped box: every wire it has lights up (Ryan 2026-10-02 — which rooms a receiver drives, at a glance)
 function applySel() {
-  const svg = $("#canvas svg"); if (!svg) { selWire = null; return; }
+  const svg = $("#canvas svg"); if (!svg) { selWire = null; selDev = null; return; }
   svg.querySelectorAll("path.wire.sel").forEach(p => p.classList.remove("sel"));
   svg.querySelectorAll(".selnode").forEach(g => g.classList.remove("selnode"));
+  const mark = nid => (svg.querySelector(`[data-device="${CSS.escape(nid)}"]`) || svg.querySelector(`[data-zone="${CSS.escape(S.view?.ix.endpointZone[nid] || "")}"]`))?.classList.add("selnode");
+  if (selDev && !selWire) {
+    // the box, the adapters on it (an encoder, the decoder feeding a receiver), and the adapter at the far end of each run
+    const comps = S.job.solutions[S.sol].companions || [];
+    const mine = new Set([selDev, ...comps.filter(k => k.serves === selDev).map(k => k.id)]);
+    const wires = [...svg.querySelectorAll("path.wire")];
+    const hit = wires.filter(p => mine.has(p.dataset.from) || mine.has(p.dataset.to));
+    const far = new Set(hit.flatMap(p => [p.dataset.from, p.dataset.to]).filter(id => comps.some(k => k.id === id) && !mine.has(id)));
+    const all = [...new Set([...hit, ...wires.filter(p => far.has(p.dataset.from) || far.has(p.dataset.to))])];
+    if (!all.length) { svg.classList.remove("wiresel"); mark(selDev); return; }
+    svg.classList.add("wiresel");
+    for (const p of all) { p.classList.add("sel"); mark(p.dataset.from); mark(p.dataset.to); }
+    mark(selDev);
+    return;
+  }
   const p = selWire && svg.querySelector(`path.wire[data-wire="${CSS.escape(selWire)}"]`);
   if (!p) { selWire = null; svg.classList.remove("wiresel"); return; }
   svg.classList.add("wiresel");
@@ -1607,7 +1623,7 @@ function applySel() {
     g?.classList.add("selnode");
   }
 }
-function clearSel() { selWire = null; hideTip(); applySel(); clearGhosts(); }
+function clearSel() { selWire = null; selDev = null; hideTip(); applySel(); clearGhosts(); }
 
 /* ---- guided rerouting: pick from legal alternate routes for the selected wire ---- */
 let ALTS = null;
@@ -1787,7 +1803,7 @@ $("#canvas").addEventListener("click", e => {
     const idx = ids.indexOf(selWire);
     if (idx !== -1 && ids.length === 1) { clearSel(); return; }
     clearGhosts();   // a new selection retires the previous wire's picker
-    selWire = ids[(idx + 1) % ids.length];
+    selWire = ids[(idx + 1) % ids.length]; selDev = null;
     applySel();
     const p = $("#canvas svg").querySelector(`path.wire[data-wire="${CSS.escape(selWire)}"]`);
     showTip(e.clientX, e.clientY,
@@ -1798,7 +1814,7 @@ $("#canvas").addEventListener("click", e => {
     return;
   }
   const dev = e.target.closest("[data-device]");
-  if (dev) { clearSel(); openGear(dev.dataset.device); return; }
+  if (dev) { clearSel(); selDev = dev.dataset.device; applySel(); openGear(dev.dataset.device); return; }
   // an adapter chip opens what it serves: the room (a DEC / balun at a TV) or the box (an ENC on a source)
   const chipEl = e.target.closest("[data-chip]");
   if (chipEl) {

@@ -830,6 +830,10 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     t("receivers: an amp isn't renamed; an unwired receiver keeps its plain name", Nn.describeNode(j, sol, sol.racks[0].devices.find(d => d.type === "amp").id).short === "Anthem MDX-16" &&
       Nn.withRooms("Anthem MRX 540", []) === "Anthem MRX 540");
     t("receivers: a name that already says the room isn't doubled (an imported 'MRX SLM — Great Room')", Nn.withRooms("Anthem MRX SLM — Great Room", ["Great Room"]) === "Anthem MRX SLM — Great Room");
+    { const Lr = loadJob(structuredClone(j)), pr = enginePlace(Lr.job, Lr.ix), svg = render(Lr.job, Lr.ix, pr, engineRoute(Lr.job, Lr.ix, pr));
+      const tile = id => (svg.match(new RegExp(`<g class="devtile" data-device="${id}"[\\s\\S]*?</g>\\s*(?=<g class="devtile"|</g>)`)) || [""])[0];
+      const avr540 = sol.racks[0].devices.find(d => /540/.test(d.model)).id;
+      t("receivers: the drawn tile says the room on top and the product under it (Loft · Anthem MRX 540)", />Loft</.test(tile(avr540)) && />Anthem MRX 540</.test(tile(avr540))); }
     t("receivers: the AI's job summary says which room each drives", /MRX 1140 — AV receiver driving Theater/.test((await import("./ai.js")).jobSummary(j, 0, CATn)));
   }
   { // re-import merge: House refreshes, Solutions and endpoint ids survive

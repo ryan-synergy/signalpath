@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-cmqYmZICGR+CrLK11jRHxTIRjiHSKxpPPqTw/zSUfro=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-q+E5iJ53N+nY06oYLbfqsw3Ix7mNe01KNUMtW/+efl0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-U3fm6r4wpja2wgi6ZiI8rvkbvZqFnNzvzlVhoB8Po38=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-Z7oq4056KyBRe6SM5cSU9TmGCcjV2m907FzP8a+rGsI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -287,6 +287,7 @@
   #devPop .dpl .dpdel { border: none; background: none; color: #999; cursor: pointer; font-size: 14px; padding: 2px; } #devPop .dpl .dpdel:hover { color: #b32017; }
   #devPop .dpempty { color: #888; font-size: 12px; margin-bottom: 4px; }
   #devPop .dpadd { border: 1px dashed #b9bec8; background: none; border-radius: 6px; font: inherit; font-size: 12px; font-weight: 600; padding: 4px 8px; cursor: pointer; color: #16181c; }
+  #devPop .dproom .sect { margin-top: 10px; } #devPop .dproom .f > label { width: 78px; flex: none; } #devPop .dproom details.more { margin: 6px 0; }
   #devPop .dpfoot { display: flex; justify-content: flex-end; margin-top: 8px; } #devPop .dpfoot a { font-size: 12px; color: var(--accent); }
   @media (pointer: coarse) { #devPop .dpl select { padding: 9px 6px; } #devPop .dpadd { padding: 8px 10px; } #devPop .dpx { font-size: 22px; padding: 4px 8px; } }
   #wiretip { position: fixed; z-index: 40; background: #16181c; color: #eee; font-size: 12px;
@@ -677,29 +678,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003200530",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003200530",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003200530",
-    "./app/ports.js": "./app/ports.js?v=20261003200530",
-    "./app/commands.js": "./app/commands.js?v=20261003200530",
-    "./app/engine.js": "./app/engine.js?v=20261003200530",
-    "./app/exports.js": "./app/exports.js?v=20261003200530",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003200530",
-    "./app/hookup.js": "./app/hookup.js?v=20261003200530",
-    "./app/importers.js": "./app/importers.js?v=20261003200530",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003200530",
-    "./app/library.js": "./app/library.js?v=20261003200530",
-    "./app/names.js": "./app/names.js?v=20261003200530",
-    "./app/network.js": "./app/network.js?v=20261003200530",
-    "./app/pages.js": "./app/pages.js?v=20261003200530",
-    "./app/power.js": "./app/power.js?v=20261003200530",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003200530",
-    "./app/rack.js": "./app/rack.js?v=20261003200530",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003200530",
-    "./app/starters.js": "./app/starters.js?v=20261003200530",
-    "./app/kinds.js": "./app/kinds.js?v=20261003200530",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003200530",
-    "./app/sheets.js": "./app/sheets.js?v=20261003200530"
+    "./app/ai.js": "./app/ai.js?v=20261003202540",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003202540",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003202540",
+    "./app/ports.js": "./app/ports.js?v=20261003202540",
+    "./app/commands.js": "./app/commands.js?v=20261003202540",
+    "./app/engine.js": "./app/engine.js?v=20261003202540",
+    "./app/exports.js": "./app/exports.js?v=20261003202540",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003202540",
+    "./app/hookup.js": "./app/hookup.js?v=20261003202540",
+    "./app/importers.js": "./app/importers.js?v=20261003202540",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003202540",
+    "./app/library.js": "./app/library.js?v=20261003202540",
+    "./app/names.js": "./app/names.js?v=20261003202540",
+    "./app/network.js": "./app/network.js?v=20261003202540",
+    "./app/pages.js": "./app/pages.js?v=20261003202540",
+    "./app/power.js": "./app/power.js?v=20261003202540",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003202540",
+    "./app/rack.js": "./app/rack.js?v=20261003202540",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003202540",
+    "./app/starters.js": "./app/starters.js?v=20261003202540",
+    "./app/kinds.js": "./app/kinds.js?v=20261003202540",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003202540",
+    "./app/sheets.js": "./app/sheets.js?v=20261003202540"
 } }
 </script>
 <script>
@@ -759,7 +760,7 @@
       <label class="chk"><input type="checkbox" id="hideNet"><span><b>Hide network</b><em>Drop the Cat6 network wires from the drawing</em></span></label>
       <label class="chk"><input type="checkbox" id="splitSheets"><span><b>A sheet per rack</b><em>Saved with the project: a pool house or guest house rack gets its own sheet</em></span></label>
       <label class="chk"><input type="checkbox" id="kindColor" checked><span><b>Color by kind</b><em>Tint rack boxes by what they are (remembered on this computer)</em></span></label>
-      <label class="chk"><input type="checkbox" id="devPopMode"><span><b>Edit boxes in a pop-up</b><em>Tap a rack box on the drawing: its jacks and connections open beside it. Off: the box opens in the side panel (remembered on this computer)</em></span></label>
+      <label class="chk"><input type="checkbox" id="devPopMode"><span><b>Edit in a pop-up</b><em>Tap a rack box or a room on the drawing: what's connected opens beside it. Off: it opens in the side panel (remembered on this computer)</em></span></label>
       <label class="chk"><input type="checkbox" id="showTitle"><span><b>Show title block</b><em>The full band under the drawing (remembered on this computer). Off: a one-line tab. Print and downloads always carry the full band</em></span></label>
       <label class="chk"><input type="checkbox" id="bwMode"><span><b>Black &amp; white</b><em>Dash patterns carry each signal, for office laser printers</em></span></label>
       <details class="mstyle"><summary><b>Drawing style</b><em>Trunks, harness, Dante labels — how the wires are drawn</em></summary>
@@ -964,7 +965,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003200530").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003202540").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1939,10 +1940,29 @@ function clearSel() { selWire = null; selDev = null; hideTip(); applySel(); clea
    color where something is plugged in), what comes in and what goes out — each a picker of what else could go there —
    and ＋ buttons for a new input / output. "More…" opens the full editor in the side panel. Same rules as the panel
    (endFits, the plug picker); it redraws after every change and follows the box when the sheet scrolls. */
-let popDev = null;
-function closeDevPop() { popDev = null; const el = $("#devPop"); if (el) el.hidden = true; }
+let popDev = null, popZone = null;
+function closeDevPop() { popDev = popZone = null; const el = $("#devPop"); if (el) el.hidden = true; }
+const popAnchor = () => popDev ? $("#canvas svg")?.querySelector(`[data-device="${CSS.escape(popDev)}"]`) : popZone ? $("#canvas svg")?.querySelector(`[data-zone="${CSS.escape(popZone)}"]`) : null;
+// a room's pop-up: the side panel's own "what feeds this room" controls (same pickers, same handlers), beside the room
+function drawRoomPop() {
+  const el = $("#devPop"), sol = S.job.solutions[S.sol], z = S.job.house.zones.find(z => z.id === popZone);
+  if (!z || !sol || S.mainView === "rack" || !popAnchor()) { closeDevPop(); return; }
+  const zEff = { ...z, ...(sol.overrides?.zones || {})[z.id] }, hk = hookupHTML(z, sol, S.job.solutions.length > 1);
+  el.innerHTML = `<div class="dph"><div><b>${esc(z.name || "Room")}</b><span class="mini">${esc(SCOPE_LABEL[zEff.scope || "included"] === SCOPE_LABEL.included ? "Room" : SCOPE_LABEL[zEff.scope])}</span></div><button class="dpx" title="Close" aria-label="Close">✕</button></div>
+    <div class="dproom" data-zid="${esc(z.id)}">${hk || `<div class="dpempty" style="margin-top:8px">No TV or speakers in this room yet.</div>`}
+      ${field("Remote", sel("zremote", Object.keys(REMOTE_LABEL), roomRemote(zEff, sol.localDevices) || "none", REMOTE_LABEL))}</div>
+    <div class="dpfoot"><a href="#" class="dpmore">More — TV, speakers, notes ›</a></div>`;
+  el.hidden = false;
+  wirePanel(el); enhanceSelects(el);
+  const zid = z.id;
+  el.querySelector(".dpx").onclick = () => clearSel();
+  el.querySelector(".dpmore").onclick = e => { e.preventDefault(); closeDevPop(); openZone(zid); };
+  // "Cabling details" opens and closes in place (the panel's handler redraws the panel instead)
+  el.querySelectorAll("details[data-more]").forEach(dt => dt.ontoggle = () => { dt.open ? S.openRows.add(dt.dataset.more) : S.openRows.delete(dt.dataset.more); placeDevPop(); });
+  placeDevPop();
+}
 function placeDevPop() {
-  const el = $("#devPop"), tile = popDev && $("#canvas svg")?.querySelector(`[data-device="${CSS.escape(popDev)}"]`);
+  const el = $("#devPop"), tile = popAnchor();
   if (!tile || el.hidden) return;
   const r = tile.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight, vw = innerWidth, vh = innerHeight;
   let left = r.right + 12; if (left + w > vw - 8) left = r.left - w - 12;
@@ -1951,7 +1971,8 @@ function placeDevPop() {
   el.style.left = `${Math.round(left)}px`; el.style.top = `${Math.round(Math.max(8, Math.min(vh - h - 8, top)))}px`;
 }
 function drawDevPop() {
-  const el = $("#devPop"); if (!popDev) { el.hidden = true; return; }
+  const el = $("#devPop"); if (popZone) return drawRoomPop();
+  if (!popDev) { el.hidden = true; return; }
   const sol = S.job.solutions[S.sol], d = sol?.racks.flatMap(r => r.devices).find(x => x.id === popDev);
   if (!d || S.mainView === "rack" || !$("#canvas svg")?.querySelector(`[data-device="${CSS.escape(popDev)}"]`)) { closeDevPop(); return; }
   const conns = sol.connections.map((c, i) => [c, i]), ins = conns.filter(([c]) => c.to === d.id), outs = conns.filter(([c]) => c.from === d.id);
@@ -1999,7 +2020,7 @@ function drawDevPop() {
   placeDevPop();
 }
 addEventListener("scroll", () => placeDevPop(), true); addEventListener("resize", () => placeDevPop());
-document.addEventListener("keydown", e => { if (e.key === "Escape" && popDev && !document.querySelector("#picker.on")) clearSel(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && (popDev || popZone) && !document.querySelector("#picker.on")) clearSel(); });
 
 /* ---- guided rerouting: pick from legal alternate routes for the selected wire ---- */
 let ALTS = null;
@@ -2232,7 +2253,9 @@ $("#canvas").addEventListener("click", e => {
     return;
   }
   const zc = e.target.closest("[data-zone]");
-  if (zc) { clearSel(); openZone(zc.dataset.zone); return; }
+  if (zc) { clearSel();
+    if ($("#devPopMode").checked) { popZone = zc.dataset.zone; focusRows(popZone); syncGlow(); drawDevPop(); } else openZone(zc.dataset.zone);
+    return; }
   // a rack's name opens the RACK tab at that rack (size, elevation, power)
   const rl = e.target.closest("[data-rack]");
   if (rl) { clearSel(); switchTab("rack"); renderPanel(); openRackEd(); return; }   // a rack's name opens the rack page

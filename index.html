@@ -430,7 +430,7 @@
   .jcard { background: #fff; border: 1px solid var(--act-line); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
   .jcard.cur { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
   .jcard .jt { flex: 1 1 260px; min-width: 0; cursor: pointer; }
-  .jcard .jt b { font-size: 15px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .jcard .jt b { font-size: 15px; display: block; overflow-wrap: anywhere; }
   .jcard .jt .jm { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
   .jcard .chips { display: inline-flex; gap: 6px; margin-left: 8px; vertical-align: 2px; }
   .jcard .chip { display: inline-block; min-height: 0; height: auto; font-size: 11px; line-height: 16px; font-weight: 700; border-radius: 999px; padding: 1px 8px; background: var(--tag-bg); color: var(--tag-ink); border: 1px solid var(--tag-line); }
@@ -442,6 +442,12 @@
   #jobsHome .jh-empty { padding: 24px; text-align: center; color: var(--muted); background: #fff; border-radius: 12px; border: 1px dashed var(--act-line); }
   #jobsHome .jh-foot { font-size: 12.5px; color: var(--muted); margin-top: 18px; }
   .jcard .ja .more { display: none; }
+  /* a proposal and its as-built(s): one block, the as-built indented under it */
+  .jgroup.many { margin-bottom: 8px; } .jgroup.many > .jcard { margin-bottom: 0; } .jgroup.many > .jcard:first-child { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+  .jcard.sub { margin-left: 28px; border-top: 0; border-radius: 0; background: #fbfcfd; position: relative; }
+  .jcard.sub:last-child { border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+  .jcard.sub::before { content: "↳"; position: absolute; left: -22px; top: 12px; color: #9aa3b2; font-size: 16px; }
+  .jcard.sub .jt b { font-size: 14px; }
   /* phone: two start tiles a row (titles only), and each job keeps Open + More (the rest in a picker) */
   @media (max-width: 600px) { #topbar #jobsHomeBtn span { display: none; }
     #jobsHome .jh-start { grid-template-columns: 1fr 1fr; } #jobsHome .jh-start button { min-height: 64px; } #jobsHome .jh-start span { display: none; }
@@ -568,29 +574,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003025354",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003025354",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003025354",
-    "./app/ports.js": "./app/ports.js?v=20261003025354",
-    "./app/commands.js": "./app/commands.js?v=20261003025354",
-    "./app/engine.js": "./app/engine.js?v=20261003025354",
-    "./app/exports.js": "./app/exports.js?v=20261003025354",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003025354",
-    "./app/hookup.js": "./app/hookup.js?v=20261003025354",
-    "./app/importers.js": "./app/importers.js?v=20261003025354",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003025354",
-    "./app/library.js": "./app/library.js?v=20261003025354",
-    "./app/names.js": "./app/names.js?v=20261003025354",
-    "./app/network.js": "./app/network.js?v=20261003025354",
-    "./app/pages.js": "./app/pages.js?v=20261003025354",
-    "./app/power.js": "./app/power.js?v=20261003025354",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003025354",
-    "./app/rack.js": "./app/rack.js?v=20261003025354",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003025354",
-    "./app/starters.js": "./app/starters.js?v=20261003025354",
-    "./app/kinds.js": "./app/kinds.js?v=20261003025354",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003025354",
-    "./app/sheets.js": "./app/sheets.js?v=20261003025354"
+    "./app/ai.js": "./app/ai.js?v=20261003025846",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003025846",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003025846",
+    "./app/ports.js": "./app/ports.js?v=20261003025846",
+    "./app/commands.js": "./app/commands.js?v=20261003025846",
+    "./app/engine.js": "./app/engine.js?v=20261003025846",
+    "./app/exports.js": "./app/exports.js?v=20261003025846",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003025846",
+    "./app/hookup.js": "./app/hookup.js?v=20261003025846",
+    "./app/importers.js": "./app/importers.js?v=20261003025846",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003025846",
+    "./app/library.js": "./app/library.js?v=20261003025846",
+    "./app/names.js": "./app/names.js?v=20261003025846",
+    "./app/network.js": "./app/network.js?v=20261003025846",
+    "./app/pages.js": "./app/pages.js?v=20261003025846",
+    "./app/power.js": "./app/power.js?v=20261003025846",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003025846",
+    "./app/rack.js": "./app/rack.js?v=20261003025846",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003025846",
+    "./app/starters.js": "./app/starters.js?v=20261003025846",
+    "./app/kinds.js": "./app/kinds.js?v=20261003025846",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003025846",
+    "./app/sheets.js": "./app/sheets.js?v=20261003025846"
 } }
 </script>
 <script>
@@ -846,7 +852,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003025354").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003025846").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1234,17 +1240,26 @@ async function renderJobsHome() {
   const q = $("#jhSearch").value.trim().toLowerCase();
   const all = (await dbAll()).sort((a, b) => b.updated - a.updated);
   const text = j => [j.data.job?.name, j.data.job?.client?.name, j.data.job?.client?.address].filter(Boolean).join(" ").toLowerCase();
-  const jobs = q ? all.filter(j => q.split(/\s+/).every(w => text(j).includes(w))) : all;
+  // an as-built sits under the proposal it was started from (by id; older ones by the proposal's name)
+  const parentOf = new Map();
+  for (const j of all) { const a = j.data.job?.asBuilt; if (j.data.job?.stage !== "asBuilt" || !a) continue;
+    const p = all.find(x => x.id === a.fromId && x.id !== j.id) || all.find(x => x.id !== j.id && x.data.job?.stage !== "asBuilt" && a.fromName && x.data.job?.name === a.fromName);
+    if (p) parentOf.set(j.id, p.id); }
+  const kids = id => all.filter(j => parentOf.get(j.id) === id);
+  const groups = all.filter(j => !parentOf.has(j.id)).map(j => [j, ...kids(j.id)])
+    .sort((a, b) => Math.max(...b.map(x => x.updated)) - Math.max(...a.map(x => x.updated)));
+  const shown = q ? groups.filter(g => g.some(j => q.split(/\s+/).every(w => text(j).includes(w)))) : groups;
+  const jobs = shown.flat();
   $("#jhCount").textContent = all.length ? `· ${all.length} saved${q ? ` · ${jobs.length} match` : ""}` : "";
-  $("#jhList").innerHTML = jobs.length ? jobs.map(j => {
-    const d = j.data, jb = d.job || {}, ab = jb.stage === "asBuilt";
+  $("#jhList").innerHTML = jobs.length ? shown.map(g => `<div class="jgroup${g.length > 1 ? " many" : ""}">${g.map((j, gi) => {
+    const d = j.data, jb = d.job || {}, ab = jb.stage === "asBuilt", sub = gi > 0, canAb = !ab && g.length === 1;
     const rooms = d.house?.zones?.length || 0, opts = d.solutions?.length || 0;
     const real = v => { v = String(v || "").trim(); return v && !/^(customer name|street, city, ca)$/i.test(v) ? v : ""; };   // the blank job's placeholders aren't a client
-    const meta = [real(jb.client?.name), real(jb.client?.address), `${rooms} room${rooms === 1 ? "" : "s"}`, opts > 1 && `${opts} options`, `edited ${ago(j.updated)}`].filter(Boolean).join(" · ");
-    return `<div class="jcard${j.id === S.id ? " cur" : ""}" data-id="${esc(j.id)}">
+    const meta = [sub && jb.asBuilt?.started && `started ${new Date(jb.asBuilt.started + "T12:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`, !sub && real(jb.client?.name), !sub && real(jb.client?.address), `${rooms} room${rooms === 1 ? "" : "s"}`, opts > 1 && `${opts} options`, `edited ${ago(j.updated)}`].filter(Boolean).join(" · ");
+    return `<div class="jcard${j.id === S.id ? " cur" : ""}${sub ? " sub" : ""}" data-id="${esc(j.id)}">
       <div class="jt" data-a="open"><b>${esc(jb.name || "Untitled job")}<span class="chips"><span class="chip${ab ? " ab" : ""}">${ab ? "As-built" : "Proposal"}</span>${j.id === S.id ? '<span class="chip now">Open now</span>' : ""}</span></b><div class="jm">${esc(meta)}</div></div>
-      <div class="ja"><button class="open" data-a="open">${j.id === S.id ? "Back to it" : "Open"}</button><button data-a="rename">Rename</button><button data-a="dup">Duplicate</button><button data-a="dl" title="The job file (.json) — a backup you can import anywhere">Download</button><button data-a="del" class="danger">Delete</button><button class="more" data-a="more">More…</button></div></div>`;
-  }).join("") : `<div class="jh-empty">${q ? "No job matches that." : "No saved jobs yet — start one above."}</div>`;
+      <div class="ja"><button class="open" data-a="open">${j.id === S.id ? "Back to it" : "Open"}</button><button data-a="rename">Rename</button><button data-a="dup">Duplicate</button><button data-a="dl" title="The job file (.json) — a backup you can import anywhere">Download</button>${canAb ? '<button data-a="ab" title="When it\'s installed: a copy to record what went in — this proposal stays as it is">Start as-built</button>' : ""}<button data-a="del" class="danger">Delete</button><button class="more" data-a="more">More…</button></div></div>`;
+  }).join("")}</div>`).join("") : `<div class="jh-empty">${q ? "No job matches that." : "No saved jobs yet — start one above."}</div>`;
 }
 async function openJobsHome() { $("#jhSearch").value = ""; await renderJobsHome(); $("#jobsHome").classList.add("show"); $("#jobsHome").scrollTop = 0; }
 $("#jobsHomeBtn").onclick = openJobsHome;
@@ -1265,8 +1280,11 @@ $("#jhList").onclick = async e => {
   if (a === "open") return id === S.id ? closeJobsHome() : openJob(id);
   if (a === "more") return openPicker({ title: name, groups: [{ label: "", items: [
       { value: "rename", label: "Rename…" }, { value: "dup", label: "Duplicate", sub: "A copy to try another idea on" },
-      { value: "dl", label: "Download", sub: "The job file (.json) — a backup you can import anywhere" }, { value: "del", label: "Delete", sub: "Removes it from this browser" }] }],
+      { value: "dl", label: "Download", sub: "The job file (.json) — a backup you can import anywhere" },
+      ...(card.querySelector('[data-a="ab"]') ? [{ value: "ab", label: "Start as-built", sub: "When it's installed: a copy to record what went in" }] : []),
+      { value: "del", label: "Delete", sub: "Removes it from this browser" }] }],
     onPick: v => card.querySelector(`[data-a="${v}"]`).click() });
+  if (a === "ab") { if (id !== S.id) await openJob(id); closeJobsHome(); return $("#startAsBuilt").click(); }
   if (a === "rename") { const n = prompt("Job name:", name); if (n == null || !n.trim()) return;
     if (id === S.id) { S.job.job.name = n.trim(); await persist(); refresh(false); }
     else { rec.data.job.name = n.trim(); await dbPut({ ...rec, updated: Date.now() }); await renderJobsSel(); } }
@@ -1275,7 +1293,8 @@ $("#jhList").onclick = async e => {
   else if (a === "dl") { const base = String(name).replace(/[\\/:*?"<>|\u0000-\u001f]+/g, "-").trim() || "SignalPath job";
     download(`${base}.json`, JSON.stringify(id === S.id ? S.job : rec.data, null, 2), "application/json"); }
   else if (a === "del") {
-    if (!confirm(`Delete "${name}"?\n\nIt's removed from this browser. Download it first if you might want it back.`)) return;
+    const hasAb = card.nextElementSibling?.classList.contains("sub");
+    if (!confirm(`Delete "${name}"?\n\nIt's removed from this browser. Download it first if you might want it back.${hasAb ? "\n\nIts as-built stays — it just won't be filed under this proposal any more." : ""}`)) return;
     if (id === S.id) { await $("#delJob").onclick.call(null, { skipConfirm: true }); }
     else { await dbDel(id); await renderJobsSel(); }
     toast(`Deleted "${name}"`); }
@@ -1599,7 +1618,9 @@ $("#startAsBuilt").onclick = async () => {
   const sol = S.job.solutions[S.sol] || S.job.solutions[0];
   if (!confirm(`Start an as-built of "${S.job.job.name}" (${sol.name || "this solution"})?\n\nA copy called "${S.job.job.name} — As-Built" opens; edit it to match what was installed. This job stays as it is.`)) return;
   await flushSave();
+  const fromId = S.id;
   S.job = startAsBuilt(S.job, S.sol); S.id = uid("job"); S.sol = 0; S.editScope = "house";
+  S.job.job.asBuilt.fromId = fromId;                 // the Jobs screen files it under its proposal (even after a rename)
   await persist(); await renderJobsSel(); refresh(false);
   toast("As-built started — changes you make are clouded and listed against the proposal");
 };

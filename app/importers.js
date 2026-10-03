@@ -5,7 +5,7 @@
    the review list — never a hard failure. Pure module, no DOM. */
 
 import { productName } from "./names.js";
-import { setVideo, setSpeakers, nextFreeOutputs } from "./hookup.js";
+import { setVideo, setSpeakers, nextFreeOutputs, autoHookup, avrFor } from "./hookup.js";
 
 const uid = p => p + "-" + Math.random().toString(36).slice(2, 7);
 const slug = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || uid("z");
@@ -328,7 +328,22 @@ const BP_CATEGORY = {
   Source: "source", Amplifier: "amp", Switching: "avSwitch", Control: "controlBox",
   Network: "networkSwitch", Lighting: null, Display: null,
 };
-const BP_SIGNAL = { hdmi: "video", video: "video", audio: "audio", ethernet: "network", network: "network" };
+const BP_SIGNAL = { hdmi: "video", video: "video", link: "video", audio: "audio", ethernet: "network", network: "network",
+  preamp_stereo_captive_screw: "audio", rca_stereo: "audio", optical_digital: "audio" };
+/* what a Savant component really is, read from its model (Ryan's real configs, 2026-10-02): the
+   category alone filed MXNet encoders as matrices, Savant audio modules as AV switches and the AVB
+   switch as a LAN switch. A rack component the model names is mapped to its real type — and to the
+   catalog where it's in it; an MXNet encoder becomes the encoder chip on its source. */
+const BP_MODEL = [
+  [/MXNET[-\s]*\S*1G-T\b|MXNET[-\s]*\S*-E\b|AVDM|\bencoder\b/i, { enc: true }],
+  [/MXNET[-\s]*\S*1G-R\b|\bdecoder\b/i, { dec: true }],
+  [/PAV-AIM|\bAIM\b/i, { type: "audioInputModule", catalogRef: "savant-pav-aim7c" }],
+  [/PAV-AOM|\bAOM\b/i, { type: "audioOutputModule", catalogRef: "savant-pav-aom8c" }],
+  [/M4250|GSM4212P/i, { type: "avbSwitch", catalogRef: "netgear-m4250-10g2f-poe" }],
+  [/ESN-AVB|\bAVB\b/i, { type: "avbSwitch" }],
+  [/MXnet|MXNET-SW/i, { type: "avSwitch" }],
+  [/MRX|receiver|\bAVR\b/i, { type: "avr" }],
+];
 
 // a Blueprinted list field that isn't a list (hand-edited, or a future format) reads as empty
 const arr = v => Array.isArray(v) ? v : [];
@@ -373,18 +388,49 @@ export function importBlueprinted(raw) {
     job.house.zones.push(zone);
   }
 
-  // rack components → devices (old gear = OFE until replaced)
-  const nameToId = {};
+  // rack components → devices (old gear = OFE until replaced); MXNet encoders → encoder chips on
+  // their sources (found through the config's HDMI connections), after the sources exist
+  const nameToId = {}, encoders = [];
+  const conns = arr(raw.connections).filter(c => c && typeof c === "object");
   for (const c of arr(raw.rack).filter(c => c && typeof c === "object")) {
-    const type = BP_CATEGORY[c.category];
+    const text = `${c.manufacturer || ""} ${c.model || ""} ${c.component || ""}`;
+    const hit = BP_MODEL.find(([re]) => re.test(text))?.[1];
+    if (hit?.enc) { encoders.push(c); continue; }
+    if (hit?.dec) continue;                                           // a decoder lives at its TV — hookup puts it there
+    const type = hit?.type || BP_CATEGORY[c.category];
     if (type === null || type === undefined) {
       if (c.category && !["Lighting", "Display"].includes(c.category)) unmapped.push(`rack: ${c.component} (${c.category}) — unmapped category`);
       continue;
     }
-    const t = type === "avSwitch" && /matrix|mx/i.test(c.model || c.component) ? "videoMatrix" : type;
-    const d = { id: uid("dev"), type: t, model: [c.manufacturer, c.model].filter(Boolean).join(" ") || c.component, status: "ofe" };
+    const t = !hit && type === "avSwitch" && /matrix|mx/i.test(c.model || c.component) ? "videoMatrix" : type;
+    // a placeholder amp named for its channels ("MDX 12") holds that many — not the generic 8 zones
+    const ch = t === "amp" && /generic/i.test(c.manufacturer || "") && +(String(c.component || "").match(/(\d+)\s*$/) || [])[1];
+    const d = { id: uid("dev"), type: t, model: [c.manufacturer, c.model].filter(Boolean).join(" ") || c.component, status: "ofe",
+      ...(hit?.catalogRef ? { catalogRef: hit.catalogRef } : {}), ...(ch >= 4 && ch <= 32 && ch % 2 === 0 ? { zones: ch / 2 } : {}) };
     sol.racks[0].devices.push(d);
     nameToId[c.component] = d.id;
+  }
+  for (const c of encoders) {
+    const feed = conns.find(k => k.sink === c.component && /hdmi|video/i.test(k.signal || "") && nameToId[k.source]);
+    if (!feed) { unmapped.push(`rack: ${c.component} (MXNet encoder) — no source feeds it in the config`); continue; }
+    const comp = { id: uid("enc"), type: "enc", serves: nameToId[feed.source], auto: true };
+    // its analog audio out went to a Savant input module → the AVDM encoder, wired the same way
+    if (conns.some(k => k.source === c.component && /preamp|rca|audio/i.test(k.signal || ""))) comp.avdm = true;
+    (sol.companions ||= []).push(comp);
+    nameToId[c.component] = comp.id;
+  }
+  // receivers that were in the rooms (with their own MXNet decoders) come in as receivers the
+  // room's hookup can use; the room says where they were
+  const roomAvr = {};
+  for (const r of (Array.isArray(raw.rooms) ? raw.rooms : []).filter(r => r && typeof r === "object")) {
+    const z = job.house.zones.find(z => z.name === String(r.name || "").trim());
+    for (const m of arr(r.avrs).filter(m => typeof m === "string" && m.trim())) {
+      if (!z) continue;
+      const id = uid("avr");
+      sol.racks[0].devices.push({ id, type: "avr", model: `${m.trim()} — ${z.name}`, status: "ofe" });
+      roomAvr[z.id] = id;
+      z.note = [z.note, "the receiver was in the room on the old system"].filter(Boolean).join(" · ");
+    }
   }
 
   // programmed wiring graph → starter connections (rack-to-rack only; room ends need the walk)
@@ -397,6 +443,24 @@ export function importBlueprinted(raw) {
   }
   if (mapped) notes.push(`${mapped} rack connections carried over from the old config`);
   if (skipped) unmapped.push(`${skipped} connections skipped (room-side, control, or unmapped ends)`);
+  // the rooms wire themselves, the same way quick-add does: TVs off the MXNet switch / matrix,
+  // a surround room on its receiver, stereo rooms on the next free amp zone
+  // speakers the old config drove off a rack amp stay on that amp
+  for (const k of conns.filter(k => /^speakers/.test(k.signal || "") && nameToId[k.source])) {
+    const z = job.house.zones.find(z => z.name === String(k.sinkZone || "").trim());
+    const amp = sol.racks[0].devices.find(d => d.id === nameToId[k.source] && d.type === "amp");
+    if (z && amp) setSpeakers(job, sol, z, amp.id);
+  }
+  // powered-speaker placeholders fed line-level from the rack: their real amp isn't in the config
+  for (const k of conns.filter(k => /rca|preamp/.test(k.signal || "") && / speakers$/i.test(k.sink || ""))) {
+    const z = job.house.zones.find(z => z.name === String(k.sinkZone || "").trim());
+    if (z && !/line-level/.test(z.note || "")) z.note = [z.note, `the old config fed these speakers line-level from ${k.source} — their amp isn't in it`].filter(Boolean).join(" · ");
+  }
+  let wired = 0;
+  for (const z of job.house.zones) {
+    try { autoHookup(job, sol, z, { avr: !!roomAvr[z.id] }); wired++; } catch (e) { warnings.push(`${z.name}: couldn't wire it automatically (${e.message})`); }
+  }
+  if (wired) notes.push(`Rooms wired from the rack the way quick-add would — check them against the walk`);
   if (raw.cameras?.length) sol.auxCounts = { cameras: raw.cameras.length };
 
   return { kind: "blueprinted", job, notes, warnings, unmapped };

@@ -582,7 +582,7 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     ],
   };
   var miniBp = {       // var: the hardening tests reuse it
-    generator: "Blueprinted", client: "Adams, Mike",
+    generator: "Blueprinted", client: "Sample, Pat",
     system: { hostModel: "Savant Pro Host", blueprintVersion: "10.6.1", advisories: ["Legacy host"] },
     rooms: [
       { n: 1, name: "Theater", zoneType: "Theater — 5.1 local", tv: true, oldTv: [{ make: "Samsung", model: "UN55D7000", size: 55 }], videoFeed: "matrix", avrs: ["Integra DRX-7.1"], flags: ["Wiring unknown"] },
@@ -685,12 +685,59 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     t("blueprinted: theater → 5.1 OFE + old TV brand/size carried",
       th.endpoints.some(e => e.config === "surround-5.1" && e.status === "ofe") &&
       th.endpoints.some(e => e.type === "display" && e.brand === "Samsung" && e.size === 55 && e.status === "ofe"));
-    t("blueprinted: matrix categorized as videoMatrix; lighting skipped",
-      sol.racks[0].devices.some(d => d.type === "videoMatrix") && sol.racks[0].devices.length === 3);
+    t("blueprinted: matrix categorized as videoMatrix; lighting skipped; the room's receiver comes along",
+      sol.racks[0].devices.some(d => d.type === "videoMatrix") && sol.racks[0].devices.length === 4 &&
+      sol.racks[0].devices.some(d => d.type === "avr" && d.model === "Integra DRX-7.1 — Theater") && /in the room/.test(th.note));
+    const atv = sol.racks[0].devices.find(d => d.type === "source").id, mx = sol.racks[0].devices.find(d => d.type === "videoMatrix").id;
     t("blueprinted: rack wiring carried over (video+audio), IR skipped",
-      sol.connections.length === 2 && sol.connections.some(c => c.signal === "video") && sol.connections.some(c => c.signal === "audio"));
+      sol.connections.some(c => c.from === atv && c.to === mx && c.signal === "video") && sol.connections.some(c => c.from === mx && c.signal === "audio") &&
+      !sol.connections.some(c => c.signal === "ir"));
+    { const L = loadJob(structuredClone(j));
+      t("blueprinted: the rooms wire themselves — theater on its receiver, kitchen on the house amp, nothing unfed",
+        validate(L.job, L.ix).errors.length === 0); }
     t("blueprinted: platform=savant, advisories + flags surface",
       sol.platforms[0] === "savant" && r.warnings.some(w => w.includes("Legacy host")) && r.warnings.some(w => w.includes("Wiring unknown")));
+  }
+  { // Blueprinted from a Savant + MXNet house (synthetic — modelled on real configs, no client data)
+    const bp = { generator: "Blueprinted", client: "Sample, Pat", system: { hostModel: "Savant Pro Host" },
+      rooms: [
+        { n: 1, name: "Den", zoneType: "Surround 5.1 — local", tv: true, videoFeed: "matrix", avrs: ["Anthem MRX SLM"] },
+        { n: 2, name: "Office", zoneType: "2-ch — house amp", tv: true, videoFeed: "matrix" },
+        { n: 3, name: "Patio", zoneType: "2-ch — house amp", tv: false },
+      ],
+      rack: [
+        { component: "AvProEdge", manufacturer: "AV Pro Edge", model: "MXnet 16x16", category: "Switching" },
+        { component: "01AppleTV", manufacturer: "Apple", model: "Apple TV 4K", category: "Source" },
+        { component: "01AppleTV Encoder", manufacturer: "AV Pro Edge", model: "AC-MXNET-1G-T", category: "Switching" },
+        { component: "Den Decoder", manufacturer: "AV Pro Edge", model: "AC-MXNET-1G-R", category: "Switching" },
+        { component: "AIM (1)", manufacturer: "Savant", model: "PAV-AIM7C", category: "Switching" },
+        { component: "AOM (1)", manufacturer: "Savant", model: "PAV-AOM8C", category: "Switching" },
+        { component: "AVB", manufacturer: "Netgear", model: "M4250-10G2F-POE+", category: "Network" },
+        { component: "MDX 4", manufacturer: "Generic", model: "Power Stereo Amplifier", category: "Amplifier" },
+      ],
+      connections: [
+        { source: "01AppleTV", sink: "01AppleTV Encoder", signal: "hdmi" },
+        { source: "01AppleTV Encoder", sink: "AIM (1)", signal: "preamp_stereo_captive_screw" },
+        { source: "MDX 4", sourceZone: "Distribution", sink: "Office Speakers", sinkZone: "Office", signal: "speakers_stereo" },
+        { source: "AOM (1)", sourceZone: "Distribution", sink: "Patio Speakers", sinkZone: "Patio", signal: "rca_stereo" },
+      ] };
+    const { readHookup: RH } = await import("./hookup.js");
+    const r = importBlueprinted(bp), sol = r.job.solutions[0], devs = sol.racks[0].devices, ty = t2 => devs.filter(d => d.type === t2);
+    const atv = devs.find(d => d.type === "source");
+    t("blueprinted/savant: an MXNet encoder becomes the AVDM encoder on its source, not a matrix",
+      !ty("videoMatrix").length && (sol.companions || []).some(c => c.type === "enc" && c.serves === atv.id && c.avdm));
+    t("blueprinted/savant: decoders aren't rack gear; the MXNet switch, AIM, AOM and AVB switch are their real types",
+      !devs.some(d => /Decoder|1G-R/.test(d.model)) && ty("avSwitch").length === 1 &&
+      ty("audioInputModule")[0]?.catalogRef === "savant-pav-aim7c" && ty("audioOutputModule")[0]?.catalogRef === "savant-pav-aom8c" &&
+      ty("avbSwitch")[0]?.catalogRef === "netgear-m4250-10g2f-poe");
+    const amp = ty("amp")[0], zn = n => r.job.house.zones.find(z => z.name === n), spkOf = n => zn(n).endpoints.find(e => e.type === "speakers").id;
+    t("blueprinted/savant: \"MDX 4\" holds 2 zones, and the config's amp → speakers link is kept",
+      amp.zones === 2 && sol.connections.some(c => c.from === amp.id && c.to === spkOf("Office") && c.signal === "speaker"));
+    t("blueprinted/savant: the room's receiver drives its own speakers; the TVs come off the MXNet switch",
+      sol.connections.some(c => c.from === ty("avr")[0].id && c.to === spkOf("Den")) &&
+      ["Den", "Office"].every(n => RH(r.job, sol, zn(n)).video));
+    t("blueprinted/savant: powered speakers fed line-level say so on the room",
+      /line-level from AOM \(1\)/.test(zn("Patio").note || ""));
   }
   { // re-import merge: House refreshes, Solutions and endpoint ids survive
     const target = structuredClone(fixtures.residence);

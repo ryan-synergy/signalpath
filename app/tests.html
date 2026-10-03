@@ -801,6 +801,24 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     t("md: text with nothing in it says how to write it", /Design brief/.test(msg));
     t("md: AI JSON slop reads (comments, trailing commas, single quotes)", MD.looseJSON("// x\n{'a': 1, b: [2,],}")?.b?.[0] === 2);
   }
+  { // ✦ AI commands for racks, PoE and encoder audio (2026-10-02)
+    const C3 = await import("./commands.js"), CAT3 = await (await fetch("./catalog.json")).json();
+    const est = await (await fetch("../mock-system-estate.json")).json();
+    const p = C3.planCommands(est, 0, [
+      { op: "add_rack", name: "Equipment Rack 2", beside: "main equipment rack" },
+      { op: "move_device", device: "mdx-16", rack: "Equipment Rack 2" },
+      { op: "set_rack", rack: "main equipment rack", size_mode: "locked", space_h: 72, casters: false },
+      { op: "add_device", product: "Savant PAV-AIM7C", rack: "Equipment Rack 2" },
+      { op: "poe_power", how: "injector", device: "family room decoder" },
+      { op: "set_rack", rack: "nowhere", size_mode: "auto" }], CAT3);
+    const sol = p.job.solutions[0], r1 = sol.racks[0], r2 = sol.racks.find(r => r.name === "Equipment Rack 2");
+    t("ai commands: add a rack beside, move a box to it, add a box straight into it", r2?.beside === r1.id && r2.devices.some(d => /MDX-16/.test(d.model)) && r2.devices.some(d => /AIM7C/.test(d.model)) && !r1.devices.some(d => /MDX-16/.test(d.model)));
+    t("ai commands: lock a rack to the space (tallest that fits, no casters)", r1.sizeMode === "space" && r1.locked && r1.casters === false && r1.space.h === 72 && !!r1.rackModel);
+    const dec = (sol.companions || []).find(k => k.serves === est.house.zones.find(z => z.name === "Family Room").endpoints.find(e => e.type === "display").id);
+    t("ai commands: PoE power by '<zone> decoder'", sol.poePower?.[dec?.id] === "injector");
+    t("ai commands: an unknown rack fails that step only", p.steps.filter(x => !x.ok).length === 1 && /nowhere/.test(p.steps.find(x => !x.ok).error));
+    t("ai commands: the vocabulary and the AI's job summary know racks by name", /set_rack/.test(C3.vocabularyText()) && /RACK "Equipment Rack 2" — Auto/.test((await import("./ai.js")).jobSummary(p.job, 0, CAT3)));
+  }
   { // re-import merge: House refreshes, Solutions and endpoint ids survive
     const target = structuredClone(fixtures.residence);
     const walk = structuredClone(miniWalk);
@@ -4082,6 +4100,9 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t("Auto: arranged by hand, the two racks stay as they are", hand2.solutions[0].racks.some(r => r.autoOf));
     E2.autoRacks(au, CAT);
     t("Auto: back under the limit, the second rack folds back in", !au.solutions[0].racks.some(r => r.autoOf));
+    { const lo = structuredClone(jj); lo.solutions[0].racks[0].sizeMode = "auto"; lo.job.autoRackMax = 16; E2.autoRacks(lo, CAT);
+      const bad = structuredClone(jj); bad.job.autoRackMax = 400; const nb = loadJob(bad).job.job.autoRackMax;
+      t("Auto limit (Rack tab field): a 16U limit splits the estate's rack; out-of-range limits are dropped", lo.solutions[0].racks.some(r => r.autoOf) && nb === undefined); }
     // Fixed U: a typed size is checked against the space
     const fx = structuredClone(jj); Object.assign(fx.solutions[0].racks[0], { sizeMode: "units", units: 44, space: { h: 72 } });
     t("Fixed U: a 44U rack typed for a 72\" space is flagged, with the tallest that fits", P(fx).a.notes.some(n => n.code === "rack-space" && /44U rack stands/.test(n.msg) && /tallest that fits/.test(n.msg)));

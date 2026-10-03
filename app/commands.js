@@ -11,8 +11,9 @@
    Pure functions over the raw job — no DOM. */
 
 import { describeNode, productName, TYPE_NAME, SPEAKER_SETUP, SIGNAL_NAME, SCOPE_NAME, STATUS_NAME, REMOTE_NAME, AUDIO_BACK_NAME } from "./names.js";
-import { readHookup, setVideo, setSpeakers, setAudioBack, addRackDevice, autoHookup, nextFreeOutputs, outputsNeeded, RUNS } from "./hookup.js";
+import { readHookup, setVideo, setSpeakers, setAudioBack, addRackDevice, autoHookup, nextFreeOutputs, outputsNeeded, RUNS, setAdapterAudio } from "./hookup.js";
 import { parseQuick } from "./quickadd.js";
+import { fitRacks } from "./racksizes.js";
 
 /* ---------- the vocabulary (also what the AI is told) ---------- */
 export const OPS = {
@@ -29,11 +30,20 @@ export const OPS = {
                  about: "Plug one thing into another. from/to: a box, or '<zone> tv' / '<zone> speakers'. signal (guessed if left out): video|audio|speaker|network|audioReturn." },
   disconnect:  { args: "from?, to, signal?", eg: `{"op":"disconnect","from":"mdx16","to":"kitchen speakers"}`,
                  about: "Remove the connection(s) between two things (or everything feeding 'to' when 'from' is left out)." },
-  add_device:  { args: "product, name?, type?", eg: `{"op":"add_device","product":"Anthem MRX 1140 8K"}`,
-                 about: "Add a box to the rack. product: a catalog product (fuzzy match), else a plain model with type: source|avr|amp|videoMatrix|avSwitch|avbSwitch|audioInputModule|audioOutputModule|controlBox|splitter|host." },
+  add_device:  { args: "product, name?, type?, rack?", eg: `{"op":"add_device","product":"Anthem MRX 1140 8K"}`,
+                 about: "Add a box to the rack (rack: which one, by name — the first if left out). product: a catalog product (fuzzy match), else a plain model with type: source|avr|amp|videoMatrix|avSwitch|avbSwitch|audioInputModule|audioOutputModule|controlBox|splitter|host." },
   set_device:  { args: "device, name?, product?, status?, zones?", eg: `{"op":"set_device","device":"amp","product":"Anthem MDX-16"}`,
                  about: "Change a box: rename, link to a catalog product, status new|ofe, amp zone count." },
   delete_device: { args: "device", eg: `{"op":"delete_device","device":"turn table"}`, about: "Remove a box and its connections." },
+  add_rack:    { args: "name, beside?", eg: `{"op":"add_rack","name":"Pool House Rack"}`,
+                 about: "Add a rack. beside: the rack it stands next to (same space — no rack-to-rack cable); leave it out for a rack somewhere else (a pool house). A new rack sizes itself to its gear (Auto)." },
+  set_rack:    { args: "rack?, name?, size_mode?, space_h?, space_w?, space_d?, casters?, units?", eg: `{"op":"set_rack","size_mode":"locked","space_h":72,"casters":true}`,
+                 about: "How a rack is sized. size_mode: locked (the tallest Middle Atlantic / Strong rack that fits the space — give space_h in inches; it never grows), auto (sized to the gear; two racks side by side past the job's limit), fixed (units = U count). casters: true|false. rack: by name (the first if left out)." },
+  move_device: { args: "device, rack", eg: `{"op":"move_device","device":"mdx-16","rack":"Equipment Rack 2"}`, about: "Move a box to another rack (its wiring goes with it)." },
+  poe_power:   { args: "how, device?", eg: `{"op":"poe_power","how":"injector","device":"all"}`,
+                 about: "How PoE gear on a switch that can't power it gets power. how: injector (in the rack, a Ubiquiti U-POE-AF on the quote) | psu (a local power supply) | none (clear). device: a box, an MXNet decoder as '<zone> decoder', or 'all'." },
+  encoder_audio: { args: "source, to", eg: `{"op":"encoder_audio","source":"apple tv","to":"amp"}`,
+                 about: "Where an MXNet encoder's analog audio out goes: to = a box in the rack (an audio input module, an amp) or 'none'. source: the box the encoder is on." },
   set_job:     { args: "name?, client?, address?, drawn_by?", eg: `{"op":"set_job","client":"The Smiths"}`, about: "Job details for the title block." },
   add_revision: { args: "description", eg: `{"op":"add_revision","description":"Patio TV to 75\\""}`, about: "Log a revision on the title block." },
 };
@@ -64,6 +74,13 @@ export function findZone(job, text) {
   if (inc.length === 1) return { zone: inc[0] };
   const c = (pre.length ? pre : inc).map(z => z.name);
   return { error: c.length ? `"${text}" could be ${c.join(" or ")}` : `no zone called "${text}"`, candidates: c };
+}
+
+// a rack by name ("pool house rack", "rack 2", its id)
+export function findRack(sol, text) {
+  const racks = sol.racks || [], t = norm(text);
+  return racks.find(r => r.id === text || norm(r.name) === t) || racks.find(r => norm(r.name).includes(t) || t.includes(norm(r.name))) ||
+    (/^(rack )?#?(\d)$/.test(t) ? racks[+t.match(/(\d)$/)[1] - 1] : null) || null;
 }
 
 export function findDevice(job, sol, text) {
@@ -337,11 +354,88 @@ const HANDLERS = {
     if (!cat && !c.type && !typeOfWords(norm(c.product)) && !/tv|cable|roku|music|turn ?table|streamer|player|sonos|apple/i.test(c.product))
       throw new Error(`"${c.product}" isn't in the catalog — give a type (receiver, amp, matrix, source…)`);
     const model = c.name || (cat ? productName(cat) : String(c.product));
-    const id = addRackDevice(job, sol, type, model);
+    const rk = c.rack ? findRack(sol, c.rack) : null;
+    if (c.rack && !rk) throw new Error(`no rack called "${c.rack}"`);
+    const id = addRackDevice(job, sol, type, model, rk ? { rackId: rk.id } : {});
     const d = rackDevices(sol).find(x => x.id === id);
     if (ref) d.catalogRef = ref;
     if (type === "amp" && cat?.zones) d.zones = cat.zones;
     return `Add ${model} to the rack${cat ? "" : " (not in the catalog)"} · ${TYPE_NAME[type] || type}`;
+  },
+
+  add_rack(job, sol, c) {
+    const name = String(c.name || "").trim() || `Rack ${(sol.racks || []).length + 1}`;
+    const by = c.beside ? findRack(sol, c.beside) : null;
+    if (c.beside && !by) throw new Error(`no rack called "${c.beside}"`);
+    const id = freeId(job, sol, "rack-" + name.toLowerCase());
+    (sol.racks ||= []).push({ id, name, devices: [], sizeMode: by?.sizeMode || "auto", ...(by ? { beside: by.id } : {}),
+      ...(by?.space ? { space: { ...by.space } } : {}), ...(by?.rackModel ? { rackModel: by.rackModel } : {}), ...(by?.locked ? { locked: true } : {}), ...(by?.casters === false ? { casters: false } : {}) });
+    return `Add ${name}${by ? ` beside ${by.name}` : ""}`;
+  },
+
+  set_rack(job, sol, c) {
+    const r = c.rack ? findRack(sol, c.rack) : (sol.racks || [])[0];
+    if (!r) throw new Error(c.rack ? `no rack called "${c.rack}"` : "there's no rack");
+    const did = [];
+    if (c.name) { r.name = String(c.name); did.push(`rename to ${r.name}`); }
+    if (c.casters != null) { if (c.casters === false || /^(no|false|off|0)$/i.test(String(c.casters))) r.casters = false; else delete r.casters; did.push(r.casters === false ? "no casters" : "on casters"); }
+    for (const k of ["h", "w", "d"]) { const v = +c[`space_${k}`]; if (v > 0 && v < 400) { (r.space ||= {})[k] = v; did.push(`space ${k.toUpperCase()} ${v}"`); } }
+    const mode = c.size_mode && String(c.size_mode).toLowerCase();
+    if (mode) {
+      if (/^(locked|space|lock)/.test(mode)) {
+        if (!r.space?.h) throw new Error("locked to the space needs the opening's height (space_h, inches)");
+        const best = fitRacks(r.space, undefined, r.casters !== false)[0];
+        if (!best) throw new Error(`no Middle Atlantic or Strong floor rack fits ${r.space.h}" high`);
+        Object.assign(r, { sizeMode: "space", rackModel: best.part, locked: true }); did.push(`locked to the space — ${best.part} (${best.u}U)`);
+      } else if (/^auto/.test(mode)) { r.sizeMode = "auto"; delete r.locked; did.push("Auto size"); }
+      else if (/^(fixed|units?|u)$/.test(mode)) { r.sizeMode = "units"; delete r.locked; did.push("fixed U"); }
+      else throw new Error(`size_mode is locked, auto or fixed`);
+    }
+    if (c.units != null) { const n = Math.floor(+c.units); if (!(n >= 1 && n <= 60)) throw new Error("units: 1–60"); r.units = n; if (!mode) r.sizeMode = "units"; did.push(`${n}U`); }
+    if (!did.length) throw new Error("nothing to change");
+    return `${r.name}: ${did.join(", ")}`;
+  },
+
+  move_device(job, sol, c) {
+    const f = findDevice(job, sol, c.device); if (!f.device) throw new Error(f.error);
+    const to = findRack(sol, c.rack); if (!to) throw new Error(`no rack called "${c.rack}"`);
+    const from = sol.racks.find(r => r.devices.includes(f.device));
+    if (from === to) return `${f.device.model} is already in ${to.name}`;
+    from.devices = from.devices.filter(d => d !== f.device); to.devices.push(f.device);
+    if (from.layout) delete from.layout[f.device.id];
+    return `Move ${f.device.model} to ${to.name}`;
+  },
+
+  poe_power(job, sol, c) {
+    const how = String(c.how || "").toLowerCase();
+    const val = /inject/.test(how) ? "injector" : /psu|supply|local/.test(how) ? "psu" : /none|clear|off/.test(how) ? null : undefined;
+    if (val === undefined) throw new Error("how is injector, psu or none");
+    let ids;
+    if (!c.device || /^all$/i.test(String(c.device).trim())) ids = [...rackDevices(sol).map(d => d.id), ...(sol.companions || []).map(k => k.id)];
+    else {
+      const t = norm(c.device), dec = t.match(/^(.*?)\s+(decoder|dec|encoder|enc|balun)$/);
+      if (dec) {
+        const z = findZone(job, dec[1]), host = z.zone ? null : findDevice(job, sol, dec[1]).device;
+        const eps = new Set((z.zone?.endpoints || []).map(e => e.id));
+        ids = (sol.companions || []).filter(k => eps.has(k.serves) || (host && k.serves === host.id)).map(k => k.id);
+        if (!ids.length) throw new Error(`no decoder or encoder on "${dec[1]}"`);
+      } else { const f = findDevice(job, sol, c.device); if (!f.device) throw new Error(f.error); ids = [f.device.id]; }
+    }
+    sol.poePower ||= {};
+    for (const id of ids) { if (val) sol.poePower[id] = val; else delete sol.poePower[id]; }
+    if (!Object.keys(sol.poePower).length) delete sol.poePower;
+    return `PoE power: ${val === "injector" ? "PoE injector" : val === "psu" ? "local power supply" : "cleared"} for ${/^all$/i.test(String(c.device || "all")) ? "everything that needs it" : c.device}`;
+  },
+
+  encoder_audio(job, sol, c) {
+    const f = findDevice(job, sol, c.source); if (!f.device) throw new Error(f.error);
+    const enc = (sol.companions || []).find(k => k.serves === f.device.id && /^enc/.test(k.type));
+    if (!enc) throw new Error(`${f.device.model} has no MXNet encoder`);
+    if (!c.to || /^none$/i.test(String(c.to))) { setAdapterAudio(sol, enc.id, null); return `${f.device.model} encoder: no analog audio out`; }
+    const t = findDevice(job, sol, c.to); if (!t.device) throw new Error(t.error);
+    setAdapterAudio(sol, enc.id, t.device.id);
+    if (["audioInputModule"].includes(t.device.type) || /avdm/i.test(enc.type)) enc.avdm = true;
+    return `${f.device.model} encoder: analog audio → ${t.device.model}`;
   },
 
   set_device(job, sol, c, catalog) {

@@ -166,6 +166,8 @@ export function normalizeJob(job) {
   if (job.job.client != null && typeof job.job.client !== "object") job.job.client = { name: String(job.job.client) };
   for (const k of ["name", "address"]) if (job.job.client && job.job.client[k] != null && typeof job.job.client[k] === "object") delete job.job.client[k];
   for (const k of ["stage", "trunkStyle", "danteStyle", "drawnBy"]) if (job.job[k] != null && typeof job.job[k] !== "string") delete job.job[k];
+  // the Auto rack limit (Rack tab): whole U, 8–60
+  if (job.job.autoRackMax != null) { const n = Math.floor(+job.job.autoRackMax); if (n >= 8 && n <= 60) job.job.autoRackMax = n; else delete job.job.autoRackMax; }
   // the title block prints each revision's rev / date / description / by — plain values only
   list(job.job, "revisions").forEach(r => { for (const k of Object.keys(r)) if (r[k] != null && typeof r[k] === "object") delete r[k]; });
   if (!job.house || typeof job.house !== "object") job.house = {};

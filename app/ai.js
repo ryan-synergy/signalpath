@@ -39,12 +39,18 @@ export function jobSummary(job, solIndex, catalog) {
   const name = id => describeNode(job, sol, id).short;
   const L = [];
   L.push(`JOB: ${job.job?.name || "Untitled"} · client ${job.job?.client?.name || "—"} · solution "${sol.name}"`);
-  L.push("", "RACK:");
-  for (const r of sol.racks || []) for (const d of r.devices || []) {
-    const c = d.catalogRef && catalog?.devices?.[d.catalogRef];
-    L.push(`- ${d.model || d.id} — ${TYPE_NAME[d.type] || d.type}${c ? ` (catalog: ${productName(c)})` : ""}${d.zones ? `, ${d.zones} zones` : ""}${d.status === "ofe" ? ", owner-furnished" : ""}`);
+  // each rack, how it's sized, and its gear (the AI moves gear between racks and sets sizes by these names)
+  const MODE = { space: "locked to the space", auto: "Auto (sized to the gear)", units: "fixed U", model: "a picked rack" };
+  for (const r of sol.racks || []) {
+    const beside = r.beside && (sol.racks || []).find(x => x.id === r.beside);
+    L.push("", `RACK "${r.name || r.id}" — ${MODE[r.sizeMode] || "fixed U"}${r.rackModel ? ` (${r.rackModel})` : r.units ? ` (${r.units}U)` : ""}${r.space?.h ? `, space ${r.space.h}" high` : ""}${r.casters === false ? ", no casters" : ""}${beside ? `, beside "${beside.name}"` : ""}:`);
+    for (const d of r.devices || []) {
+      const c = d.catalogRef && catalog?.devices?.[d.catalogRef];
+      L.push(`- ${d.model || d.id} — ${TYPE_NAME[d.type] || d.type}${c ? ` (catalog: ${productName(c)})` : ""}${d.zones ? `, ${d.zones} zones` : ""}${d.status === "ofe" ? ", owner-furnished" : ""}`);
+    }
+    if (!(r.devices || []).length) L.push("- (empty)");
   }
-  if (!(sol.racks || []).some(r => r.devices?.length)) L.push("- (empty)");
+
   L.push("", "ZONES:");
   for (const z of job.house.zones) {
     const h = readHookup(job, sol, z);

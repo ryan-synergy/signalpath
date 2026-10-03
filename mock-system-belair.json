@@ -630,18 +630,18 @@
    },
    {
     "scope": "included",
-    "name": "Cabana",
-    "id": "z-cabana",
+    "name": "Pool House Patio",
+    "id": "z-pool-house-patio",
     "endpoints": [
      {
-      "id": "z-cabana-spk",
+      "id": "z-pool-house-patio-spk",
       "type": "speakers",
       "config": "stereo",
       "status": "new",
       "count": 2
      },
      {
-      "id": "z-cabana-tv",
+      "id": "z-pool-house-patio-tv",
       "type": "display",
       "displayType": "tv",
       "brand": "",
@@ -753,6 +753,22 @@
        "model": "Anthem MRX 540",
        "status": "new",
        "catalogRef": "anthem-mrx-540-8k"
+      },
+      {
+       "id": "amp-2",
+       "type": "amp",
+       "model": "Anthem MDX-16",
+       "status": "new",
+       "zones": 8,
+       "catalogRef": "anthem-mdx-16"
+      },
+      {
+       "id": "amp-3",
+       "type": "amp",
+       "model": "Anthem MDX-16",
+       "status": "new",
+       "zones": 8,
+       "catalogRef": "anthem-mdx-16"
       }
      ],
      "sizeMode": "auto"
@@ -762,28 +778,11 @@
      "name": "Main Rack B",
      "devices": [
       {
-       "id": "amp-2",
-       "type": "amp",
-       "model": "Anthem MDX-16 (2)",
+       "id": "source-4",
+       "type": "source",
+       "model": "Kaleidescape Strato V 4K Movie Player (Dolby Vision)",
        "status": "new",
-       "zones": 8,
-       "catalogRef": "anthem-mdx-16"
-      },
-      {
-       "id": "amp-3",
-       "type": "amp",
-       "model": "Anthem MDX-16 (3)",
-       "status": "new",
-       "zones": 8,
-       "catalogRef": "anthem-mdx-16"
-      },
-      {
-       "id": "amp-4",
-       "type": "amp",
-       "model": "Anthem MDX-8 Landscape",
-       "status": "new",
-       "zones": 4,
-       "catalogRef": "anthem-mdx-8"
+       "catalogRef": "kaleidescape-strato-v"
       },
       {
        "id": "power-2",
@@ -805,13 +804,6 @@
        "model": "Anthem MRX 740",
        "status": "new",
        "catalogRef": "anthem-mrx-740-8k"
-      },
-      {
-       "id": "source-4",
-       "type": "source",
-       "model": "Kaleidescape Strato V 4K Movie Player (Dolby Vision)",
-       "status": "new",
-       "catalogRef": "kaleidescape-strato-v"
       }
      ],
      "sizeMode": "auto",
@@ -829,16 +821,9 @@
        "catalogRef": "apple-tv-4k-3gen"
       },
       {
-       "id": "avr-5",
-       "type": "avr",
-       "model": "Casita MRX 540",
-       "status": "new",
-       "catalogRef": "anthem-mrx-540-8k"
-      },
-      {
-       "id": "amp-5",
+       "id": "amp-4",
        "type": "amp",
-       "model": "Casita MDX-8",
+       "model": "Anthem MDX-8",
        "status": "new",
        "zones": 4,
        "catalogRef": "anthem-mdx-8"
@@ -849,6 +834,13 @@
        "model": "WattBox WB-800-IPVM-6",
        "status": "new",
        "catalogRef": "wattbox-800-ipvm-6"
+      },
+      {
+       "id": "avr-5",
+       "type": "avr",
+       "model": "Anthem MRX 540",
+       "status": "new",
+       "catalogRef": "anthem-mrx-540-8k"
       }
      ],
      "sizeMode": "auto"
@@ -858,9 +850,9 @@
      "name": "Pool House Rack",
      "devices": [
       {
-       "id": "amp-6",
+       "id": "amp-5",
        "type": "amp",
-       "model": "Pool House MDX-8",
+       "model": "Anthem MDX-8",
        "status": "new",
        "zones": 4,
        "catalogRef": "anthem-mdx-8"
@@ -894,6 +886,30 @@
      "id": "enc-cable",
      "type": "enc",
      "serves": "cablebox",
+     "auto": true
+    },
+    {
+     "id": "enc-source",
+     "type": "enc",
+     "serves": "source",
+     "auto": true
+    },
+    {
+     "id": "enc-source-2",
+     "type": "enc",
+     "serves": "source-2",
+     "auto": true
+    },
+    {
+     "id": "enc-source-3",
+     "type": "enc",
+     "serves": "source-3",
+     "auto": true
+    },
+    {
+     "id": "enc-source-4",
+     "type": "enc",
+     "serves": "source-4",
      "auto": true
     },
     {
@@ -1032,6 +1048,18 @@
      "auto": true
     },
     {
+     "id": "enc-source-5",
+     "type": "enc",
+     "serves": "source-5",
+     "auto": true
+    },
+    {
+     "id": "dec-z-casita-living-room",
+     "type": "dec",
+     "serves": "z-casita-living-room-tv",
+     "auto": true
+    },
+    {
      "id": "dec-avr-5",
      "type": "dec",
      "serves": "avr-5",
@@ -1044,9 +1072,23 @@
      "auto": true
     },
     {
+     "id": "dec-audio-amp-4",
+     "type": "dec",
+     "variant": "audio-deembed",
+     "serves": "amp-4",
+     "auto": true
+    },
+    {
      "id": "dec-z-pool-house-lounge",
      "type": "dec",
      "serves": "z-pool-house-lounge-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-audio-amp-5",
+     "type": "dec",
+     "variant": "audio-deembed",
+     "serves": "amp-5",
      "auto": true
     },
     {
@@ -1056,57 +1098,10 @@
      "auto": true
     },
     {
-     "id": "dec-z-cabana",
+     "id": "dec-z-pool-house-patio",
      "type": "dec",
-     "serves": "z-cabana-tv",
+     "serves": "z-pool-house-patio-tv",
      "auto": true
-    },
-    {
-     "id": "dec-audio-amp-4",
-     "type": "dec",
-     "variant": "audio-deembed",
-     "serves": "amp-4",
-     "auto": true
-    },
-    {
-     "id": "balun-z-casita-living-room",
-     "type": "balun",
-     "serves": "z-casita-living-room-tv",
-     "auto": true
-    },
-    {
-     "id": "enc-source",
-     "type": "enc",
-     "serves": "source",
-     "auto": true
-    },
-    {
-     "id": "enc-source-2",
-     "type": "enc",
-     "serves": "source-2",
-     "auto": true
-    },
-    {
-     "id": "enc-source-3",
-     "type": "enc",
-     "serves": "source-3",
-     "auto": true
-    },
-    {
-     "id": "dec-audio-amp-5",
-     "type": "dec",
-     "variant": "audio-deembed",
-     "serves": "amp-5",
-     "auto": true,
-     "note": "MDX-8 is analog-input only; the decoder de-embeds network audio to analog"
-    },
-    {
-     "id": "dec-audio-amp-6",
-     "type": "dec",
-     "variant": "audio-deembed",
-     "serves": "amp-6",
-     "auto": true,
-     "note": "MDX-8 is analog-input only; the decoder de-embeds network audio to analog"
     }
    ],
    "connections": [
@@ -1144,6 +1139,46 @@
      "from": "cbx",
      "to": "sw",
      "signal": "network"
+    },
+    {
+     "from": "source",
+     "to": "enc-source",
+     "signal": "video"
+    },
+    {
+     "from": "enc-source",
+     "to": "sw",
+     "signal": "video"
+    },
+    {
+     "from": "source-2",
+     "to": "enc-source-2",
+     "signal": "video"
+    },
+    {
+     "from": "enc-source-2",
+     "to": "sw",
+     "signal": "video"
+    },
+    {
+     "from": "source-3",
+     "to": "enc-source-3",
+     "signal": "video"
+    },
+    {
+     "from": "enc-source-3",
+     "to": "sw",
+     "signal": "video"
+    },
+    {
+     "from": "source-4",
+     "to": "enc-source-4",
+     "signal": "video"
+    },
+    {
+     "from": "enc-source-4",
+     "to": "sw",
+     "signal": "video"
     },
     {
      "from": "sw",
@@ -1521,6 +1556,26 @@
      "channels": "7-8"
     },
     {
+     "from": "source-5",
+     "to": "enc-source-5",
+     "signal": "video"
+    },
+    {
+     "from": "enc-source-5",
+     "to": "sw",
+     "signal": "video"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-casita-living-room",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-casita-living-room",
+     "to": "z-casita-living-room-tv",
+     "signal": "video"
+    },
+    {
      "from": "avr-5",
      "to": "z-casita-living-room-spk",
      "signal": "speaker"
@@ -1551,34 +1606,10 @@
      "signal": "video"
     },
     {
-     "from": "sw",
-     "to": "dec-z-pool-house-lounge",
-     "signal": "video"
-    },
-    {
-     "from": "dec-z-pool-house-lounge",
-     "to": "z-pool-house-lounge-tv",
-     "signal": "video"
-    },
-    {
-     "from": "sw",
-     "to": "dec-z-pool-house-bar",
-     "signal": "video"
-    },
-    {
-     "from": "dec-z-pool-house-bar",
-     "to": "z-pool-house-bar-tv",
-     "signal": "video"
-    },
-    {
-     "from": "sw",
-     "to": "dec-z-cabana",
-     "signal": "video"
-    },
-    {
-     "from": "dec-z-cabana",
-     "to": "z-cabana-tv",
-     "signal": "video"
+     "from": "amp-4",
+     "to": "z-casita-bedroom-spk",
+     "signal": "speaker",
+     "channels": "1-2"
     },
     {
      "from": "sw",
@@ -1591,84 +1622,26 @@
      "signal": "audio"
     },
     {
-     "from": "avr-5",
-     "to": "balun-z-casita-living-room",
-     "signal": "video"
-    },
-    {
-     "from": "balun-z-casita-living-room",
-     "to": "z-casita-living-room-tv",
-     "signal": "video"
-    },
-    {
-     "from": "source-5",
-     "to": "avr-5",
-     "signal": "video"
-    },
-    {
-     "from": "amp-5",
-     "to": "z-casita-bedroom-spk",
-     "signal": "speaker",
-     "channels": "1-2"
-    },
-    {
-     "from": "amp-5",
+     "from": "amp-4",
      "to": "z-casita-kitchen-spk",
      "signal": "speaker",
      "channels": "3-4"
     },
     {
-     "from": "amp-6",
+     "from": "sw",
+     "to": "dec-z-pool-house-lounge",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-pool-house-lounge",
+     "to": "z-pool-house-lounge-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp-5",
      "to": "z-pool-house-lounge-spk",
      "signal": "speaker",
      "channels": "1-2"
-    },
-    {
-     "from": "amp-6",
-     "to": "z-pool-house-bar-spk",
-     "signal": "speaker",
-     "channels": "3-4"
-    },
-    {
-     "from": "amp-6",
-     "to": "z-cabana-spk",
-     "signal": "speaker",
-     "channels": "5-6"
-    },
-    {
-     "from": "source-4",
-     "to": "avr",
-     "signal": "video"
-    },
-    {
-     "from": "source",
-     "to": "enc-source",
-     "signal": "video"
-    },
-    {
-     "from": "enc-source",
-     "to": "sw",
-     "signal": "video"
-    },
-    {
-     "from": "source-2",
-     "to": "enc-source-2",
-     "signal": "video"
-    },
-    {
-     "from": "enc-source-2",
-     "to": "sw",
-     "signal": "video"
-    },
-    {
-     "from": "source-3",
-     "to": "enc-source-3",
-     "signal": "video"
-    },
-    {
-     "from": "enc-source-3",
-     "to": "sw",
-     "signal": "video"
     },
     {
      "from": "sw",
@@ -1682,13 +1655,35 @@
     },
     {
      "from": "sw",
-     "to": "dec-audio-amp-6",
+     "to": "dec-z-pool-house-bar",
      "signal": "video"
     },
     {
-     "from": "dec-audio-amp-6",
-     "to": "amp-6",
-     "signal": "audio"
+     "from": "dec-z-pool-house-bar",
+     "to": "z-pool-house-bar-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp-5",
+     "to": "z-pool-house-bar-spk",
+     "signal": "speaker",
+     "channels": "3-4"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-pool-house-patio",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-pool-house-patio",
+     "to": "z-pool-house-patio-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp-5",
+     "to": "z-pool-house-patio-spk",
+     "signal": "speaker",
+     "channels": "5-6"
     }
    ],
    "annotations": []

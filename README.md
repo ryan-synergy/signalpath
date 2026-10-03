@@ -115,7 +115,7 @@ This repo is public (it serves the live site), so SignalPath carries **no pricin
 cd signalpath && python3 -m http.server 8745
 ```
 
-Then open http://localhost:8745/. Load a sample job from the jobs dropdown (Residence / Estate / Stress fixtures ship with the app).
+Then open http://localhost:8745/. Load a sample from 📁 Jobs → Open a sample (Residence / Estate / a 30-room, 4-rack Bel Air estate / Stress fixtures ship with the app).
 
 ## Repo layout
 
@@ -150,7 +150,7 @@ app/test-fixtures/      Test-only jobs (dense-harness.json: one source → 9 TVs
 
 ## Tests
 
-Open `app/tests.html` in a served browser tab. 851 assertions run on load and report pass/fail with a summary line. The suite covers the data model, validation, advisor budgets, placement geometry, router hop ceilings per fixture (regression guards), render output, importers, quick-add parsing, catalog integrity, and print pages. **All tests green is the bar for every change.** `app/fuzz.html` complements it: hand-built edge cases plus hundreds of seeded random jobs pushed through the whole pipeline — every job also drawn in trunk mode — (with room distances, Bullet Train runs and eARC kits layered on from a second random stream, junk values included), checking for crashes, malformed SVG, two different wires sharing a lane, `undefined`/`NaN` on paper and in the text outputs (takeoff, wire runs, advisor, jack plan, PlanQueue file, AI review), wires crossing any device or card body, overlapping hop arcs, vanished wires, and whether a picked reroute (returns, rack runs and zone feeds) reproduces its preview and keeps the whole sheet legal. Every job is also routed in harness style and with outdoor zones as their own cluster, held to the same geometry checks. Router fallbacks on overloaded layouts are reported as a capacity metric, not a failure.
+Open `app/tests.html` in a served browser tab. 1,057 assertions run on load and report pass/fail with a summary line. The suite covers the data model, validation, advisor budgets, placement geometry, router hop ceilings per fixture (regression guards), render output, importers, quick-add parsing, catalog integrity, and print pages. **All tests green is the bar for every change.** `app/fuzz.html` complements it: hand-built edge cases plus hundreds of seeded random jobs pushed through the whole pipeline — every job also drawn in trunk mode — (with room distances, Bullet Train runs and eARC kits layered on from a second random stream, junk values included), checking for crashes, malformed SVG, two different wires sharing a lane, `undefined`/`NaN` on paper and in the text outputs (takeoff, wire runs, advisor, jack plan, PlanQueue file, AI review), wires crossing any device or card body, overlapping hop arcs, vanished wires, and whether a picked reroute (returns, rack runs and zone feeds) reproduces its preview and keeps the whole sheet legal. Every job is also routed in harness style and with outdoor zones as their own cluster, held to the same geometry checks. Router fallbacks on overloaded layouts are reported as a capacity metric, not a failure.
 
 ## Architecture in one paragraph
 

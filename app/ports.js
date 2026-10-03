@@ -219,7 +219,7 @@ export function plugCandidates(job, ix, catalog, solIndex, id, dir) {
   return others.map(oid => {
     const o = info(oid); if (!o) return null;
     const [src, snk, srcId, snkId] = dir === "in" ? [o, me, oid, id] : [me, o, id, oid];
-    const base = { id: oid, name: name(oid), group: o.kind === "device" ? (s.locals[oid] ? "In the zones" : "In the rack") : o.kind === "companion" ? "Adapters" : "In the zones" };
+    const base = { id: oid, name: name(oid), group: o.kind === "device" ? (s.locals[oid] ? "In the rooms" : "In the rack") : o.kind === "companion" ? "Adapters" : "In the rooms" };
     if (NET_ONLY.has(o.type)) return { ...base, disabled: true, reason: "network gear — its Cat6 is planned on the Network sheet" };
     if (src.kind === "speakers") return { ...base, disabled: true, reason: "speakers only take a signal, they don't send one" };
     // a TV's own sound back to a box (eARC / optical / analog)

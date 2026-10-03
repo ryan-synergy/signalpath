@@ -76,12 +76,27 @@ export function drivesRooms(job, sol, devId) {
     const fed = conns.some(c => c.from === devId && (c.signal === "speaker" || c.signal === "video") && (eps.has(c.to) || via.has(c.to)));
     if (fed && !out.includes(z.name)) out.push(z.name);
   }
-  return out;
+  // the room whose speakers it drives first — that's the receiver's own room; TVs it only feeds come after
+  const spkRoom = n => { const z = zones.find(x => x.name === n); return conns.some(c => c.from === devId && c.signal === "speaker" && (z.endpoints || []).some(e => e.id === c.to)); };
+  return [...out.filter(spkRoom), ...out.filter(n => !spkRoom(n))];
 }
 // "Anthem MRX 540 — Family Room" (unless the name already says the room)
+// one room only (2026-10-03: "Family Room, Master Bed, Patio +1" grew with every TV it fed — its own room names it)
 export function withRooms(name, rooms) {
   const n = String(name || ""), add = rooms.filter(r => r && !n.toLowerCase().includes(String(r).toLowerCase()));
-  return add.length ? `${n} — ${add.slice(0, 3).join(", ")}${add.length > 3 ? ` +${add.length - 3}` : ""}` : n;
+  return add.length && !rooms.some(r => n.toLowerCase().includes(String(r).toLowerCase())) ? `${n} — ${add[0]}` : n;
+}
+/* two boxes with the same name in one picker can't be told apart ("Sonos Amp" ×3, two MXNet switches):
+   the room it drives, else its rack, else a number (2026-10-03 picker audit) */
+function twinTag(job, sol, d) {
+  const racks = sol?.racks || [], all = racks.flatMap(r => r.devices || []);
+  const same = all.filter(x => (x.model || x.id) === (d.model || d.id));
+  if (same.length < 2) return "";
+  const rooms = drivesRooms(job, sol, d.id);
+  if (rooms.length === 1) return ` — ${rooms[0]}`;            // a one-room box (a Sonos Amp) goes by its room; an 8-zone amp doesn't
+  const rk = racks.find(r => (r.devices || []).includes(d));
+  if (rk && same.some(x => !(rk.devices || []).includes(x))) return ` — ${rk.name || rk.id}`;
+  return ` #${same.indexOf(d) + 1}`;
 }
 
 export function describeNode(job, sol, id) {
@@ -89,21 +104,22 @@ export function describeNode(job, sol, id) {
   const zoneName = zid => zones.find(z => z.id === zid)?.name || zid;
   for (const r of sol?.racks || []) for (const d of r.devices || []) if (d.id === id) {
     const t = TYPE_NAME[d.type];
-    const name = d.type === "avr" ? withRooms(d.model || id, drivesRooms(job, sol, d.id)) : d.model || id;
+    let name = d.type === "avr" ? withRooms(d.model || id, drivesRooms(job, sol, d.id)) : d.model || id;
+    if (name === (d.model || id)) name += twinTag(job, sol, d);
     return { group: "In the rack", kind: "rack", type: d.type, short: name,
              label: `${name}${t && d.type !== "source" && !String(d.model || "").toLowerCase().includes(t.toLowerCase()) ? ` (${t})` : ""}` };
   }
   for (const z of zones) for (const e of z.endpoints || []) if (e.id === id) {
     if (e.type === "display") {
       const what = e.displayType === "projector" ? "projector" : "TV";
-      return { group: "In the zones", kind: "display", short: `${z.name} ${what}`, label: `${z.name} ${what}${e.size ? ` (${e.size}")` : ""}` };
+      return { group: "In the rooms", kind: "display", short: `${z.name} ${what}`, label: `${z.name} ${what}${e.size ? ` (${e.size}")` : ""}` };
     }
     if (e.type === "speakers") {
       const setup = SPEAKER_SETUP[e.config || "stereo"] || e.config;
-      return { group: "In the zones", kind: "speakers", short: `${z.name} speakers`, label: `${z.name} speakers (${setup})` };
+      return { group: "In the rooms", kind: "speakers", short: `${z.name} speakers`, label: `${z.name} speakers (${setup})` };
     }
     const t = e.type || "endpoint (no type)";
-    return { group: "In the zones", kind: e.type, short: `${z.name} ${t}`, label: `${z.name} ${t}` };
+    return { group: "In the rooms", kind: e.type, short: `${z.name} ${t}`, label: `${z.name} ${t}` };
   }
   for (const c of sol?.companions || []) if (c.id === id) {
     const at = describeNode(job, sol, c.serves);

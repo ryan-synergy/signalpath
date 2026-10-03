@@ -162,6 +162,20 @@ export function setAudioBack(job, sol, zone, mode, to) {
   setReturn(job, sol, zone, optical ? (to || h.ret?.to || (viaReceiver ? h.video.from : null)) : null, mode === "earc+optical" && wantEarc);
 }
 
+/* after a room's picture or sound moves: its TV's audio return follows. Back to a receiver that no longer has
+   anything to do with the room is a stray wire (2026-10-03 hammer: moving Family Room to the 1140 left its optical
+   on the 740; picture to a receiver and back left a backup return behind) — it goes to the room's receiver now,
+   or away if the room has none. A return to an input module (a Savant rack) isn't a receiver's — left alone. */
+export function followReturn(job, sol, zone) {
+  const h = readHookup(job, sol, zone);
+  if (!h.tv || !h.ret?.to || !isReceiver(sol, h.ret.to)) return;
+  const mine = [h.speakers?.from, h.video?.from].filter(id => isReceiver(sol, id));
+  if (mine.includes(h.ret.to)) return;
+  const to = mine[0];
+  if (!to) { setAudioBack(job, sol, zone, h.earc ? "earc" : "none"); return; }
+  setAudioBack(job, sol, zone, h.audioBack === "earc-kit" ? "earc-kit" : h.earc && isReceiver(sol, h.video?.from) && h.video.from === to ? "earc+optical" : "optical", to);
+}
+
 // amp outputs a speaker set needs, and the next free block on that amp
 export function outputsNeeded(spk) {
   const c = spk?.config || "stereo";
@@ -356,10 +370,71 @@ export function feedAmp(job, sol, ampId) {
   return dec.id;
 }
 
+/* delete a rack box and everything that only existed for it (2026-10-03 hammer: deleting the MXNet switch left
+   12 decoders drawn and wired with nothing feeding them, every room still green). Goes: the box, the adapters at
+   it (its encoders), and any adapter whose every feed came from it (a TV's decoder or balun, an amp's audio
+   decoder) — then their wires. Returns the rooms that lost a feed, so the caller can say so. */
+export function removeRackDevice(job, sol, devId) {
+  for (const r of sol.racks || []) r.devices = (r.devices || []).filter(d => d.id !== devId);
+  const conns = sol.connections || [], comps = sol.companions || [];
+  const gone = new Set([devId, ...comps.filter(c => c.serves === devId).map(c => c.id)]);
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const k of comps) {
+      if (gone.has(k.id)) continue;
+      const ins = conns.filter(c => c.to === k.id && c.signal !== "network");
+      if (ins.length && ins.every(c => gone.has(c.from))) { gone.add(k.id); grew = true; }
+    }
+  }
+  const hit = new Set();
+  for (const c of conns) if (gone.has(c.from) && !gone.has(c.to)) {
+    const k = comps.find(x => x.id === c.to);
+    const z = (job.house?.zones || []).find(z => (z.endpoints || []).some(e => e.id === c.to || e.id === k?.serves));
+    if (z) hit.add(z.name);
+  }
+  for (const k of comps) if (gone.has(k.id) && k.serves) { const z = (job.house?.zones || []).find(z => (z.endpoints || []).some(e => e.id === k.serves)); if (z) hit.add(z.name); }
+  sol.connections = conns.filter(c => !gone.has(c.from) && !gone.has(c.to));
+  sol.companions = comps.filter(c => !gone.has(c.id));
+  for (const c of sol.connections) if (c.routeHint?.between?.some?.(x => gone.has(x))) delete c.routeHint;
+  if (sol.poePower) for (const id of gone) delete sol.poePower[id];
+  return [...hit];
+}
+
+/* a source added to an MXNet rack gets its encoder into the switch, like the kit's own sources (2026-10-03:
+   an Apple TV added to the Bel Air rack sat unplugged). AVDM when the rack's other encoders are (a Savant
+   rack breaks each source's audio out); nothing for a box with no picture or one that's already wired. */
+export function encodeSource(job, sol, srcId, catalog = null) {
+  const d = rackDevices(sol).find(x => x.id === srcId);
+  if (!d || d.type !== "source") return null;
+  const sw = rackDevices(sol).find(x => x.type === "avSwitch" && !x.danteSwitch);
+  if (!sw) return null;
+  const cat = d.catalogRef ? catalog?.devices?.[d.catalogRef] : null;
+  if (cat?.outputs && !cat.outputs.hdmi) return null;
+  if (/turn\s*table|record player|phono|music|streamer|tuner|radio/i.test(`${d.model || ""} ${d.sourceType || ""}`) && !/apple|roku|kaleidescape|cable/i.test(d.model || "")) return null;
+  const conns = (sol.connections ||= []);
+  if (conns.some(c => c.from === d.id && c.signal === "video")) return null;
+  const encs = (sol.companions || []).filter(k => /^enc/.test(k.type));
+  const enc = { id: freeId(job, sol, `enc-${d.id}`), type: "enc", serves: d.id, auto: true, ...(encs.length && encs.every(k => k.avdm) ? { avdm: true } : {}) };
+  (sol.companions ||= []).push(enc);
+  conns.push({ from: d.id, to: enc.id, signal: "video" }, { from: enc.id, to: sw.id, signal: "video" });
+  // an AVDM rack sends each source's sound to the input module its other encoders feed
+  const aim = enc.avdm && conns.find(c => encs.some(k => k.id === c.from) && c.signal === "audio")?.to;
+  if (aim) conns.push({ from: enc.id, to: aim, signal: "audio" });
+  return enc.id;
+}
+
 /* quick-add: wire a new zone from its shorthand hints */
+// a room in an area with its own rack (a casita, a pool house) uses that rack's gear first, and new gear goes there
+function homeRackOf(job, sol, zone) {
+  const a = (job.house?.areas || []).find(x => x.id === zone.area);
+  return a?.homeRack && (sol.racks || []).find(r => r.id === a.homeRack) || null;
+}
 export function autoHookup(job, sol, zone, hints = {}) {
   const { tv, spk } = endpointsOf(zone);
-  const devs = rackDevices(sol);
+  const home = homeRackOf(job, sol, zone);
+  const atHome = d => !!home && (home.devices || []).includes(d);
+  const devs = rackDevices(sol).sort((a, b) => atHome(b) - atHome(a));
+  const homeX = home ? { rackId: home.id } : {};
   // "local": the Apple TV quick-add put in the room feeds this TV directly
   const loc = hints.local && tv && (sol.localDevices || []).find(d => d.zone === zone.id && d.type === "source");
   if (loc) setVideo(job, sol, zone, loc.id);
@@ -389,7 +464,7 @@ export function autoHookup(job, sol, zone, hints = {}) {
     // it isn't already driving another zone's speakers
     const busy = new Set((sol.connections || []).filter(c => c.signal === "speaker").map(c => c.from));
     let avr = devs.find(d => d.type === "avr" && !busy.has(d.id))?.id;
-    if (!avr) { const a = avrFor(spk); avr = addRackDevice(job, sol, "avr", a.model, { catalogRef: a.catalogRef }); }
+    if (!avr) { const a = avrFor(spk); avr = addRackDevice(job, sol, "avr", a.model, { catalogRef: a.catalogRef, ...homeX }); }
     // a whole-home rack (a matrix / AV switch): the matrix feeds the receiver and the TV
     // SEPARATELY — one output each (Ryan 2026-09-30: matrix → receiver → TV is unstable
     // HDMI practice, an option for extreme cases, never the default). Without one, the
@@ -416,8 +491,8 @@ export function autoHookup(job, sol, zone, hints = {}) {
     if (/^surround/.test(cfg)) {
       if (hints.matrix && m) {
         const busy = new Set((sol.connections || []).filter(c => c.signal === "speaker").map(c => c.from));
-        let avr = rackDevices(sol).find(d => d.type === "avr" && !busy.has(d.id))?.id;
-        if (!avr) { const a = avrFor(spk); avr = addRackDevice(job, sol, "avr", a.model, { catalogRef: a.catalogRef }); }
+        let avr = devs.find(d => d.type === "avr" && !busy.has(d.id))?.id;
+        if (!avr) { const a = avrFor(spk); avr = addRackDevice(job, sol, "avr", a.model, { catalogRef: a.catalogRef, ...homeX }); }
         setSpeakers(job, sol, zone, avr);
         if (!(sol.connections || []).some(c => c.to === avr && c.signal === "video"))   // (directly, or via its decoder)
           feedReceiver(job, sol, m, avr, {});
@@ -425,7 +500,16 @@ export function autoHookup(job, sol, zone, hints = {}) {
       }
     } else if (!/^soundbar/.test(cfg)) {
       const used = id => (sol.connections || []).filter(c => c.from === id && c.signal === "speaker").length;
-      const amp = rackDevices(sol).find(d => d.type === "amp" && used(d.id) < (d.zones || 8));
+      const amps = devs.filter(d => d.type === "amp");
+      let amp = amps.find(d => used(d.id) < (d.zones || 8));
+      // every amp full: another of the same, beside the last one (2026-10-03: a 30-room job left 12 rooms unfed, silently)
+      if (!amp && amps.length) {
+        const last = amps.filter(d => !home || atHome(d)).pop() || amps[amps.length - 1];
+        const rk = (sol.racks || []).find(r => (r.devices || []).includes(last));
+        const id = addRackDevice(job, sol, "amp", String(last.model || "Multi-zone amp").replace(/\s*\(\d+\)$/, ""), {
+          ...(last.catalogRef ? { catalogRef: last.catalogRef } : {}), zones: last.zones || 8, ...(rk ? { rackId: rk.id } : {}) });
+        amp = rackDevices(sol).find(d => d.id === id);
+      }
       if (amp) { setSpeakers(job, sol, zone, amp.id); if (included) feedAmp(job, sol, amp.id); }
     }
   }

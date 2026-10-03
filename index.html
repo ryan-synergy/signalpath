@@ -189,6 +189,13 @@
   #pkSearch { margin: 0 14px 8px; padding: 9px 10px; font: inherit; font-size: 15px; border: 1px solid var(--line); border-radius: 8px; }
   #pkList { overflow-y: auto; padding: 0 8px 16px; -webkit-overflow-scrolling: touch; }
   #pkList .pk-g { font-size: 11px; color: #666; margin: 12px 8px 4px; text-transform: uppercase; letter-spacing: .05em; }
+  .mstyle { border-top: 1px solid var(--line, #ddd); margin-top: 4px; padding-top: 2px; }
+  .mstyle > summary { list-style: none; cursor: pointer; padding: 8px 10px; display: flex; flex-direction: column; }
+  .mstyle > summary::after { content: "▸"; position: absolute; right: 14px; }
+  .mstyle[open] > summary::after { content: "▾"; }
+  .mstyle > summary em { font-style: normal; font-size: 12px; color: var(--muted, #777); }
+  .mstyle > summary { position: relative; }
+  #pkList .pk-more { display: block; width: 100%; margin: 10px 0 4px; padding: 10px; border: 1px dashed var(--line, #ccc); border-radius: 10px; background: none; color: var(--accent, #2b6cb0); font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
   #pkList .pk-i { display: block; width: 100%; text-align: left; padding: 9px 10px; border: 0; background: none; border-radius: 8px; font: inherit; font-size: 14px; min-height: 44px; cursor: pointer; color: #1b1d21; }
   #pkList .pk-i:hover:not([disabled]), #pkList .pk-i:focus-visible { background: #eef3fa; outline: none; }
   #pkList .pk-i.cur { background: #e6effa; font-weight: 600; }
@@ -537,6 +544,7 @@
   .row { border-radius: 12px; }
   .row > .head .t { font-size: 15px; }
   .zsum { font-size: 12.5px; color: var(--lbl); }
+  .zfeed { font-size: 11.5px; color: var(--muted); margin-top: 3px; line-height: 1.35; }
   .fields .f:has(> label) { flex-direction: column; align-items: stretch; gap: 5px; margin-bottom: 10px; }
   .fields .f:has(> label) > label { width: auto; font-size: 12px; font-weight: 600; color: var(--lbl); }
   .fields .f.inline { flex-direction: row !important; align-items: center !important; }
@@ -602,29 +610,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003044805",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003044805",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003044805",
-    "./app/ports.js": "./app/ports.js?v=20261003044805",
-    "./app/commands.js": "./app/commands.js?v=20261003044805",
-    "./app/engine.js": "./app/engine.js?v=20261003044805",
-    "./app/exports.js": "./app/exports.js?v=20261003044805",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003044805",
-    "./app/hookup.js": "./app/hookup.js?v=20261003044805",
-    "./app/importers.js": "./app/importers.js?v=20261003044805",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003044805",
-    "./app/library.js": "./app/library.js?v=20261003044805",
-    "./app/names.js": "./app/names.js?v=20261003044805",
-    "./app/network.js": "./app/network.js?v=20261003044805",
-    "./app/pages.js": "./app/pages.js?v=20261003044805",
-    "./app/power.js": "./app/power.js?v=20261003044805",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003044805",
-    "./app/rack.js": "./app/rack.js?v=20261003044805",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003044805",
-    "./app/starters.js": "./app/starters.js?v=20261003044805",
-    "./app/kinds.js": "./app/kinds.js?v=20261003044805",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003044805",
-    "./app/sheets.js": "./app/sheets.js?v=20261003044805"
+    "./app/ai.js": "./app/ai.js?v=20261003051054",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003051054",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003051054",
+    "./app/ports.js": "./app/ports.js?v=20261003051054",
+    "./app/commands.js": "./app/commands.js?v=20261003051054",
+    "./app/engine.js": "./app/engine.js?v=20261003051054",
+    "./app/exports.js": "./app/exports.js?v=20261003051054",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003051054",
+    "./app/hookup.js": "./app/hookup.js?v=20261003051054",
+    "./app/importers.js": "./app/importers.js?v=20261003051054",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003051054",
+    "./app/library.js": "./app/library.js?v=20261003051054",
+    "./app/names.js": "./app/names.js?v=20261003051054",
+    "./app/network.js": "./app/network.js?v=20261003051054",
+    "./app/pages.js": "./app/pages.js?v=20261003051054",
+    "./app/power.js": "./app/power.js?v=20261003051054",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003051054",
+    "./app/rack.js": "./app/rack.js?v=20261003051054",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003051054",
+    "./app/starters.js": "./app/starters.js?v=20261003051054",
+    "./app/kinds.js": "./app/kinds.js?v=20261003051054",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003051054",
+    "./app/sheets.js": "./app/sheets.js?v=20261003051054"
 } }
 </script>
 <script>
@@ -673,26 +681,28 @@
   <input id="jobName" title="Project name">
   <select id="solSel" title="Solution"></select>
   <select id="stageSel"><option value="proposal">PROPOSAL</option><option value="asBuilt">AS-BUILT</option></select>
-  <button id="undoBtn" title="Undo the last change made by a command or the AI" style="display:none">↶ Undo</button>
+  <button id="undoBtn" title="Undo the last change" style="display:none">↶ Undo</button>
   <span class="spacer"></span>
-  <button id="aiBtn" title="Describe a change — Claude proposes it, you preview and apply">✦ Ask AI</button>
+  <button id="aiBtn" title="Ask Claude to make a change — you preview it first">✦ Ask AI</button>
   <span id="rulesChip" class="ok">✓</span>
   <div id="viewSw" role="tablist" aria-label="View"><button role="tab" data-view="schematic" class="on" aria-selected="true">Schematic</button><button role="tab" data-view="rack" aria-selected="false" title="The racks, full size — drag gear to arrange">Rack</button><button role="tab" data-view="asbuilt" aria-selected="false" title="What was installed: the drawing as built, what changed from the proposal, and every box's serial / MAC / IP">As-built</button></div>
   <span class="spacer"></span>
   <div class="menu" id="viewMenu"><button class="mbtn" aria-haspopup="true" aria-expanded="false">View ▾</button>
     <div class="mlist" role="menu" hidden>
       <label class="chk"><input type="checkbox" id="hideNet"><span><b>Hide network</b><em>Drop the Cat6 network wires from the drawing</em></span></label>
+      <label class="chk"><input type="checkbox" id="splitSheets"><span><b>A sheet per rack</b><em>Saved with the job: a pool house or guest house rack gets its own sheet</em></span></label>
+      <label class="chk"><input type="checkbox" id="kindColor" checked><span><b>Color by kind</b><em>Tint rack boxes by what they are (remembered on this computer)</em></span></label>
+      <label class="chk"><input type="checkbox" id="bwMode"><span><b>Black &amp; white</b><em>Dash patterns carry each signal, for office laser printers</em></span></label>
+      <details class="mstyle"><summary><b>Drawing style</b><em>Trunks, harness, Dante labels — how the wires are drawn</em></summary>
       <div class="mgroup" role="group" aria-label="Trunks">
-        <div class="mlabel">Trunks <em>Saved with the job: one trunk per signal type, breaking out room by room</em></div>
+        <div class="mlabel">Trunks <em>Saved with the job: one trunk per signal type, breaking out at each room</em></div>
         <label class="chk"><input type="radio" name="trunkStyle" value="bundle"><span><b>Bundle</b><em>The default: one heavy run with ×N, thin breakouts, wire numbers</em></span></label>
         <label class="chk"><input type="radio" name="trunkStyle" value="ribbon"><span><b>Ribbon</b><em>Same trunks, every wire its own line side by side</em></span></label>
         <label class="chk"><input type="radio" name="trunkStyle" value="off"><span><b>Off</b><em>Each wire takes its own path (the older drawing)</em></span></label>
       </div>
-      <label class="chk"><input type="checkbox" id="danteLabels"><span><b>Dante as labels</b><em>Saved with the job: no Dante lines — each amp lists its Dante sources, each source says where it goes</em></span></label>
-      <label class="chk"><input type="checkbox" id="splitSheets"><span><b>A sheet per rack</b><em>Saved with the job: a pool house, guest house or backyard with its own rack draws on its own sheet; the main sheet shows how the main rack feeds it</em></span></label>
-      <label class="chk"><input type="checkbox" id="harnessMode"><span><b>Harness style</b><em>Saved with the job: runs to 3+ zones share one trunk and break out near each zone, like an electrical drawing</em></span></label>
-      <label class="chk"><input type="checkbox" id="kindColor" checked><span><b>Color by kind</b><em>Each kind of rack box wears its own tint and edge (sources stay black); remembered on this computer</em></span></label>
-      <label class="chk"><input type="checkbox" id="bwMode"><span><b>Black &amp; white</b><em>Dash patterns carry each signal, for office laser printers</em></span></label>
+      <label class="chk"><input type="checkbox" id="danteLabels"><span><b>Dante as labels</b><em>Saved with the job: Dante shown as text on each box instead of lines</em></span></label>
+      <label class="chk"><input type="checkbox" id="harnessMode"><span><b>Harness style</b><em>Saved with the job: runs to 3+ rooms share one line and branch off at each room</em></span></label>
+      </details>
     </div></div>
   <input type="file" id="importFile" accept=".json,.md,.markdown,.txt,text/markdown,text/plain,application/json" hidden>
   <div class="menu" id="exportMenu"><button class="mbtn" aria-haspopup="true" aria-expanded="false">Export ▾</button>
@@ -704,7 +714,7 @@
       <hr>
       <button id="exportJson" role="menuitem"><b>Job file</b><span>The whole job (.json) — reopen, share, back up</span></button>
       <button id="exportSvg" role="menuitem"><b>Drawing</b><span>The schematic sheet (.svg)</span></button>
-      <button id="exportAi" role="menuitem"><b>AI review</b><span>Markdown for an AI: rooms, feeds, rack, open items, wire list + the full job</span></button>
+      <button id="exportAi" role="menuitem"><b>AI review</b><span>The whole design as Markdown, for an AI to check</span></button>
       <button id="exportBrief" role="menuitem"><b>Design brief for an AI</b><span>The Markdown format SignalPath imports, with the catalog's product names — give it to an AI to write a design</span></button>
     </div></div>
   <button id="printBtn" title="Print packet / save as PDF">Print</button>
@@ -828,7 +838,7 @@
 </div></div>
 
 <script type="module">
-import { autoRacks } from "./app/engine.js";
+import { autoRacks, expandChannels } from "./app/engine.js";
 import { loadJob, normalizeJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock, trunkMode, boxUsage, SHEET, KIND_STYLE, deviceKind } from "./app/engine.js";
 import { importAny, mergeHouse, drawFromWalk, decodeHandoff, stripUnsafe } from "./app/importers.js";
 import { importMarkdown, designBrief } from "./app/mdimport.js";
@@ -845,7 +855,7 @@ import { rackReference, fitRacks, rackOption, RACK_CLEARANCE, RACK_OPTIONS } fro
 import { STARTERS, applyStarter, starterFromJob, listStarters, duplicateStarter, kitRemoveDevice, kitDuplicateDevice, kitAddDevice } from "./app/starters.js";
 import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/commands.js";
 import { askClaude, handoffPrompt, extractProposal, jobSummary, assess, loadConn, saveConn, connReady, MODELS, quoteRequest, quoteAttachment } from "./app/ai.js";
-import { setDanteAudio, danteAmpFor } from "./app/hookup.js";
+import { setDanteAudio, danteAmpFor, encodeSource, removeRackDevice, followReturn } from "./app/hookup.js";
 import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, quickFixes, adapterAudioOut, adapterAudioTargets, setAdapterAudio, addLocalAmp, nextFreeOutputs, outputsNeeded,
          VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS, REACH, bulletFor } from "./app/hookup.js";
 import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME, AUDIO_NET_NAME,
@@ -881,7 +891,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003044805").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003051054").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -947,6 +957,8 @@ function effectiveCatalog() {
   if (snap?.devices) for (const [id, e] of Object.entries(snap.devices)) cat.devices[id] = { ...(cat.devices[id] || {}), ...e };
   return cat;
 }
+// one product, read without cloning the whole catalog (pickers ask per option)
+const catDev = ref => { if (!ref) return null; const a = SETTINGS.catalog.devices?.[ref], b = S.job?.job?.catalogSnapshot?.devices?.[ref]; return a || b ? { ...(a || {}), ...(b || {}) } : null; };
 
 /* ============ state ============ */
 const S = { job: null, id: null, sol: 0, tab: "zones", openRows: new Set(), editScope: "house", undo: [] };
@@ -980,6 +992,13 @@ function schematicSheets(raw) {
   return g ? g.map((x, k) => ({ name: x.name, raw: sheetJob(raw, S.sol, g, k) })) : [{ name: null, raw }];
 }
 function refresh(save = true) {
+  // every edit is undoable: a change made since the last draw that no command recorded (a panel picker, a chip,
+  // a drag) goes on the undo stack as it was before (2026-10-03: Undo skipped panel edits and undid two steps)
+  if (S.base && S.base.id === S.id && !S.undoMarked) {
+    const now = JSON.stringify(S.job);
+    if (now !== S.base.json) { S.undo.push({ job: JSON.parse(S.base.json), id: S.id, sol: S.base.sol, label: S.editLabel || "last change" }); if (S.undo.length > 30) S.undo.shift(); syncUndo(); }
+  }
+  S.undoMarked = false; S.editLabel = "";
   const sol = S.job.solutions[S.sol] || S.job.solutions[0];
   S.sol = S.job.solutions.indexOf(sol);
   let v, a, svg = "", err, routeWarn = [], placeWarn = [];
@@ -1088,6 +1107,7 @@ function refresh(save = true) {
   renderRackEd(true);                                        // the rack view follows every change (space, size, gear)
   renderAsBuilt();
   if (save) { clearTimeout(saveTimer); saveTimer = setTimeout(() => { saveTimer = null; persist(); }, 400); }
+  S.base = { id: S.id, sol: S.sol, json: JSON.stringify(S.job) };   // the "before" of the next edit (undo)
 }
 /* findings → the row they belong to: zones by the endpoint / adapter / in-zone
    gear they name (`ref`), boxes by device id (validator refs, port budgets) */
@@ -1122,7 +1142,7 @@ function drawAdvisor() {
       ${ref.length ? `<button class="advnotes" data-adv="toggle">${ref.length} note${ref.length > 1 ? "s" : ""}</button>` : ""}
       <span class="advpeek">${adv.length ? esc(splitMsg(adv[0].msg).title) : ""}</span>
       ${adv.length || ref.length ? `<button class="advtoggle" data-adv="toggle">${open ? "Hide ▾" : "Show all ▴"}</button>` : ""}
-    </div>${open && (adv.length || ref.length) ? `<div class="advlist"><div class="advhd"><b>Advisor</b><button class="advtoggle" data-adv="toggle">Close ✕</button></div>${adv.length ? `<div class="advsec">TO CHECK</div>${adv.map(item).join("")}` : ""}${ref.length ? `<div class="advsec">NOTES — setup checklists, budgets, licensing</div>${ref.map(item).join("")}` : ""}</div>` : ""}`;
+    </div>${open && (adv.length || ref.length) ? `<div class="advlist"><div class="advhd"><b>Advisor</b><button class="advtoggle" data-adv="toggle">Close ✕</button></div>${adv.length ? `<div class="advsec">TO CHECK</div>${adv.map(item).join("")}` : ""}${ref.length ? `<div class="advsec">NOTES</div>${ref.map(item).join("")}` : ""}</div>` : ""}`;
   $("#advisor").querySelectorAll("[data-adv=toggle]").forEach(b => b.onclick = () => { try { localStorage.setItem("sp.advOpen", open ? "0" : "1"); } catch {} drawAdvisor(); });
   $("#advisor").querySelectorAll("button.advitem").forEach(b => b.onclick = () => goToRef(b.dataset.ref));
 }
@@ -1173,7 +1193,9 @@ async function persist() {
   try {
     // lockfile: freeze the catalog entries this job uses the first time they're
     // saved — later saves never overwrite them (JOB tab → Update catalog specs)
+    const clean = S.base && S.base.id === S.id && S.base.json === JSON.stringify(S.job);
     lockCatalog(S.job, SETTINGS.catalog);
+    if (clean) S.base.json = JSON.stringify(S.job);   // the lockfile isn't an edit — nothing to undo
     await dbPut({ id: S.id, updated: Date.now(), data: S.job });
     await renderJobsSel();
     if (!DB && !saveWarned) { saveWarned = true; alert("Heads up: browser storage is unavailable, so autosave only lasts for this tab. Use Export JSON to keep your work."); }
@@ -1199,7 +1221,7 @@ function renderTopbar() {
 async function renderJobsSel() {
   const jobs = (await dbAll()).sort((a, b) => b.updated - a.updated);
   $("#jobsSel").innerHTML = jobs.map(j => `<option value="${j.id}">${esc(j.data.job.name)}</option>`).join("") +
-    `<optgroup label="Samples"><option value="__residence">Sample Residence</option><option value="__estate">Sample Estate</option><option value="__belair">Bel Air Estate (30 rooms, 4 racks)</option><option value="__stress">Stress (25 zones)</option></optgroup>`;
+    `<optgroup label="Samples"><option value="__residence">Sample Residence</option><option value="__estate">Sample Estate</option><option value="__belair">Bel Air Estate (30 rooms, 4 racks)</option><option value="__stress">Stress (25 rooms)</option></optgroup>`;
   $("#jobsSel").value = S.id;
 }
 
@@ -1402,6 +1424,7 @@ $("#stCancel").onclick = () => $("#starter").classList.remove("show");
 
 /* ============ commands: undo, apply, preview (quick-add box, AI, window.SignalPath) ============ */
 function pushUndo(label) {
+  S.undoMarked = true;
   S.undo.push({ job: structuredClone(S.job), id: S.id, sol: S.sol, label });
   if (S.undo.length > 30) S.undo.shift();
   syncUndo();
@@ -1415,10 +1438,19 @@ function syncUndo() {
 function undo() {
   const top = S.undo[S.undo.length - 1];
   if (!top || top.id !== S.id) return;
-  S.undo.pop(); S.job = top.job; S.sol = top.sol;
+  S.undo.pop(); S.job = top.job; S.sol = top.sol; S.undoMarked = true;
   refresh(); toast(`Undone: ${top.label}`);
 }
 $("#undoBtn").onclick = undo;
+// what an undo will say: the field and the room or box it was on ("Undone: Sound from — Kitchen")
+for (const ev of ["change", "click"]) $("#panelBody").addEventListener(ev, e => {
+  const t = e.target; if (!t?.closest || t.closest("[data-toggle], details > summary, .fieldbtn")) return;
+  const f = t.closest(".f"), lab = f?.querySelector(":scope > label")?.textContent?.replace(/×$/, "").trim()
+    || (t.classList.contains("del") || t.classList.contains("cdel") ? t.textContent.trim() : "");
+  const z = S.job?.house?.zones?.find(x => x.id === t.closest("[data-zid]")?.dataset.zid);
+  const d = S.job?.solutions?.[S.sol]?.racks?.flatMap(r => r.devices).find(x => x.id === t.closest("[data-did]")?.dataset.did);
+  if (lab) S.editLabel = [lab, z?.name || d?.model].filter(Boolean).join(" — ");
+}, true);
 addEventListener("keydown", e => {
   if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "z" && !e.target.closest?.("input, textarea, select, [contenteditable]")) {
     const top = S.undo[S.undo.length - 1];
@@ -1534,7 +1566,7 @@ window.SignalPath = Object.freeze({
 // harden/ui-audit.js drives every picker through this — only when the page is opened with ?audit
 if (new URLSearchParams(location.search).has("audit")) window.__spAudit = {
   get job() { return S.job; },
-  load(j) { S.job = structuredClone(j); S.sol = 0; S.id = "ui-audit"; S.editScope = "house"; S.undo = []; refresh(false); },
+  load(j) { S.job = structuredClone(j); S.sol = 0; S.id = "ui-audit"; S.editScope = "house"; S.undo = []; S.base = null; refresh(false); syncUndo(); },
   openAll() { for (let k = 0; k < 3; k++) { document.querySelectorAll("#panelBody [data-toggle]").forEach(h => S.openRows.add(h.dataset.toggle));
     document.querySelectorAll("#panelBody details[data-more]").forEach(d => S.openRows.add(d.dataset.more)); renderPanel(); } },
   tab(t) { switchTab(t); renderPanel(); },
@@ -2063,14 +2095,18 @@ const DEV_TYPE_LABEL = TYPE_NAME, SIGNAL_LABEL = SIGNAL_NAME, SCOPE_LABEL = SCOP
 function openPicker({ title, groups, onPick }) {
   const box = $("#picker"), list = $("#pkList"), q = $("#pkSearch");
   $("#pkTitle").textContent = title; q.value = "";
+  let all = false;   // the tucked-away groups (another room's receiver, can't-connect) open on search or "Show more"
   const draw = () => {
     const t = q.value.trim().toLowerCase();
+    const tucked = groups.filter(g => g.searchOnly && !t && !all);
     list.innerHTML = groups.map(g => {
-      if (g.searchOnly && !t) return "";
+      if (tucked.includes(g)) return "";
       const items = g.items.filter(it => !t || `${it.label} ${it.sub || ""} ${it.reason || ""} ${it.keys || ""}`.toLowerCase().includes(t));
       if (!items.length) return "";
       return `<div class="pk-g">${esc(g.label)}</div>` + items.map(it => `<button class="pk-i${it.current ? " cur" : ""}" data-v="${esc(it.value)}" ${it.disabled ? "disabled" : ""}>${esc(it.label)}${(it.disabled ? it.reason : it.sub) ? `<small>${esc(it.disabled ? it.reason : it.sub)}</small>` : ""}</button>`).join("");
-    }).join("") || `<div class="mini" style="padding:14px">Nothing matches “${esc(q.value)}”.</div>`;
+    }).join("") + (tucked.some(g => g.items.length) ? `<button class="pk-more">Show ${tucked.reduce((n, g) => n + g.items.length, 0)} more — ${esc(tucked.map(g => g.label.replace(/\s*\(.*\)$/, "").toLowerCase()).join(", "))}</button>` : "")
+      || `<div class="mini" style="padding:14px">Nothing matches “${esc(q.value)}”.</div>`;
+    list.querySelector(".pk-more")?.addEventListener("click", () => { all = true; draw(); });
     list.querySelectorAll(".pk-i:not([disabled])").forEach(b => b.onclick = () => { close(); onPick(b.dataset.v); });
   };
   const key = e => { if (e.key === "Escape") close(); };
@@ -2135,9 +2171,27 @@ const sel = (cls, opts, val, labels = {}) => `<select class="${cls}">${opts.map(
 
 // connection ends in words — the editor reads the raw job it's editing
 const nodeInfo = id => describeNode(S.job, S.job.solutions[S.sol] || S.job.solutions[0], id);
-function nodeSel(cls, val) {
+/* can this box be this end of this kind of wire? (2026-10-03 picker audit: a speaker wire's "To" offered the
+   cable box, the WattBox and another room's TV — every pick broke the room). The current end always stays listed. */
+const NOT_AV = ["power", "networkSwitch", "avbSwitch", "gateway", "host", "controlBox", "danteBridge"];
+function endFits(end, id, other, signal, asType = null) {
+  if (id === other) return false;
+  const n = nodeInfo(id), k = n.kind, t = asType && n.kind === "rack" ? asType : n.type;
+  const rack = (...types) => k === "rack" && types.includes(t);
+  switch (signal) {
+    case "speaker": return end === "from" ? rack("avr", "amp") : k === "speakers";
+    case "video": return end === "from" ? k === "local" || k === "adapter" || rack("source", "avr", "videoMatrix", "avSwitch", "splitter")
+                                         : k === "display" || k === "adapter" || rack("avr", "videoMatrix", "avSwitch", "splitter");
+    case "audio": return end === "from" ? k === "local" || k === "adapter" || rack("source", "avr", "videoMatrix", "avSwitch", "audioOutputModule", "splitter")
+                                         : k === "adapter" || rack("avr", "amp", "audioInputModule", "audioOutputModule", "danteBridge");
+    case "audioReturn": return end === "from" ? k === "display" || k === "local" || k === "adapter" : k === "adapter" || rack("avr", "audioInputModule", "amp");
+    case "network": return k !== "speakers";
+    default: return true;
+  }
+}
+function nodeSel(cls, val, fit = null) {
   const groups = new Map();
-  for (const id of allNodes()) { const n = nodeInfo(id); (groups.get(n.group) ?? groups.set(n.group, []).get(n.group)).push([id, n.label]); }
+  for (const id of allNodes()) { if (fit && id !== val && !fit(id)) continue; const n = nodeInfo(id); (groups.get(n.group) ?? groups.set(n.group, []).get(n.group)).push([id, n.label]); }
   if (val && !allNodes().includes(val)) groups.set("Missing", [[val, nodeInfo(val).label]]);
   return `<select class="${cls}">${[...groups].map(([g, list]) => `<optgroup label="${esc(g)}">${list.map(([id, l]) =>
     `<option value="${esc(id)}" ${id === val ? "selected" : ""}>${esc(l)}</option>`).join("")}</optgroup>`).join("")}</select>`;
@@ -2200,10 +2254,10 @@ function enhanceSelects(root) {
     b.onclick = () => {
       const groups = [];
       for (const ch of sel.children) {
-        if (ch.tagName === "OPTGROUP") groups.push({ label: ch.label, items: [...ch.children] });
+        if (ch.tagName === "OPTGROUP") groups.push({ label: ch.label, items: [...ch.children], searchOnly: ch.dataset.search === "1" });
         else (groups[groups.length - 1]?.loose ? groups[groups.length - 1] : (groups.push({ label: label, loose: true, items: [] }), groups[groups.length - 1])).items.push(ch);
       }
-      openPicker({ title: label, groups: groups.map(g => ({ label: g.label, items: g.items.map(o => ({ value: o.value, label: o.textContent, current: o.selected,
+      openPicker({ title: label, groups: groups.map(g => ({ label: g.label, searchOnly: g.searchOnly && !g.items.some(o => o.selected), items: g.items.map(o => ({ value: o.value, label: o.textContent, current: o.selected,
         disabled: o.disabled, reason: o.title || "not available here" })) })),
         onPick: v => { sel.value = v; sel.dispatchEvent(new Event("change", { bubbles: true })); } });
     };
@@ -2219,14 +2273,15 @@ function zonesHTML() {
   const escope = multi ? `<div id="escope"><span class="t">EDITS APPLY TO</span>
     <label><input type="radio" name="escope" value="house" ${scopeSol ? "" : "checked"}> House (all)</label>
     <label><input type="radio" name="escope" value="sol" ${scopeSol ? "checked" : ""}> ${esc(sol.name)} only</label>
-    <span class="mini" title="Zone names and adding/removing zones, speakers or displays always edit the House.">ⓘ</span></div>` : "";
+    <span class="mini" title="Room names and adding/removing rooms, speakers or displays always edit the House.">ⓘ</span></div>` : "";
   const qa = `<div id="qa">
     <div class="line"><input id="qaInput" placeholder="Add rooms — e.g. ${esc(S.qaHint || "family room 5.1 75 sony, kitchen stereo")}" autocomplete="off">
       <button id="qaMic" title="Dictate">🎤</button><button id="qaGo">Add</button></div>
     <div id="qaChips"></div>
-    <div class="ex">Name, setup, TV size, brand — commas for more rooms. <details><summary>How quick-add works</summary>
-      new zones: name + setup (5.1, stereo, 2.1, soundbar, landscape 8) + TV size + brand · "matrix" / "avr" / "local" wires it · "ofe" "prewire" · comma = next zone<br>
-      changes: "connect cable box to mrx" · "kitchen, office to amp 2" · "family room from the receiver" · "patio 75 ofe" · "master optical backup" · "add an mrx 1140"</details></div>
+    <div class="ex">Name, setup, TV size, brand — commas for more rooms. <details><summary>Examples</summary>
+      <b>Add rooms:</b> “family room surround sound 75 sony” · “kitchen stereo, patio landscape 8” · “theater 7.1.4 projector 120”<br>
+      <b>Extras:</b> “local” Apple TV at the TV · “avr” its own receiver · “prewire” wire only · “ofe” owner's gear<br>
+      <b>Change things:</b> “kitchen to amp 2” · “family room from the receiver” · “patio 75” · “add an mrx 1140”</details></div>
   </div>`;
   const ovHas = (kind, id, f) => ov[kind]?.[id] != null && f in ov[kind][id];
   const fieldO = (label, inner, kind, id, f) => {
@@ -2244,11 +2299,13 @@ function zonesHTML() {
     const h = readHookup(S.job, sol, z);
     const wired = (!h.tv || h.video) && (!h.spk || h.speakers) && (h.tv || h.spk);
     // closed, a row answers "what is it, what feeds it, is it done?"
+    // closed, a row says what's in the room in plain words — which box feeds it is one tap away (2026-10-03, Ryan:
+    // "simplify the room cards, but able to reveal more info if needed")
     const what = [spk && (SPEAKER_SETUP[spk.config || "stereo"] || spk.config),
-                  tv && `${tv.size || "?"}" ${tv.displayType === "projector" ? "projector" : "TV"}${tv.brand ? " " + tv.brand : ""}`].filter(Boolean).join(" + ") || "Nothing in this zone yet";
-    // inside the zone's own row, "Apple TV in Patio" is just "Apple TV (in zone)"
+                  tv && `${tv.size || "?"}″${tv.brand ? " " + tv.brand : ""} ${tv.displayType === "projector" ? "projector" : "TV"}`].filter(Boolean).join(" · ") || "Nothing in this room yet";
+    // inside the zone's own row, "Apple TV in Patio" is just "Apple TV (in room)"
     // a receiver named for the room it drives: in that room's own line the room goes without saying
-    const short = id => id ? describeNode(S.job, sol, id).short.replace(` in ${z.name}`, " (in zone)").replace(new RegExp(` — ${z.name.replace(/[.*+?^${}()|[\]\\]/g, c => "\\" + c)}$`), "") : null;
+    const short = id => id ? describeNode(S.job, sol, id).short.replace(` in ${z.name}`, " (in room)").replace(new RegExp(` — ${z.name.replace(/[.*+?^${}()|[\]\\]/g, c => "\\" + c)}$`), "") : null;
     let feed = "";
     if (h.video?.from && h.video.from === h.speakers?.from) feed = `${short(h.video.from)} → TV + speakers`;
     else feed = [h.tv && h.video?.from && `TV ← ${short(h.video.from)}`,
@@ -2259,7 +2316,7 @@ function zonesHTML() {
     const head = `<div class="head zhead" data-toggle="${esc(z.id)}">${statusMark(found, wired)}
       <div class="zmain"><div class="zt"><span class="t">${esc(z.name)}</span>
         ${zEff.scope !== "included" ? `<span class="badge${ovHas("zones", z.id, "scope") ? " ovb" : ""}">${esc(SCOPE_NAME[zEff.scope] || zEff.scope)}</span>` : ""}</div>
-        <div class="zsum">${esc(what)}${feed ? ` · ${esc(feed)}` : ""}</div>
+        <div class="zsum">${esc(what)}</div>${open && feed ? `<div class="zfeed">${esc(feed)}</div>` : ""}
         ${issue && !open ? `<div class="ziss ${issue.level}">${esc(issue.msg)}${found.length > 1 ? ` <span class="mini">(+${found.length - 1} more)</span>` : ""}</div>` : ""}</div></div>`;
     // open: the essentials as taps; the rarely-touched fields behind "More"
     const spkCfg = spk ? spk.config || "stereo" : "none";
@@ -2279,27 +2336,27 @@ function zonesHTML() {
           const list = sizes.includes(cur) ? sizes : [...sizes, cur].sort((a, b) => a - b);
           return chips("tvsize", list.map(n => [String(n), n + "″"]), String(cur)).replace(/<\/div>$/, `<button type="button" class="chip more" data-other="tvsize">Other…</button></div>`);
         })(), "endpoints", tvH.id, "size") : ""}
-        ${tv ? fieldO("Brand", `<input class="tvbrand" value="${esc(tv.brand || "")}" placeholder="e.g. Sony">`, "endpoints", tvH.id, "brand") : ""}
         ${hookupHTML(z, sol, multi)}
-        <details class="more" data-more="${esc(moreKey)}" ${S.openRows.has(moreKey) ? "open" : ""}><summary>More — name, scope, status, remote${tv ? ", model, size check" : ""}</summary>
+        <details class="more" data-more="${esc(moreKey)}" ${S.openRows.has(moreKey) ? "open" : ""}><summary>More — name, ${tv ? "brand, model, " : ""}scope, remote</summary>
           ${field("Name", `<input class="zname" value="${esc(z.name)}">`)}
+          ${tv ? fieldO("Brand", `<input class="tvbrand" value="${esc(tv.brand || "")}" placeholder="e.g. Sony">`, "endpoints", tvH.id, "brand") : ""}
         ${tv ? fieldO("Model", `<input class="tvmodel" value="${esc(tv.model || "")}" placeholder="${tv.displayType === "projector" ? "e.g. Epson LS12000 — blank quotes “Unspecified Projector”" : "e.g. K-85XR90 — blank quotes “Unspecified TV”"}" autocorrect="off" spellcheck="false">`, "endpoints", tvH.id, "model") : ""}
 
           ${fieldO("Scope", chips("zscope", ["included", "prewire", "future"].map(k => [k, SCOPE_LABEL[k]]), zEff.scope || "included", "seg"), "zones", z.id, "scope")}
           ${fieldO("Remote", sel("zremote", ["none", "savant", "appletv", "josh", "factory"], zEff.remote || "none", REMOTE_LABEL), "zones", z.id, "remote")}
           ${field("Outdoor", sel("zoutdoor", ["auto", "yes", "no"], typeof z.outdoor === "boolean" ? (z.outdoor ? "yes" : "no") : "auto",
             { auto: `Auto (${isOutdoorZone({ ...z, outdoor: undefined }) ? "outdoor" : "indoor"})`, yes: "Outdoor", no: "Indoor" }))}
-          ${(S.job.house.areas || []).length ? field("Area", sel("zarea", ["", ...S.job.house.areas.map(a => a.id)], z.area || "")) : ""}
+          ${(S.job.house.areas || []).length ? field("Area", sel("zarea", ["", ...S.job.house.areas.map(a => a.id)], z.area || "", { "": "—", ...Object.fromEntries(S.job.house.areas.map(a => [a.id, a.name || a.id])) })) : ""}
           ${spk && !/^(surround|soundbar)/.test(spk.config || "") ? fieldO("Spk count", `<input class="spkcount" type="number" min="1" max="12" value="${esc(spk.count || 2)}">`, "endpoints", spkH.id, "count") : ""}
           ${spk ? fieldO("Speakers are", chips("spkstatus", STATUSES.map(k => [k, STATUS_LABEL[k]]), spk.status || "new"), "endpoints", spkH.id, "status") : ""}
           ${tv ? fieldO("TV is", chips("tvstatus", STATUSES.slice(0, 2).map(k => [k, STATUS_LABEL[k]]), tv.status || "new"), "endpoints", tvH.id, "status") : ""}
           ${tv ? field("Confirm", `<input type="checkbox" class="tvconfirm" ${tvH.confirm?.length ? "checked" : ""}> <span class="mini">size needs confirmation</span>`) : ""}
-          <div style="text-align:right"><button class="del zdel">delete zone</button></div>
+          <div style="text-align:right"><button class="del zdel">delete room</button></div>
         </details>
       </div>
     </div>`;
   }).join("");
-  return escope + qa + rows + `<button class="addbtn" id="addZone">＋ Add zone</button>`;
+  return escope + qa + rows + `<button class="addbtn" id="addZone">＋ Add room</button>`;
 }
 
 /* HOOKUP: what feeds this zone — the TV's video (and how it gets there), the
@@ -2311,6 +2368,22 @@ function jackSub(sol, from, to, signal) {
   const i = (sol.connections || []).findIndex(c => c.from === from && c.to === to && c.signal === signal);
   const pm = S.portMap?.[i]; if (!pm) return "";
   return [pm.from?.label, pm.to?.label].filter(Boolean).join(" → ");
+}
+// a source that has no picture to give a TV: a turntable, a music server / streamer with no HDMI out
+function uniqueLocalId(sol, base) {
+  const taken = new Set([...S.job.house.zones.flatMap(z => [z.id, ...(z.endpoints || []).map(e => e.id)]), ...sol.racks.flatMap(r => r.devices.map(d => d.id)),
+    ...(sol.companions || []).map(c => c.id), ...(sol.localDevices || []).map(d => d.id)]);
+  let id = base, n = 2; while (taken.has(id)) id = `${base}-${n++}`;
+  return id;
+}
+function noPicture(d) {
+  const c = catDev(d.catalogRef);
+  if (c?.outputs && !c.outputs.hdmi) return true;
+  return /turn\s*table|record player|phono|music|sonos (?:port|connect)|streamer|tuner|radio/i.test(`${d.model || ""} ${d.sourceType || ""}`) && !/apple|roku|kaleidescape|cable|blu-?ray/i.test(d.model || "");
+}
+// how many stereo zones an amp has: its own count, else its product's
+function ampZones(d) {
+  return +d.zones || +catDev(d.catalogRef)?.zones || 0;
 }
 function hookupHTML(z, sol, multi) {
   const h = readHookup(S.job, sol, z);
@@ -2325,10 +2398,26 @@ function hookupHTML(z, sol, multi) {
   const byDev = id => devs.find(d => d.id === id);
   if (h.tv) {
     const cur = h.video?.from || (h.tv.ownApps ? "__apps" : "");
-    rows.push(field("TV video", `<select class="hvfrom" data-sub="${esc(jackSub(sol, h.video?.from, h.video?.via || h.tv.id, "video"))}">${opt("", "— not connected —", cur)}${opt("__apps", "TV's own apps (no rack feed)", cur)}
-      <optgroup label="In the rack">${devOpts(VIDEO_FROM, cur)}</optgroup>
-      ${locals.length ? `<optgroup label="In this zone">${locals.map(d => opt(d.id, nm(d.id), cur)).join("")}</optgroup>` : ""}
-      <optgroup label="Add">${opt("__new_avr", "＋ New AV receiver…", "")}</optgroup></select>`));
+    // only what can put a picture on this TV (2026-10-03 picker audit): no turntable or music server, and a
+    // source whose one HDMI out is already plugged in elsewhere is shown but greyed with where it goes
+    const roomRcv = d => (sol.connections || []).some(c => c.from === d.id && c.signal === "speaker" && c.to === h.spk?.id);
+    const othersRcv = d => d.type === "avr" && !roomRcv(d) && d.id !== cur && (sol.connections || []).some(c => c.from === d.id && c.signal === "speaker");
+    const hubsAll = devs.filter(d => VIDEO_FROM.includes(d.type) && d.type !== "source" && !d.danteSwitch)
+      .sort((a, b) => VIDEO_FROM.indexOf(a.type) - VIDEO_FROM.indexOf(b.type));
+    const hubs = hubsAll.filter(d => !othersRcv(d)), away = hubsAll.filter(othersRcv);
+    const srcsAll = devs.filter(d => d.type === "source" && !noPicture(d));
+    const mine = new Set([h.tv.id, ...(sol.companions || []).filter(k => k.serves === h.tv.id).map(k => k.id)]);
+    const busyOut = d => (sol.connections || []).find(c => c.from === d.id && c.signal === "video" && !mine.has(c.to));
+    const srcOpt = d => { const b = busyOut(d); return b && d.id !== cur ? `<option value="${esc(d.id)}" disabled title="${esc(`its HDMI out already goes to ${describeNode(S.job, sol, b.to).short}`)}">${esc(nm(d.id))}</option>` : opt(d.id, nm(d.id), cur); };
+    const hasLocalAtv = locals.some(d => /apple/i.test(d.model || ""));
+    // with a switch or matrix, a source already on it is just noise here (it's picked through the switch)
+    const srcs = hubs.some(d => d.type !== "avr") ? srcsAll.filter(d => !busyOut(d) || d.id === cur) : srcsAll;
+    rows.push(field("Picture from", `<select class="hvfrom">${opt("", "— not connected —", cur)}${opt("__apps", "TV's own apps (no rack feed)", cur)}
+      ${hubs.length ? `<optgroup label="In the rack">${hubs.map(d => opt(d.id, nm(d.id), cur)).join("")}</optgroup>` : ""}
+      ${srcs.length ? `<optgroup label="${hubs.some(d => d.type !== "avr") ? "Straight from a source (skips the switch)" : "Sources in the rack"}">${srcs.map(srcOpt).join("")}</optgroup>` : ""}
+      ${away.length ? `<optgroup label="Another room's receiver" data-search="1">${away.map(d => opt(d.id, nm(d.id), cur)).join("")}</optgroup>` : ""}
+      ${locals.length ? `<optgroup label="At this TV">${locals.map(d => opt(d.id, nm(d.id), cur)).join("")}</optgroup>` : ""}
+      <optgroup label="Add">${hasLocalAtv ? "" : opt("__new_local", "＋ Apple TV at this TV", "")}${opt("__new_avr", "＋ New AV receiver…", "")}</optgroup></select>`));
     if (byDev(cur)) {
       fine.push(field("Run to TV", chips("hvrun", Object.entries(RUNS), h.video.run, "seg")));
       gist.push(RUNS[h.video.run] || h.video.run, z.runFt ? `${z.runFt} ft` : `${(REACH[z.reach || "average"] || "").toLowerCase()} run`);
@@ -2346,26 +2435,53 @@ function hookupHTML(z, sol, multi) {
   if (h.spk) {
     const cur = h.speakers?.from || "";
     const bar = /^soundbar/.test(h.spk.config || "") && h.tv;
-    rows.push(field("Speakers", `<select class="hsfrom" data-sub="${esc(jackSub(sol, h.speakers?.from, h.spk.id, "speaker"))}">${opt("", "— not connected —", cur)}
-      ${bar ? `<optgroup label="In this zone">${opt("__tv", "The TV — powered bar on HDMI eARC", h.speakers?.viaTv ? "__tv" : cur)}</optgroup>` : ""}
-      <optgroup label="In the rack">${devOpts(SPEAKERS_FROM, cur)}</optgroup>
+    // a receiver already driving another room, or an amp with no free zone, is shown greyed with why (2026-10-03)
+    const full = d => {
+      if (d.id === cur) return "";
+      const other = (sol.connections || []).filter(c => c.from === d.id && c.signal === "speaker" && c.to !== h.spk.id);
+      if (d.type === "avr") { const o = other[0]; return o ? `already drives ${describeNode(S.job, sol, o.to).short}` : ""; }
+      const n = outputsNeeded(h.spk) || 2, zones = ampZones(d), next = nextFreeOutputs(sol, d.id, n, h.spk.id);
+      return zones && +String(next).split("-").pop() > zones * 2 ? `full — all ${zones} zones in use` : "";
+    };
+    const spkOpt = d => { const why = full(d); return why ? `<option value="${esc(d.id)}" disabled title="${esc(why)}">${esc(nm(d.id))}</option>` : opt(d.id, nm(d.id), cur); };
+    const drivers = devs.filter(d => SPEAKERS_FROM.includes(d.type)).sort((a, b) => SPEAKERS_FROM.indexOf(a.type) - SPEAKERS_FROM.indexOf(b.type));
+    rows.push(field("Sound from", `<select class="hsfrom">${opt("", "— not connected —", cur)}
+      ${bar ? `<optgroup label="In this room">${opt("__tv", "The TV (soundbar on HDMI eARC)", h.speakers?.viaTv ? "__tv" : cur)}</optgroup>` : ""}
+      <optgroup label="In the rack">${drivers.filter(d => !(d.type === "avr" && full(d))).map(spkOpt).join("")}</optgroup>
+      ${drivers.some(d => d.type === "avr" && full(d)) ? `<optgroup label="Receivers already in use" data-search="1">${drivers.filter(d => d.type === "avr" && full(d)).map(spkOpt).join("")}</optgroup>` : ""}
       <optgroup label="Add">${opt("__new_avr", "＋ New AV receiver…", "")}${opt("__new_amp", "＋ New multi-zone amp…", "")}</optgroup></select>`));
-    if (byDev(cur)?.type === "amp") gist.push(`outputs ${h.speakers.channels || "?"}`);
-    if (byDev(cur)?.type === "amp")
-      fine.push(field("Amp outputs", `<input class="hsch" value="${esc(h.speakers.channels || "")}" placeholder="e.g. ${esc(nextFreeOutputs(sol, cur, outputsNeeded(h.spk) || 2, h.spk.id))}">`));
+    if (byDev(cur)?.type === "amp") {
+      gist.push(`outputs ${h.speakers.channels || "?"}`);
+      // the amp's outputs as a list — free ones to pick, taken ones greyed with the room on them (was a typed field)
+      const amp = byDev(cur), zones = ampZones(amp) || 8, n = outputsNeeded(h.spk) || 2;
+      const taken = new Map();
+      for (const c of sol.connections || []) if (c.from === amp.id && c.signal === "speaker" && c.to !== h.spk.id)
+        for (const k of expandChannels(c.channels)) taken.set(k, describeNode(S.job, sol, c.to).short.replace(/ speakers$/, ""));
+      const blocks = [];
+      for (let a = 1; a + n - 1 <= zones * 2; a += Math.min(n, 2)) blocks.push(n === 1 ? String(a) : `${a}-${a + n - 1}`);
+      const curCh = h.speakers.channels || "";
+      if (curCh && !blocks.includes(curCh)) blocks.unshift(curCh);
+      const blockOpt = b => { const who = expandChannels(b).map(k => taken.get(k)).find(Boolean);
+        const lab = `Outputs ${b}${n === 2 && /^\d+-\d+$/.test(b) ? ` (zone ${Math.ceil(+b.split("-")[0] / 2)})` : ""}`;
+        return who && b !== curCh ? `<option value="${esc(b)}" disabled title="${esc("used by " + who)}">${esc(lab + " — " + who)}</option>` : opt(b, lab, curCh); };
+      fine.push(field("Amp outputs", `<select class="hsch">${curCh ? "" : opt("", "— pick —", "")}${blocks.map(blockOpt).join("")}</select>`));
+    }
   }
-  if (h.tv) {
+  if (h.tv && (h.tv.displayType !== "projector" || h.ret)) {
     // eARC rides the receiver's HDMI (default); optical is a pulled Toslink run,
     // alone or as a backup — only offered where it can exist
     const rcv = byDev(h.video?.from)?.type === "avr" ? byDev(h.video.from) : null;
     const cur = h.audioBack === "optical" ? `optical:${h.ret.to}` : h.audioBack;
     const kitElsewhere = h.audioBack === "earc-kit" && h.ret.to !== rcv?.id;   // the kit into a receiver that no longer feeds the TV
-    const optTargets = devs.filter(d => RETURN_TO.includes(d.type));
+    // the TV's own room's receiver first; a projector has no eARC to send back (2026-10-03)
+    const optTargets = devs.filter(d => RETURN_TO.includes(d.type)).sort((a, b) => (b.id === rcv?.id) - (a.id === rcv?.id));
     gist.push(h.audioBack === "optical" ? "optical back" : h.audioBack === "none" || !h.audioBack ? "no audio back" : (AUDIO_BACK[h.audioBack] || h.audioBack).replace(/\s*\(.*\)$/, ""));
     fine.push(field("TV audio back", `<select class="hret">
-      ${rcv ? opt("earc", `${AUDIO_BACK.earc} (to ${nm(rcv.id)})`, cur) + opt("earc+optical", `${AUDIO_BACK["earc+optical"]} (to ${nm(rcv.id)})`, cur)
+      ${rcv && h.tv.displayType !== "projector" ? opt("earc", `${AUDIO_BACK.earc} (to ${nm(rcv.id)})`, cur) + opt("earc+optical", `${AUDIO_BACK["earc+optical"]} (to ${nm(rcv.id)})`, cur)
         + opt("earc-kit", `${AUDIO_BACK["earc-kit"]} (to ${nm(rcv.id)})`, cur) : ""}
-      ${optTargets.map(d => opt(`optical:${d.id}`, `Optical only → ${nm(d.id)}`, cur)).join("")}
+      ${optTargets.filter(d => d.id === rcv?.id || d.type !== "avr" || cur === `optical:${d.id}` || !(sol.connections || []).some(c => c.from === d.id && c.signal === "speaker")).map(d => opt(`optical:${d.id}`, `Optical only → ${nm(d.id)}`, cur)).join("")}
+      ${(() => { const rest = optTargets.filter(d => !(d.id === rcv?.id || d.type !== "avr" || cur === `optical:${d.id}` || !(sol.connections || []).some(c => c.from === d.id && c.signal === "speaker")));
+        return rest.length ? `<optgroup label="Another room's receiver" data-search="1">${rest.map(d => opt(`optical:${d.id}`, `Optical only → ${nm(d.id)}`, cur)).join("")}</optgroup>` : ""; })()}
       ${kitElsewhere ? opt("earc-kit", `${AUDIO_BACK["earc-kit"]} (to ${nm(h.ret.to)})`, cur) : ""}
       ${opt("none", AUDIO_BACK.none, cur)}</select>`));
     if (h.audioBack === "earc-kit")
@@ -2390,9 +2506,11 @@ function hookupHTML(z, sol, multi) {
     nudge = `<button class="addbtn hsame sug" data-what="video" data-dev="${esc(sDev.id)}"><span aria-hidden="true">✦</span><span class="t">Feed the TV from ${esc(sDev.model || sDev.id)} too</span><span class="ap">Apply</span></button>`;
   else if (h.spk && vDev?.type === "avr" && h.speakers?.from !== vDev.id)
     nudge = `<button class="addbtn hsame sug" data-what="speakers" data-dev="${esc(vDev.id)}"><span aria-hidden="true">✦</span><span class="t">Drive the speakers from ${esc(vDev.model || vDev.id)} too</span><span class="ap">Apply</span></button>`;
+  const jv = h.tv && jackSub(sol, h.video?.from, h.video?.via || h.tv.id, "video"), js = h.spk && jackSub(sol, h.speakers?.from, h.spk.id, "speaker");
+  if (jv || js) fine.unshift(field("Jacks", `<span class="mini" style="line-height:1.5">${[jv && "TV: " + esc(jv), js && "Speakers: " + esc(js)].filter(Boolean).join("<br>")}</span>`));
   const wk = "wire:" + z.id;
   if (h.dante) gist.push("Dante");
-  const details = fine.length ? `<details class="more wiring" data-more="${esc(wk)}" ${S.openRows.has(wk) ? "open" : ""}><summary>${esc(gist.filter(Boolean).join(" · ") || "Wiring details")}</summary>${fine.join("")}</details>` : "";
+  const details = fine.length ? `<details class="more wiring" data-more="${esc(wk)}" ${S.openRows.has(wk) ? "open" : ""}><summary>Cabling details <span class="mini">${esc(gist.filter(Boolean).join(" · "))}</span></summary>${fine.join("")}</details>` : "";
   return `<div class="sect">WHAT FEEDS THIS ROOM${multi ? ` <span class="mini">${esc(sol.name)}</span>` : ""}</div>${rows.join("")}${nudge}${details}`;
 }
 
@@ -2431,13 +2549,14 @@ function gearHTML(o = {}) {
         ${drifted(d) ? `<div class="mini" style="margin:-2px 0 6px 80px;color:#8a5a00">The drawing says “${esc(d.model || "")}”, the product is “${esc(drifted(d))}”. <a href="#" class="dusecat">Use “${esc(drifted(d))}”</a></div>` : ""}
         <div class="sect">INPUTS${cap.ins ? ` <span class="mini">${esc(cap.ins)}</span>` : ""}</div>
         <div class="ports">${ins.length ? ins.map(([c, i]) => connRowHTML(c, i, sol, d.id, "in")).join("") : `<div class="empty">Nothing plugged in yet.</div>`}
-          <button class="addconn" data-dir="in">＋ Plug something in</button></div>
+          <button class="addconn" data-dir="in">＋ Add an input</button></div>
         <div class="sect">OUTPUTS${cap.outs ? ` <span class="mini">${esc(cap.outs)}</span>` : ""}</div>
         <div class="ports">${outs.length ? outs.map(([c, i]) => connRowHTML(c, i, sol, d.id, "out")).join("") : `<div class="empty">Not feeding anything yet.</div>`}
-          <button class="addconn" data-dir="out">＋ Connect an output</button></div>
+          <button class="addconn" data-dir="out">＋ Add an output</button></div>
         ${encAudioHTML(sol, d)}
         <details class="more" data-more="more:${esc(d.id)}" ${S.openRows.has("more:" + d.id) ? "open" : ""}><summary>More — type, status${d.type === "amp" ? ", zones" : ""}</summary>
-          ${field("Type", sel("dtype", DEV_TYPES, d.type, { ...DEV_TYPE_LABEL, source: "Source (Apple TV, cable box, streamer…)" }))}
+          ${field("Type", sel("dtype", DEV_TYPES.filter(ty => ty === d.type || [...ins.map(([c]) => ["to", c]), ...outs.map(([c]) => ["from", c])]
+              .every(([end, c]) => endFits(end, d.id, end === "to" ? c.from : c.to, c.signal, ty))), d.type, { ...DEV_TYPE_LABEL, source: "Source (Apple TV, cable box, streamer…)" }))}
           ${d.type === "amp" ? field("Zones", `<input class="dzones" type="number" min="1" max="32" value="${esc(d.zones || 8)}">`) : ""}
           ${field("Status", sel("dstatus", STATUSES.slice(0, 2), d.status || "new", STATUS_LABEL))}
           <div style="text-align:right"><button class="del ddel">delete device</button></div>
@@ -2469,9 +2588,9 @@ function connRowHTML(c, i, sol, ctx, dir) {
       <div class="head" data-toggle="${esc(key)}"><span class="t">${esc(title)}</span><span class="sub">${esc(tail)}</span></div>
       ${jacks}
       <div class="fields">
-        ${field("From", nodeSel("cfrom", c.from))}
-        ${field("To", nodeSel("cto", c.to))}
-        ${field("Carries", sel("csig", SIGNALS, c.signal, SIGNAL_LABEL))}
+        ${field("From", nodeSel("cfrom", c.from, id => endFits("from", id, c.to, c.signal)))}
+        ${field("To", nodeSel("cto", c.to, id => endFits("to", id, c.from, c.signal)))}
+        ${field("Carries", sel("csig", SIGNALS.filter(g => g === c.signal || (endFits("from", c.from, c.to, g) && endFits("to", c.to, c.from, g))), c.signal, SIGNAL_LABEL))}
         ${c.signal === "video" && fromRcv ? field("eARC", `<input type="checkbox" class="cearc" ${c.earc ? "checked" : ""}> <span class="mini">the TV's audio comes back over this HDMI</span>`) : ""}
         ${c.signal === "audioReturn" && !c.earcKit ? field("Backup", `<input type="checkbox" class="cbackup" ${c.backup ? "checked" : ""}> <span class="mini">optical backup to eARC</span>`) : ""}
         ${c.signal !== "network" ? field("Outputs", `<input class="cch" placeholder="optional, e.g. 3-4" title="Which outputs this uses — amp channels (3-4) or a matrix output (2). Shows on the channel strip." value="${esc(c.channels || "")}">`) : ""}
@@ -2861,7 +2980,7 @@ function jobHTML() {
       ${field("Name", `<input class="jclient" value="${esc(J.client?.name || "")}">`)}
       ${field("Address", `<input class="jaddr" value="${esc(J.client?.address || "")}">`)}
       ${field("Drawn by", `<input class="jdrawn" value="${esc(J.drawnBy || "")}">`)}
-      ${field("Group zones", sel("jgroup", ["type", "type-outdoor", "order"], J.zoneGrouping || "type", ZONE_GROUPING_NAME))}
+      ${field("Group rooms", sel("jgroup", ["type", "type-outdoor", "order"], J.zoneGrouping || "type", ZONE_GROUPING_NAME))}
     </div></div>
     <div class="sect">SOLUTION</div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
@@ -2890,7 +3009,7 @@ function jobHTML() {
     </div></div>
     <details class="more advanced" data-more="adv:conns" id="advConns" ${S.openRows.has("adv:conns") || S.connQuery ? "open" : ""}><summary>Advanced — every connection (${S.job.solutions[S.sol].connections.length}), searchable</summary>
     <div class="sect" id="allConns">ALL CONNECTIONS <span class="badge">${S.job.solutions[S.sol].connections.length}</span></div>
-    <input id="connSearch" placeholder="Search — a box, a zone, a signal…" value="${esc(S.connQuery || "")}">
+    <input id="connSearch" placeholder="Search — a box, a room, a signal…" value="${esc(S.connQuery || "")}">
     <div id="connList">${allConnsHTML()}</div>
     <button class="addbtn" id="addConn">＋ Add connection</button>
     </details>`;
@@ -3363,7 +3482,14 @@ function wirePanel(body) {
     let spk = z.endpoints.find(e => e.type === "speakers");
     if (scopeSol && (el.value === "none" || !spk)) return structural();
     if (el.value === "none") { z.endpoints = z.endpoints.filter(e => e.type !== "speakers"); purgeHouseRefs([spk?.id].filter(Boolean)); }
-    else if (spk) setF("endpoints", spk, "config", el.value);
+    else if (spk) {
+      // a soundbar played off its TV: that TV → bar wire means nothing to a stereo pair or a surround set (2026-10-03 hammer)
+      if (/^soundbar/.test(spk.config || "") && !/^soundbar/.test(el.value)) {
+        const tvId = z.endpoints.find(e => e.type === "display")?.id;
+        for (const so of S.job.solutions) so.connections = (so.connections || []).filter(c => !(c.to === spk.id && c.from === tvId));
+      }
+      setF("endpoints", spk, "config", el.value);
+    }
     else z.endpoints.unshift({ id: uid(z.id + "-spk"), type: "speakers", config: el.value, count: 2, status: "new" });
   });
   on(".spkcount", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "speakers"), "count", +el.value); });
@@ -3384,7 +3510,7 @@ function wirePanel(body) {
   zon(".tvstatus", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "status", el.value); });
   on(".tvconfirm", el => { const t = zoneOf(el)?.endpoints.find(e => e.type === "display"); if (t) { if (el.checked) t.confirm = ["size"]; else delete t.confirm; } });
   body.querySelectorAll(".zdel").forEach(el => el.onclick = () => {
-    const z = zoneOf(el); if (!z || !confirm(`Delete zone "${z.name}"?`)) return;
+    const z = zoneOf(el); if (!z || !confirm(`Delete room "${z.name}"?`)) return;
     S.job.house.zones = S.job.house.zones.filter(x => x !== z);
     purgeHouseRefs((z.endpoints || []).map(e => e.id), z.id);
     S.openRows.delete(z.id);
@@ -3392,7 +3518,7 @@ function wirePanel(body) {
   });
   const addZone = body.querySelector("#addZone");
   if (addZone) addZone.onclick = () => {
-    const name = prompt("Zone name:", "New Zone"); if (!name) return;
+    const name = prompt("Room name:", "New Room"); if (!name) return;
     const id = uid("z");
     S.job.house.zones.push({ id, name, scope: "included",
       endpoints: [{ id: uid(id + "-spk"), type: "speakers", config: "stereo", count: 2, status: "new" }] });
@@ -3423,10 +3549,25 @@ function wirePanel(body) {
 
   /* zone hookup */
   const hook = (el, fn) => { const z = zoneOf(el); if (!z) return; fn(z, S.job.solutions[S.sol]); refresh(); };
-  const newDev = (sol, v) => {
-    const type = v === "__new_amp" ? "amp" : "avr";
-    const model = prompt(type === "amp" ? "Amp model:" : "Receiver model:", type === "amp" ? "Multi-zone amp" : "AV receiver");
-    return model ? addRackDevice(S.job, sol, type, model) : null;
+  // "＋ New AV receiver… / amp…": pick the product from the catalog (tap, don't type — was a typed prompt),
+  // then it goes in the room's rack and takes the job it was added for
+  const newDev = (el, v, then) => {
+    const type = v === "__new_amp" ? "amp" : "avr", z = zoneOf(el);
+    const EC = effectiveCatalog();
+    const items = Object.entries(EC.devices || {}).filter(([, c]) => c.type === type && !/LEGACY/.test(c.notes || ""))
+      .map(([id, c]) => ({ value: id, label: productName(c), sub: [productSku(c) !== c.model ? productSku(c) : "", c.zones ? `${c.zones} zones` : ""].filter(Boolean).join(" · ") }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    const generic = type === "amp" ? "Multi-zone amp" : "AV receiver";
+    openPicker({ title: type === "amp" ? "Add a multi-zone amp" : "Add an AV receiver",
+      groups: [{ label: "From the catalog", items }, { label: "Not in the catalog", items: [{ value: "__generic", label: `${generic} (model to be picked)` }] }],
+      onPick: ref => {
+        const sol = S.job.solutions[S.sol], c = EC.devices?.[ref];
+        const area = (S.job.house.areas || []).find(a => a.id === z?.area);
+        const id = addRackDevice(S.job, sol, type, c ? productName(c) : generic, { ...(c ? { catalogRef: ref } : {}), ...(c?.zones ? { zones: c.zones } : {}), ...(area?.homeRack ? { rackId: area.homeRack } : {}) });
+        S.editLabel = `Add ${c ? productName(c) : generic}${z ? " — " + z.name : ""}`;
+        if (z) then(z, sol, id);
+        refresh();
+      } });
   };
   body.querySelectorAll(".encaud").forEach(el => el.onchange = () => {
     pushUndo("encoder audio out");
@@ -3439,13 +3580,19 @@ function wirePanel(body) {
   body.querySelectorAll(".hvfrom").forEach(el => el.onchange = () => hook(el, (z, sol) => {
     let v = el.value;
     if (v === "__apps") { setVideo(S.job, sol, z, null); const tv = z.endpoints.find(e => e.type === "display"); if (tv) tv.ownApps = true; return; }
-    if (v.startsWith("__new_")) { v = newDev(sol, v); if (!v) return; }
+    if (v === "__new_local") {   // an Apple TV behind this TV, feeding it straight
+      v = uniqueLocalId(sol, z.id + "-src");
+      (sol.localDevices ||= []).push({ id: v, type: "source", sourceType: "appletv", model: "Apple TV", status: "new", zone: z.id, location: "at-display" });
+    }
+    if (v.startsWith("__new_")) { newDev(el, v, (z, sol, id) => { setVideo(S.job, sol, z, id); followReturn(S.job, sol, z); }); return; }
     setVideo(S.job, sol, z, v || null);
+    followReturn(S.job, sol, z);
     if (!v) delete z.endpoints.find(e => e.type === "display")?.ownApps;
   }));
   body.querySelectorAll(".hsfrom").forEach(el => el.onchange = () => hook(el, (z, sol) => {
-    let v = el.value; if (v.startsWith("__new_")) { v = newDev(sol, v); if (!v) return; }
+    const v = el.value; if (v.startsWith("__new_")) { newDev(el, v, (z, sol, id) => { setSpeakers(S.job, sol, z, id); followReturn(S.job, sol, z); }); return; }
     setSpeakers(S.job, sol, z, v || null);
+    followReturn(S.job, sol, z);
   }));
   body.querySelectorAll(".hsch").forEach(el => el.onchange = () => hook(el, (z, sol) =>
     setSpeakers(S.job, sol, z, readHookup(S.job, sol, z).speakers?.from, el.value.trim())));
@@ -3535,7 +3682,7 @@ function wirePanel(body) {
         if (z.id !== oldId) for (const ep of z.endpoints) ep.id = ep.id.replace(oldId, z.id);
         const notes = [];
         if (hints.local) {
-          notes.push("TV fed by a source in the zone");
+          notes.push("TV fed by a source in the room");
           S.job.solutions[S.sol].localDevices.push({ id: uid(z.id + "-src"), type: "source",
             sourceType: "appletv", model: "Apple TV", status: "new", zone: z.id, location: "at-display" });
         }
@@ -3615,16 +3762,13 @@ function wirePanel(body) {
   on(".dzones", el => { const { d } = devOf(el); if (d) d.zones = +el.value; });
   on(".dstatus", el => { const { d } = devOf(el); if (d) d.status = el.value; });
   body.querySelectorAll(".ddel").forEach(el => el.onclick = () => {
-    const { d, r } = devOf(el); if (!d || !confirm(`Delete "${d.model || d.id}"?`)) return;
-    r.devices = r.devices.filter(x => x !== d);
+    const { d } = devOf(el); if (!d) return;
     const sol = S.job.solutions[S.sol];
-    // the device's chips go with it — and so do the wires into those chips
-    const gone = new Set([d.id, ...(sol.companions || []).filter(c => c.serves === d.id).map(c => c.id)]);
-    sol.connections = sol.connections.filter(c => !gone.has(c.from) && !gone.has(c.to));
-    sol.companions = (sol.companions || []).filter(c => !gone.has(c.id));
-    for (const c of sol.connections) if (c.routeHint?.between?.includes?.(d.id)) delete c.routeHint;   // custom route named it
-    S.openRows.delete(d.id);
+    // the box, its encoders, and the decoders / baluns that only it fed — one tap, one Undo (no "are you sure?")
+    const rooms = removeRackDevice(S.job, sol, d.id);
+    S.openRows.delete(d.id); S.editLabel = `delete ${d.model || d.id}`;
     refresh();
+    toast(`Deleted ${d.model || d.id}${rooms.length ? ` — ${rooms.length > 3 ? `${rooms.length} rooms` : rooms.join(", ")} need${rooms.length === 1 ? "s" : ""} a new feed` : ""}`, true);
   });
   // adding a box starts from the library (2026-10-01): the product you pick — a shipped one or
   // one you made (an MDX-16 copied into an MDX-18) — arrives linked, typed and named
@@ -3641,6 +3785,7 @@ function wirePanel(body) {
         linkProduct(d, v);
       }
       r.devices.push(d); S.openRows.add(d.id);
+      if (encodeSource(S.job, sol, d.id, effectiveCatalog())) toast(`${d.model || "Source"} added on its own MXNet encoder`);
       refresh();
     } });
   });
@@ -3657,9 +3802,12 @@ function wirePanel(body) {
   on(".cscope", el => { const c = connOf(el); if (c) { if (el.value !== "included") c.scope = el.value; else delete c.scope; } });
   body.querySelectorAll(".cdel").forEach(el => el.onclick = () => {
     const sol = S.job.solutions[S.sol];
-    sol.connections.splice(+el.closest("[data-ci]").dataset.ci, 1);
+    const [gone] = sol.connections.splice(+el.closest("[data-ci]").dataset.ci, 1);
     for (const k of [...S.openRows]) if (k.startsWith("conn:")) S.openRows.delete(k);   // indices shifted (every context)
+    const what = gone ? `${nodeInfo(gone.from).short} → ${nodeInfo(gone.to).short}` : "connection";
+    S.editLabel = `delete ${what}`;
     refresh();
+    toast(`Deleted ${what}`, true);   // no "are you sure?" — one tap brings it back
   });
   const addConn = body.querySelector("#addConn");
   if (addConn) addConn.onclick = () => {
@@ -3711,10 +3859,10 @@ function wirePanel(body) {
     const item = c => ({ value: c.id, label: c.port ? `${c.name} — ${c.port}` : c.name, disabled: c.disabled, reason: c.reason,
       sub: c.disabled ? "" : [c.note, c.other ? `${dir === "in" ? "into" : "from"} ${d.model || d.id} ${c.other}` : ""].filter(Boolean).join(" · ") });
     const ok = cands.filter(c => !c.disabled), no = cands.filter(c => c.disabled);
-    const groups = ["In the rack", "Adapters", "In the zones"].map(g => ({ label: g, items: ok.filter(c => c.group === g).map(item) }));
-    groups.push({ label: "Can't connect", items: no.map(item) });
+    const groups = ["In the rack", "Adapters", "In the rooms"].map(g => ({ label: g, items: ok.filter(c => c.group === g).map(item) }));
+    groups.push({ label: "Can't connect (search to see why)", items: no.map(item), searchOnly: true });   // the long list of misfits only while searching (2026-10-03)
     groups.push({ label: "Advanced", items: [{ value: "__free", label: "Any connection — pick both ends and the signal yourself", sub: "for the exceptions: nothing is checked" }] });
-    openPicker({ title: dir === "in" ? `Plug into ${d.model || d.id}` : `Connect an output of ${d.model || d.id}`, groups, onPick: v => {
+    openPicker({ title: dir === "in" ? `Add an input to ${d.model || d.id}` : `Add an output from ${d.model || d.id}`, groups, onPick: v => {
       if (v === "__free") {
         const other = allNodes().find(x => x !== d.id) || "";
         sol.connections.push(dir === "in" ? { from: other, to: d.id, signal: suggestSignal(other, d.id) || "video" } : { from: d.id, to: other, signal: suggestSignal(d.id, other) || "video" });

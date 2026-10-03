@@ -887,6 +887,53 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
       t("receivers: the drawn tile says the room on top and the product under it (Loft · Anthem MRX 540)", />Loft</.test(tile(avr540)) && />Anthem MRX 540</.test(tile(avr540))); }
     t("receivers: the AI's job summary says which room each drives", /MRX 1140 — AV receiver driving Theater/.test((await import("./ai.js")).jobSummary(j, 0, CATn)));
   }
+  { // picker audit fixes (2026-10-03): names that don't grow, twins told apart, full amps, areas, encoders, no vanishing wires
+    const Nn = await import("./names.js"), Cm = await import("./commands.js"), Hk = await import("./hookup.js"), Sk = await import("./starters.js"), Im = await import("./importers.js");
+    const CATp = await (await fetch("./catalog.json")).json();
+    t("names: a receiver says its one room, never a growing list", Nn.withRooms("Anthem MRX 540", ["Family Room", "Master Bed", "Patio"]) === "Anthem MRX 540 — Family Room");
+    let j = Sk.applyStarter(Im.skeletonJob("T"), Sk.STARTERS.find(k => k.id === "mxnet"), CATp);
+    j = Cm.planCommands(j, 0, [{ op: "add_zones", text: "a stereo, b stereo, c stereo, d stereo, e stereo, f stereo, g stereo, h stereo, i stereo, k stereo" }], CATp).job;
+    let sol = j.solutions[0];
+    const amps = sol.racks.flatMap(r => r.devices).filter(d => d.type === "amp");
+    const unfed = j.house.zones.filter(z => !Hk.readHookup(j, sol, z).speakers).map(z => z.name);
+    t("quick-add: ten stereo rooms on an 8-zone amp — a second amp joins, nobody is left unfed", amps.length === 2 && !unfed.length, `${amps.length} amps, unfed: ${unfed}`);
+    t("names: two identical amps are told apart in every picker", new Set(amps.map(d => Nn.describeNode(j, sol, d.id).short)).size === 2, amps.map(d => Nn.describeNode(j, sol, d.id).short).join(" | "));
+    j = Cm.planCommands(j, 0, [{ op: "add_device", product: "Apple TV", name: "Apple TV 9", type: "source" }], CATp).job; sol = j.solutions[0];
+    const atv = sol.racks.flatMap(r => r.devices).find(d => d.model === "Apple TV 9");
+    const enc = (sol.companions || []).find(k => k.serves === atv.id);
+    t("add a source to an MXNet rack: it comes on its own encoder into the switch", !!enc && sol.connections.some(c => c.from === enc.id && c.signal === "video"));
+    j = Cm.planCommands(j, 0, [{ op: "add_rack", name: "Casita Rack" }, { op: "add_device", product: "MDX-8", rack: "Casita Rack" }], CATp).job; sol = j.solutions[0];
+    const casRack = sol.racks.find(r => r.name === "Casita Rack");
+    j.house.areas = [{ id: "a-main", name: "Main House", homeRack: sol.racks[0].id }, { id: "a-cas", name: "Guest Casita", homeRack: casRack.id }];
+    j = Cm.planCommands(j, 0, [{ op: "add_zones", text: "casita bedroom stereo, casita living room 5.1 65" }], CATp).job; sol = j.solutions[0];
+    const cb = j.house.zones.find(z => z.name === "Casita Bedroom"), cl = j.house.zones.find(z => z.name === "Casita Living Room");
+    const inCasita = id => sol.racks.find(r => r.name === "Casita Rack").devices.some(d => d.id === id);
+    t("areas: a quick-added casita room lands in the casita's area", cb.area === "a-cas" && cl.area === "a-cas");
+    t("areas: it wires to the casita rack's amp, and its new receiver goes in the casita rack", inCasita(Hk.readHookup(j, sol, cb).speakers?.from) && inCasita(Hk.readHookup(j, sol, cl).speakers?.from));
+    const ba = await (await fetch("../mock-system-belair.json")).json();
+    const Lb = loadJob(effectiveJob(ba, 0)), vb = validate(Lb.job, Lb.ix), pb = enginePlace(Lb.job, Lb.ix), rb = engineRoute(Lb.job, Lb.ix, pb);
+    t("bel air (30 rooms, 4 racks): loads with zero errors", !vb.errors.length, vb.errors.map(e => e.msg).join(" | "));
+    t("bel air: every wire is drawn (a crowded staple lane widens, else draws flagged — never vanishes)", !rb.warnings.some(w => w.code === "unrouted"), rb.warnings.filter(w => w.code === "unrouted").map(w => w.msg).join(" | "));
+    { // delete the MXNet switch: its decoders go too, and every room it fed says so
+      const jd = structuredClone(ba), sd = jd.solutions[0], sw = sd.racks.flatMap(r => r.devices).find(d => d.type === "avSwitch");
+      const rooms = Hk.removeRackDevice(jd, sd, sw.id);
+      const Ld = loadJob(effectiveJob(jd, 0)), vd = validate(Ld.job, Ld.ix);
+      t("delete a switch: no decoder or balun is left wired to a TV with nothing feeding it", !sd.companions.some(k => /^dec/.test(k.type) && !sd.connections.some(c => c.to === k.id)));
+      t("delete a switch: the rooms it fed are named, and each TV is an error", rooms.length >= 20 && vd.errors.filter(e => /(TV|projector) has nothing feeding it/.test(e.msg)).length >= 20, `${rooms.length} rooms · ${vd.errors.length} errors`); }
+    { // a TV whose decoder lost its feed (the wire into it re-pointed) is unfed, not green
+      const jo = structuredClone(ba), so = jo.solutions[0], dec = so.companions.find(k => k.type === "dec" && !k.variant);
+      so.connections = so.connections.filter(c => c.to !== dec.id);
+      const Lo = loadJob(effectiveJob(jo, 0)), vo = validate(Lo.job, Lo.ix);
+      t("a decoder with nothing into it: its TV is flagged", vo.errors.some(e => /isn't connected to anything/.test(e.msg)), vo.errors.map(e => e.msg).join(" | ")); }
+    { // move a room to another receiver: its TV's optical return goes with it
+      let jr = Sk.applyStarter(Im.skeletonJob("R"), Sk.STARTERS.find(k => k.id === "theater-receiver"), CATp);
+      jr = Cm.planCommands(jr, 0, [{ op: "add_zones", text: "family room 5.1 75, den 5.1 65" }], CATp).job;
+      const sr = jr.solutions[0], fam = jr.house.zones.find(z => z.name === "Family Room"), den = jr.house.zones.find(z => z.name === "Den");
+      Hk.setAudioBack(jr, sr, fam, "optical", Hk.readHookup(jr, sr, fam).speakers.from);
+      const denAvr = Hk.readHookup(jr, sr, den).speakers.from;
+      Hk.setVideo(jr, sr, fam, denAvr); Hk.setSpeakers(jr, sr, fam, denAvr); Hk.followReturn(jr, sr, fam);
+      t("move a room to another receiver: the TV's audio return follows it", Hk.readHookup(jr, sr, fam).ret?.to === denAvr, JSON.stringify(Hk.readHookup(jr, sr, fam).ret)); }
+  }
   { // re-import merge: House refreshes, Solutions and endpoint ids survive
     const target = structuredClone(fixtures.residence);
     const walk = structuredClone(miniWalk);
@@ -3158,7 +3205,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const KEY = /["'](price|priceUsd|prices|msrp|cost|costUsd|sellPrice|dealerPrice|listPrice|retailPrice|unitPrice)["']\s*:/i;
     // built from pieces, so this file doesn't itself read as the export to check-public.py
     const PQ = new RegExp([["Synergy Plan", "Queue Catalog"], ["dealer sell", " pric"], ["contains", " dealer"], ['^\\s*"?sku"?,\\s*"?name"?,\\s*"?manufacturer"?,\\s*"?category"?,\\s*"?pr', "ice"]].map(p => p.join("")).join("|"), "im");
-    const files = ["../index.html", "../README.md", "../BUILDING.md", "./catalog.json", "../mock-system-residence.json", "../mock-system-estate.json", "../mock-system-stress.json",
+    const files = ["../index.html", "../README.md", "../BUILDING.md", "./catalog.json", "../mock-system-residence.json", "../mock-system-estate.json", "../mock-system-belair.json", "../mock-system-stress.json",
       ...["ai", "asbuilt", "audiochain", "commands", "engine", "exports", "fuzz-jobs", "hookup", "importers", "kinds", "library", "names", "network", "pages", "ports", "power", "quickadd", "rack", "route-audit", "sheets", "starters"].map(m => `./${m}.js`)];
     const found = [];
     for (const f of files) {

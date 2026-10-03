@@ -11,7 +11,7 @@
    Pure functions over the raw job — no DOM. */
 
 import { describeNode, productName, TYPE_NAME, SPEAKER_SETUP, SIGNAL_NAME, SCOPE_NAME, STATUS_NAME, REMOTE_NAME, AUDIO_BACK_NAME } from "./names.js";
-import { readHookup, setVideo, setSpeakers, setAudioBack, addRackDevice, autoHookup, nextFreeOutputs, outputsNeeded, RUNS, setAdapterAudio } from "./hookup.js";
+import { readHookup, setVideo, setSpeakers, setAudioBack, addRackDevice, autoHookup, nextFreeOutputs, outputsNeeded, RUNS, setAdapterAudio, encodeSource, removeRackDevice, followReturn } from "./hookup.js";
 import { parseQuick, parseQuickZone, roomTexts } from "./quickadd.js";
 import { fitRacks } from "./racksizes.js";
 
@@ -211,6 +211,14 @@ const HANDLERS = {
       if (z.id !== oldId) for (const ep of z.endpoints) ep.id = ep.id.replace(oldId, z.id);
       if (hints.local) (sol.localDevices ||= []).push({ id: freeId(job, sol, z.id + "-src"), type: "source", sourceType: "appletv",
         model: "Apple TV", status: "new", zone: z.id, location: "at-display" });
+      // a job with areas (main house, casita, pool house): "casita bedroom" lands in the Guest Casita and wires to its rack
+      if (!z.area && (job.house.areas || []).length) {
+        // the area's name without "the / guest / area" has to be in the room's name ("pool house bar", not "pool deck")
+        const core = a => String(a.name || "").toLowerCase().replace(/\b(the|guest|area)\b/g, " ").replace(/\s+/g, " ").trim();
+        const nameL = z.name.toLowerCase();
+        const hit = job.house.areas.find(a => core(a).length > 2 && nameL.includes(core(a)));
+        if (hit) z.area = hit.id;
+      }
       job.house.zones.push(z);
       autoHookup(job, sol, z, hints);
       const h = readHookup(job, sol, z);
@@ -298,6 +306,7 @@ const HANDLERS = {
       h = readHookup(job, sol, z);
       did.push(from ? `speakers ← ${nm(job, sol, from)}${h.speakers.channels ? ` outputs ${h.speakers.channels}` : ""}` : "disconnect the speakers");
     }
+    if (c.audio_back == null && (tvFrom !== undefined || spkFrom !== undefined)) followReturn(job, sol, z);   // the TV's sound follows the room's receiver
     if (c.audio_back != null) {
       if (!h.tv) throw new Error(`${z.name} has no TV`);
       const mode = norm(c.audio_back).replace(/\s*\+\s*/, "+").replace("earc + optical", "earc+optical");
@@ -365,7 +374,8 @@ const HANDLERS = {
     const d = rackDevices(sol).find(x => x.id === id);
     if (ref) d.catalogRef = ref;
     if (type === "amp" && cat?.zones) d.zones = cat.zones;
-    return `Add ${model} to the rack${cat ? "" : " (not in the catalog)"} · ${TYPE_NAME[type] || type}`;
+    const enc = type === "source" && encodeSource(job, sol, id, catalog);
+    return `Add ${model} to the rack${cat ? "" : " (not in the catalog)"} · ${TYPE_NAME[type] || type}${enc ? " · on its own MXNet encoder" : ""}`;
   },
 
   add_rack(job, sol, c) {
@@ -458,14 +468,9 @@ const HANDLERS = {
 
   delete_device(job, sol, c) {
     const f = findDevice(job, sol, c.device); if (!f.device) throw new Error(f.error);
-    const d = f.device;
-    for (const r of sol.racks) r.devices = r.devices.filter(x => x !== d);
-    const gone = new Set([d.id, ...(sol.companions || []).filter(a => a.serves === d.id).map(a => a.id)]);
-    const n = (sol.connections || []).filter(x => gone.has(x.from) || gone.has(x.to)).length;
-    sol.connections = (sol.connections || []).filter(x => !gone.has(x.from) && !gone.has(x.to));
-    sol.companions = (sol.companions || []).filter(a => !gone.has(a.id));
-    for (const x of sol.connections) if (x.routeHint?.between?.includes?.(d.id)) delete x.routeHint;
-    return `Delete ${d.model}${n ? ` and its ${n} connection${n > 1 ? "s" : ""}` : ""}`;
+    const d = f.device, n0 = (sol.connections || []).length;
+    const rooms = removeRackDevice(job, sol, d.id), n = n0 - sol.connections.length;
+    return `Delete ${d.model}${n ? ` and its ${n} connection${n > 1 ? "s" : ""}` : ""}${rooms.length ? ` — ${rooms.length > 3 ? `${rooms.length} rooms` : rooms.join(", ")} now need${rooms.length === 1 ? "s" : ""} a feed` : ""}`;
   },
 
   set_job(job, sol, c) {

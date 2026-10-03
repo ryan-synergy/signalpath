@@ -395,7 +395,7 @@ export function validate(job, ix = indexJob(job)) {
   const names = {};
   job.house.zones.forEach(z => { names[z.name] = (names[z.name] || 0) + 1; });
   Object.entries(names).filter(([, n]) => n > 1)
-    .forEach(([n]) => W("dup-zone-name", `${names[n]} zones are named "${n}" — give each its own name so the drawing and schedules can tell them apart`));
+    .forEach(([n]) => W("dup-zone-name", `${names[n]} rooms are named "${n}" — give each its own name`));
 
   // areas / homeRack refs
   const areaIds = new Set((job.house.areas || []).map(a => a.id));
@@ -447,7 +447,7 @@ export function validate(job, ix = indexJob(job)) {
       if (!SIGNAL_COLORS[c.signal]) E("bad-signal", `${nm(c.from)} → ${nm(c.to)}: ${c.signal ? `unknown signal "${c.signal}"` : "no signal type set"}`, `${c.from}→${c.to}`);
       // a custom-route hint that names vanished devices is stale, not fatal
       if (c.routeHint?.between && !(Array.isArray(c.routeHint.between) && c.routeHint.between.every(id => s.devices[id])))
-        W("route-hint-stale", `${nm(c.from)} → ${nm(c.to)}: the custom route named gear that was removed — routing it automatically`, `${c.from}→${c.to}`);
+        W("route-hint-stale", `${nm(c.from)} → ${nm(c.to)}: its hand-drawn path went past gear that's gone — drawn automatically again`, `${c.from}→${c.to}`);
     }
 
     // orphan endpoints: every endpoint must be fed (be `to` of >=1 edge) —
@@ -468,6 +468,17 @@ export function validate(job, ix = indexJob(job)) {
       if (scope === "prewire") { W("orphan-endpoint", `${nm(eid)} (pre-wire) isn't wired to the rack yet — its cable has no home run`, eid); continue; }
       E("orphan-endpoint", `${nm(eid)} has nothing feeding it — add a connection`, eid);
     }
+    // a TV whose only feed is its decoder / balun, and nothing feeds that (its switch or receiver was deleted,
+    // or the wire into it re-pointed): as dark as an unwired TV — say so (2026-10-03 hammer: every room stayed green)
+    const compIns = id => (sol.connections || []).some(c => c.to === id && c.signal !== "network");
+    for (const eid of Object.keys(ix.endpointsById)) {
+      if (ix.endpointsById[eid].type !== "display" || !fed.has(eid)) continue;
+      const feeds = (sol.connections || []).filter(c => c.to === eid && c.signal === "video");
+      if (!feeds.length) continue;
+      const dead = feeds.every(c => { const k = (sol.companions || []).find(x => x.id === c.from); return k && !compIns(k.id); });
+      const scope = ix.zonesById[ix.endpointZone[eid]]?.scope || "included";
+      if (dead && scope !== "future") E("orphan-endpoint", `${nm(eid)} has nothing feeding it — its ${adapterName((sol.companions || []).find(x => x.id === feeds[0].from))} isn't connected to anything`, eid);
+    }
     // sources should feed something
     // (a network link counts from either end: a music server on the AVB / Dante network IS connected)
     const used = new Set((sol.connections || []).flatMap(c => c.signal === "network" ? [c.from, c.to] : [c.from]));
@@ -481,7 +492,7 @@ export function validate(job, ix = indexJob(job)) {
       if (!["amp", "avr", "videoMatrix", "splitter"].includes(d.type) || fedIn.has(d.id)) continue;
       if (/sonos/i.test(`${d.catalogRef || ""} ${d.model || ""}`)) continue;   // a Sonos Amp streams its own music over the network
       const drives = (sol.connections || []).filter(c => c.from === d.id && c.signal !== "network");
-      if (drives.length) W("no-input", `${d.model || d.id} drives ${drives.length === 1 ? nm(drives[0].to) : `${drives.length} things`} but nothing is plugged into it — connect a source${d.type === "amp" ? " (or a Savant/Dante audio feed)" : ""}`, d.id);
+      if (drives.length) W("no-input", `${d.model || d.id} has nothing plugged in — ${drives.length === 1 ? nm(drives[0].to) : `its ${drives.length} rooms`} will have no sound. Connect a source${d.type === "amp" ? " or an audio feed" : ""}`, d.id);
     }
 
     // amp channel collisions + zone capacity
@@ -507,7 +518,7 @@ export function validate(job, ix = indexJob(job)) {
     for (const c of sol.connections || []) {
       if (c.signal === "audioReturn" && s.locals[c.to] &&
           !(sol.connections || []).some(o => o.from === c.to && s.devices[o.to]))
-        W("return-no-backhaul", `${nm(c.to)}: the audio return has no link back to the rack`, c.to);
+        W("return-no-backhaul", `${nm(c.to)}: the TV's sound has no way back to the rack`, c.to);
     }
 
     // scope coherence: prewire/future zone endpoints should have matching-scope feeds
@@ -517,16 +528,16 @@ export function validate(job, ix = indexJob(job)) {
       const zScope = sol.overrides?.zones?.[zid]?.scope || ix.zonesById[zid].scope || "included";
       const cScope = c.scope || "included";
       if (zScope !== "included" && cScope === "included")
-        W("scope-mismatch", `${zName(zid)} is ${SCOPE_NAME[zScope] || zScope}, but the feed to ${nm(c.to)} is marked Included`, c.to);
+        W("scope-mismatch", `${zName(zid)} is ${SCOPE_NAME[zScope] || zScope}, but the wire to ${nm(c.to)} is still Included`, c.to);
       else if (zScope === "included" && cScope !== "included" && !(c.count > 1))   // (a counted spare run may be pre-wire on purpose)
-        W("scope-mismatch", `${zName(zid)} is Included, but the feed to ${nm(c.to)} is still marked ${SCOPE_NAME[cScope] || cScope} — it won't be quoted or scheduled as a live run`, c.to);
+        W("scope-mismatch", `${zName(zid)} is Included, but the wire to ${nm(c.to)} is still ${SCOPE_NAME[cScope] || cScope} — it won't be installed`, c.to);
     }
   }
 
   // readability budget
   const zoneCount = job.house.zones.length;
   if (zoneCount > READABILITY_ZONE_CEILING)
-    W("readability", `${zoneCount} zones is more than fits comfortably on one sheet (~${READABILITY_ZONE_CEILING}) — the drawing will print small`);
+    W("readability", `${zoneCount} rooms on one sheet (about ${READABILITY_ZONE_CEILING} fit well) — the drawing will print small. View → A sheet per rack can split it`);
 
   return { errors, warnings, ok: errors.length === 0 };
 }
@@ -2857,9 +2868,17 @@ function routeOnce(job, ix, placement, opts = {}) {
       // stacked racks, aligned columns: tight staple beside the aligned devices
       const sy = portPlan[wireId(conn)] ?? takeRightPort(a, a.y + a.h / 2);
       const ty = takeRightPort(b, b.y + b.h / 2);
-      const gx = alloc(usedV, sx + 14, Math.min(sy, ty), Math.max(sy, ty), nWire, +1,
-        x => segBlocked(x, Math.min(sy, ty), x, Math.max(sy, ty), skip), [sx + 8, sx + 80]);
-      tryCommit(conn, "staple", [gx != null ? [[sx, sy], [gx, sy], [gx, ty], [b.x + b.w, ty]] : null], skip);
+      // a crowded staple lane (a 30-room estate's racks: every riser beside them taken) widens before it gives up,
+      // and as a last resort draws the flagged best effort — a wire must never vanish from the drawing (2026-10-03)
+      let gx = null;
+      for (const reach of [80, 200, 360]) {
+        gx = alloc(usedV, sx + 14, Math.min(sy, ty), Math.max(sy, ty), nWire, +1,
+          x => segBlocked(x, Math.min(sy, ty), x, Math.max(sy, ty), skip), [sx + 8, sx + reach]);
+        if (gx != null) break;
+      }
+      const staple = (x, y0 = sy, y1 = ty) => [[sx, y0], [x, y0], [x, y1], [b.x + b.w, y1]];
+      // no free port left on an edge (a 48-port switch's every right-edge slot): mid-height, flagged
+      tryCommit(conn, "staple", [gx != null ? staple(gx) : null, staple(sx + 14, sy ?? a.y + a.h / 2, ty ?? b.y + b.h / 2)], skip);
       if (rHint?.ch) out.warnings.push({ code: "hint-unroutable", msg: wireId(conn) });   // the inter-rack trunk has one shape
       return;
     }
@@ -2967,8 +2986,12 @@ function routeOnce(job, ix, placement, opts = {}) {
         const above = b.y < a.y;
         sy2 = peekPort(rightPorts, a, above ? a.y + 12 : a.y + a.h - 12);
         ty2 = peekPort(rightPorts, b, above ? b.y + b.h - 12 : b.y + 12);
-        const gx = alloc(usedV, sx + 14, Math.min(sy2, ty2), Math.max(sy2, ty2), nWire, +1,
-          x => segBlocked(x, Math.min(sy2, ty2), x, Math.max(sy2, ty2), skip), [sx + 8, sx + 44]);
+        let gx = null;   // the tight lane first; a crowded rack (a 30-room estate) widens it before giving up (2026-10-03)
+        for (const reach of [44, 120, 240]) {
+          gx = alloc(usedV, sx + 14, Math.min(sy2, ty2), Math.max(sy2, ty2), nWire, +1,
+            x => segBlocked(x, Math.min(sy2, ty2), x, Math.max(sy2, ty2), skip), [sx + 8, sx + reach]);
+          if (gx != null && !pathBlocked([[sx, sy2], [gx, sy2], [gx, ty2], [b.x + b.w, ty2]], skip)) break;
+        }
         const cand = gx != null ? [[sx, sy2], [gx, sy2], [gx, ty2], [b.x + b.w, ty2]] : null;
         if (cand && !pathBlocked(cand, skip) && pathRegisterable(cand, nWire)) staple = cand;
       }
@@ -2995,7 +3018,10 @@ function routeOnce(job, ix, placement, opts = {}) {
         release(rightPorts, a.id, sy);   // the staple exits at sy2 — the planned mid-port is free again
       }
       else if (pick) (leftPorts[b.id] ||= []).push(ty);
-      tryCommit(conn, pick === staple ? "staple" : "wrap", [pick], skip);
+      // nothing legal: draw the flagged best effort (a tight staple) — a wire must never vanish from the drawing
+      const yA = sy2 ?? sy ?? a.y + a.h / 2, yB = ty2 ?? b.y + b.h / 2;
+      const last = !pick ? [[sx, yA], [sx + 14, yA], [sx + 14, yB], [b.x + b.w, yB]] : null;
+      tryCommit(conn, pick === staple ? "staple" : "wrap", [pick, last], skip);
     }
   }
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-QQSgDoRKmk3lvp/OMWZvQeP0owEdcFOGXXnPd31BVDA=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-DdEWWC/t7lin1Fiy1aGKsSz1fHnKtVYkSaU0pvj7gW4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-XavRxRFXo/g9rs0K6+sRBB/zJkrUjf0BQsLJGIe4SRI=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-A86G5DdjT1Pvtxgefk0ANFR66tzVnjG9jde3hIHfqWw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -503,20 +503,26 @@
   /* ---- new job: rack starting points ---- */
   /* Jobs screen (Ryan 2026-10-02: "break it out — where we start jobs, maintain jobs") */
   #topbar #jobsHomeBtn { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; border-radius: 8px; background: transparent; color: #e6e9ef; font-weight: 600; }
-  #jobsHome { position: fixed; inset: 0; background: #f4f5f7; display: none; z-index: 45; overflow-y: auto; }
+  /* Projects: a panel that drops from its button, over the corner of the page (Ryan 2026-10-03 — it used to be a page of
+     its own). JS sets top / left from the button; tap outside or Esc closes it. */
+  #jobsHome { position: fixed; top: 56px; left: 8px; width: min(580px, calc(100vw - 16px)); max-height: calc(100vh - 68px); background: #f6f7f9; display: none; z-index: 45; overflow-y: auto;
+              border: 1px solid #b9bec8; border-radius: 12px; box-shadow: 0 12px 34px rgba(0,0,0,.28); overscroll-behavior: contain; }
   #jobsHome.show { display: block; }
-  #jobsHome .jh { max-width: 980px; margin: 0 auto; padding: 18px 16px 40px; }
-  #jobsHome .jh-hd { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
-  #jobsHome h2 { margin: 0; font-size: 22px; flex: 1; }
-  #jobsHome .jh-back { min-height: var(--hit); border-radius: 8px; padding: 0 14px; border: 1px solid var(--act-line); background: #fff; font-weight: 600; }
-  #jobsHome .jh-sect { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #3b3f47; margin: 20px 2px 8px; }
+  #jobsHome .jh { padding: 12px 14px 14px; }
+  #jobsHome .jh-hd { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; position: sticky; top: -12px; background: #f6f7f9; padding: 12px 0 8px; margin-top: -12px; z-index: 1; }
+  #jobsHome h2 { margin: 0; font-size: 18px; flex: 0 0 auto; }
+  #jobsHome #jhSearch { flex: 1 1 auto; }
+  #jobsHome .jh-back { min-height: var(--hit); min-width: var(--hit); border-radius: 8px; padding: 0 10px; border: none; background: none; font-size: 18px; color: #555; cursor: pointer; }
+  #jobsHome .jh-sect { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #3b3f47; margin: 12px 2px 8px; }
   #jobsHome .jh-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   #jobsHome .jh-row > span { flex: 1; } #jobsHome .jh-row em { font-style: normal; font-weight: 400; color: var(--muted); letter-spacing: 0; text-transform: none; }
   #jhSearch { flex: 0 1 320px; min-width: 0; width: 100%; min-height: var(--hit); padding: 0 12px; border: 1px solid var(--act-line); border-radius: 8px; font: inherit; font-size: 14px; letter-spacing: 0; text-transform: none; font-weight: 400; }
-  #jobsHome .jh-start { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
-  #jobsHome .jh-start button { text-align: left; background: #fff; border: 1px solid var(--act-line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-height: 92px; cursor: pointer; }
+  #jobsHome .jh-start { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  #jobsHome .jh-start button { text-align: left; background: #fff; border: 1px solid var(--act-line); border-radius: 10px; padding: 9px 12px; display: flex; flex-direction: column; gap: 2px; min-height: var(--hit); cursor: pointer; }
   #jobsHome .jh-start button:first-child { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-  #jobsHome .jh-start b { font-size: 15px; } #jobsHome .jh-start span { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+  #jobsHome .jh-start b { font-size: 14px; } #jobsHome .jh-start span { font-size: 11.5px; color: var(--muted); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #jobsHome .jcard { padding: 9px 12px; } #jobsHome .jcard .jt { flex: 1 1 200px; }
+  #topbar #jobsHomeBtn[aria-expanded="true"] { background: #2a2e36; box-shadow: inset 0 0 0 1.5px var(--accent); }
   #jobsHome .jh-start button:hover, #jobsHome .jcard:hover { border-color: #9aa3b2; }
   .jcard { background: #fff; border: 1px solid var(--act-line); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
   .jcard.cur { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
@@ -699,29 +705,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003204806",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003204806",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003204806",
-    "./app/ports.js": "./app/ports.js?v=20261003204806",
-    "./app/commands.js": "./app/commands.js?v=20261003204806",
-    "./app/engine.js": "./app/engine.js?v=20261003204806",
-    "./app/exports.js": "./app/exports.js?v=20261003204806",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003204806",
-    "./app/hookup.js": "./app/hookup.js?v=20261003204806",
-    "./app/importers.js": "./app/importers.js?v=20261003204806",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003204806",
-    "./app/library.js": "./app/library.js?v=20261003204806",
-    "./app/names.js": "./app/names.js?v=20261003204806",
-    "./app/network.js": "./app/network.js?v=20261003204806",
-    "./app/pages.js": "./app/pages.js?v=20261003204806",
-    "./app/power.js": "./app/power.js?v=20261003204806",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003204806",
-    "./app/rack.js": "./app/rack.js?v=20261003204806",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003204806",
-    "./app/starters.js": "./app/starters.js?v=20261003204806",
-    "./app/kinds.js": "./app/kinds.js?v=20261003204806",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003204806",
-    "./app/sheets.js": "./app/sheets.js?v=20261003204806"
+    "./app/ai.js": "./app/ai.js?v=20261003205632",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003205632",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003205632",
+    "./app/ports.js": "./app/ports.js?v=20261003205632",
+    "./app/commands.js": "./app/commands.js?v=20261003205632",
+    "./app/engine.js": "./app/engine.js?v=20261003205632",
+    "./app/exports.js": "./app/exports.js?v=20261003205632",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003205632",
+    "./app/hookup.js": "./app/hookup.js?v=20261003205632",
+    "./app/importers.js": "./app/importers.js?v=20261003205632",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003205632",
+    "./app/library.js": "./app/library.js?v=20261003205632",
+    "./app/names.js": "./app/names.js?v=20261003205632",
+    "./app/network.js": "./app/network.js?v=20261003205632",
+    "./app/pages.js": "./app/pages.js?v=20261003205632",
+    "./app/power.js": "./app/power.js?v=20261003205632",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003205632",
+    "./app/rack.js": "./app/rack.js?v=20261003205632",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003205632",
+    "./app/starters.js": "./app/starters.js?v=20261003205632",
+    "./app/kinds.js": "./app/kinds.js?v=20261003205632",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003205632",
+    "./app/sheets.js": "./app/sheets.js?v=20261003205632"
 } }
 </script>
 <script>
@@ -880,8 +886,8 @@
   <div id="pkList"></div>
 </div></div>
 
-<div id="jobsHome" role="dialog" aria-modal="true" aria-labelledby="jhTitle"><div class="jh">
-  <div class="jh-hd"><h2 id="jhTitle">Projects</h2><button id="jhClose" class="jh-back">Back to the project</button></div>
+<div id="jobsHome" role="dialog" aria-labelledby="jhTitle"><div class="jh">
+  <div class="jh-hd"><h2 id="jhTitle">Projects</h2><input id="jhSearch" placeholder="Search projects, clients, addresses…" autocomplete="off" spellcheck="false"><button id="jhClose" class="jh-back" title="Close" aria-label="Close">✕</button></div>
   <div class="jh-sect">Start a project</div>
   <div class="jh-start">
     <button data-start="newJob"><b>New project</b><span>Pick the closest rack — Savant, theater, MXNet, Dante or blank — then type the rooms</span></button>
@@ -889,7 +895,7 @@
     <button data-start="importBtn"><b>Import a file</b><span>A Markdown design, PlanQueue file, SignalPath project, AVWalk survey or Blueprinted (Savant) file</span></button>
     <button data-start="sample"><b>Open a sample</b><span>Sample Residence, Sample Estate, a 30-room Bel Air estate or a 25-room stress project to try things on</span></button>
   </div>
-  <div class="jh-sect jh-row"><span>Your projects <em id="jhCount"></em></span><input id="jhSearch" placeholder="Search projects, clients, addresses…" autocomplete="off" spellcheck="false"></div>
+  <div class="jh-sect jh-row"><span>Your projects <em id="jhCount"></em></span></div>
   <div id="jhList"></div>
   <div class="jh-foot">Projects are saved in this browser. <b>Download</b> a project file to back it up or move it to another computer; <b>Import a file</b> brings it back.</div>
 </div></div>
@@ -986,7 +992,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003204806").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003205632").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1398,7 +1404,16 @@ async function openJob(id) {
   if (rec) { S.job = rec.data; S.id = rec.id; S.sol = 0; }
   closeJobsHome(); refresh(false);
 }
-function closeJobsHome() { $("#jobsHome").classList.remove("show"); }
+function closeJobsHome() { $("#jobsHome").classList.remove("show"); $("#jobsHomeBtn").setAttribute("aria-expanded", "false"); }
+// the panel hangs under its button (kept on screen on a narrow window)
+function placeJobsHome() { const el = $("#jobsHome"), r = $("#jobsHomeBtn").getBoundingClientRect(); if (!el.classList.contains("show")) return;
+  const top = Math.round(r.bottom + 6); el.style.top = top + "px"; el.style.maxHeight = `calc(100vh - ${top + 10}px)`;
+  el.style.left = Math.max(8, Math.min(Math.round(r.left), innerWidth - el.offsetWidth - 8)) + "px"; }
+addEventListener("resize", placeJobsHome);
+// a tap anywhere else closes it — but not a tap in something it opened (the ⋯ menu's picker, the Undo toast)
+document.addEventListener("pointerdown", e => { if (!$("#jobsHome").classList.contains("show")) return;
+  if (e.target.closest?.("#jobsHome, #jobsHomeBtn, #picker, #starter, #pasteBox, #review, #aiBox, #toast, .libov")) return;
+  closeJobsHome(); }, true);
 async function renderJobsHome() {
   await flushSave();
   const q = $("#jhSearch").value.trim().toLowerCase();
@@ -1425,8 +1440,9 @@ async function renderJobsHome() {
       <div class="ja"><button class="open" data-a="open">${j.id === S.id ? "Back to it" : "Open"}</button><button data-a="rename">Rename</button><button data-a="dup">Duplicate</button><button data-a="dl" title="The project file (.json) — a backup you can import anywhere">Download</button>${canAb ? '<button data-a="ab" title="When it\'s installed: a copy to record what went in — this proposal stays as it is">Start as-built</button>' : ""}<button data-a="del" class="danger">Delete</button><button class="more" data-a="more" aria-label="More: rename, duplicate, download, delete" title="Rename, duplicate, download, delete">⋯</button></div></div>`;
   }).join("")}</div>`).join("") : `<div class="jh-empty">${q ? "No project matches that." : "No saved projects yet — start one above."}</div>`;
 }
-async function openJobsHome() { $("#jhSearch").value = ""; await renderJobsHome(); $("#jobsHome").classList.add("show"); $("#jobsHome").scrollTop = 0; }
-$("#jobsHomeBtn").onclick = openJobsHome;
+async function openJobsHome() { closeDevPop(); $("#jhSearch").value = ""; await renderJobsHome(); $("#jobsHome").classList.add("show"); $("#jobsHomeBtn").setAttribute("aria-expanded", "true"); $("#jobsHome").scrollTop = 0; placeJobsHome();
+  if (matchMedia("(pointer: fine)").matches) $("#jhSearch").focus({ preventScroll: true }); }
+$("#jobsHomeBtn").onclick = () => $("#jobsHome").classList.contains("show") ? closeJobsHome() : openJobsHome();
 $("#jhClose").onclick = closeJobsHome;
 $("#jhSearch").oninput = () => renderJobsHome();
 addEventListener("keydown", e => { if (e.key === "Escape" && $("#jobsHome").classList.contains("show") && !document.querySelector("#starter.show, #pasteBox.show, #picker.on")) closeJobsHome(); });

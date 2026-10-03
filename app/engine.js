@@ -806,6 +806,7 @@ function placeAt(job, ix, opts, gs) {
    On by default since 2026-09-30 (Ryan): a job draws as "bundle" unless it says
    job.job.trunkStyle = "ribbon" or "off". opts.trunks overrides ("bundle" |
    "ribbon" | false / "off" for the classic drawing). */
+const LINK_MIN = 10;   // a trunk to this many rooms beside the rack may gather at its sources and cross the rack once (measured 6 / 10 / 14)
 const PACK_SLACK = 14;   // packed / bands: every TV row's gap keeps a spare lane (measured 0 / 14 / 28 on every sample, 2026-10-03: 14 brings Bundle and Ribbon level with Classic)
 const BAND_COLORS = { surround: "#2f3e9e", tvspk: "#7a3fb0", tv: "#4b5563", speakers: "#12806a", outdoor: "#2f7a3a", off: "#6b7280" };
 export const LAYOUT_STYLES = ["packed", "bands", "classic"];
@@ -2123,7 +2124,7 @@ function routeOnce(job, ix, placement, opts = {}) {
     const routeFam = (F, cfg = {}) => {
       const net = F.net;
       F.cfg = cfg;
-      F.ports = [];
+      F.ports = []; F.link = undefined;
       F.blockers = null; F.repairable = false;
       // a trial with a bound to beat stops as soon as what it has drawn already costs more — crossing
       // points and length only grow as wires are added, so a stopped trial could never have won
@@ -2395,6 +2396,36 @@ function routeOnce(job, ix, placement, opts = {}) {
           if (busY != null) for (let x = Math.min(rx, t.tx - 240); x <= Math.max(rx, t.tx + 240); x += 24) picks.push([[rx, busY], [x, busY]]);
           const above = t.landY == null && join[1] < t.cardTop;
           const L = t.landY ?? (above ? t.cardTop : t.cardBot);
+          // packed / bands: a second way out — gather on the riser beside the sources, cross the rack ONCE on a clear
+          // line (its top pad, or just under it), then run the channel between the racks and the rooms as a spine and
+          // break out at each row. Without it a big switch's riser moves out to that channel and every port draws its
+          // own line across the rack to reach it. The link and the spine are found once per family and shared.
+          const rackRightX = Math.max(...P.racks.map(r => r.x + r.w));
+          if (P.layout && P.layout !== "classic" && F.dir === "out" && rx < rackRightX - 20 && F.members.filter(x => !x.rack).length >= LINK_MIN) {
+            if (F.link === undefined) {
+              F.link = null;
+              const side = P.zones.filter(z => z.band === "mid" || z.band === "audio"), zx0 = side.length ? Math.min(...side.map(z => z.x)) : 0;
+              if (zx0 - rackRightX > 24) {
+                const ys = side.map(z => z.y), y0s = Math.min(...ys) - 40, y1s = Math.max(...side.map(z => z.y + z.h)) + 80;
+                for (const [lo, hi] of [[F.rack.y + 10, F.rack.y + PL.rackPadTop - 10], [F.rack.y + F.rack.h + 6, F.rack.y + F.rack.h + PL.rackGapY - 6], [F.rack.y - PL.rackGapY + 6, F.rack.y - 6]]) {
+                  if (F.link) break;
+                  for (let y = lo; y <= hi && !F.link; y += RT.lane) {
+                    if (conflicts(usedH, y, rx, zx0, net)) continue;
+                    const cx = alloc(usedV, zx0 - 16, Math.min(y, y0s), y1s, net, -1, xx => !!segBlocked(xx, Math.min(y, y0s), xx, y1s, null), [rackRightX + 8, zx0 - 8]);
+                    if (cx == null || segBlocked(rx, y, cx, y, null)) continue;
+                    F.link = { y, cx };
+                  }
+                }
+              }
+            }
+            if (F.link) {
+              const { y: ly, cx } = F.link;
+              for (let k = 0; k <= 6; k++) {
+                const y2 = (t.landY != null || !above) ? L + 8 + k * RT.lane : L - 8 - k * RT.lane;
+                cands.push([[rx, ly], [cx, ly], [cx, y2], [t.tx, y2], [t.tx, L]]);
+              }
+            }
+          }
           for (const pre of picks) {
             const B = pre[pre.length - 1];
             if (t.landY != null ? B[1] >= L + 8 : above ? B[1] <= L - 8 : B[1] >= L + 8) cands.push([...pre, [t.tx, B[1]], [t.tx, L]]);

@@ -1,0 +1,1697 @@
+{
+ "generator": "SignalPath",
+ "schemaVersion": 1,
+ "job": {
+  "name": "Sample Bel Air Estate",
+  "client": {
+   "name": "Customer Name",
+   "address": "Bel Air, Los Angeles, CA"
+  },
+  "stage": "proposal",
+  "drawnBy": "SignalPath",
+  "revisions": [
+   {
+    "rev": 1,
+    "date": "2026-10-03",
+    "description": "Sample — a big estate to try things on",
+    "by": "SP"
+   }
+  ],
+  "catalogSnapshot": {
+   "asOf": "2026-10-03"
+  },
+  "starter": "mxnet"
+ },
+ "house": {
+  "areas": [
+   {
+    "id": "area-main",
+    "name": "Main House",
+    "homeRack": "rack-main"
+   },
+   {
+    "id": "area-casita",
+    "name": "Guest Casita",
+    "homeRack": "rack-casita-rack"
+   },
+   {
+    "id": "area-pool",
+    "name": "Pool House",
+    "homeRack": "rack-pool-house-rack"
+   }
+  ],
+  "zones": [
+   {
+    "scope": "included",
+    "name": "Theater",
+    "id": "z-theater",
+    "endpoints": [
+     {
+      "id": "z-theater-spk",
+      "type": "speakers",
+      "config": "surround-7.1.4",
+      "status": "new"
+     },
+     {
+      "id": "z-theater-tv",
+      "type": "display",
+      "displayType": "projector",
+      "brand": "Sony",
+      "size": 150,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Family Room",
+    "id": "z-family-room",
+    "endpoints": [
+     {
+      "id": "z-family-room-spk",
+      "type": "speakers",
+      "config": "surround-7.1",
+      "status": "new"
+     },
+     {
+      "id": "z-family-room-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "Sony",
+      "size": 85,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Upstairs Family Room",
+    "id": "z-upstairs-family-room",
+    "endpoints": [
+     {
+      "id": "z-upstairs-family-room-spk",
+      "type": "speakers",
+      "config": "surround-5.1",
+      "status": "new"
+     },
+     {
+      "id": "z-upstairs-family-room-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 75,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Game Room",
+    "id": "z-game-room",
+    "endpoints": [
+     {
+      "id": "z-game-room-spk",
+      "type": "speakers",
+      "config": "surround-5.1",
+      "status": "new"
+     },
+     {
+      "id": "z-game-room-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 85,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Living Room",
+    "id": "z-living-room",
+    "endpoints": [
+     {
+      "id": "z-living-room-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-living-room-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 75,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Kitchen",
+    "id": "z-kitchen",
+    "endpoints": [
+     {
+      "id": "z-kitchen-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-kitchen-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 65,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Dining Room",
+    "id": "z-dining-room",
+    "endpoints": [
+     {
+      "id": "z-dining-room-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Breakfast Nook",
+    "id": "z-breakfast-nook",
+    "endpoints": [
+     {
+      "id": "z-breakfast-nook-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Office",
+    "id": "z-office",
+    "endpoints": [
+     {
+      "id": "z-office-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-office-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 55,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Gym",
+    "id": "z-gym",
+    "endpoints": [
+     {
+      "id": "z-gym-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-gym-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 65,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Wine Cellar",
+    "id": "z-wine-cellar",
+    "endpoints": [
+     {
+      "id": "z-wine-cellar-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Primary Suite",
+    "id": "z-primary-suite",
+    "endpoints": [
+     {
+      "id": "z-primary-suite-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-primary-suite-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 85,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Primary Bath",
+    "id": "z-primary-bath",
+    "endpoints": [
+     {
+      "id": "z-primary-bath-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Bedroom 2",
+    "id": "z-bedroom-2",
+    "endpoints": [
+     {
+      "id": "z-bedroom-2-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-bedroom-2-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 55,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Bedroom 3",
+    "id": "z-bedroom-3",
+    "endpoints": [
+     {
+      "id": "z-bedroom-3-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-bedroom-3-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 55,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Bedroom 4",
+    "id": "z-bedroom-4",
+    "endpoints": [
+     {
+      "id": "z-bedroom-4-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-bedroom-4-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 55,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Bedroom 5",
+    "id": "z-bedroom-5",
+    "endpoints": [
+     {
+      "id": "z-bedroom-5-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-bedroom-5-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 50,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Bedroom 6",
+    "id": "z-bedroom-6",
+    "endpoints": [
+     {
+      "id": "z-bedroom-6-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-bedroom-6-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 50,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Covered Patio",
+    "id": "z-covered-patio",
+    "endpoints": [
+     {
+      "id": "z-covered-patio-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-covered-patio-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 75,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Front Lawn",
+    "id": "z-front-lawn",
+    "endpoints": [
+     {
+      "id": "z-front-lawn-spk",
+      "type": "speakers",
+      "config": "landscape",
+      "satCount": 8,
+      "buriedSub": true,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Back Lawn",
+    "id": "z-back-lawn",
+    "endpoints": [
+     {
+      "id": "z-back-lawn-spk",
+      "type": "speakers",
+      "config": "landscape",
+      "satCount": 12,
+      "buriedSub": true,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Pool Deck",
+    "id": "z-pool-deck",
+    "endpoints": [
+     {
+      "id": "z-pool-deck-spk",
+      "type": "speakers",
+      "config": "landscape",
+      "satCount": 10,
+      "buriedSub": true,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Motor Court",
+    "id": "z-motor-court",
+    "endpoints": [
+     {
+      "id": "z-motor-court-spk",
+      "type": "speakers",
+      "config": "landscape",
+      "satCount": 6,
+      "buriedSub": true,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Rose Garden",
+    "id": "z-rose-garden",
+    "endpoints": [
+     {
+      "id": "z-rose-garden-spk",
+      "type": "speakers",
+      "config": "landscape",
+      "satCount": 6,
+      "buriedSub": true,
+      "status": "new"
+     }
+    ],
+    "area": "area-main"
+   },
+   {
+    "scope": "included",
+    "name": "Casita Living Room",
+    "id": "z-casita-living-room",
+    "endpoints": [
+     {
+      "id": "z-casita-living-room-spk",
+      "type": "speakers",
+      "config": "surround-5.1",
+      "status": "new"
+     },
+     {
+      "id": "z-casita-living-room-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 65,
+      "status": "new"
+     }
+    ],
+    "area": "area-casita"
+   },
+   {
+    "scope": "included",
+    "name": "Casita Bedroom",
+    "id": "z-casita-bedroom",
+    "endpoints": [
+     {
+      "id": "z-casita-bedroom-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-casita-bedroom-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 55,
+      "status": "new"
+     }
+    ],
+    "area": "area-casita"
+   },
+   {
+    "scope": "included",
+    "name": "Casita Kitchen",
+    "id": "z-casita-kitchen",
+    "endpoints": [
+     {
+      "id": "z-casita-kitchen-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     }
+    ],
+    "area": "area-casita"
+   },
+   {
+    "scope": "included",
+    "name": "Pool House Lounge",
+    "id": "z-pool-house-lounge",
+    "endpoints": [
+     {
+      "id": "z-pool-house-lounge-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-pool-house-lounge-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 65,
+      "status": "new"
+     }
+    ],
+    "area": "area-pool"
+   },
+   {
+    "scope": "included",
+    "name": "Pool House Bar",
+    "id": "z-pool-house-bar",
+    "endpoints": [
+     {
+      "id": "z-pool-house-bar-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-pool-house-bar-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 55,
+      "status": "new"
+     }
+    ],
+    "area": "area-pool"
+   },
+   {
+    "scope": "included",
+    "name": "Cabana",
+    "id": "z-cabana",
+    "endpoints": [
+     {
+      "id": "z-cabana-spk",
+      "type": "speakers",
+      "config": "stereo",
+      "status": "new",
+      "count": 2
+     },
+     {
+      "id": "z-cabana-tv",
+      "type": "display",
+      "displayType": "tv",
+      "brand": "",
+      "size": 50,
+      "status": "new"
+     }
+    ],
+    "area": "area-pool"
+   }
+  ]
+ },
+ "solutions": [
+  {
+   "id": "sol-a",
+   "name": "Proposed System",
+   "videoDistribution": "hybrid",
+   "platforms": [],
+   "auxCounts": {},
+   "racks": [
+    {
+     "id": "rack-main",
+     "name": "Main Rack A",
+     "devices": [
+      {
+       "id": "atv1",
+       "type": "source",
+       "model": "Apple TV 1",
+       "status": "new"
+      },
+      {
+       "id": "atv2",
+       "type": "source",
+       "model": "Apple TV 2",
+       "status": "new"
+      },
+      {
+       "id": "cablebox",
+       "type": "source",
+       "model": "Cable Box",
+       "status": "new"
+      },
+      {
+       "id": "sw",
+       "type": "avSwitch",
+       "catalogRef": "avpro-mxnet-sw48e",
+       "model": "AVPro Edge AC-MXNET-SW48E",
+       "status": "new"
+      },
+      {
+       "id": "cbx",
+       "type": "controlBox",
+       "catalogRef": "avpro-mxnet-cbox-ha",
+       "model": "AVPro Edge AC-MXNET-CBOX-HA",
+       "status": "new"
+      },
+      {
+       "id": "amp",
+       "type": "amp",
+       "catalogRef": "anthem-mdx-16",
+       "model": "Anthem MDX-16",
+       "status": "new",
+       "zones": 8
+      },
+      {
+       "id": "lan",
+       "type": "networkSwitch",
+       "catalogRef": "ubiquiti-usw-pro-max-48-poe",
+       "model": "Ubiquiti USW-Pro-Max-48-PoE",
+       "status": "new"
+      },
+      {
+       "id": "power",
+       "type": "power",
+       "catalogRef": "wattbox-800vps-ipvm-18",
+       "model": "WattBox WB-800VPS-IPVM-18",
+       "status": "new"
+      },
+      {
+       "id": "source",
+       "type": "source",
+       "model": "Apple TV 3",
+       "status": "new",
+       "catalogRef": "apple-tv-4k-3gen"
+      },
+      {
+       "id": "source-2",
+       "type": "source",
+       "model": "Apple TV 4",
+       "status": "new",
+       "catalogRef": "apple-tv-4k-3gen"
+      },
+      {
+       "id": "source-3",
+       "type": "source",
+       "model": "Cable Box 2",
+       "status": "new",
+       "catalogRef": "provider-cable-box"
+      },
+      {
+       "id": "avr-3",
+       "type": "avr",
+       "model": "Anthem MRX 540",
+       "status": "new",
+       "catalogRef": "anthem-mrx-540-8k"
+      },
+      {
+       "id": "avr-4",
+       "type": "avr",
+       "model": "Anthem MRX 540",
+       "status": "new",
+       "catalogRef": "anthem-mrx-540-8k"
+      }
+     ],
+     "sizeMode": "auto"
+    },
+    {
+     "id": "rack-main-rack-b",
+     "name": "Main Rack B",
+     "devices": [
+      {
+       "id": "amp-2",
+       "type": "amp",
+       "model": "Anthem MDX-16 (2)",
+       "status": "new",
+       "zones": 8,
+       "catalogRef": "anthem-mdx-16"
+      },
+      {
+       "id": "amp-3",
+       "type": "amp",
+       "model": "Anthem MDX-16 (3)",
+       "status": "new",
+       "zones": 8,
+       "catalogRef": "anthem-mdx-16"
+      },
+      {
+       "id": "amp-4",
+       "type": "amp",
+       "model": "Anthem MDX-8 Landscape",
+       "status": "new",
+       "zones": 4,
+       "catalogRef": "anthem-mdx-8"
+      },
+      {
+       "id": "power-2",
+       "type": "power",
+       "model": "WattBox WB-800-IPVM-12",
+       "status": "new",
+       "catalogRef": "wattbox-800-ipvm-12"
+      },
+      {
+       "id": "avr",
+       "type": "avr",
+       "model": "Anthem MRX 1140",
+       "status": "new",
+       "catalogRef": "anthem-mrx-1140-8k"
+      },
+      {
+       "id": "avr-2",
+       "type": "avr",
+       "model": "Anthem MRX 740",
+       "status": "new",
+       "catalogRef": "anthem-mrx-740-8k"
+      },
+      {
+       "id": "source-4",
+       "type": "source",
+       "model": "Kaleidescape Strato V 4K Movie Player (Dolby Vision)",
+       "status": "new",
+       "catalogRef": "kaleidescape-strato-v"
+      }
+     ],
+     "sizeMode": "auto",
+     "beside": "rack-main"
+    },
+    {
+     "id": "rack-casita-rack",
+     "name": "Casita Rack",
+     "devices": [
+      {
+       "id": "source-5",
+       "type": "source",
+       "model": "Casita Apple TV",
+       "status": "new",
+       "catalogRef": "apple-tv-4k-3gen"
+      },
+      {
+       "id": "avr-5",
+       "type": "avr",
+       "model": "Casita MRX 540",
+       "status": "new",
+       "catalogRef": "anthem-mrx-540-8k"
+      },
+      {
+       "id": "amp-5",
+       "type": "amp",
+       "model": "Casita MDX-8",
+       "status": "new",
+       "zones": 4,
+       "catalogRef": "anthem-mdx-8"
+      },
+      {
+       "id": "power-3",
+       "type": "power",
+       "model": "WattBox WB-800-IPVM-6",
+       "status": "new",
+       "catalogRef": "wattbox-800-ipvm-6"
+      }
+     ],
+     "sizeMode": "auto"
+    },
+    {
+     "id": "rack-pool-house-rack",
+     "name": "Pool House Rack",
+     "devices": [
+      {
+       "id": "amp-6",
+       "type": "amp",
+       "model": "Pool House MDX-8",
+       "status": "new",
+       "zones": 4,
+       "catalogRef": "anthem-mdx-8"
+      },
+      {
+       "id": "power-4",
+       "type": "power",
+       "model": "WattBox WB-800-IPVM-6",
+       "status": "new",
+       "catalogRef": "wattbox-800-ipvm-6"
+      }
+     ],
+     "sizeMode": "auto"
+    }
+   ],
+   "localDevices": [],
+   "companions": [
+    {
+     "id": "enc-atv1",
+     "type": "enc",
+     "serves": "atv1",
+     "auto": true
+    },
+    {
+     "id": "enc-atv2",
+     "type": "enc",
+     "serves": "atv2",
+     "auto": true
+    },
+    {
+     "id": "enc-cable",
+     "type": "enc",
+     "serves": "cablebox",
+     "auto": true
+    },
+    {
+     "id": "dec-z-theater",
+     "type": "dec",
+     "serves": "z-theater-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-avr",
+     "type": "dec",
+     "serves": "avr",
+     "auto": true
+    },
+    {
+     "id": "dec-z-family-room",
+     "type": "dec",
+     "serves": "z-family-room-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-avr-2",
+     "type": "dec",
+     "serves": "avr-2",
+     "auto": true
+    },
+    {
+     "id": "dec-z-upstairs-family-room",
+     "type": "dec",
+     "serves": "z-upstairs-family-room-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-avr-3",
+     "type": "dec",
+     "serves": "avr-3",
+     "auto": true
+    },
+    {
+     "id": "dec-z-game-room",
+     "type": "dec",
+     "serves": "z-game-room-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-avr-4",
+     "type": "dec",
+     "serves": "avr-4",
+     "auto": true
+    },
+    {
+     "id": "dec-z-living-room",
+     "type": "dec",
+     "serves": "z-living-room-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-audio-amp",
+     "type": "dec",
+     "variant": "audio-deembed",
+     "serves": "amp",
+     "auto": true
+    },
+    {
+     "id": "dec-z-kitchen",
+     "type": "dec",
+     "serves": "z-kitchen-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-z-office",
+     "type": "dec",
+     "serves": "z-office-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-z-gym",
+     "type": "dec",
+     "serves": "z-gym-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-z-primary-suite",
+     "type": "dec",
+     "serves": "z-primary-suite-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-audio-amp-2",
+     "type": "dec",
+     "variant": "audio-deembed",
+     "serves": "amp-2",
+     "auto": true
+    },
+    {
+     "id": "dec-z-bedroom-2",
+     "type": "dec",
+     "serves": "z-bedroom-2-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-z-bedroom-3",
+     "type": "dec",
+     "serves": "z-bedroom-3-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-z-bedroom-4",
+     "type": "dec",
+     "serves": "z-bedroom-4-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-z-bedroom-5",
+     "type": "dec",
+     "serves": "z-bedroom-5-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-z-bedroom-6",
+     "type": "dec",
+     "serves": "z-bedroom-6-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-z-covered-patio",
+     "type": "dec",
+     "serves": "z-covered-patio-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-audio-amp-3",
+     "type": "dec",
+     "variant": "audio-deembed",
+     "serves": "amp-3",
+     "auto": true
+    },
+    {
+     "id": "dec-avr-5",
+     "type": "dec",
+     "serves": "avr-5",
+     "auto": true
+    },
+    {
+     "id": "dec-z-casita-bedroom",
+     "type": "dec",
+     "serves": "z-casita-bedroom-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-z-pool-house-lounge",
+     "type": "dec",
+     "serves": "z-pool-house-lounge-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-z-pool-house-bar",
+     "type": "dec",
+     "serves": "z-pool-house-bar-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-z-cabana",
+     "type": "dec",
+     "serves": "z-cabana-tv",
+     "auto": true
+    },
+    {
+     "id": "dec-audio-amp-4",
+     "type": "dec",
+     "variant": "audio-deembed",
+     "serves": "amp-4",
+     "auto": true
+    },
+    {
+     "id": "balun-z-casita-living-room",
+     "type": "balun",
+     "serves": "z-casita-living-room-tv",
+     "auto": true
+    },
+    {
+     "id": "enc-source",
+     "type": "enc",
+     "serves": "source",
+     "auto": true
+    },
+    {
+     "id": "enc-source-2",
+     "type": "enc",
+     "serves": "source-2",
+     "auto": true
+    },
+    {
+     "id": "enc-source-3",
+     "type": "enc",
+     "serves": "source-3",
+     "auto": true
+    },
+    {
+     "id": "dec-audio-amp-5",
+     "type": "dec",
+     "variant": "audio-deembed",
+     "serves": "amp-5",
+     "auto": true,
+     "note": "MDX-8 is analog-input only; the decoder de-embeds network audio to analog"
+    },
+    {
+     "id": "dec-audio-amp-6",
+     "type": "dec",
+     "variant": "audio-deembed",
+     "serves": "amp-6",
+     "auto": true,
+     "note": "MDX-8 is analog-input only; the decoder de-embeds network audio to analog"
+    }
+   ],
+   "connections": [
+    {
+     "from": "atv1",
+     "to": "enc-atv1",
+     "signal": "video"
+    },
+    {
+     "from": "enc-atv1",
+     "to": "sw",
+     "signal": "video"
+    },
+    {
+     "from": "atv2",
+     "to": "enc-atv2",
+     "signal": "video"
+    },
+    {
+     "from": "enc-atv2",
+     "to": "sw",
+     "signal": "video"
+    },
+    {
+     "from": "cablebox",
+     "to": "enc-cable",
+     "signal": "video"
+    },
+    {
+     "from": "enc-cable",
+     "to": "sw",
+     "signal": "video"
+    },
+    {
+     "from": "cbx",
+     "to": "sw",
+     "signal": "network"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-theater",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-theater",
+     "to": "z-theater-tv",
+     "signal": "video"
+    },
+    {
+     "from": "avr",
+     "to": "z-theater-spk",
+     "signal": "speaker"
+    },
+    {
+     "from": "sw",
+     "to": "dec-avr",
+     "signal": "video"
+    },
+    {
+     "from": "dec-avr",
+     "to": "avr",
+     "signal": "video"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-family-room",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-family-room",
+     "to": "z-family-room-tv",
+     "signal": "video"
+    },
+    {
+     "from": "avr-2",
+     "to": "z-family-room-spk",
+     "signal": "speaker"
+    },
+    {
+     "from": "sw",
+     "to": "dec-avr-2",
+     "signal": "video"
+    },
+    {
+     "from": "dec-avr-2",
+     "to": "avr-2",
+     "signal": "video"
+    },
+    {
+     "from": "z-family-room-tv",
+     "to": "avr-2",
+     "signal": "audioReturn"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-upstairs-family-room",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-upstairs-family-room",
+     "to": "z-upstairs-family-room-tv",
+     "signal": "video"
+    },
+    {
+     "from": "avr-3",
+     "to": "z-upstairs-family-room-spk",
+     "signal": "speaker"
+    },
+    {
+     "from": "sw",
+     "to": "dec-avr-3",
+     "signal": "video"
+    },
+    {
+     "from": "dec-avr-3",
+     "to": "avr-3",
+     "signal": "video"
+    },
+    {
+     "from": "z-upstairs-family-room-tv",
+     "to": "avr-3",
+     "signal": "audioReturn"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-game-room",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-game-room",
+     "to": "z-game-room-tv",
+     "signal": "video"
+    },
+    {
+     "from": "avr-4",
+     "to": "z-game-room-spk",
+     "signal": "speaker"
+    },
+    {
+     "from": "sw",
+     "to": "dec-avr-4",
+     "signal": "video"
+    },
+    {
+     "from": "dec-avr-4",
+     "to": "avr-4",
+     "signal": "video"
+    },
+    {
+     "from": "z-game-room-tv",
+     "to": "avr-4",
+     "signal": "audioReturn"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-living-room",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-living-room",
+     "to": "z-living-room-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp",
+     "to": "z-living-room-spk",
+     "signal": "speaker",
+     "channels": "1-2"
+    },
+    {
+     "from": "sw",
+     "to": "dec-audio-amp",
+     "signal": "video"
+    },
+    {
+     "from": "dec-audio-amp",
+     "to": "amp",
+     "signal": "audio"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-kitchen",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-kitchen",
+     "to": "z-kitchen-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp",
+     "to": "z-kitchen-spk",
+     "signal": "speaker",
+     "channels": "3-4"
+    },
+    {
+     "from": "amp",
+     "to": "z-dining-room-spk",
+     "signal": "speaker",
+     "channels": "5-6"
+    },
+    {
+     "from": "amp",
+     "to": "z-breakfast-nook-spk",
+     "signal": "speaker",
+     "channels": "7-8"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-office",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-office",
+     "to": "z-office-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp",
+     "to": "z-office-spk",
+     "signal": "speaker",
+     "channels": "9-10"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-gym",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-gym",
+     "to": "z-gym-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp",
+     "to": "z-gym-spk",
+     "signal": "speaker",
+     "channels": "11-12"
+    },
+    {
+     "from": "amp",
+     "to": "z-wine-cellar-spk",
+     "signal": "speaker",
+     "channels": "13-14"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-primary-suite",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-primary-suite",
+     "to": "z-primary-suite-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp",
+     "to": "z-primary-suite-spk",
+     "signal": "speaker",
+     "channels": "15-16"
+    },
+    {
+     "from": "amp-2",
+     "to": "z-primary-bath-spk",
+     "signal": "speaker",
+     "channels": "1-2"
+    },
+    {
+     "from": "sw",
+     "to": "dec-audio-amp-2",
+     "signal": "video"
+    },
+    {
+     "from": "dec-audio-amp-2",
+     "to": "amp-2",
+     "signal": "audio"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-bedroom-2",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-bedroom-2",
+     "to": "z-bedroom-2-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp-2",
+     "to": "z-bedroom-2-spk",
+     "signal": "speaker",
+     "channels": "3-4"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-bedroom-3",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-bedroom-3",
+     "to": "z-bedroom-3-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp-2",
+     "to": "z-bedroom-3-spk",
+     "signal": "speaker",
+     "channels": "5-6"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-bedroom-4",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-bedroom-4",
+     "to": "z-bedroom-4-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp-2",
+     "to": "z-bedroom-4-spk",
+     "signal": "speaker",
+     "channels": "7-8"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-bedroom-5",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-bedroom-5",
+     "to": "z-bedroom-5-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp-2",
+     "to": "z-bedroom-5-spk",
+     "signal": "speaker",
+     "channels": "9-10"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-bedroom-6",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-bedroom-6",
+     "to": "z-bedroom-6-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp-2",
+     "to": "z-bedroom-6-spk",
+     "signal": "speaker",
+     "channels": "11-12"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-covered-patio",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-covered-patio",
+     "to": "z-covered-patio-tv",
+     "signal": "video"
+    },
+    {
+     "from": "amp-2",
+     "to": "z-covered-patio-spk",
+     "signal": "speaker",
+     "channels": "13-14"
+    },
+    {
+     "from": "amp-2",
+     "to": "z-front-lawn-spk",
+     "signal": "speaker",
+     "channels": "15-16"
+    },
+    {
+     "from": "amp-3",
+     "to": "z-back-lawn-spk",
+     "signal": "speaker",
+     "channels": "1-2"
+    },
+    {
+     "from": "sw",
+     "to": "dec-audio-amp-3",
+     "signal": "video"
+    },
+    {
+     "from": "dec-audio-amp-3",
+     "to": "amp-3",
+     "signal": "audio"
+    },
+    {
+     "from": "amp-3",
+     "to": "z-pool-deck-spk",
+     "signal": "speaker",
+     "channels": "3-4"
+    },
+    {
+     "from": "amp-3",
+     "to": "z-motor-court-spk",
+     "signal": "speaker",
+     "channels": "5-6"
+    },
+    {
+     "from": "amp-3",
+     "to": "z-rose-garden-spk",
+     "signal": "speaker",
+     "channels": "7-8"
+    },
+    {
+     "from": "avr-5",
+     "to": "z-casita-living-room-spk",
+     "signal": "speaker"
+    },
+    {
+     "from": "sw",
+     "to": "dec-avr-5",
+     "signal": "video"
+    },
+    {
+     "from": "dec-avr-5",
+     "to": "avr-5",
+     "signal": "video"
+    },
+    {
+     "from": "z-casita-living-room-tv",
+     "to": "avr-5",
+     "signal": "audioReturn"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-casita-bedroom",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-casita-bedroom",
+     "to": "z-casita-bedroom-tv",
+     "signal": "video"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-pool-house-lounge",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-pool-house-lounge",
+     "to": "z-pool-house-lounge-tv",
+     "signal": "video"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-pool-house-bar",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-pool-house-bar",
+     "to": "z-pool-house-bar-tv",
+     "signal": "video"
+    },
+    {
+     "from": "sw",
+     "to": "dec-z-cabana",
+     "signal": "video"
+    },
+    {
+     "from": "dec-z-cabana",
+     "to": "z-cabana-tv",
+     "signal": "video"
+    },
+    {
+     "from": "sw",
+     "to": "dec-audio-amp-4",
+     "signal": "video"
+    },
+    {
+     "from": "dec-audio-amp-4",
+     "to": "amp-4",
+     "signal": "audio"
+    },
+    {
+     "from": "avr-5",
+     "to": "balun-z-casita-living-room",
+     "signal": "video"
+    },
+    {
+     "from": "balun-z-casita-living-room",
+     "to": "z-casita-living-room-tv",
+     "signal": "video"
+    },
+    {
+     "from": "source-5",
+     "to": "avr-5",
+     "signal": "video"
+    },
+    {
+     "from": "amp-5",
+     "to": "z-casita-bedroom-spk",
+     "signal": "speaker",
+     "channels": "1-2"
+    },
+    {
+     "from": "amp-5",
+     "to": "z-casita-kitchen-spk",
+     "signal": "speaker",
+     "channels": "3-4"
+    },
+    {
+     "from": "amp-6",
+     "to": "z-pool-house-lounge-spk",
+     "signal": "speaker",
+     "channels": "1-2"
+    },
+    {
+     "from": "amp-6",
+     "to": "z-pool-house-bar-spk",
+     "signal": "speaker",
+     "channels": "3-4"
+    },
+    {
+     "from": "amp-6",
+     "to": "z-cabana-spk",
+     "signal": "speaker",
+     "channels": "5-6"
+    },
+    {
+     "from": "source-4",
+     "to": "avr",
+     "signal": "video"
+    },
+    {
+     "from": "source",
+     "to": "enc-source",
+     "signal": "video"
+    },
+    {
+     "from": "enc-source",
+     "to": "sw",
+     "signal": "video"
+    },
+    {
+     "from": "source-2",
+     "to": "enc-source-2",
+     "signal": "video"
+    },
+    {
+     "from": "enc-source-2",
+     "to": "sw",
+     "signal": "video"
+    },
+    {
+     "from": "source-3",
+     "to": "enc-source-3",
+     "signal": "video"
+    },
+    {
+     "from": "enc-source-3",
+     "to": "sw",
+     "signal": "video"
+    },
+    {
+     "from": "sw",
+     "to": "dec-audio-amp-5",
+     "signal": "video"
+    },
+    {
+     "from": "dec-audio-amp-5",
+     "to": "amp-5",
+     "signal": "audio"
+    },
+    {
+     "from": "sw",
+     "to": "dec-audio-amp-6",
+     "signal": "video"
+    },
+    {
+     "from": "dec-audio-amp-6",
+     "to": "amp-6",
+     "signal": "audio"
+    }
+   ],
+   "annotations": []
+  }
+ ]
+}

@@ -602,29 +602,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003041525",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003041525",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003041525",
-    "./app/ports.js": "./app/ports.js?v=20261003041525",
-    "./app/commands.js": "./app/commands.js?v=20261003041525",
-    "./app/engine.js": "./app/engine.js?v=20261003041525",
-    "./app/exports.js": "./app/exports.js?v=20261003041525",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003041525",
-    "./app/hookup.js": "./app/hookup.js?v=20261003041525",
-    "./app/importers.js": "./app/importers.js?v=20261003041525",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003041525",
-    "./app/library.js": "./app/library.js?v=20261003041525",
-    "./app/names.js": "./app/names.js?v=20261003041525",
-    "./app/network.js": "./app/network.js?v=20261003041525",
-    "./app/pages.js": "./app/pages.js?v=20261003041525",
-    "./app/power.js": "./app/power.js?v=20261003041525",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003041525",
-    "./app/rack.js": "./app/rack.js?v=20261003041525",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003041525",
-    "./app/starters.js": "./app/starters.js?v=20261003041525",
-    "./app/kinds.js": "./app/kinds.js?v=20261003041525",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003041525",
-    "./app/sheets.js": "./app/sheets.js?v=20261003041525"
+    "./app/ai.js": "./app/ai.js?v=20261003044805",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003044805",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003044805",
+    "./app/ports.js": "./app/ports.js?v=20261003044805",
+    "./app/commands.js": "./app/commands.js?v=20261003044805",
+    "./app/engine.js": "./app/engine.js?v=20261003044805",
+    "./app/exports.js": "./app/exports.js?v=20261003044805",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003044805",
+    "./app/hookup.js": "./app/hookup.js?v=20261003044805",
+    "./app/importers.js": "./app/importers.js?v=20261003044805",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003044805",
+    "./app/library.js": "./app/library.js?v=20261003044805",
+    "./app/names.js": "./app/names.js?v=20261003044805",
+    "./app/network.js": "./app/network.js?v=20261003044805",
+    "./app/pages.js": "./app/pages.js?v=20261003044805",
+    "./app/power.js": "./app/power.js?v=20261003044805",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003044805",
+    "./app/rack.js": "./app/rack.js?v=20261003044805",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003044805",
+    "./app/starters.js": "./app/starters.js?v=20261003044805",
+    "./app/kinds.js": "./app/kinds.js?v=20261003044805",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003044805",
+    "./app/sheets.js": "./app/sheets.js?v=20261003044805"
 } }
 </script>
 <script>
@@ -784,7 +784,7 @@
     <button data-start="newJob"><b>New job</b><span>Pick the closest rack — Savant, theater, MXNet, Dante or blank — then type the rooms</span></button>
     <button data-start="pasteBtn"><b>Paste a design</b><span>Markdown or notes from Claude, ChatGPT, an email or a tech — rooms and gear come in wired</span></button>
     <button data-start="importBtn"><b>Import a file</b><span>A Markdown design, PlanQueue file, SignalPath job, AVWalk survey or Blueprinted (Savant) file</span></button>
-    <button data-start="sample"><b>Open a sample</b><span>Sample Residence, Sample Estate or a 25-room stress job to try things on</span></button>
+    <button data-start="sample"><b>Open a sample</b><span>Sample Residence, Sample Estate, a 30-room Bel Air estate or a 25-room stress job to try things on</span></button>
   </div>
   <div class="jh-sect jh-row"><span>Your jobs <em id="jhCount"></em></span><input id="jhSearch" placeholder="Search jobs, clients, addresses…" autocomplete="off" spellcheck="false"></div>
   <div id="jhList"></div>
@@ -881,7 +881,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003041525").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003044805").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1199,7 +1199,7 @@ function renderTopbar() {
 async function renderJobsSel() {
   const jobs = (await dbAll()).sort((a, b) => b.updated - a.updated);
   $("#jobsSel").innerHTML = jobs.map(j => `<option value="${j.id}">${esc(j.data.job.name)}</option>`).join("") +
-    `<optgroup label="Samples"><option value="__residence">Sample Residence</option><option value="__estate">Sample Estate</option><option value="__stress">Stress (25 zones)</option></optgroup>`;
+    `<optgroup label="Samples"><option value="__residence">Sample Residence</option><option value="__estate">Sample Estate</option><option value="__belair">Bel Air Estate (30 rooms, 4 racks)</option><option value="__stress">Stress (25 zones)</option></optgroup>`;
   $("#jobsSel").value = S.id;
 }
 
@@ -1299,7 +1299,7 @@ addEventListener("keydown", e => { if (e.key === "Escape" && $("#jobsHome").clas
 $("#jobsHome").querySelector(".jh-start").onclick = e => {
   const b = e.target.closest("[data-start]"); if (!b) return;
   if (b.dataset.start === "sample") return openPicker({ title: "Open a sample", groups: [{ label: "Samples (a new copy each time)", items: [
-      { value: "__residence", label: "Sample Residence" }, { value: "__estate", label: "Sample Estate" }, { value: "__stress", label: "Stress (25 rooms)" }] }],
+      { value: "__residence", label: "Sample Residence" }, { value: "__estate", label: "Sample Estate" }, { value: "__belair", label: "Bel Air Estate (30 rooms, 4 racks)" }, { value: "__stress", label: "Stress (25 rooms)" }] }],
     onPick: v => { closeJobsHome(); $("#jobsSel").value = v; $("#jobsSel").dispatchEvent(new Event("change")); } });
   closeJobsHome(); $("#" + b.dataset.start).click();
 };
@@ -1531,6 +1531,19 @@ window.SignalPath = Object.freeze({
   undo: () => undo(),
   prompt: req => handoffPrompt(S.job, S.sol, effectiveCatalog(), req),
 });
+// harden/ui-audit.js drives every picker through this — only when the page is opened with ?audit
+if (new URLSearchParams(location.search).has("audit")) window.__spAudit = {
+  get job() { return S.job; },
+  load(j) { S.job = structuredClone(j); S.sol = 0; S.id = "ui-audit"; S.editScope = "house"; S.undo = []; refresh(false); },
+  openAll() { for (let k = 0; k < 3; k++) { document.querySelectorAll("#panelBody [data-toggle]").forEach(h => S.openRows.add(h.dataset.toggle));
+    document.querySelectorAll("#panelBody details[data-more]").forEach(d => S.openRows.add(d.dataset.more)); renderPanel(); } },
+  tab(t) { switchTab(t); renderPanel(); },
+  issues: () => assess(S.job, S.sol, effectiveCatalog()),
+  kits: () => listStarters(SETTINGS.starters),
+  kitJob(id, rooms) { const st = listStarters(SETTINGS.starters).find(k => k.id === id); let j = applyStarter(blankJob(), st, SETTINGS.catalog);
+    const text = st.rooms || rooms; if (text) j = planCommands(j, 0, [{ op: "add_zones", text }], effectiveCatalog()).job; return j; },
+  describe: id => describeNode(S.job, S.job.solutions[S.sol], id),
+};
 $("#starter").onclick = e => { if (e.target.id === "starter") $("#starter").classList.remove("show"); };
 $("#delJob").onclick = async opt => {
   if (!opt?.skipConfirm && !confirm(`Delete "${S.job.job.name}"?`)) return;

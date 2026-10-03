@@ -29,7 +29,7 @@ export function stripUnsafe(v, depth = 0) {
 // ids flow into HTML attributes, CSS selectors and the "from→to" wire key —
 // everything the app itself generates fits this set, so an imported id that
 // doesn't is either corrupt or hostile
-const SAFE_ID = /^[A-Za-z0-9_.:-]{1,80}$/;
+const SAFE_ID = /^(?!(?:__proto__|constructor|prototype)$)[A-Za-z0-9_.:-]{1,80}$/;
 
 export function assertJobShape(job) {
   const bad = m => { throw new Error("SignalPath file rejected: " + m); };
@@ -510,12 +510,27 @@ export async function encodeHandoff(obj) {
   return b64u.enc(await pipe(new TextEncoder().encode(JSON.stringify(obj)), new CompressionStream("deflate-raw")));
 }
 /* null when the hash isn't a handoff; throws on a damaged one */
+// a survey is tens of KB; a link that inflates past this is broken or hostile (a decompression bomb)
+const HANDOFF_MAX = 5e6;
+async function inflateCapped(bytes, max) {
+  const reader = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw")).getReader();
+  const parts = []; let n = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    n += value.length;
+    if (n > max) { await reader.cancel().catch(() => {}); const e = new Error("too large"); e.capped = true; throw e; }
+    parts.push(value);
+  }
+  const out = new Uint8Array(n); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+}
 export async function decodeHandoff(hash) {
   const m = String(hash || "").match(/^#avwalk=(.*)$/s);
   if (!m) return null;
   let text;
-  try { text = new TextDecoder().decode(await pipe(b64u.dec(m[1]), new DecompressionStream("deflate-raw"))); }
-  catch (e) { throw new Error("AVWalk link is damaged or cut off — send it again (" + e.message + ")"); }
+  try { text = new TextDecoder().decode(await inflateCapped(b64u.dec(m[1]), HANDOFF_MAX)); }
+  catch (e) { throw new Error(e.capped ? "That AVWalk link holds far more than a survey — not opened." : "AVWalk link is damaged or cut off — send it again (" + e.message + ")"); }
   return JSON.parse(text);
 }
 

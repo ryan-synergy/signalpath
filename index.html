@@ -616,29 +616,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003122208",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003122208",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003122208",
-    "./app/ports.js": "./app/ports.js?v=20261003122208",
-    "./app/commands.js": "./app/commands.js?v=20261003122208",
-    "./app/engine.js": "./app/engine.js?v=20261003122208",
-    "./app/exports.js": "./app/exports.js?v=20261003122208",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003122208",
-    "./app/hookup.js": "./app/hookup.js?v=20261003122208",
-    "./app/importers.js": "./app/importers.js?v=20261003122208",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003122208",
-    "./app/library.js": "./app/library.js?v=20261003122208",
-    "./app/names.js": "./app/names.js?v=20261003122208",
-    "./app/network.js": "./app/network.js?v=20261003122208",
-    "./app/pages.js": "./app/pages.js?v=20261003122208",
-    "./app/power.js": "./app/power.js?v=20261003122208",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003122208",
-    "./app/rack.js": "./app/rack.js?v=20261003122208",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003122208",
-    "./app/starters.js": "./app/starters.js?v=20261003122208",
-    "./app/kinds.js": "./app/kinds.js?v=20261003122208",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003122208",
-    "./app/sheets.js": "./app/sheets.js?v=20261003122208"
+    "./app/ai.js": "./app/ai.js?v=20261003123922",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003123922",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003123922",
+    "./app/ports.js": "./app/ports.js?v=20261003123922",
+    "./app/commands.js": "./app/commands.js?v=20261003123922",
+    "./app/engine.js": "./app/engine.js?v=20261003123922",
+    "./app/exports.js": "./app/exports.js?v=20261003123922",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003123922",
+    "./app/hookup.js": "./app/hookup.js?v=20261003123922",
+    "./app/importers.js": "./app/importers.js?v=20261003123922",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003123922",
+    "./app/library.js": "./app/library.js?v=20261003123922",
+    "./app/names.js": "./app/names.js?v=20261003123922",
+    "./app/network.js": "./app/network.js?v=20261003123922",
+    "./app/pages.js": "./app/pages.js?v=20261003123922",
+    "./app/power.js": "./app/power.js?v=20261003123922",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003123922",
+    "./app/rack.js": "./app/rack.js?v=20261003123922",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003123922",
+    "./app/starters.js": "./app/starters.js?v=20261003123922",
+    "./app/kinds.js": "./app/kinds.js?v=20261003123922",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003123922",
+    "./app/sheets.js": "./app/sheets.js?v=20261003123922"
 } }
 </script>
 <script>
@@ -897,7 +897,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003122208").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003123922").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1352,7 +1352,7 @@ $("#jhList").onclick = async e => {
       { value: "dl", label: "Download", sub: "The job file (.json) — a backup you can import anywhere" },
       ...(card.querySelector('[data-a="ab"]') ? [{ value: "ab", label: "Start as-built", sub: "When it's installed: a copy to record what went in" }] : []),
       { value: "del", label: "Delete", sub: "Removes it from this browser" }] }],
-    onPick: v => card.querySelector(`[data-a="${v}"]`).click() });
+    onPick: v => card.querySelector(`[data-a="${CSS.escape(v)}"]`)?.click() });
   if (a === "ab") { if (id !== S.id) await openJob(id); closeJobsHome(); return $("#startAsBuilt").click(); }
   if (a === "rename") { const n = prompt("Job name:", name); if (n == null || !n.trim()) return;
     if (id === S.id) { S.job.job.name = n.trim(); await persist(); refresh(false); }
@@ -3236,7 +3236,7 @@ function wireSettings(body) {
   const addCat = body.querySelector("#addCat");
   if (addCat) addCat.onclick = () => {
     const id = (prompt("Catalog id (e.g. sonos-amp):") || "").trim(); if (!id) return;
-    if (!/^[A-Za-z0-9_.:-]{1,80}$/.test(id)) { alert("Use letters, numbers, dots, dashes or underscores for the id."); return; }
+    if (!/^(?!(?:__proto__|constructor|prototype)$)[A-Za-z0-9_.:-]{1,80}$/.test(id)) { alert("Use letters, numbers, dots, dashes or underscores for the id."); return; }
     if (SETTINGS.catalog.devices[id]) { alert(`"${id}" is already in the catalog — edit that entry instead.`); S.openRows.add("cat-" + id); renderPanel(); return; }
     SETTINGS.catalog.devices[id] = { brand: "", model: id, type: "amp", zones: 1, inputs: {}, verified: false };
     S.openRows.add("cat-" + id); save(); renderPanel();
@@ -3289,7 +3289,7 @@ function renderLibList() {
   if (other.length) groups.push(["Other", other]);
   $("#libList").innerHTML = groups.length ? groups.map(([l, g]) => `<div class="grp">${esc(l)} · ${g.length}</div>` + g.map(([id, d]) =>
     `<div class="it${id === LIB.sel ? " on" : ""}" data-id="${esc(id)}"><div class="m">${esc(`${d.brand || ""} ${d.model || id}`.trim())}${libBadges(id, d)}</div>
-     <div class="s">${esc(d.partNo || "no part #")}${d.zones ? ` · ${d.zones} zones` : ""}</div></div>`).join("")).join("")
+     <div class="s">${esc(d.partNo || "no part #")}${d.zones ? ` · ${esc(d.zones)} zones` : ""}</div></div>`).join("")).join("")
     : `<div class="empty">Nothing matches.</div>`;
   $("#libList").querySelectorAll(".it").forEach(el => el.onclick = () => { LIB.sel = el.dataset.id; renderLibList(); renderLibEditor(); $("#libEd").scrollTop = 0; });
 }
@@ -3387,6 +3387,7 @@ $("#libExport").onclick = () => {
 $("#libImport").onclick = () => $("#libFile").click();
 $("#libFile").onchange = async () => {
   const f = $("#libFile").files[0]; $("#libFile").value = ""; if (!f) return;
+  if (f.size > 25e6) { alert(`${f.name} is ${Math.round(f.size / 1e6)} MB — a library file is well under 1 MB. Wrong file?`); return; }
   try {
     const file = stripUnsafe(JSON.parse(await f.text()));
     const plan = planImport(SETTINGS.catalog.devices, file, stableStr, SETTINGS.starters);
@@ -3644,7 +3645,7 @@ function wirePanel(body) {
     for (const z of S.job.house.zones) S.openRows.delete(z.id);
     S.openRows.add(id); S.openRows.add("more:" + id);
     refresh();
-    const inp = document.querySelector(`[data-zid="${id}"] .zname`); if (inp) { inp.scrollIntoView({ block: "center" }); inp.select(); }
+    const inp = document.querySelector(`[data-zid="${CSS.escape(id)}"] .zname`); if (inp) { inp.scrollIntoView({ block: "center" }); inp.select(); }
   };
 
   body.querySelectorAll(".chip[data-act]").forEach(b => b.onclick = () => {

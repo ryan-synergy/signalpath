@@ -188,20 +188,29 @@ export function planImport(devices, file, stableStr, starters = null) {
   if (!file || file.kind !== "signalpath-library" || !file.devices || typeof file.devices !== "object" || Array.isArray(file.devices)) throw new Error("That isn't a SignalPath library file.");
   const plan = { added: [], updated: [], same: [], kitsAdded: [], kitsUpdated: [] };
   for (const [id, e] of Object.entries(file.devices)) {
-    if (!/^[A-Za-z0-9_.:-]{1,80}$/.test(id) || !e || typeof e !== "object") continue;
+    if (!/^(?!(?:__proto__|constructor|prototype)$)[A-Za-z0-9_.:-]{1,80}$/.test(id) || !e || typeof e !== "object") continue;
     if (!devices[id]) plan.added.push(id); else if (stableStr(devices[id]) !== stableStr(e)) plan.updated.push(id); else plan.same.push(id);
   }
   const mine = starters?.mine || {};
   const theirs = file.starters?.mine;
   for (const [id, k] of Object.entries(theirs && typeof theirs === "object" && !Array.isArray(theirs) ? theirs : {})) {
-    if (!/^[A-Za-z0-9_.:-]{1,80}$/.test(id) || !k || typeof k !== "object" || !Array.isArray(k.devices)) continue;
+    if (!/^(?!(?:__proto__|constructor|prototype)$)[A-Za-z0-9_.:-]{1,80}$/.test(id) || !k || typeof k !== "object" || !Array.isArray(k.devices)) continue;
     if (!mine[id]) plan.kitsAdded.push(id); else if (stableStr(mine[id]) !== stableStr(k)) plan.kitsUpdated.push(id);
   }
   return plan;
 }
 // starters (optional): SETTINGS.starters — kits are added or replaced; new ones join the end of the order
+// a field the library holds as a number (zones, rack units, watts…) comes in as a number or not at all — a string
+// there was rendered as-is (2026-10-03 security review: "zones": "8<img …>" ran script in the library list)
+const NUMERIC = ["zones", "rackUnits", "u", "powerTypicalW", "powerMaxW", "depthIn", "widthIn", "heightIn", "weightLb", "switchPorts", "hdmiIn", "hdmiOut", "outlets", "watts"];
+function tidyDevice(e) {
+  const d = structuredClone(e);
+  for (const k of NUMERIC) if (k in d && typeof d[k] !== "number") { const n = +d[k]; if (Number.isFinite(n) && String(d[k]).trim() !== "") d[k] = n; else delete d[k]; }
+  for (const [k, v] of Object.entries(d)) if (typeof v === "number" && !Number.isFinite(v)) delete d[k];
+  return d;
+}
 export function applyImport(devices, file, plan, starters = null) {
-  for (const id of [...plan.added, ...plan.updated]) devices[id] = structuredClone(file.devices[id]);
+  for (const id of [...plan.added, ...plan.updated]) devices[id] = tidyDevice(file.devices[id]);
   if (starters) {
     tidyStarterStore(starters);
     for (const id of [...(plan.kitsAdded || []), ...(plan.kitsUpdated || [])]) starters.mine[id] = structuredClone(file.starters.mine[id]);

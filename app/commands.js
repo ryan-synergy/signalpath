@@ -522,7 +522,7 @@ export function planCommands(job, solIndex, commands, catalog) {
   const steps = [];
   for (const raw of Array.isArray(commands) ? commands : []) {
     const cmd = raw && typeof raw === "object" ? raw : { op: String(raw) };
-    const fn = HANDLERS[cmd.op];
+    const fn = Object.hasOwn(HANDLERS, cmd.op) ? HANDLERS[cmd.op] : null;   // "constructor" / "toString" aren't commands
     if (!fn) { steps.push({ ok: false, cmd, error: `unknown command "${cmd.op}"` }); continue; }
     const snap = structuredClone(next);               // a failing step must not leave half its change behind
     try { steps.push({ ok: true, cmd, text: fn(next, solOf(), cmd, catalog) }); }

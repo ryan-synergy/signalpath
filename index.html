@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-xJ8PDkISiuDZ43a/4XbfLQ8CBDVgVpjrkNYJrMrDHZs=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-ZctJxxJ7/WFyxNepywocXkNpyhchr09eDxAQWaVdf18='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-pR960UdCGzT1Nvx9CS+CVU8CLg9o1f7tb7FAHb4rZfQ=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-1MQ0tiOnFr5t31TkJpQ8BfQJYw+alWWlr/wJZ05bpjw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -550,7 +550,7 @@
   .nbody { flex: 1; min-width: 0; }
   .notetext { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--act-line); border-radius: 8px; resize: vertical; background: #fffdf2; }
   .noteopts { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; font-size: 12px; color: var(--lbl); margin-top: 4px; }
-  .noteopts label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; min-height: 28px; }
+  .noteopts label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; min-height: 28px; white-space: nowrap; }
   .noteopts .notedel { margin-left: auto; border: 0; background: none; color: #b3261e; font: inherit; font-size: 12px; cursor: pointer; min-height: 28px; }
   .noteadd { border: 1px dashed var(--act-line); background: #fff; border-radius: 8px; padding: 0 12px; min-height: var(--hit); font: inherit; font-size: 13px; color: var(--accent); font-weight: 600; cursor: pointer; }
   .noteadd .mini { font-weight: 400; }
@@ -653,29 +653,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003143204",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003143204",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003143204",
-    "./app/ports.js": "./app/ports.js?v=20261003143204",
-    "./app/commands.js": "./app/commands.js?v=20261003143204",
-    "./app/engine.js": "./app/engine.js?v=20261003143204",
-    "./app/exports.js": "./app/exports.js?v=20261003143204",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003143204",
-    "./app/hookup.js": "./app/hookup.js?v=20261003143204",
-    "./app/importers.js": "./app/importers.js?v=20261003143204",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003143204",
-    "./app/library.js": "./app/library.js?v=20261003143204",
-    "./app/names.js": "./app/names.js?v=20261003143204",
-    "./app/network.js": "./app/network.js?v=20261003143204",
-    "./app/pages.js": "./app/pages.js?v=20261003143204",
-    "./app/power.js": "./app/power.js?v=20261003143204",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003143204",
-    "./app/rack.js": "./app/rack.js?v=20261003143204",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003143204",
-    "./app/starters.js": "./app/starters.js?v=20261003143204",
-    "./app/kinds.js": "./app/kinds.js?v=20261003143204",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003143204",
-    "./app/sheets.js": "./app/sheets.js?v=20261003143204"
+    "./app/ai.js": "./app/ai.js?v=20261003143221",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003143221",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003143221",
+    "./app/ports.js": "./app/ports.js?v=20261003143221",
+    "./app/commands.js": "./app/commands.js?v=20261003143221",
+    "./app/engine.js": "./app/engine.js?v=20261003143221",
+    "./app/exports.js": "./app/exports.js?v=20261003143221",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003143221",
+    "./app/hookup.js": "./app/hookup.js?v=20261003143221",
+    "./app/importers.js": "./app/importers.js?v=20261003143221",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003143221",
+    "./app/library.js": "./app/library.js?v=20261003143221",
+    "./app/names.js": "./app/names.js?v=20261003143221",
+    "./app/network.js": "./app/network.js?v=20261003143221",
+    "./app/pages.js": "./app/pages.js?v=20261003143221",
+    "./app/power.js": "./app/power.js?v=20261003143221",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003143221",
+    "./app/rack.js": "./app/rack.js?v=20261003143221",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003143221",
+    "./app/starters.js": "./app/starters.js?v=20261003143221",
+    "./app/kinds.js": "./app/kinds.js?v=20261003143221",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003143221",
+    "./app/sheets.js": "./app/sheets.js?v=20261003143221"
 } }
 </script>
 <script>
@@ -935,7 +935,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003143204").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003143221").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1978,7 +1978,7 @@ function notesHTML(near) {
   return `<div class="notes" data-near="${esc(near)}">${mine.map(a => { const i = all.indexOf(a), n = noteNumber(sol, a);
     return `<div class="noteitem" data-ni="${i}"><span class="nbadge">${n || "＋"}</span><div class="nbody">
       <textarea class="notetext" rows="2" placeholder="What should someone reading the drawing know?">${esc(a.text || "")}</textarea>
-      <div class="noteopts"><label title="Shows the note's text in a box beside it on the drawing, not just the marker"><input type="checkbox" class="notepin" ${a.pinned ? "checked" : ""}> Always show on the drawing</label>
+      <div class="noteopts"><label title="Shows the note's text in a box beside it on the drawing, not just the marker"><input type="checkbox" class="notepin" ${a.pinned ? "checked" : ""}> Pin on the drawing</label>
         <label title="Leaves this note off the client's packet"><input type="checkbox" class="notecrew" ${a.crew ? "checked" : ""}> Crew only</label>
         <button type="button" class="notedel">Remove</button></div></div></div>`; }).join("")}
     <button type="button" class="noteadd">＋ Add a note <span class="mini">— a numbered red marker on the drawing</span></button></div>`;
@@ -2094,7 +2094,7 @@ $("#canvas").addEventListener("click", e => {
     const sol = S.job.solutions[S.sol], a = (sol.annotations || []).filter(x => x && String(x.text ?? "").trim())[+nm.dataset.note];
     if (a) { clearSel(); S.tipNote = a;
       showTip(e.clientX, e.clientY, `<b>Note ${+nm.dataset.note + 1}</b> · ${esc(S.job.house.zones.find(z => z.id === a.near)?.name || nodeName(a.near))}${a.crew ? ' · <span class="mini">crew only</span>' : ""}<div style="padding:4px 0 2px;white-space:normal;max-width:280px">${esc(a.text)}</div>` +
-        `<div id="ntEdit" class="altrow">✎ Edit this note</div><div id="ntPin" class="altrow">${a.pinned ? "Show only the marker" : "📌 Always show it on the drawing"}</div>`); }
+        `<div id="ntEdit" class="altrow">✎ Edit this note</div><div id="ntPin" class="altrow">${a.pinned ? "Unpin — show only the marker" : "📌 Pin it on the drawing"}</div>`); }
     return;
   }
   // wires first (their fat hit-twins sit on top); overlapping bundles cycle per tap

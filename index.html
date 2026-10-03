@@ -410,6 +410,42 @@
   #toast.show { display: flex; }
   #toast button { background: none; border: 1px solid #555; color: #fff; border-radius: 6px; padding: 3px 9px; font: inherit; font-size: 12px; cursor: pointer; }
   /* ---- new job: rack starting points ---- */
+  /* Jobs screen (Ryan 2026-10-02: "break it out — where we start jobs, maintain jobs") */
+  #topbar #jobsHomeBtn { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; border-radius: 8px; background: transparent; color: #e6e9ef; font-weight: 600; }
+  #jobsHome { position: fixed; inset: 0; background: #f4f5f7; display: none; z-index: 45; overflow-y: auto; }
+  #jobsHome.show { display: block; }
+  #jobsHome .jh { max-width: 980px; margin: 0 auto; padding: 18px 16px 40px; }
+  #jobsHome .jh-hd { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  #jobsHome h2 { margin: 0; font-size: 22px; flex: 1; }
+  #jobsHome .jh-back { min-height: var(--hit); border-radius: 8px; padding: 0 14px; border: 1px solid var(--act-line); background: #fff; font-weight: 600; }
+  #jobsHome .jh-sect { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #3b3f47; margin: 20px 2px 8px; }
+  #jobsHome .jh-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  #jobsHome .jh-row > span { flex: 1; } #jobsHome .jh-row em { font-style: normal; font-weight: 400; color: var(--muted); letter-spacing: 0; text-transform: none; }
+  #jhSearch { flex: 0 1 320px; min-width: 0; width: 100%; min-height: var(--hit); padding: 0 12px; border: 1px solid var(--act-line); border-radius: 8px; font: inherit; font-size: 14px; letter-spacing: 0; text-transform: none; font-weight: 400; }
+  #jobsHome .jh-start { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+  #jobsHome .jh-start button { text-align: left; background: #fff; border: 1px solid var(--act-line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-height: 92px; cursor: pointer; }
+  #jobsHome .jh-start button:first-child { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  #jobsHome .jh-start b { font-size: 15px; } #jobsHome .jh-start span { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+  #jobsHome .jh-start button:hover, #jobsHome .jcard:hover { border-color: #9aa3b2; }
+  .jcard { background: #fff; border: 1px solid var(--act-line); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .jcard.cur { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .jcard .jt { flex: 1 1 260px; min-width: 0; cursor: pointer; }
+  .jcard .jt b { font-size: 15px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .jcard .jt .jm { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .jcard .chips { display: inline-flex; gap: 6px; margin-left: 8px; vertical-align: 2px; }
+  .jcard .chip { display: inline-block; min-height: 0; height: auto; font-size: 11px; line-height: 16px; font-weight: 700; border-radius: 999px; padding: 1px 8px; background: var(--tag-bg); color: var(--tag-ink); border: 1px solid var(--tag-line); }
+  .jcard .chip.ab { background: #e8f5ec; color: #1d6b35; border-color: #bfe3cb; } .jcard .chip.now { background: var(--sug-bg); color: var(--sug-ink); border-color: var(--sug-line); }
+  .jcard .ja { display: flex; gap: 6px; flex-wrap: wrap; }
+  .jcard .ja button { min-height: var(--hit); padding: 0 12px; border-radius: 8px; border: 1px solid var(--act-line); background: #fff; font-size: 13px; }
+  .jcard .ja button.open { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .jcard .ja button.danger { color: #b3261e; }
+  #jobsHome .jh-empty { padding: 24px; text-align: center; color: var(--muted); background: #fff; border-radius: 12px; border: 1px dashed var(--act-line); }
+  #jobsHome .jh-foot { font-size: 12.5px; color: var(--muted); margin-top: 18px; }
+  .jcard .ja .more { display: none; }
+  /* phone: two start tiles a row (titles only), and each job keeps Open + More (the rest in a picker) */
+  @media (max-width: 600px) { #topbar #jobsHomeBtn span { display: none; }
+    #jobsHome .jh-start { grid-template-columns: 1fr 1fr; } #jobsHome .jh-start button { min-height: 64px; } #jobsHome .jh-start span { display: none; }
+    .jcard .ja { width: 100%; } .jcard .ja button { flex: 1; } .jcard .ja button:not(.open):not(.more) { display: none; } .jcard .ja .more { display: block; } }
   #starter { position: fixed; inset: 0; background: rgba(10,12,16,.55); display: none; z-index: 50; align-items: center; justify-content: center; }
   #starter.show { display: flex; }
   #starter .card { background: #fff; border-radius: 12px; width: min(820px, 94vw); max-height: 88vh; overflow-y: auto;
@@ -532,29 +568,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003024441",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003024441",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003024441",
-    "./app/ports.js": "./app/ports.js?v=20261003024441",
-    "./app/commands.js": "./app/commands.js?v=20261003024441",
-    "./app/engine.js": "./app/engine.js?v=20261003024441",
-    "./app/exports.js": "./app/exports.js?v=20261003024441",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003024441",
-    "./app/hookup.js": "./app/hookup.js?v=20261003024441",
-    "./app/importers.js": "./app/importers.js?v=20261003024441",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003024441",
-    "./app/library.js": "./app/library.js?v=20261003024441",
-    "./app/names.js": "./app/names.js?v=20261003024441",
-    "./app/network.js": "./app/network.js?v=20261003024441",
-    "./app/pages.js": "./app/pages.js?v=20261003024441",
-    "./app/power.js": "./app/power.js?v=20261003024441",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003024441",
-    "./app/rack.js": "./app/rack.js?v=20261003024441",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003024441",
-    "./app/starters.js": "./app/starters.js?v=20261003024441",
-    "./app/kinds.js": "./app/kinds.js?v=20261003024441",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003024441",
-    "./app/sheets.js": "./app/sheets.js?v=20261003024441"
+    "./app/ai.js": "./app/ai.js?v=20261003025354",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003025354",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003025354",
+    "./app/ports.js": "./app/ports.js?v=20261003025354",
+    "./app/commands.js": "./app/commands.js?v=20261003025354",
+    "./app/engine.js": "./app/engine.js?v=20261003025354",
+    "./app/exports.js": "./app/exports.js?v=20261003025354",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003025354",
+    "./app/hookup.js": "./app/hookup.js?v=20261003025354",
+    "./app/importers.js": "./app/importers.js?v=20261003025354",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003025354",
+    "./app/library.js": "./app/library.js?v=20261003025354",
+    "./app/names.js": "./app/names.js?v=20261003025354",
+    "./app/network.js": "./app/network.js?v=20261003025354",
+    "./app/pages.js": "./app/pages.js?v=20261003025354",
+    "./app/power.js": "./app/power.js?v=20261003025354",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003025354",
+    "./app/rack.js": "./app/rack.js?v=20261003025354",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003025354",
+    "./app/starters.js": "./app/starters.js?v=20261003025354",
+    "./app/kinds.js": "./app/kinds.js?v=20261003025354",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003025354",
+    "./app/sheets.js": "./app/sheets.js?v=20261003025354"
 } }
 </script>
 <script>
@@ -588,7 +624,8 @@
 
 <div id="topbar">
   <span class="logo">SIGNALPATH</span>
-  <button id="jobBtn" title="Job, stage, option, file"><b id="jobBtnName">Job ▾</b><span id="jobBtnSub"></span></button>
+  <button id="jobsHomeBtn" title="All jobs — start, open, copy, back up" aria-label="All jobs"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M1.5 4.5v8a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-6.5a1 1 0 0 0-1-1H8L6.5 3h-4a1 1 0 0 0-1 1.5z"/></svg><span>Jobs</span></button>
+  <button id="jobBtn" title="This job: rename, stage, option"><b id="jobBtnName">Job ▾</b><span id="jobBtnSub"></span></button>
   <select id="jobsSel" title="Jobs"></select>
   <div class="menu" id="fileMenu"><button class="mbtn" aria-haspopup="true" aria-expanded="false">File ▾</button>
     <div class="mlist" role="menu" hidden>
@@ -705,6 +742,20 @@
   <div id="pkList"></div>
 </div></div>
 
+<div id="jobsHome" role="dialog" aria-modal="true" aria-labelledby="jhTitle"><div class="jh">
+  <div class="jh-hd"><h2 id="jhTitle">Jobs</h2><button id="jhClose" class="jh-back">Back to the job</button></div>
+  <div class="jh-sect">Start a job</div>
+  <div class="jh-start">
+    <button data-start="newJob"><b>New job</b><span>Pick the closest rack — Savant, theater, MXNet, Dante or blank — then type the rooms</span></button>
+    <button data-start="pasteBtn"><b>Paste a design</b><span>Markdown or notes from Claude, ChatGPT, an email or a tech — rooms and gear come in wired</span></button>
+    <button data-start="importBtn"><b>Import a file</b><span>A Markdown design, PlanQueue file, SignalPath job, AVWalk survey or Blueprinted (Savant) file</span></button>
+    <button data-start="sample"><b>Open a sample</b><span>Sample Residence, Sample Estate or a 25-room stress job to try things on</span></button>
+  </div>
+  <div class="jh-sect jh-row"><span>Your jobs <em id="jhCount"></em></span><input id="jhSearch" placeholder="Search jobs, clients, addresses…" autocomplete="off" spellcheck="false"></div>
+  <div id="jhList"></div>
+  <div class="jh-foot">Jobs are saved in this browser. <b>Download</b> a job file to back it up or move it to another computer; <b>Import a file</b> brings it back.</div>
+</div></div>
+
 <div id="starter" role="dialog" aria-modal="true" aria-labelledby="stTitle"><div class="card">
   <h2 id="stTitle">New job — pick the closest rack</h2>
   <div class="s">Its gear comes filled in. Then type the rooms — they wire themselves to it.</div>
@@ -795,7 +846,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003024441").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003025354").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1151,16 +1202,12 @@ $("#jobBtn").onclick = () => {
       { value: "stage:proposal", label: "Proposal", current: stage === "proposal", sub: "stage" },
       { value: "stage:asBuilt", label: "As-built", current: stage === "asBuilt", sub: "stage" } ] },
     { label: "Option", items: opts("#solSel").map(o => ({ value: `sol:${o.value}`, label: o.textContent, current: o.value === String(S.sol) })) },
-    { label: "File", items: [
-      { value: "file:newJob", label: "New job…", sub: "Start from a rack: Savant, theater, MXNet, Dante or blank" },
-      { value: "file:importBtn", label: "Import…", sub: "A SignalPath job, an AVWalk survey or a Blueprinted file" },
-      ...($("#startAsBuilt").hidden ? [] : [{ value: "file:startAsBuilt", label: "Start as-built", sub: "Copy this job to record what was installed" }]),
-      { value: "file:delJob", label: "Delete job", sub: "Removes this job from this browser" } ] },
-    { label: "Open another job", items: jobs.filter(o => o.tagName === "OPTION").map(o => ({ value: `job:${o.value}`, label: o.textContent, current: o.value === String(S.id) })) },
-    ...jobs.map(g => g.tagName === "OPTGROUP"
-      ? { label: g.label, items: [...g.children].map(o => ({ value: `job:${o.value}`, label: o.textContent })) }
-      : null).filter(Boolean),
+    ...($("#startAsBuilt").hidden ? [] : [{ label: "When it's installed", items: [{ value: "file:startAsBuilt", label: "Start as-built", sub: "A copy to record what was installed — this proposal stays as it is" }] }]),
+    // the rest of the jobs live on the Jobs screen; the last few stay one tap away here
+    { label: "Recent jobs", items: [...jobs.filter(o => o.tagName === "OPTION" && o.value !== String(S.id)).slice(0, 5).map(o => ({ value: `job:${o.value}`, label: o.textContent })),
+      { value: "home", label: "All jobs…", sub: "Start, open, rename, copy, back up or delete jobs" }] },
   ], onPick: v => {
+    if (v === "home") return openJobsHome();
     const [k, ...rest] = v.split(":"), val = rest.join(":");
     const set = (sel, x) => { $(sel).value = x; $(sel).dispatchEvent(new Event("change")); };
     if (k === "rename") { const n = prompt("Job name:", S.job.job.name || ""); if (n != null && n.trim()) set("#jobName", n.trim()); }
@@ -1169,6 +1216,70 @@ $("#jobBtn").onclick = () => {
     else if (k === "file") $("#" + val).click();
     else if (k === "job") set("#jobsSel", val);
   } });
+};
+
+/* ============ Jobs screen: start a job, open / rename / copy / back up / delete the saved ones ============ */
+const ago = t => { const m = Math.round((Date.now() - t) / 60000);
+  return m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : m < 2880 ? "yesterday"
+    : new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric", year: new Date(t).getFullYear() === new Date().getFullYear() ? undefined : "numeric" }); };
+async function openJob(id) {
+  await flushSave(); S.editScope = "house";
+  const rec = (await dbAll()).find(j => j.id === id);
+  if (rec) { S.job = rec.data; S.id = rec.id; S.sol = 0; }
+  closeJobsHome(); refresh(false);
+}
+function closeJobsHome() { $("#jobsHome").classList.remove("show"); }
+async function renderJobsHome() {
+  await flushSave();
+  const q = $("#jhSearch").value.trim().toLowerCase();
+  const all = (await dbAll()).sort((a, b) => b.updated - a.updated);
+  const text = j => [j.data.job?.name, j.data.job?.client?.name, j.data.job?.client?.address].filter(Boolean).join(" ").toLowerCase();
+  const jobs = q ? all.filter(j => q.split(/\s+/).every(w => text(j).includes(w))) : all;
+  $("#jhCount").textContent = all.length ? `· ${all.length} saved${q ? ` · ${jobs.length} match` : ""}` : "";
+  $("#jhList").innerHTML = jobs.length ? jobs.map(j => {
+    const d = j.data, jb = d.job || {}, ab = jb.stage === "asBuilt";
+    const rooms = d.house?.zones?.length || 0, opts = d.solutions?.length || 0;
+    const real = v => { v = String(v || "").trim(); return v && !/^(customer name|street, city, ca)$/i.test(v) ? v : ""; };   // the blank job's placeholders aren't a client
+    const meta = [real(jb.client?.name), real(jb.client?.address), `${rooms} room${rooms === 1 ? "" : "s"}`, opts > 1 && `${opts} options`, `edited ${ago(j.updated)}`].filter(Boolean).join(" · ");
+    return `<div class="jcard${j.id === S.id ? " cur" : ""}" data-id="${esc(j.id)}">
+      <div class="jt" data-a="open"><b>${esc(jb.name || "Untitled job")}<span class="chips"><span class="chip${ab ? " ab" : ""}">${ab ? "As-built" : "Proposal"}</span>${j.id === S.id ? '<span class="chip now">Open now</span>' : ""}</span></b><div class="jm">${esc(meta)}</div></div>
+      <div class="ja"><button class="open" data-a="open">${j.id === S.id ? "Back to it" : "Open"}</button><button data-a="rename">Rename</button><button data-a="dup">Duplicate</button><button data-a="dl" title="The job file (.json) — a backup you can import anywhere">Download</button><button data-a="del" class="danger">Delete</button><button class="more" data-a="more">More…</button></div></div>`;
+  }).join("") : `<div class="jh-empty">${q ? "No job matches that." : "No saved jobs yet — start one above."}</div>`;
+}
+async function openJobsHome() { $("#jhSearch").value = ""; await renderJobsHome(); $("#jobsHome").classList.add("show"); $("#jobsHome").scrollTop = 0; }
+$("#jobsHomeBtn").onclick = openJobsHome;
+$("#jhClose").onclick = closeJobsHome;
+$("#jhSearch").oninput = () => renderJobsHome();
+addEventListener("keydown", e => { if (e.key === "Escape" && $("#jobsHome").classList.contains("show") && !document.querySelector("#starter.show, #pasteBox.show, #picker.show")) closeJobsHome(); });
+$("#jobsHome").querySelector(".jh-start").onclick = e => {
+  const b = e.target.closest("[data-start]"); if (!b) return;
+  if (b.dataset.start === "sample") return openPicker({ title: "Open a sample", groups: [{ label: "Samples (a new copy each time)", items: [
+      { value: "__residence", label: "Sample Residence" }, { value: "__estate", label: "Sample Estate" }, { value: "__stress", label: "Stress (25 rooms)" }] }],
+    onPick: v => { closeJobsHome(); $("#jobsSel").value = v; $("#jobsSel").dispatchEvent(new Event("change")); } });
+  closeJobsHome(); $("#" + b.dataset.start).click();
+};
+$("#jhList").onclick = async e => {
+  const a = e.target.closest("[data-a]")?.dataset.a, card = e.target.closest(".jcard"); if (!a || !card) return;
+  const id = card.dataset.id, rec = (await dbAll()).find(j => j.id === id); if (!rec) return renderJobsHome();
+  const name = rec.data.job?.name || "Untitled job";
+  if (a === "open") return id === S.id ? closeJobsHome() : openJob(id);
+  if (a === "more") return openPicker({ title: name, groups: [{ label: "", items: [
+      { value: "rename", label: "Rename…" }, { value: "dup", label: "Duplicate", sub: "A copy to try another idea on" },
+      { value: "dl", label: "Download", sub: "The job file (.json) — a backup you can import anywhere" }, { value: "del", label: "Delete", sub: "Removes it from this browser" }] }],
+    onPick: v => card.querySelector(`[data-a="${v}"]`).click() });
+  if (a === "rename") { const n = prompt("Job name:", name); if (n == null || !n.trim()) return;
+    if (id === S.id) { S.job.job.name = n.trim(); await persist(); refresh(false); }
+    else { rec.data.job.name = n.trim(); await dbPut({ ...rec, updated: Date.now() }); await renderJobsSel(); } }
+  else if (a === "dup") { const copy = structuredClone(id === S.id ? S.job : rec.data); copy.job.name = `${name} (copy)`;
+    await dbPut({ id: uid("job"), updated: Date.now(), data: copy }); await renderJobsSel(); toast(`Copied — "${copy.job.name}" is at the top`); }
+  else if (a === "dl") { const base = String(name).replace(/[\\/:*?"<>|\u0000-\u001f]+/g, "-").trim() || "SignalPath job";
+    download(`${base}.json`, JSON.stringify(id === S.id ? S.job : rec.data, null, 2), "application/json"); }
+  else if (a === "del") {
+    if (!confirm(`Delete "${name}"?\n\nIt's removed from this browser. Download it first if you might want it back.`)) return;
+    if (id === S.id) { await $("#delJob").onclick.call(null, { skipConfirm: true }); }
+    else { await dbDel(id); await renderJobsSel(); }
+    toast(`Deleted "${name}"`); }
+  renderJobsHome();
 };
 
 // new job: pick a rack starting point (or blank); quick-add then wires zones to it
@@ -1372,11 +1483,11 @@ window.SignalPath = Object.freeze({
   prompt: req => handoffPrompt(S.job, S.sol, effectiveCatalog(), req),
 });
 $("#starter").onclick = e => { if (e.target.id === "starter") $("#starter").classList.remove("show"); };
-$("#delJob").onclick = async () => {
-  if (!confirm(`Delete "${S.job.job.name}"?`)) return;
+$("#delJob").onclick = async opt => {
+  if (!opt?.skipConfirm && !confirm(`Delete "${S.job.job.name}"?`)) return;
   cancelSave();
   await dbDel(S.id);
-  const jobs = await dbAll();
+  const jobs = (await dbAll()).sort((a, b) => b.updated - a.updated);   // the most recently edited job opens next
   if (jobs.length) { S.id = jobs[0].id; S.job = jobs[0].data; } else { S.job = blankJob(); S.id = uid("job"); await persist(); }
   refresh();
 };

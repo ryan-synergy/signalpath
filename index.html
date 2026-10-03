@@ -613,29 +613,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003053422",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003053422",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003053422",
-    "./app/ports.js": "./app/ports.js?v=20261003053422",
-    "./app/commands.js": "./app/commands.js?v=20261003053422",
-    "./app/engine.js": "./app/engine.js?v=20261003053422",
-    "./app/exports.js": "./app/exports.js?v=20261003053422",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003053422",
-    "./app/hookup.js": "./app/hookup.js?v=20261003053422",
-    "./app/importers.js": "./app/importers.js?v=20261003053422",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003053422",
-    "./app/library.js": "./app/library.js?v=20261003053422",
-    "./app/names.js": "./app/names.js?v=20261003053422",
-    "./app/network.js": "./app/network.js?v=20261003053422",
-    "./app/pages.js": "./app/pages.js?v=20261003053422",
-    "./app/power.js": "./app/power.js?v=20261003053422",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003053422",
-    "./app/rack.js": "./app/rack.js?v=20261003053422",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003053422",
-    "./app/starters.js": "./app/starters.js?v=20261003053422",
-    "./app/kinds.js": "./app/kinds.js?v=20261003053422",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003053422",
-    "./app/sheets.js": "./app/sheets.js?v=20261003053422"
+    "./app/ai.js": "./app/ai.js?v=20261003053459",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003053459",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003053459",
+    "./app/ports.js": "./app/ports.js?v=20261003053459",
+    "./app/commands.js": "./app/commands.js?v=20261003053459",
+    "./app/engine.js": "./app/engine.js?v=20261003053459",
+    "./app/exports.js": "./app/exports.js?v=20261003053459",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003053459",
+    "./app/hookup.js": "./app/hookup.js?v=20261003053459",
+    "./app/importers.js": "./app/importers.js?v=20261003053459",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003053459",
+    "./app/library.js": "./app/library.js?v=20261003053459",
+    "./app/names.js": "./app/names.js?v=20261003053459",
+    "./app/network.js": "./app/network.js?v=20261003053459",
+    "./app/pages.js": "./app/pages.js?v=20261003053459",
+    "./app/power.js": "./app/power.js?v=20261003053459",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003053459",
+    "./app/rack.js": "./app/rack.js?v=20261003053459",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003053459",
+    "./app/starters.js": "./app/starters.js?v=20261003053459",
+    "./app/kinds.js": "./app/kinds.js?v=20261003053459",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003053459",
+    "./app/sheets.js": "./app/sheets.js?v=20261003053459"
 } }
 </script>
 <script>
@@ -894,7 +894,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003053422").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003053459").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -2604,7 +2604,7 @@ function gearHTML(o = {}) {
         ${encAudioHTML(sol, d)}
         <details class="more" data-more="more:${esc(d.id)}" ${S.openRows.has("more:" + d.id) ? "open" : ""}><summary>More — ${catOf(d) ? "" : "type, "}status${d.type === "amp" ? ", zones" : ""}</summary>
           ${catOf(d) ? "" : field("Type", sel("dtype", DEV_TYPES.filter(ty => ty === d.type || [...ins.map(([c]) => ["to", c]), ...outs.map(([c]) => ["from", c])]
-              .every(([end, c]) => endFits(end, d.id, end === "to" ? c.from : c.to, c.signal, ty))), d.type, { ...DEV_TYPE_LABEL, source: "Source (Apple TV, cable box, streamer…)" })))}
+              .every(([end, c]) => endFits(end, d.id, end === "to" ? c.from : c.to, c.signal, ty))), d.type, { ...DEV_TYPE_LABEL, source: "Source (Apple TV, cable box, streamer…)" }))}
           ${d.type === "amp" ? field("Zones", `<input class="dzones" type="number" min="1" max="32" value="${esc(d.zones || 8)}">`) : ""}
           ${field("Status", sel("dstatus", STATUSES.slice(0, 2), d.status || "new", STATUS_LABEL))}
           <div style="text-align:right"><button class="del ddel">delete device</button></div>

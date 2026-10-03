@@ -2685,6 +2685,20 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t("amp faces: the theater amp has two VU meters and a window per channel (L C R LS RS), no fins",
       !!hy && g("hype").querySelectorAll('path[d*="a11 11 0 0 1 22 0z"]').length === 2 && [...g("hype").querySelectorAll("g.lights text")].map(x => x.textContent).join(" ") === "L C R LS RS" && !g("hype").querySelector('rect[width="1.6"]'));
   }
+  { // control boxes and adapter chips (Ryan 2026-10-03: control box option 1, chips concept C)
+    const tj = await (await fetch("./test-fixtures/test-job-1.json")).json();
+    const Lc = loadJob(effectiveJob(tj, 0)), pc = enginePlace(Lc.job, Lc.ix), rc = engineRoute(Lc.job, Lc.ix, pc), sc = render(Lc.job, Lc.ix, pc, rc), dc = new DOMParser().parseFromString(sc, "image/svg+xml");
+    const dev = id => dc.querySelector(`g.devtile[data-device="${id}"]`), chip = id => dc.querySelector(`g.chiptile[data-chip="${id}"]`), words = g => [...g.querySelectorAll("text")].map(x => x.textContent);
+    t("control boxes: each says the system it runs — MXNET on one, DANTE on the other — beside the brain on its disc",
+      words(dev("cbx")).includes("MXNET") && words(dev("cbx")).includes("controller") && words(dev("dante-cbox")).includes("DANTE") && !!dev("cbx").querySelector('circle[r="11"]'));
+    const tipX = (id, side) => { const c = pc.chips.find(k => k.id === id), d = chip(id).querySelector("path").getAttribute("d"); return d.includes(`L${side === "r" ? c.x + c.w : c.x} ${c.y + c.h / 2}`); };
+    t("chips: an encoder points right, a decoder points left, a balun is a lozenge; each has a colored cap with a wave (magenta MXNet, amber balun, blue Dante audio)",
+      tipX("enc-atv1", "r") && !tipX("enc-atv1", "l") && tipX("dec-avr", "l") && !tipX("dec-avr", "r") && tipX("balun-z-2", "l") && tipX("balun-z-2", "r") &&
+      chip("enc-atv1").innerHTML.includes("#e0449e") && chip("balun-z-2").innerHTML.includes("#ffab2e") && chip("axis16-z-family-roomb").innerHTML.includes("#3b82c4") && [...dc.querySelectorAll("g.chiptile")].every(g => /q1\.7 -5 3\.4 0/.test(g.innerHTML)));
+    // a wire that lands off-centre on a pointed end is carried on to the slant
+    const off = rc.wires.filter(w => { const c = pc.chips.find(k => k.id === w.from); return c && Math.abs(w.pts[0][0] - (c.x + c.w)) < 0.6 && Math.abs(w.pts[0][1] - (c.y + c.h / 2)) > 0.6 && /^enc/.test(c.id); });
+    t("chips: a wire leaving an encoder's point off-centre is drawn on to the slanted edge", off.length > 0 && off.every(w => new RegExp(`d="M${w.pts[0][0]} ${String(w.pts[0][1]).replace(".", "\\.")}L[\\d.]+ ${String(w.pts[0][1]).replace(".", "\\.")}"`).test(sc)), `${off.length} wires`);
+  }
   { // the speaker look Ryan picked from concepts (2026-10-03): yellow cone, thin dark rim, sound lines per group, a glint on the TV
     const svgB = render(job, ix, p, route(job, ix, p), { grayscale: true });
     t("look: speakers have a yellow cone (light gray in B&W), sound lines beside a group with room, a reflection on each TV",

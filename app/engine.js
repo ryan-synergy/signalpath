@@ -4313,12 +4313,16 @@ export function render(job, ix, P, rt, opts = {}) {
           if (u.ports) { const over = u.ports.used > u.ports.cap;
             push(`<text x="${+(x0 + disc + fw + (hasSfp ? 14 : 0) + 4).toFixed(1)}" y="${my + 1.5}" font-size="6.2" font-weight="600" fill="${over && !bw ? LIGHT_OVER : bw ? "#cfcfcf" : lighten(lit, 0.5)}">${over ? `+${u.ports.used - u.ports.cap}` : `${u.ports.used}/${u.ports.cap}`}</text>`); }
         } else if (fk === "control") {
-          // the brains of the job
-          const c = bw || !kind ? "#cfcfcf" : lit, bx = d.x + d.w / 2, by = my - 1;
-          push(`<g fill="none" stroke="${c}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">` +
-            `<path d="M${bx - 0.8} ${by - 7}C${bx - 5} ${by - 9} ${bx - 9.5} ${by - 6} ${bx - 8.5} ${by - 2.5}C${bx - 11} ${by} ${bx - 9.5} ${by + 5} ${bx - 6} ${by + 5.5}C${bx - 5} ${by + 8} ${bx - 1.5} ${by + 8.5} ${bx - 0.8} ${by + 6}Z"/>` +
-            `<path d="M${bx + 0.8} ${by - 7}C${bx + 5} ${by - 9} ${bx + 9.5} ${by - 6} ${bx + 8.5} ${by - 2.5}C${bx + 11} ${by} ${bx + 9.5} ${by + 5} ${bx + 6} ${by + 5.5}C${bx + 5} ${by + 8} ${bx + 1.5} ${by + 8.5} ${bx + 0.8} ${by + 6}Z"/>` +
-            `<path d="M${bx - 6} ${by - 3}q2.5 0.5 2.5 3M${bx - 4.5} ${by + 2.5}q2 -0.5 3.2 1.5M${bx + 6} ${by - 3}q-2.5 0.5 -2.5 3M${bx + 4.5} ${by + 2.5}q-2 -0.5 -3.2 1.5"/></g>`);
+          // the brains of the job (Ryan 2026-10-03, option 1): the brain on a solid disc in the box's color, then a badge for
+          // the system it runs — MXNET or DANTE, so two control boxes in one rack can be told apart — and "controller"
+          const c = bw || !kind ? "#cfcfcf" : lit, bx = d.x + 26, by = my - 1;
+          const fl = [...(dev.flags || []), ...(job.job?.catalogSnapshot?.devices?.[dev.catalogRef]?.flags || [])], nm = `${dev.model || ""} ${dev.catalogRef || ""}`;
+          const sys = fl.includes("danteController") || /dante/i.test(nm) ? ["DANTE", "#3b82c4", 31] : fl.includes("mxnet") || /mxnet/i.test(nm) ? ["MXNET", "#e0449e", 33] : null;
+          push(`<circle cx="${bx}" cy="${by}" r="11" fill="${c}"/><g transform="translate(${bx} ${by}) scale(0.85)" fill="none" stroke="${bw ? "#111" : "#2b2618"}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">` +
+            `<path d="M-0.8 -7C-5 -9 -9.5 -6 -8.5 -2.5C-11 0 -9.5 5 -6 5.5C-5 8 -1.5 8.5 -0.8 6Z"/><path d="M0.8 -7C5 -9 9.5 -6 8.5 -2.5C11 0 9.5 5 6 5.5C5 8 1.5 8.5 0.8 6Z"/>` +
+            `<path d="M-6 -3q2.5 0.5 2.5 3M-4.5 2.5q2 -0.5 3.2 1.5M6 -3q-2.5 0.5 -2.5 3M4.5 2.5q-2 -0.5 -3.2 1.5"/></g>`);
+          if (sys) push(`<rect x="${d.x + 44}" y="${by - 6}" width="${sys[2]}" height="12" rx="2.5" fill="${bw ? "#e6e6e6" : sys[1]}"/><text x="${d.x + 44 + sys[2] / 2}" y="${by + 3}" text-anchor="middle" font-size="7.2" font-weight="800" letter-spacing="0.3" fill="${bw ? "#111" : "#fff"}">${sys[0]}</text>`);
+          push(`<text x="${d.x + (sys ? 49 + sys[2] : 44)}" y="${by + 3}" font-size="7.4" font-weight="600" fill="${bw ? "#cfcfcf" : lighten(lit, 0.6)}">${dev.type === "host" ? "control host" : "controller"}</text>`);
         } else if (dev.type === "audioInputModule" || dev.type === "audioOutputModule") {
           // input vs output at a glance (Ryan 2026-10-03, concept 1): an IN badge on the left with chevrons flowing toward
           // the jacks; on an output module the jacks come first and the chevrons flow out to an OUT badge on the right.
@@ -4431,6 +4435,7 @@ export function render(job, ix, P, rt, opts = {}) {
   /* wires (under chips so badges sit inline on their runs) */
   const TRK = trunkMode(job, opts), trunkWires = [], mergedTags = {};
   const puckOf = Object.fromEntries(P.racks.flatMap(r => r.devices).filter(d => d.puck).map(d => [d.id, d]));
+  const chipOf = Object.fromEntries((P.chips || []).map(c => [c.id, { ...c, type: (sol.companions || []).find(k => k.id === c.id)?.type }]));
   push(`<g fill="none" stroke-width="2.2" stroke-linecap="round">`);
   for (const w of rt.wires) {
     const key = w.scope !== "included" ? "prewire" : w.dante ? "dante" : (w.signal === "speaker" ? "audio" : w.signal);
@@ -4441,6 +4446,14 @@ export function render(job, ix, P, rt, opts = {}) {
     const conn = (sol.connections || []).find(c => c.from === w.from && c.to === w.to && c.signal === w.signal);
     const n = conn ? trunkCount(conn, s) : 1;
     const onTrunk = TRK && w.cls === "trunk";
+    // a wire landing off-centre on a chip's pointed end runs on to the slant
+    for (const [id, q] of [[w.from, w.pts[0]], [w.to, w.pts[w.pts.length - 1]]]) {
+      const ch = chipOf[id]; if (!ch || !q) continue;
+      const off = Math.abs(q[1] - (ch.y + ch.h / 2)), tips = chipShape(ch).tips;
+      const side = Math.abs(q[0] - (ch.x + ch.w)) < 0.6 && tips.includes("r") ? 1 : Math.abs(q[0] - ch.x) < 0.6 && tips.includes("l") ? -1 : 0;
+      if (side && off > 0.6 && off <= ch.h / 2) { const dx = +(CHIP_TIP * off / (ch.h / 2) + 0.6).toFixed(1);
+        push(`<path d="M${q[0]} ${q[1]}L${side > 0 ? ch.x + ch.w - dx : ch.x + dx} ${q[1]}" stroke="${color}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`); }
+    }
     // a wire into a narrow puck (Apple TV, Roku) runs on from its slot's edge to the puck's own edge
     for (const [id, q] of [[w.from, w.pts[0]], [w.to, w.pts[w.pts.length - 1]]]) {
       const pd = puckOf[id]; if (!pd || !q) continue;
@@ -4502,10 +4515,23 @@ export function render(job, ix, P, rt, opts = {}) {
   }
 
   /* companion chips */
+  /* (Ryan 2026-10-03, concept C) an encoder is an arrow pointing right, a decoder an arrow pointing left, a balun a
+     lozenge; the flat end is a colored cap with a little wave on it — magenta for MXNet, blue for the Dante audio
+     adapters, amber for a balun. A wire that lands on a slanted end is carried on to it (chipStub, with the wires). */
   for (const c of P.chips) {   // a tap on a chip opens what it serves (the app's click-to-edit)
-    push(`<g class="chiptile" data-chip="${esc(c.id)}"><rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="2" fill="#1e1e1e"/>`);
-    push(`<text x="${c.x + c.w / 2}" y="${c.y + 13}" text-anchor="middle" font-size="10" fill="#eee">${esc(adapterTag(c))}</text>`);
-    push(`<circle cx="${c.x + c.w - 6}" cy="${c.y + c.h / 2}" r="1.8" fill="#3fbf5a"/></g>`);
+    const tag = adapterTag(c), sh = chipShape(c), { x, y, w, h } = c, t = CHIP_TIP, f = v => +v.toFixed(1);
+    const ink = "#1b1b1b", capC = bw ? "#cfcfcf" : sh.color, waveC = bw || sh.kind === "balun" ? "#161616" : "#fff";
+    const wave = wx => `<path d="M${f(wx)} ${y + h / 2}q1.7 -5 3.4 0t3.4 0t3.4 0" fill="none" stroke="${waveC}" stroke-width="1.5" stroke-linecap="round"/>`;
+    const fs = tag.length > 4 ? 7.4 : tag.length > 3 ? 8 : 8.8, led = cx => tag.length > 4 ? "" : `<circle cx="${f(cx)}" cy="${y + h / 2}" r="1.6" fill="#3fbf5a"/>`;
+    const text = cx => `<text x="${f(cx)}" y="${y + h / 2 + 3.1}" text-anchor="middle" font-size="${fs}" font-weight="600" letter-spacing="0.3" fill="#fff">${esc(tag)}</text>`;
+    let body;
+    if (sh.kind === "enc") body = `<path d="M${x + 3} ${y}H${x + w - t}L${x + w} ${y + h / 2}L${x + w - t} ${y + h}H${x + 3}a3 3 0 0 1 -3 -3V${y + 3}a3 3 0 0 1 3 -3z" fill="${ink}"/>` +
+      `<path d="M${x + 3} ${y}h11v${h}h-11a3 3 0 0 1 -3 -3V${y + 3}a3 3 0 0 1 3 -3z" fill="${capC}"/>` + wave(x + 1.9) + text(x + 14 + (w - t - 14 - (tag.length > 4 ? 0 : 5)) / 2 + 1) + led(x + w - t - 1.5);
+    else if (sh.kind === "dec") body = `<path d="M${x + t} ${y}H${x + w - 3}a3 3 0 0 1 3 3V${y + h - 3}a3 3 0 0 1 -3 3H${x + t}L${x} ${y + h / 2}z" fill="${ink}"/>` +
+      `<path d="M${x + w - 14} ${y}h11a3 3 0 0 1 3 3V${y + h - 3}a3 3 0 0 1 -3 3h-11z" fill="${capC}"/>` + wave(x + w - 12.1) + text(x + t + (w - t - 14 + (tag.length > 4 ? 0 : 5)) / 2 - 1) + led(x + t + 2);
+    else body = `<path d="M${x + t} ${y}H${x + w - t}L${x + w} ${y + h / 2}L${x + w - t} ${y + h}H${x + t}L${x} ${y + h / 2}z" fill="${ink}"/>` +
+      `<path d="M${x + t} ${y}h9v${h}h-9L${x} ${y + h / 2}z" fill="${capC}"/>` + wave(x + 3.6) + `<text x="${f(x + t + 9 + (w - 2 * t - 9) / 2 + 1.5)}" y="${y + h / 2 + 3}" text-anchor="middle" font-size="7.4" font-weight="600" letter-spacing="0.2" fill="#fff">${esc(tag)}</text>`;
+    push(`<g class="chiptile" data-chip="${esc(c.id)}">${body}</g>`);
   }
 
   /* invisible fat twins over every wire: 12px tap targets for click-to-trace
@@ -4679,6 +4705,16 @@ export function render(job, ix, P, rt, opts = {}) {
    type so a rack of black boxes passes the squint test */
 // a source's face: its stored sourceType, else read off its name (kit and library boxes
 // carry a model, not a sourceType — an Apple TV from a kit still gets its badge)
+// how an adapter chip is drawn: its outline (encoder → points right, decoder → points left, balun → a lozenge) and its
+// cap color (MXNet magenta, the Dante audio adapters blue, a balun amber)
+const CHIP_TIP = 9;
+function chipShape(c) {
+  const t = c?.type;
+  if (t === "balun") return { kind: "balun", color: "#ffab2e", tips: ["l", "r"] };
+  if (t === "dec") return { kind: "dec", color: "#e0449e", tips: ["l"] };
+  if (t === "axis" || t === "axis16") return { kind: "enc", color: "#3b82c4", tips: ["r"] };
+  return { kind: "enc", color: "#e0449e", tips: ["r"] };
+}
 function sourceFace(dev) {
   if (dev.sourceType) return dev.sourceType;
   if (dev.type !== "source") return null;

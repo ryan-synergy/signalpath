@@ -807,6 +807,7 @@ function placeAt(job, ix, opts, gs) {
    job.job.trunkStyle = "ribbon" or "off". opts.trunks overrides ("bundle" |
    "ribbon" | false / "off" for the classic drawing). */
 const LINK_MIN = 10;   // a trunk to this many rooms beside the rack may gather at its sources and cross the rack once (measured 6 / 10 / 14)
+const OFF_CHANNEL = 0.3;  // packed / bands, trunks off: lanes added to the rack-to-rooms channel per room feed
 const PACK_SLACK = 14;   // packed / bands: every TV row's gap keeps a spare lane (measured 0 / 14 / 28 on every sample, 2026-10-03: 14 brings Bundle and Ribbon level with Classic)
 const BAND_COLORS = { surround: "#2f3e9e", tvspk: "#7a3fb0", tv: "#4b5563", speakers: "#12806a", outdoor: "#2f7a3a", off: "#6b7280" };
 export const LAYOUT_STYLES = ["packed", "bands", "classic"];
@@ -1029,6 +1030,10 @@ function placeOnce(job, ix, opts, variant) {
     const tzid = epZoneOf(c.to);
     if (devColOf[c.from] === "C" && tzid && primary.video.some(z => z.id === tzid)) colCRisers++;
   }
+  // packed / bands with trunks off: every room feed is its own line down the channel between the racks and the rooms
+  // (a trunk shares one), so the channel widens with the feeds — measured 0 / .15 / .25 / .3 / .4 lanes per feed on
+  // every sample (2026-10-03): .3 is where wires stop running through rooms
+  if (packed && trunkMode(job, opts) === null) colCRisers += Math.round(OFF_CHANNEL * visConns.filter(c => epZoneOf(c.to)).length);
   const rightCorridorW = quant(colCRisers * PL.lanePitch + 36, PL.rightCorridorMin);
 
   /* -- racks: left column, stacked, device columns vertically aligned -- */
@@ -2898,6 +2903,8 @@ function routeOnce(job, ix, placement, opts = {}) {
                Math.min(y1, y2) < tChip.y + tChip.h - 1 && Math.max(y1, y2) > tChip.y + 1;
       })());
       const blockedHere = pts => pathBlocked(pts, skip) || (piercesChip(pts) ? "target chip" : null);
+      const sideY = (zs => zs.length ? [Math.min(...zs.map(z => z.y)), Math.max(...zs.map(z => z.y))] : [0, 1])(P.zones.filter(z => z.band === "mid" || z.band === "audio"));
+      const sideMinX = P.layout && P.layout !== "classic" && P.zones.length ? Math.min(...P.zones.filter(z => z.band === "mid" || z.band === "audio").map(z => z.x)) : null;
       const finishFrom = (px, py, prefix, inverted = false, relax = false) => {
         const sibNets = relax ? [] : eastNets;
         // a chip under the card has one entry, its bottom: approach from BELOW no
@@ -2956,8 +2963,8 @@ function routeOnce(job, ix, placement, opts = {}) {
         // level-with-the-band sources (bottom-anchored amps) dive below the band
         // right at the source and run the bottom strip east — the mock's pattern;
         // a target-side riser would have to cross every card between here and there
-        const tryDive = (landAt, rng, desired, dir) => {
-          const bandMinX = plan.eastBandMinX;
+        const tryDive = (landAt, rng, desired, dir, chan = false) => {
+          const bandMinX = chan ? sideMinX : plan.eastBandMinX;
           const g1 = Math.min(bandMinX != null ? bandMinX - 10 : tx - 10, tx - 10);
           const g0 = px + 10;
           if (g1 <= g0 + 6) return null;
@@ -2965,12 +2972,14 @@ function routeOnce(job, ix, placement, opts = {}) {
           // the band edge and advance WEST: each farther sibling dives wider and
           // deeper, its strip run passing safely under the nearer ones
           const rk = "dive" + g0;
-          const prev = riserTrack[rk];
-          const rDesired = Math.min(g1, prev != null ? prev - 12 : g1);
+          const prev = chan ? null : riserTrack[rk];   // the channel's risers serve different rows: any free one will do
+          // in the channel a lower row's riser sits farther west, so the run to an upper row never crosses it
+          const rDesired = chan ? g1 - (g1 - g0 - 6) * Math.min(1, Math.max(0, (cardTop - sideY[0]) / Math.max(1, sideY[1] - sideY[0])))
+            : Math.min(g1, prev != null ? prev - 12 : g1);
           if (rDesired < g0 + 6) return null;
           scanLane(desired, dir, rng, px, tx, nWire, y => {
-            const riserX = alloc(usedV, rDesired, Math.min(py, y), Math.max(py, y), nWire, -1,
-              x => segBlocked(x, Math.min(py, y), x, Math.max(py, y), skip), [g0, rDesired]);
+            const riserX = alloc(usedV, rDesired, Math.min(py, y), Math.max(py, y), nWire, chan ? 0 : -1,
+              x => segBlocked(x, Math.min(py, y), x, Math.max(py, y), skip), [g0, chan ? g1 : rDesired]);
             if (riserX == null) { dbg(o, { y, fail: "dive-riser" }); return false; }
             const cand = [...prefix, [px, py], [riserX, py], [riserX, y], [tx, y], [tx, landAt]];
             if (blockedHere(cand) || !pathRegisterable(cand, nWire)) { dbg(o, { y, riserX, fail: "dive-blocked" }); return false; }
@@ -2981,8 +2990,13 @@ function routeOnce(job, ix, placement, opts = {}) {
           });
           return found;
         };
-        if (above) tryStaged(land, [Math.max(20, cardTop - 320), cardTop - 14], cardTop - 26, -1);
-        else {
+        if (above) {
+          tryStaged(land, [Math.max(20, cardTop - 320), cardTop - 14], cardTop - 26, -1);
+          // packed / bands: rooms sit in rows beside the rack, so a riser next to a far row's room would have to pass
+          // through every row above it — come down the channel between the racks and the rooms instead, then run the
+          // row's gap to the room
+          if (!found && sideMinX != null) tryDive(land, [Math.max(20, cardTop - 320), cardTop - 14], cardTop - 26, -1, true);
+        } else {
           // both shapes, then the cheaper (fewest crossings, then shortest): the dive
           // alone used to win whenever it existed, even when it ran the wire under the
           // whole band while a riser beside the target reached it at card level

@@ -64,13 +64,34 @@ export const PLATFORM_NAME = { "": "—", savant: "Savant", josh: "Josh.ai", con
      group: "In the rack", kind: "rack"|"display"|"speakers"|"adapter"|"local"|"missing" }
    Zones: "Family Room TV (75\")", "Family Room speakers (5.1 surround)".
    Adapters: "HDBaseT balun at Family Room TV". In-zone gear: "Apple TV in Patio". */
+/* the rooms a receiver drives (Ryan 2026-10-02: "a bunch of receivers" in a picker can't be told apart —
+   a theater's MRX 1140 and a loft's MRX 540 need the room they feed by name). Read from the wiring, so it's
+   never stale: its speakers, or its TV's picture (straight, or through the decoder / balun at the TV). */
+export function drivesRooms(job, sol, devId) {
+  const zones = job?.house?.zones || [], conns = sol?.connections || [], comps = sol?.companions || [];
+  const out = [];
+  for (const z of zones) {
+    const eps = new Set((z.endpoints || []).map(e => e.id));
+    const via = new Set(comps.filter(k => eps.has(k.serves)).map(k => k.id));     // the adapter at the TV
+    const fed = conns.some(c => c.from === devId && (c.signal === "speaker" || c.signal === "video") && (eps.has(c.to) || via.has(c.to)));
+    if (fed && !out.includes(z.name)) out.push(z.name);
+  }
+  return out;
+}
+// "Anthem MRX 540 — Family Room" (unless the name already says the room)
+export function withRooms(name, rooms) {
+  const n = String(name || ""), add = rooms.filter(r => r && !n.toLowerCase().includes(String(r).toLowerCase()));
+  return add.length ? `${n} — ${add.slice(0, 3).join(", ")}${add.length > 3 ? ` +${add.length - 3}` : ""}` : n;
+}
+
 export function describeNode(job, sol, id) {
   const zones = job?.house?.zones || [];
   const zoneName = zid => zones.find(z => z.id === zid)?.name || zid;
   for (const r of sol?.racks || []) for (const d of r.devices || []) if (d.id === id) {
     const t = TYPE_NAME[d.type];
-    return { group: "In the rack", kind: "rack", type: d.type, short: d.model || id,
-             label: `${d.model || id}${t && d.type !== "source" && !String(d.model || "").toLowerCase().includes(t.toLowerCase()) ? ` (${t})` : ""}` };
+    const name = d.type === "avr" ? withRooms(d.model || id, drivesRooms(job, sol, d.id)) : d.model || id;
+    return { group: "In the rack", kind: "rack", type: d.type, short: name,
+             label: `${name}${t && d.type !== "source" && !String(d.model || "").toLowerCase().includes(t.toLowerCase()) ? ` (${t})` : ""}` };
   }
   for (const z of zones) for (const e of z.endpoints || []) if (e.id === id) {
     if (e.type === "display") {

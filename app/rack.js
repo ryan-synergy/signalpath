@@ -11,6 +11,7 @@
 import { wireRuns } from "./pages.js";
 import { companionRef, specFor } from "./network.js";
 import { deviceKind } from "./kinds.js";
+import { drivesRooms, withRooms } from "./names.js";
 import { rackOption, fitRacks, cabinetNeeds, belowMinimum, estimateHeight, RACK_CLEARANCE } from "./racksizes.js";
 
 export const DEFAULT_RACK_U = 42;
@@ -210,7 +211,8 @@ export function rackPlans(job, ix, catalog) {
         items.push({ kind: "patch", tier: 0, u: 1, label: `Cat6 patch panel ${PATCH_PORTS}-port${Math.ceil(cat6 / PATCH_PORTS) > 1 ? ` (${k + 1})` : ""}` });
       for (const d of r.devices || []) {
         const c = specFor(d, catalog);
-        const name = `${d.model || d.id}${d.danteSwitch ? " (Dante)" : ""}`;
+        // a receiver says which room it drives (Ryan 2026-10-02) — the rack holds several that look alike
+        const name = `${d.type === "avr" ? withRooms(d.model || d.id, drivesRooms(job, sol, d.id)) : d.model || d.id}${d.danteSwitch ? " (Dante)" : ""}`;
         if (c?.mount === "vertical") { rear.push(name); continue; }
         const u = typeof c?.rackUnits === "number" ? c.rackUnits : null;
         const tier = TIER[d.type] ?? 2;

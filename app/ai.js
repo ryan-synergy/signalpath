@@ -11,7 +11,7 @@
 
 import { loadJob, effectiveJob, validate, advise } from "./engine.js";
 import { planCommands, vocabularyText, OPS } from "./commands.js";
-import { describeNode, productName, TYPE_NAME, SPEAKER_SETUP, SIGNAL_NAME, SCOPE_NAME, AUDIO_BACK_NAME } from "./names.js";
+import { describeNode, drivesRooms, productName, TYPE_NAME, SPEAKER_SETUP, SIGNAL_NAME, SCOPE_NAME, AUDIO_BACK_NAME } from "./names.js";
 import { readHookup } from "./hookup.js";
 
 export const MODELS = [
@@ -46,7 +46,8 @@ export function jobSummary(job, solIndex, catalog) {
     L.push("", `RACK "${r.name || r.id}" — ${MODE[r.sizeMode] || "fixed U"}${r.rackModel ? ` (${r.rackModel})` : r.units ? ` (${r.units}U)` : ""}${r.space?.h ? `, space ${r.space.h}" high` : ""}${r.casters === false ? ", no casters" : ""}${beside ? `, beside "${beside.name}"` : ""}:`);
     for (const d of r.devices || []) {
       const c = d.catalogRef && catalog?.devices?.[d.catalogRef];
-      L.push(`- ${d.model || d.id} — ${TYPE_NAME[d.type] || d.type}${c ? ` (catalog: ${productName(c)})` : ""}${d.zones ? `, ${d.zones} zones` : ""}${d.status === "ofe" ? ", owner-furnished" : ""}`);
+      const rooms = d.type === "avr" ? drivesRooms(job, sol, d.id) : [];
+      L.push(`- ${d.model || d.id} — ${TYPE_NAME[d.type] || d.type}${rooms.length ? ` driving ${rooms.join(", ")}` : ""}${c ? ` (catalog: ${productName(c)})` : ""}${d.zones ? `, ${d.zones} zones` : ""}${d.status === "ofe" ? ", owner-furnished" : ""}`);
     }
     if (!(r.devices || []).length) L.push("- (empty)");
   }

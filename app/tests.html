@@ -819,6 +819,19 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     t("ai commands: an unknown rack fails that step only", p.steps.filter(x => !x.ok).length === 1 && /nowhere/.test(p.steps.find(x => !x.ok).error));
     t("ai commands: the vocabulary and the AI's job summary know racks by name", /set_rack/.test(C3.vocabularyText()) && /RACK "Equipment Rack 2" — Auto/.test((await import("./ai.js")).jobSummary(p.job, 0, CAT3)));
   }
+  { // receivers named for the rooms they drive (Ryan 2026-10-02: "a bunch of receivers" can't be told apart)
+    const MDn = await import("./mdimport.js"), Nn = await import("./names.js"), CATn = await (await fetch("./catalog.json")).json();
+    const r = MDn.importMarkdown("## Rooms\n- Theater — 7.1.4 Atmos, 120 projector\n- Loft — 5.1, 65\" Sony\n- Kitchen — stereo\n\n## Rack\n- AVPro Edge AC-MXNET-SW8P\n- Anthem MDX-16", CATn);
+    const j = r.job, sol = j.solutions[0], avrs = sol.racks[0].devices.filter(d => d.type === "avr");
+    const names = avrs.map(d => Nn.describeNode(j, sol, d.id).short);
+    t("receivers: each is named for the room it drives — theater's 1140, loft's 540", names.includes("Anthem MRX 1140 — Theater") && names.includes("Anthem MRX 540 — Loft"), names.join(" | "));
+    const L = loadJob(structuredClone(j)), a = advise(L.job, L.ix, CATn);
+    t("receivers: the rack elevation labels say the room too", a.racks[0].items.filter(i => i.type === "avr").every(i => / — (Theater|Loft)$/.test(i.label)));
+    t("receivers: an amp isn't renamed; an unwired receiver keeps its plain name", Nn.describeNode(j, sol, sol.racks[0].devices.find(d => d.type === "amp").id).short === "Anthem MDX-16" &&
+      Nn.withRooms("Anthem MRX 540", []) === "Anthem MRX 540");
+    t("receivers: a name that already says the room isn't doubled (an imported 'MRX SLM — Great Room')", Nn.withRooms("Anthem MRX SLM — Great Room", ["Great Room"]) === "Anthem MRX SLM — Great Room");
+    t("receivers: the AI's job summary says which room each drives", /MRX 1140 — AV receiver driving Theater/.test((await import("./ai.js")).jobSummary(j, 0, CATn)));
+  }
   { // re-import merge: House refreshes, Solutions and endpoint ids survive
     const target = structuredClone(fixtures.residence);
     const walk = structuredClone(miniWalk);

@@ -532,29 +532,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003012558",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003012558",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003012558",
-    "./app/ports.js": "./app/ports.js?v=20261003012558",
-    "./app/commands.js": "./app/commands.js?v=20261003012558",
-    "./app/engine.js": "./app/engine.js?v=20261003012558",
-    "./app/exports.js": "./app/exports.js?v=20261003012558",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003012558",
-    "./app/hookup.js": "./app/hookup.js?v=20261003012558",
-    "./app/importers.js": "./app/importers.js?v=20261003012558",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003012558",
-    "./app/library.js": "./app/library.js?v=20261003012558",
-    "./app/names.js": "./app/names.js?v=20261003012558",
-    "./app/network.js": "./app/network.js?v=20261003012558",
-    "./app/pages.js": "./app/pages.js?v=20261003012558",
-    "./app/power.js": "./app/power.js?v=20261003012558",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003012558",
-    "./app/rack.js": "./app/rack.js?v=20261003012558",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003012558",
-    "./app/starters.js": "./app/starters.js?v=20261003012558",
-    "./app/kinds.js": "./app/kinds.js?v=20261003012558",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003012558",
-    "./app/sheets.js": "./app/sheets.js?v=20261003012558"
+    "./app/ai.js": "./app/ai.js?v=20261003013034",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003013034",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003013034",
+    "./app/ports.js": "./app/ports.js?v=20261003013034",
+    "./app/commands.js": "./app/commands.js?v=20261003013034",
+    "./app/engine.js": "./app/engine.js?v=20261003013034",
+    "./app/exports.js": "./app/exports.js?v=20261003013034",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003013034",
+    "./app/hookup.js": "./app/hookup.js?v=20261003013034",
+    "./app/importers.js": "./app/importers.js?v=20261003013034",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003013034",
+    "./app/library.js": "./app/library.js?v=20261003013034",
+    "./app/names.js": "./app/names.js?v=20261003013034",
+    "./app/network.js": "./app/network.js?v=20261003013034",
+    "./app/pages.js": "./app/pages.js?v=20261003013034",
+    "./app/power.js": "./app/power.js?v=20261003013034",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003013034",
+    "./app/rack.js": "./app/rack.js?v=20261003013034",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003013034",
+    "./app/starters.js": "./app/starters.js?v=20261003013034",
+    "./app/kinds.js": "./app/kinds.js?v=20261003013034",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003013034",
+    "./app/sheets.js": "./app/sheets.js?v=20261003013034"
 } }
 </script>
 <script>
@@ -763,7 +763,7 @@ import { setDanteAudio, danteAmpFor } from "./app/hookup.js";
 import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, quickFixes, adapterAudioOut, adapterAudioTargets, setAdapterAudio, addLocalAmp, nextFreeOutputs, outputsNeeded,
          VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS, REACH, bulletFor } from "./app/hookup.js";
 import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME, AUDIO_NET_NAME,
-         signalName, describeNode, humanizeWireIds, productName, productSku, ADAPTER, adapterName, isOutdoorZone, ZONE_GROUPING_NAME } from "./app/names.js";
+         signalName, describeNode, drivesRooms, humanizeWireIds, productName, productSku, ADAPTER, adapterName, isOutdoorZone, ZONE_GROUPING_NAME } from "./app/names.js";
 
 /* ============ IndexedDB jobs store ============ */
 const DB = await new Promise((res, rej) => {
@@ -795,7 +795,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003012558").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003013034").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -2056,7 +2056,8 @@ function zonesHTML() {
     const what = [spk && (SPEAKER_SETUP[spk.config || "stereo"] || spk.config),
                   tv && `${tv.size || "?"}" ${tv.displayType === "projector" ? "projector" : "TV"}${tv.brand ? " " + tv.brand : ""}`].filter(Boolean).join(" + ") || "Nothing in this zone yet";
     // inside the zone's own row, "Apple TV in Patio" is just "Apple TV (in zone)"
-    const short = id => id ? describeNode(S.job, sol, id).short.replace(` in ${z.name}`, " (in zone)") : null;
+    // a receiver named for the room it drives: in that room's own line the room goes without saying
+    const short = id => id ? describeNode(S.job, sol, id).short.replace(` in ${z.name}`, " (in zone)").replace(new RegExp(` — ${z.name.replace(/[.*+?^${}()|[\]\\]/g, c => "\\" + c)}$`), "") : null;
     let feed = "";
     if (h.video?.from && h.video.from === h.speakers?.from) feed = `${short(h.video.from)} → TV + speakers`;
     else feed = [h.tv && h.video?.from && `TV ← ${short(h.video.from)}`,
@@ -2171,8 +2172,8 @@ function hookupHTML(z, sol, multi) {
     const optTargets = devs.filter(d => RETURN_TO.includes(d.type));
     gist.push(h.audioBack === "optical" ? "optical back" : h.audioBack === "none" || !h.audioBack ? "no audio back" : (AUDIO_BACK[h.audioBack] || h.audioBack).replace(/\s*\(.*\)$/, ""));
     fine.push(field("TV audio back", `<select class="hret">
-      ${rcv ? opt("earc", `${AUDIO_BACK.earc} (to ${rcv.model || rcv.id})`, cur) + opt("earc+optical", `${AUDIO_BACK["earc+optical"]} (to ${rcv.model || rcv.id})`, cur)
-        + opt("earc-kit", `${AUDIO_BACK["earc-kit"]} (to ${rcv.model || rcv.id})`, cur) : ""}
+      ${rcv ? opt("earc", `${AUDIO_BACK.earc} (to ${nm(rcv.id)})`, cur) + opt("earc+optical", `${AUDIO_BACK["earc+optical"]} (to ${nm(rcv.id)})`, cur)
+        + opt("earc-kit", `${AUDIO_BACK["earc-kit"]} (to ${nm(rcv.id)})`, cur) : ""}
       ${optTargets.map(d => opt(`optical:${d.id}`, `Optical only → ${nm(d.id)}`, cur)).join("")}
       ${kitElsewhere ? opt("earc-kit", `${AUDIO_BACK["earc-kit"]} (to ${nm(h.ret.to)})`, cur) : ""}
       ${opt("none", AUDIO_BACK.none, cur)}</select>`));
@@ -2227,7 +2228,7 @@ function gearHTML(o = {}) {
       return `<div class="row ${open ? "open" : ""}" data-did="${esc(d.id)}" data-rid="${esc(r.id)}">
       <div class="head zhead" data-toggle="${esc(d.id)}">${statusMark(found, ins.length || outs.length)}
         <div class="zmain"><div class="zt"><span class="t">${esc(d.model || d.id)}${drifted(d) ? ' <span class="mini" style="color:#b26a00" title="Name differs from its catalog product">●</span>' : ""}</span></div>
-          <div class="zsum">${esc(DEV_TYPE_LABEL[d.type] || d.type)}${d.zones ? ` · ${esc(d.zones)} zones` : ""} · ${ins.length} in · ${outs.length} out${cap.short ? " · " + esc(cap.short) : ""}</div>
+          <div class="zsum">${esc(DEV_TYPE_LABEL[d.type] || d.type)}${d.type === "avr" && drivesRooms(S.job, sol, d.id).length ? ` · drives ${esc(drivesRooms(S.job, sol, d.id).join(", "))}` : ""}${d.zones ? ` · ${esc(d.zones)} zones` : ""} · ${ins.length} in · ${outs.length} out${cap.short ? " · " + esc(cap.short) : ""}</div>
           ${issue && !open ? `<div class="ziss ${issue.level}">${esc(issue.msg)}</div>` : ""}</div></div>
       <div class="fields">
         ${found.length ? `<div class="zissues">${found.map(f => { const fx = fixButtons(f); return `<div class="${f.level}">${esc(f.msg)}${fx ? `<div class="zfix">${fx}</div>` : ""}</div>`; }).join("")}</div>` : ""}

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-GhMpansE7ADGxrvUc4SPDO5zGRPLK7WpRim2Wx6DsxA=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-Cj4uSMx75wCg7n1TFVqRxi7jmMf9W2iEe6tVyQgJSbM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-xJ8PDkISiuDZ43a/4XbfLQ8CBDVgVpjrkNYJrMrDHZs=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-ZctJxxJ7/WFyxNepywocXkNpyhchr09eDxAQWaVdf18='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -543,6 +543,18 @@
           --tag-bg: #f0f1f4; --tag-line: #dfe1e6; --tag-ink: #3b3f47; --muted: #5d626b; --lbl: #4a4f58; }
   @media (pointer: coarse) { :root { --hit: 44px; } }
   #pkSearch[hidden] { display: none; }
+  /* notes on a room / box */
+  .notes { margin: 10px 0 2px; }
+  .noteitem { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+  .nbadge { flex: none; width: 22px; height: 22px; border-radius: 50%; background: #d92d20; color: #fff; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; margin-top: 4px; box-shadow: 0 0 0 3px rgba(217,45,32,.2); }
+  .nbody { flex: 1; min-width: 0; }
+  .notetext { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--act-line); border-radius: 8px; resize: vertical; background: #fffdf2; }
+  .noteopts { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; font-size: 12px; color: var(--lbl); margin-top: 4px; }
+  .noteopts label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; min-height: 28px; }
+  .noteopts .notedel { margin-left: auto; border: 0; background: none; color: #b3261e; font: inherit; font-size: 12px; cursor: pointer; min-height: 28px; }
+  .noteadd { border: 1px dashed var(--act-line); background: #fff; border-radius: 8px; padding: 0 12px; min-height: var(--hit); font: inherit; font-size: 13px; color: var(--accent); font-weight: 600; cursor: pointer; }
+  .noteadd .mini { font-weight: 400; }
+  @media (pointer: coarse) { .noteopts label, .noteopts .notedel { min-height: 40px; } .noteopts input { width: 20px; height: 20px; } }
   /* packet pages: the whole row is the checkbox's label, tall enough for a finger (iPad pass 2026-10-03) */
   .pgrow { display: flex; align-items: center; gap: 10px; min-height: 34px; cursor: pointer; }
   .pgrow input { width: 18px; height: 18px; flex: none; }
@@ -595,7 +607,7 @@
   .addbtn.sug .t { flex: 1; } .addbtn.sug .ap { font-weight: 700; color: #1d4f8a; }
   /* jacks: quiet tags you can tap */
   .portchip { min-height: 28px; padding: 0 9px; border-radius: 6px; border: 1px solid var(--tag-line); background: var(--tag-bg); color: var(--tag-ink); font-size: 12px; }
-  @media (pointer: coarse) { .portchip { min-height: 34px; } }
+  @media (pointer: coarse) { .portchip { min-height: 40px; } }
   .portchip.none { background: #fff1d6; border-color: #e7c68a; color: #7a4b00; }
   .jacks { margin: 2px 10px 8px; font-size: 12px; color: var(--muted); }
   #qa #qaInput { min-height: var(--hit); border-radius: 8px; }
@@ -626,6 +638,14 @@
     .advhd { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 0; position: sticky; top: 0; background: #fff; }
     .advhd b { font-size: 15px; }
   }
+  /* touch: everything tappable is at least 40 px tall (iPad pass 2026-10-03 — header buttons were 38, fix chips 30, the check bar 34) */
+  @media (pointer: coarse) {
+    #topbar .mbtn, #topbar #aiBtn, #topbar #undoBtn, #topbar #printBtn, #topbar #printMenu .mbtn, #topbar #jobsHomeBtn, #topbar #jobBtn { min-height: 44px; }
+    #topbar #toolsBtn { width: 44px; height: 44px; }
+    .advcount, .advnotes, .advtoggle, .fixbtn { min-height: 40px; }
+    #starter .opt .det { min-height: 40px; min-width: 64px; }
+    #qa .ex details summary { display: inline-block; padding: 10px 6px 10px 0; }
+  }
 </style>
 <!-- Every app file carries the build stamp (deploy replaces "v=dev"): GitHub
      Pages lets a browser keep a file 10 minutes, and a new page mixed with
@@ -633,29 +653,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003141522",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003141522",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003141522",
-    "./app/ports.js": "./app/ports.js?v=20261003141522",
-    "./app/commands.js": "./app/commands.js?v=20261003141522",
-    "./app/engine.js": "./app/engine.js?v=20261003141522",
-    "./app/exports.js": "./app/exports.js?v=20261003141522",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003141522",
-    "./app/hookup.js": "./app/hookup.js?v=20261003141522",
-    "./app/importers.js": "./app/importers.js?v=20261003141522",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003141522",
-    "./app/library.js": "./app/library.js?v=20261003141522",
-    "./app/names.js": "./app/names.js?v=20261003141522",
-    "./app/network.js": "./app/network.js?v=20261003141522",
-    "./app/pages.js": "./app/pages.js?v=20261003141522",
-    "./app/power.js": "./app/power.js?v=20261003141522",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003141522",
-    "./app/rack.js": "./app/rack.js?v=20261003141522",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003141522",
-    "./app/starters.js": "./app/starters.js?v=20261003141522",
-    "./app/kinds.js": "./app/kinds.js?v=20261003141522",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003141522",
-    "./app/sheets.js": "./app/sheets.js?v=20261003141522"
+    "./app/ai.js": "./app/ai.js?v=20261003143204",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003143204",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003143204",
+    "./app/ports.js": "./app/ports.js?v=20261003143204",
+    "./app/commands.js": "./app/commands.js?v=20261003143204",
+    "./app/engine.js": "./app/engine.js?v=20261003143204",
+    "./app/exports.js": "./app/exports.js?v=20261003143204",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003143204",
+    "./app/hookup.js": "./app/hookup.js?v=20261003143204",
+    "./app/importers.js": "./app/importers.js?v=20261003143204",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003143204",
+    "./app/library.js": "./app/library.js?v=20261003143204",
+    "./app/names.js": "./app/names.js?v=20261003143204",
+    "./app/network.js": "./app/network.js?v=20261003143204",
+    "./app/pages.js": "./app/pages.js?v=20261003143204",
+    "./app/power.js": "./app/power.js?v=20261003143204",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003143204",
+    "./app/rack.js": "./app/rack.js?v=20261003143204",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003143204",
+    "./app/starters.js": "./app/starters.js?v=20261003143204",
+    "./app/kinds.js": "./app/kinds.js?v=20261003143204",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003143204",
+    "./app/sheets.js": "./app/sheets.js?v=20261003143204"
 } }
 </script>
 <script>
@@ -915,7 +935,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003141522").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003143204").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1699,7 +1719,8 @@ function printPacket(packet = "service") {
     const a = advise(job, ix, effectiveCatalog());
     const sheets = schematicSheets(full);                      // one schematic sheet per rack when split
     const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, kindColor: $("#kindColor").checked, company: SETTINGS.company, usage: boxUsage(job, ix, effectiveCatalog(), a, S.sol),
-                   rawJob: S.job, packet, catalog: effectiveCatalog(), schematicSheets: sheets.length };   // the takeoff names the real parts
+                   rawJob: S.job, packet, catalog: effectiveCatalog(), schematicSheets: sheets.length,   // the takeoff names the real parts
+                   hideCrewNotes: packet === "client" };                                                  // crew-only notes stay off the client's copy
     const total = sheetTotal(job, ix, a, opts);
     const drawn = sheets.map((sh, k) => {
       const d = sheets.length > 1 ? loadJob(sh.raw) : { job, ix };
@@ -1920,6 +1941,8 @@ function applyAlt(i) {
   clearSel(); refresh();
 }
 tip.addEventListener("click", e => {
+  if (e.target.closest("#ntEdit") && S.tipNote) { const a = S.tipNote, i = (S.job.solutions[S.sol].annotations || []).indexOf(a); hideTip(); if (i >= 0) openNote(a.near, i); return; }
+  if (e.target.closest("#ntPin") && S.tipNote) { const a = S.tipNote; hideTip(); S.editLabel = "note"; a.pinned ? delete a.pinned : a.pinned = true; refresh(); return; }
   if (e.target.closest("#rrGo")) { startReroute(tipAt.x, tipAt.y); return; }
   if (e.target.closest("#ceGo")) { openConn(selWire, selSignal()); return; }
   if (e.target.closest("#zhGo")) { const z = wireZone(selWire, selSignal()); hideTip(); if (z) openHookup(z); return; }
@@ -1946,6 +1969,24 @@ function flashRow(sel) {
   row.scrollIntoView({ block: "center", behavior: "smooth" });
   row.classList.add("flash");
   setTimeout(() => row.classList.remove("flash"), 1300);
+}
+/* notes on the drawing (Ryan 2026-10-03): a room or a box wears a numbered red badge; the sentence is in the legend's NOTES,
+   and a pinned note also shows beside the item. Stored as solution.annotations = [{ text, near, pinned?, crew? }]. */
+const noteNumber = (sol, a) => (sol.annotations || []).filter(x => x && String(x.text ?? "").trim()).indexOf(a) + 1;
+function notesHTML(near) {
+  const sol = S.job.solutions[S.sol], all = sol.annotations || [], mine = all.filter(a => a && a.near === near);
+  return `<div class="notes" data-near="${esc(near)}">${mine.map(a => { const i = all.indexOf(a), n = noteNumber(sol, a);
+    return `<div class="noteitem" data-ni="${i}"><span class="nbadge">${n || "＋"}</span><div class="nbody">
+      <textarea class="notetext" rows="2" placeholder="What should someone reading the drawing know?">${esc(a.text || "")}</textarea>
+      <div class="noteopts"><label title="Shows the note's text in a box beside it on the drawing, not just the marker"><input type="checkbox" class="notepin" ${a.pinned ? "checked" : ""}> Always show on the drawing</label>
+        <label title="Leaves this note off the client's packet"><input type="checkbox" class="notecrew" ${a.crew ? "checked" : ""}> Crew only</label>
+        <button type="button" class="notedel">Remove</button></div></div></div>`; }).join("")}
+    <button type="button" class="noteadd">＋ Add a note <span class="mini">— a numbered red marker on the drawing</span></button></div>`;
+}
+function openNote(near, i) {
+  const isZone = S.job.house.zones.some(z => z.id === near);
+  isZone ? openZone(near) : openGear(near);
+  setTimeout(() => { const t = $(`#panelBody .noteitem[data-ni="${i}"] .notetext`); if (t) { t.scrollIntoView({ block: "center" }); t.focus(); } }, 380);
 }
 function openZone(zid) { focusRows(zid); switchTab("zones"); renderPanel(); flashRow(`[data-zid="${CSS.escape(zid)}"]`); syncGlow(); }
 /* sheet → panel: a tapped wire opens its connection row (GEAR) or its zone's
@@ -2047,6 +2088,15 @@ $("#canvas").addEventListener("click", e => {
   // ghost alternates (reroute picker) swallow the tap
   const alt = e.target.closest(".altpath, .altbub, .altnum");
   if (alt) { applyAlt(+alt.dataset.alt); return; }
+  // a note's badge: read it right there, with the ways to change it
+  const nm = e.target.closest(".notemark");
+  if (nm) {
+    const sol = S.job.solutions[S.sol], a = (sol.annotations || []).filter(x => x && String(x.text ?? "").trim())[+nm.dataset.note];
+    if (a) { clearSel(); S.tipNote = a;
+      showTip(e.clientX, e.clientY, `<b>Note ${+nm.dataset.note + 1}</b> · ${esc(S.job.house.zones.find(z => z.id === a.near)?.name || nodeName(a.near))}${a.crew ? ' · <span class="mini">crew only</span>' : ""}<div style="padding:4px 0 2px;white-space:normal;max-width:280px">${esc(a.text)}</div>` +
+        `<div id="ntEdit" class="altrow">✎ Edit this note</div><div id="ntPin" class="altrow">${a.pinned ? "Show only the marker" : "📌 Always show it on the drawing"}</div>`); }
+    return;
+  }
   // wires first (their fat hit-twins sit on top); overlapping bundles cycle per tap
   const ids = [...new Set(document.elementsFromPoint(e.clientX, e.clientY)
     .filter(el => el.classList?.contains("wirehit") || el.classList?.contains("wire"))
@@ -2424,6 +2474,7 @@ function zonesHTML() {
           return chips("tvsize", list.map(n => [String(n), n + "″"]), String(cur)).replace(/<\/div>$/, `<button type="button" class="chip more" data-other="tvsize">Other…</button></div>`);
         })(), "endpoints", tvH.id, "size") : ""}
         ${hookupHTML(z, sol, multi)}
+        ${notesHTML(z.id)}
         <details class="more" data-more="${esc(moreKey)}" ${S.openRows.has(moreKey) ? "open" : ""}><summary>More — name, ${tv ? "brand, model, " : ""}scope, remote</summary>
           ${field("Name", `<input class="zname" value="${esc(z.name)}">`)}
           ${tv ? fieldO("Brand", `<input class="tvbrand" value="${esc(tv.brand || "")}" placeholder="e.g. Sony">`, "endpoints", tvH.id, "brand") : ""}
@@ -2688,6 +2739,7 @@ function gearHTML(o = {}) {
         <div class="ports">${outs.length ? outs.map(([c, i]) => connRowHTML(c, i, sol, d.id, "out")).join("") : `<div class="empty">Not feeding anything yet.</div>`}
           <button class="addconn" data-dir="out">＋ Add an output</button></div>
         ${encAudioHTML(sol, d)}
+        ${notesHTML(d.id)}
         <details class="more" data-more="more:${esc(d.id)}" ${S.openRows.has("more:" + d.id) ? "open" : ""}><summary>More — ${catOf(d) ? "" : "type, "}status${d.type === "amp" ? ", zones" : ""}</summary>
           ${catOf(d) ? "" : field("Type", sel("dtype", DEV_TYPES.filter(ty => ty === d.type || [...ins.map(([c]) => ["to", c]), ...outs.map(([c]) => ["from", c])]
               .every(([end, c]) => endFits(end, d.id, end === "to" ? c.from : c.to, c.signal, ty))), d.type, { ...DEV_TYPE_LABEL, source: "Source (Apple TV, cable box, streamer…)" }))}
@@ -3569,6 +3621,20 @@ function wirePanel(body) {
   });
   const zoneOf = el => S.job.house.zones.find(z => z.id === el.closest("[data-zid]")?.dataset.zid);
   const on = (selctor, fn) => body.querySelectorAll(selctor).forEach(el => el.onchange = () => { fn(el); refresh(); });
+  /* notes */
+  { const sol = S.job.solutions[S.sol], noteOf = el => (sol.annotations || [])[+el.closest(".noteitem").dataset.ni];
+    on(".notetext", el => { const a = noteOf(el); if (!a) return; const t = el.value.replace(/\s+/g, " ").trim().slice(0, 400);
+      S.editLabel = "note"; if (t) a.text = t; else sol.annotations.splice(sol.annotations.indexOf(a), 1); });
+    on(".notepin", el => { const a = noteOf(el); if (a) { S.editLabel = "note"; el.checked ? a.pinned = true : delete a.pinned; } });
+    on(".notecrew", el => { const a = noteOf(el); if (a) { S.editLabel = "note"; el.checked ? a.crew = true : delete a.crew; } });
+    body.querySelectorAll(".notedel").forEach(b => b.onclick = () => { const a = noteOf(b); if (!a) return; S.editLabel = "note";
+      sol.annotations.splice(sol.annotations.indexOf(a), 1); refresh(); if (String(a.text || "").trim()) toast("Note removed", true); });
+    body.querySelectorAll(".noteadd").forEach(b => b.onclick = () => { const near = b.closest(".notes").dataset.near; sol.annotations ||= [];
+      let a = sol.annotations.find(x => x && x.near === near && !String(x.text || "").trim());       // one blank at a time
+      if (!a) sol.annotations.push(a = { text: "", near });
+      const i = sol.annotations.indexOf(a); renderPanel();
+      setTimeout(() => $(`#panelBody .noteitem[data-ni="${i}"] .notetext`)?.focus(), 30); });
+  }
   // zone field handlers are also reachable from tap chips: a chip calls the
   // same handler with its value (and closest() for the row lookup)
   const ZH = {};

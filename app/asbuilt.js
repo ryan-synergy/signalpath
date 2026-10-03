@@ -112,6 +112,14 @@ export function asBuiltChanges(job) {
   }
   for (const o of bsol.connections || []) if (!cw.has(connKey(o)))
     add("wire", "removed", { wire: `${o.from}→${o.to}` }, `Removed run: ${name(bj, bsol, o.from)} → ${name(bj, bsol, o.to)} (${sig(o)})`);
+
+  // notes on rooms and boxes: what the installer added, changed or took off
+  const noteKey = a => `${a.near}|${String(a.text || "").trim()}`, real = s => (s.annotations || []).filter(a => a && String(a.text || "").trim());
+  const refOf = (j, near) => (j.house?.zones || []).some(z => z.id === near) ? { zone: near } : { device: near };
+  const bn = new Set(real(bsol).map(noteKey)), cn = new Set(real(sol).map(noteKey));
+  const clip = t => { t = String(t).trim(); return t.length > 90 ? t.slice(0, 88) + "…" : t; };
+  for (const a of real(sol)) if (!bn.has(noteKey(a))) add("note", "added", refOf(job, a.near), `Note on ${name(job, sol, a.near)}: ${clip(a.text)}`);
+  for (const o of real(bsol)) if (!cn.has(noteKey(o))) add("note", "removed", refOf(bj, o.near), `Note removed from ${name(bj, bsol, o.near)}: ${clip(o.text)}`);
   return out;
 }
 

@@ -428,8 +428,9 @@ export function validate(job, ix = indexJob(job)) {
     solIds.forEach(id => { if (seenSol.has(id)) E("dup-id", `Two pieces of gear share the id "${id}" — each needs its own`, id); seenSol.add(id); });
     // a note with no `near` is a general sheet note (legend only, legitimately
     // unanchored); one that NAMES a zone that's gone lost its keynote marker
+    // (2026-10-03: a note can sit on a box too — rack gear or an in-room device)
     for (const a of sol.annotations || [])
-      if (a?.near != null && !ix.zonesById[a.near]) W("bad-annotation", `Note "${String(a.text || "").slice(0, 40)}" points at a zone that no longer exists`, a.near);
+      if (a?.near != null && !ix.zonesById[a.near] && !solIds.includes(a.near)) W("bad-annotation", `Note "${String(a.text || "").slice(0, 40)}" points at a room or box that no longer exists`, a.near);
 
     // companions serve real things
     for (const c of sol.companions || []) {
@@ -1218,9 +1219,18 @@ function placeOnce(job, ix, opts, variant) {
   const rows = order.filter(k => present.includes(k));
   // zone annotations ride the legend as numbered keynotes (CAD style): the
   // full sentence lives here, the zone card wears only the circled number
-  const notes = (sol.annotations || []).filter(a => a && typeof a === "object")
-    .map((a, i) => ({ n: i + 1, text: String(a.text ?? ""), near: a.near }));
-  const noteW = notes.length ? Math.max(...notes.map(n => n.text.length)) * 5.4 + 58 : 0;
+  // a crew-only note stays off the client's packet (opts.hideCrewNotes); a long note wraps instead of stretching the legend
+  const wrapNote = (t, max) => { const lines = []; let line = "";
+    for (const w of String(t).replace(/\s+/g, " ").trim().split(" ")) {
+      if (line && (line + " " + w).length > max) { lines.push(line); line = w; } else line = line ? line + " " + w : w;
+      while (line.length > max) { lines.push(line.slice(0, max)); line = line.slice(max); }
+    }
+    if (line) lines.push(line); return lines; };
+  const notes = (sol.annotations || []).filter(a => a && typeof a === "object" && String(a.text ?? "").trim() && !(opts.hideCrewNotes && a.crew))
+    .map((a, i) => { const text = String(a.text ?? "").trim(), tag = a.crew && !opts.hideCrewNotes ? " (crew only)" : "";
+      return { n: i + 1, text, near: a.near, pinned: !!a.pinned, crew: !!a.crew, lines: wrapNote(text + tag, 110).slice(0, 4), box: wrapNote(text, 34).slice(0, 5) }; });
+  const noteLines = notes.reduce((n, a) => n + a.lines.length, 0);
+  const noteW = notes.length ? Math.max(...notes.flatMap(n => n.lines.map(l => l.length))) * 5.4 + 70 : 0;
   // equipment key (color by kind): one swatch per kind of box actually in the racks
   const kindsHere = opts.kindColor === false ? [] : (() => {
     const snap = job.job?.catalogSnapshot?.devices || {};
@@ -1229,7 +1239,7 @@ function placeOnce(job, ix, opts, variant) {
   })();
   const eqH = kindsHere.length ? PL.legendEqH : 0;
   const lw = Math.max(90, 24 + rows.length * PL.legendRowW, noteW, kindsHere.length ? 24 + kindsHere.length * PL.legendEqW : 0);   // "LEGEND" must fit even with no signal rows yet
-  const lh = PL.legendH + eqH + (notes.length ? notes.length * 15 + 10 : 0);
+  const lh = PL.legendH + eqH + (notes.length ? noteLines * 13 + notes.length * 3 + 12 : 0);
   out.legend = { rows, kinds: kindsHere, eqH, notes, w: lw, h: lh, x: SHEET.content.x + SHEET.content.w - lw - 60, y: SHEET.content.y + SHEET.content.h - lh - 6 };
 
   /* -- bounds + fit scale (one-page rule: drawing scales, never splits) -- */
@@ -4303,17 +4313,6 @@ export function render(job, ix, P, rt, opts = {}) {
     push(`</g>`);
   }
 
-  /* annotations render as keynotes: circled number on the zone card (top-left
-     corner), full sentence in the legend's NOTES block */
-  const keynote = n => n <= 20 ? String.fromCharCode(0x2460 + n - 1) : `(${n})`;
-  const markersOn = {};
-  for (const a of P.legend.notes || []) {
-    const z = P.zones.find(z => z.id === a.near);
-    if (!z) continue;
-    const k = markersOn[z.id] = (markersOn[z.id] || 0) + 1;    // two notes on one card sit side by side
-    push(`<text x="${z.x + 9 + (k - 1) * 13}" y="${z.y + 17}" font-size="11" font-weight="700" fill="${bw ? "#333" : "#b32017"}">${keynote(a.n)}</text>`);
-  }
-
   /* harness underlay: bundled feeds share their root's trunk as one heavier
      run, then break out thin toward their own destinations (electrical-drawing
      convention). The count rides the root segment carrying the most wires. */
@@ -4430,6 +4429,41 @@ export function render(job, ix, P, rt, opts = {}) {
   for (const w of rt.wires)
     push(`<path class="wirehit" data-wire="${esc(w.id)}" data-from="${esc(w.from)}" data-to="${esc(w.to)}" data-signal="${esc(w.signal)}" d="${wireD(w)}" pointer-events="stroke"/>`);
   push(`</g>`);
+  /* notes (Ryan 2026-10-03): a numbered red badge on the corner of the room or box it's about — big enough that a tech
+     scanning the sheet can't miss it — with the sentence in the legend's NOTES block; a PINNED note also shows its text
+     in a callout beside the item. Drawn last, over the wires. Tap a badge on screen to read or edit it. */
+  {
+    const NOTE = bw ? "#111" : "#d92d20";
+    const bodies = [...P.zones, ...P.racks.flatMap(r => r.devices), ...(P.chips || [])];
+    const hit = (r, o) => r.x < o.x + o.w + 4 && r.x + r.w > o.x - 4 && r.y < o.y + o.h + 4 && r.y + r.h > o.y - 4;
+    const placed = [], seen = {};
+    for (const a of P.legend.notes || []) {
+      const it = P.zones.find(z => z.id === a.near) || P.racks.flatMap(r => r.devices).find(d => d.id === a.near);
+      if (!it) continue;
+      const k = seen[a.near] = (seen[a.near] || 0) + 1;            // two notes on one item sit side by side
+      const cx = it.x + 3 + (k - 1) * 21, cy = it.y + 3;
+      let callout = "";
+      if (a.pinned) {
+        const w = Math.min(190, Math.max(...a.box.map(l => l.length)) * 4.9 + 16), h = a.box.length * 11 + 10;
+        // the first spot beside the item that covers no room, box or other callout; else above it, over whatever's there
+        const spots = [[it.x + it.w + 14, it.y], [it.x - w - 14, it.y], [it.x, it.y - h - 12], [it.x, it.y + it.h + 12], [it.x + it.w + 14, it.y + it.h - h], [it.x - w - 14, it.y + it.h - h]]
+          .map(([x, y]) => ({ x, y, w, h })).filter(r => r.x >= 2 && r.y >= 2 && r.x + r.w <= P.bounds.w - 2);
+        const r = spots.find(r => ![...bodies, ...placed].some(o => hit(r, o))) || { x: Math.max(2, it.x), y: Math.max(2, it.y - h - 12), w, h };
+        placed.push(r);
+        // a short pointer from the callout to the nearest edge of what it's about (not across its face to the badge)
+        const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+        const ix0 = clamp(r.x + r.w / 2, it.x, it.x + it.w), iy0 = clamp(r.y + r.h / 2, it.y, it.y + it.h);
+        const ex = clamp(ix0, r.x, r.x + r.w), ey = clamp(iy0, r.y, r.y + r.h);
+        callout = `<line x1="${ix0}" y1="${iy0}" x2="${ex}" y2="${ey}" stroke="${NOTE}" stroke-width="1.2"/>` +
+          `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="4" fill="${bw ? "#fff" : "#fff6cc"}" fill-opacity="0.93" stroke="${NOTE}" stroke-width="1.1"/>` +
+          a.box.map((l, i) => `<text x="${r.x + 8}" y="${r.y + 13 + i * 11}" font-size="8.6" fill="#222">${esc(l)}</text>`).join("") +
+          `<circle cx="${r.x}" cy="${r.y}" r="6" fill="${NOTE}" stroke="#fff" stroke-width="1"/><text x="${r.x}" y="${r.y + 2.8}" text-anchor="middle" font-size="7.5" font-weight="700" fill="#fff">${a.n}</text>`;
+      }
+      push(`<g class="notemark" data-note="${a.n - 1}" data-near="${esc(a.near)}" style="cursor:pointer">${callout}` +
+        `<circle cx="${cx}" cy="${cy}" r="12.5" fill="${NOTE}" fill-opacity="0.22"/><circle cx="${cx}" cy="${cy}" r="9.5" fill="${NOTE}" stroke="#fff" stroke-width="1.6"/>` +
+        `<text x="${cx}" y="${cy + 3.6}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">${a.n}</text><title>${esc(a.text)}</title></g>`);
+    }
+  }
   // as-built revision clouds + numbered deltas (asbuilt.js changeMarks, drawn by the
   // caller from this sheet's own placement + routes): drawing-space coordinates, on top
   if (opts.marks) push(opts.marks);
@@ -4464,9 +4498,12 @@ export function render(job, ix, P, rt, opts = {}) {
     // the circled markers on their zone cards
     push(`<line x1="${lg.x}" y1="${ny - 4}" x2="${lg.x + lg.w}" y2="${ny - 4}" stroke="#bbb" stroke-width="0.7"/>`);
     push(`<text x="${lg.x + 12}" y="${ny + 10}" font-size="9" font-weight="700" fill="#555" letter-spacing="1">NOTES</text>`);
-    lg.notes.forEach((a, i) => {
-      push(`<text x="${lg.x + 54}" y="${ny + 10 + i * 15}" font-size="10" fill="${bw ? "#333" : "#b32017"}">${keynote(a.n)}  ${esc(a.text)}</text>`);
-    });
+    let yy = ny + 10;
+    for (const a of lg.notes) {
+      push(`<circle cx="${lg.x + 60}" cy="${yy - 3.4}" r="6" fill="${bw ? "#111" : "#d92d20"}"/><text x="${lg.x + 60}" y="${yy - 0.6}" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">${a.n}</text>`);
+      (a.lines || [a.text]).forEach((l, i) => push(`<text x="${lg.x + 72}" y="${yy + i * 13}" font-size="10" fill="${bw ? "#333" : "#b32017"}">${esc(l)}</text>`));
+      yy += (a.lines || [a.text]).length * 13 + 3;
+    }
   }
 
   /* title block (vertical right edge, per the approved mock) */

@@ -38,7 +38,7 @@ export function jobSummary(job, solIndex, catalog) {
   const sol = job.solutions[solIndex] || job.solutions[0];
   const name = id => describeNode(job, sol, id).short;
   const L = [];
-  L.push(`JOB: ${job.job?.name || "Untitled"} · client ${job.job?.client?.name || "—"} · solution "${sol.name}"`);
+  L.push(`JOB: ${job.job?.name || "Untitled"} · client ${job.job?.client?.name && job.job.client.name !== "Customer Name" ? job.job.client.name : "—"} · solution "${sol.name}"`);
   // each rack, how it's sized, and its gear (the AI moves gear between racks and sets sizes by these names)
   const MODE = { space: "locked to the space", auto: "Auto (sized to the gear)", units: "fixed U", model: "a picked rack" };
   for (const r of sol.racks || []) {

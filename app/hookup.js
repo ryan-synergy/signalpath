@@ -379,6 +379,7 @@ export function feedAmp(job, sol, ampId) {
    decoder) — then their wires. Returns the rooms that lost a feed, so the caller can say so. */
 export function removeRackDevice(job, sol, devId) {
   for (const r of sol.racks || []) r.devices = (r.devices || []).filter(d => d.id !== devId);
+  if (sol.annotations) sol.annotations = sol.annotations.filter(a => a?.near !== devId);   // its notes go with it
   const conns = sol.connections || [], comps = sol.companions || [];
   const gone = new Set([devId, ...comps.filter(c => c.serves === devId).map(c => c.id)]);
   for (let grew = true; grew;) {

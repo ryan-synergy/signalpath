@@ -37,7 +37,7 @@ export function assertJobShape(job) {
   const idOk = (x, what) => { if (!x || typeof x !== "object" || typeof x.id !== "string" || !SAFE_ID.test(x.id)) bad(`${what} has a missing or invalid id`); };
   if (job.generator !== "SignalPath") bad("not a SignalPath file");   // loadJob refuses it too — say so at the door
   if (job.schemaVersion !== 1) bad("unsupported schemaVersion " + job.schemaVersion);
-  if (!job.job || typeof job.job !== "object") bad("missing job block");
+  if (!job.job || typeof job.job !== "object") bad("missing project details (the \"job\" block)");
   if (!job.house || !Array.isArray(job.house.zones)) bad("missing house.zones");
   if (!Array.isArray(job.solutions) || !job.solutions.length) bad("missing solutions");
   for (const a of list(job.house, "areas", "house.")) idOk(a, "area");

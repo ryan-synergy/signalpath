@@ -2386,8 +2386,8 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t("audit: channel-less feeds take the next free amp slot (not all on slot 1)", lit === 5, `${lit} lit`); }
   { const r = R(); r.solutions[0].annotations.push({ text: "second gym note", near: "z-gym" });
     const o = pipeline(r); const doc = new DOMParser().parseFromString(o.svg, "image/svg+xml");
-    const marks = [...doc.querySelectorAll("text")].filter(x => /^[①②]$/.test(x.textContent)).map(x => +x.getAttribute("x"));
-    t("audit: two keynotes on one card sit side by side", marks.length >= 2 && new Set(marks).size === marks.length); }
+    const marks = [...doc.querySelectorAll("g.notemark")].map(g => +g.querySelector("circle").getAttribute("cx"));
+    t("audit: two note badges on one card sit side by side", marks.length >= 2 && new Set(marks).size === marks.length); }
   { const r = R(); r.solutions[0].connections = [];
     const { job, ix } = loadJob(r);
     t("audit: legend box fits its title with no signal rows", place(job, ix).legend.w >= 90); }
@@ -2645,9 +2645,31 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const noteText = (job.solutions[0].annotations || [])[0]?.text || "";
   t("keynotes: fixture still carries the gym annotation", noteText.length > 0);
   t("keynotes: full sentence lives in the legend NOTES block, not floating on canvas",
-    svg.includes("NOTES") && svg.split(esc4(noteText)).length === 2);
-  t("keynotes: circled number appears twice — zone card marker + legend entry",
-    svg.split("①").length === 3);
+    svg.includes("NOTES") && svg.split(`>${esc4(noteText)}</text>`).length === 2);
+  t("keynotes: the note's number appears twice — the badge on the room and the legend entry",
+    svg.split('font-weight="700" fill="#fff">1</text>').length === 3 && svg.includes('class="notemark" data-note="0" data-near="z-gym"'));
+  { // notes on boxes, pinned callouts, crew-only (Ryan 2026-10-03)
+    const r = structuredClone(fixtures.residence), sol = r.solutions[0], dev = sol.racks[0].devices.find(d => d.id === "mrx540");
+    sol.annotations.push({ text: "Leave 6 in. behind this for the conduit stub and the future generator transfer switch feed", near: dev.id, pinned: true, crew: true }, { text: "  ", near: "z-family" });
+    const L = loadJob(r), pA = place(L.job, L.ix), sA = render(L.job, L.ix, pA, route(L.job, L.ix, pA));
+    const dA = new DOMParser().parseFromString(sA, "image/svg+xml"), mk = dA.querySelector(`g.notemark[data-near="${dev.id}"]`), dv = pA.racks[0].devices.find(d => d.id === dev.id);
+    t("notes: a box takes a note too — a numbered badge on its corner, no warning, a blank note draws nothing",
+      !!mk && Math.abs(+mk.querySelector('circle[r="9.5"]').getAttribute("cx") - dv.x) < 8 && dA.querySelectorAll("g.notemark").length === 2 && !validate(L.job, L.ix).warnings.some(w => w.code === "bad-annotation"));
+    const box = mk?.querySelector("rect"), bx = box && { x: +box.getAttribute("x"), y: +box.getAttribute("y"), w: +box.getAttribute("width"), h: +box.getAttribute("height") };
+    const bodies = [...pA.zones, ...pA.racks.flatMap(k => k.devices), ...pA.chips];
+    t("notes: a pinned note shows its text in a callout that covers no room or box; the legend says it's crew only",
+      !!bx && mk.querySelectorAll("text").length >= 3 && !bodies.some(o => bx.x < o.x + o.w && bx.x + bx.w > o.x && bx.y < o.y + o.h && bx.y + bx.h > o.y) && sA.includes("(crew only)"), JSON.stringify(bx));
+    const pC = place(L.job, L.ix, { hideCrewNotes: true }), sC = render(L.job, L.ix, pC, route(L.job, L.ix, pC, {}), {});
+    t("notes: a crew-only note stays off the client's copy (no badge, no legend line)", pC.legend.notes.length === 1 && !sC.includes("conduit stub") && sC.includes("Gym pre-wired only"));
+    const bad = structuredClone(r); bad.solutions[0].annotations.push({ text: "orphan", near: "no-such-box" });
+    const Lb = loadJob(bad); t("notes: a note whose room or box is gone is flagged", validate(Lb.job, Lb.ix).warnings.some(w => w.code === "bad-annotation"));
+    const Hk2 = await import("./hookup.js"), del = structuredClone(r); Hk2.removeRackDevice(del, del.solutions[0], dev.id);
+    t("notes: deleting a box takes its notes with it", !del.solutions[0].annotations.some(a => a.near === dev.id));
+    const AB2 = await import("./asbuilt.js"), ab = AB2.startAsBuilt(structuredClone(fixtures.residence), 0, "2026-10-03");
+    ab.solutions[0].annotations.push({ text: "Sub moved to the left corner on site", near: "z-family" });
+    const ch = AB2.asBuiltChanges(ab).filter(c => c.kind === "note");
+    t("notes: a note added on the as-built is a listed change, pointing at its room", ch.length === 1 && ch[0].action === "added" && ch[0].ref.zone === "z-family" && /Sub moved/.test(ch[0].text), JSON.stringify(ch));
+  }
   t("keynotes: legend grew to house the note", p.legend.notes.length >= 1 && p.legend.h > 56);
   function esc4(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
 }

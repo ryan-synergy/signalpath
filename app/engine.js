@@ -1111,9 +1111,12 @@ function placeOnce(job, ix, opts, variant) {
     // chips and feed lanes, a speaker row only the row gap
     const bandX = rackRight + rightCorridorW, maxW = Math.max(680, wrapRight - bandX);
     const hasTv = z => (z.endpoints || []).some(e => e.type === "display");
+    const stableByRank = list => list.map((z, i) => [z, i]).sort((a, b) => tvRank(a[0]) - tvRank(b[0]) || a[1] - b[1]).map(x => x[0]);
     const off = z => !!z.offSystem, outd = z => isOutdoorZone(z);
     const all = [...midZones, ...primary.audio];
-    const groups = !bandsOn ? [{ zones: midZones }, { zones: primary.audio }] : [
+    const others = clusters.slice(1).filter(c => c.video.length + c.audio.length);
+    const groups = !bandsOn ? [{ zones: midZones }, { zones: primary.audio },
+      ...others.flatMap(c => [{ zones: stableByRank(c.video), area: c }, { zones: c.audio, area: c.video.length ? null : c }])] : [
       { key: "surround", label: "SURROUND + TV", zones: all.filter(z => !off(z) && !outd(z) && hasTv(z) && tvRank(z) === 0) },
       { key: "tvspk", label: "TV + SPEAKERS", zones: all.filter(z => !off(z) && !outd(z) && hasTv(z) && tvRank(z) === 1) },
       { key: "tv", label: "TV ONLY", zones: all.filter(z => !off(z) && !outd(z) && hasTv(z) && tvRank(z) === 2) },
@@ -1130,6 +1133,9 @@ function placeOnce(job, ix, opts, variant) {
       y += HEAD + rowH + gap + (bandsOn ? 12 : 0); x = bandX; rowH = 0; row = []; rowBands = []; };
     for (const g of groups) {
       if (!g.zones.length) continue;
+      // another building's rooms (Packed): a headed block of rows under the main house's, in the same flow — placed to
+      // the right as a group of their own they sat behind the main rooms, and their feeds had no clear way across
+      if (g.area) { y += 30; out.areaHeaders.push({ areaId: g.area.areaId, name: (g.area.name || "").toUpperCase(), cx: bandX + (g.area.name || "").length * 5.6 + 4, y: y - 10, stack: true }); }
       // speaker-only rooms sit on a shared cell pitch (their feeds dive through the gutters between columns); rows
       // with TVs take each card at its own width, like the classic top band — their feeds run in the lanes under each row
       const cell = g.zones.some(hasTv) ? 0 : gridCell(g.zones.map(z => cardOf[z.id].w));
@@ -1223,7 +1229,7 @@ function placeOnce(job, ix, opts, variant) {
   /* -- secondary clusters: full stacks to the right (video row, audio rows below) -- */
   out.clusters = [{ areaId: primaryAreaId, x0: PL.marginX, x1: Math.max(topBandRight, ...out.zones.map(z => z.x + z.w), rackRight) }];
   let clusterX = out.clusters[0].x1;
-  for (const cl of clusters.slice(1)) {
+  for (const cl of packed ? [] : clusters.slice(1)) {
     // gutter before each cluster sized for the feeds that must rise through it
     clusterX += Math.max(PL.areaGapX, (clusterInbound[cl.areaId] || 0) * 12 + 32);
     const startX = clusterX;
@@ -1502,6 +1508,7 @@ function routeOnce(job, ix, placement, opts = {}) {
     ...(trunkMode(job, opts) ? P.racks.flatMap(r => r.devices.filter(d => d.kind === "small").map(d => ({ id: d.id + ":caption", x: d.x - 18, y: d.y + d.h + 3, w: d.w + 36, h: 19 }))) : []),   // 19, not 15: a wire along the old bottom edge ran on the caption's baseline
     // a band's heading (the Bands layout): wires go round the words
     ...(P.bands || []).map(b => ({ id: "band:" + b.key, x: b.x + 6, y: b.y + 3, w: b.label.length * 10.4 + 14, h: 20 })),
+    ...(P.areaHeaders || []).filter(h => h.stack).map(h => ({ id: "area:" + h.areaId, x: h.cx - h.name.length * 5.6 - 4, y: h.y - 13, w: h.name.length * 11.2 + 8, h: 17 })),
     ...P.chips.map(c => ({ id: c.id, x: c.x, y: c.y, w: c.w, h: c.h })),
     ...P.zones.map(z => ({ id: z.id, x: z.x, y: z.y, w: z.w, h: z.h })),
   ];

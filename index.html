@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-U3fm6r4wpja2wgi6ZiI8rvkbvZqFnNzvzlVhoB8Po38=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-Z7oq4056KyBRe6SM5cSU9TmGCcjV2m907FzP8a+rGsI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-phVJ/qOO4OUJZEP1CG8icuYkWIlliE38ITl5YxlMc74=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-1/i0dynTOJXZ+Ix2QXyJcaATTbYlYTLgk4tM6fX/TPI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -287,6 +287,15 @@
   #devPop .dpl .dpdel { border: none; background: none; color: #999; cursor: pointer; font-size: 14px; padding: 2px; } #devPop .dpl .dpdel:hover { color: #b32017; }
   #devPop .dpempty { color: #888; font-size: 12px; margin-bottom: 4px; }
   #devPop .dpadd { border: 1px dashed #b9bec8; background: none; border-radius: 6px; font: inherit; font-size: 12px; font-weight: 600; padding: 4px 8px; cursor: pointer; color: #16181c; }
+  #devPop .dpsec, #devPop .dproom details.more.wiring { border-top: 1px solid #e3e5eb; margin: 8px 0 0; padding-top: 2px; }
+  #devPop .dpsec > summary, #devPop .dproom details.wiring > summary { display: flex; align-items: baseline; gap: 8px; cursor: pointer; padding: 7px 0 5px; font-size: 10.5px; letter-spacing: 1.1px; font-weight: 700; color: #4b5563; list-style: none; text-transform: uppercase; }
+  #devPop .dpsec > summary::-webkit-details-marker, #devPop .dproom details.wiring > summary::-webkit-details-marker { display: none; }
+  #devPop .dpsec > summary::before, #devPop .dproom details.wiring > summary::before { content: "▸"; font-size: 10px; color: #6b7280; }
+  #devPop .dpsec[open] > summary::before, #devPop .dproom details.wiring[open] > summary::before { content: "▾"; }
+  #devPop summary .mini { margin-left: auto; font-weight: 400; letter-spacing: 0; text-transform: none; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 62%; }
+  #devPop .dppen { border: none; background: none; color: var(--accent); font-size: 15px; cursor: pointer; padding: 0 4px; }
+  #devPop .dprn { display: flex; gap: 6px; flex: 1; } #devPop .dprn input { flex: 1; min-width: 0; font: inherit; font-size: 15px; font-weight: 700; padding: 4px 8px; border: 1.6px solid var(--accent); border-radius: 7px; }
+  #devPop .dpok { border: none; background: none; color: var(--accent); font-size: 18px; font-weight: 700; cursor: pointer; padding: 0 6px; }
   #devPop .dproom .sect { margin-top: 10px; } #devPop .dproom .f > label { width: 78px; flex: none; } #devPop .dproom details.more { margin: 6px 0; }
   #devPop .dpfoot { display: flex; justify-content: flex-end; margin-top: 8px; } #devPop .dpfoot a { font-size: 12px; color: var(--accent); }
   @media (pointer: coarse) { #devPop .dpl select { padding: 9px 6px; } #devPop .dpadd { padding: 8px 10px; } #devPop .dpx { font-size: 22px; padding: 4px 8px; } }
@@ -678,29 +687,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003202540",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003202540",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003202540",
-    "./app/ports.js": "./app/ports.js?v=20261003202540",
-    "./app/commands.js": "./app/commands.js?v=20261003202540",
-    "./app/engine.js": "./app/engine.js?v=20261003202540",
-    "./app/exports.js": "./app/exports.js?v=20261003202540",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003202540",
-    "./app/hookup.js": "./app/hookup.js?v=20261003202540",
-    "./app/importers.js": "./app/importers.js?v=20261003202540",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003202540",
-    "./app/library.js": "./app/library.js?v=20261003202540",
-    "./app/names.js": "./app/names.js?v=20261003202540",
-    "./app/network.js": "./app/network.js?v=20261003202540",
-    "./app/pages.js": "./app/pages.js?v=20261003202540",
-    "./app/power.js": "./app/power.js?v=20261003202540",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003202540",
-    "./app/rack.js": "./app/rack.js?v=20261003202540",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003202540",
-    "./app/starters.js": "./app/starters.js?v=20261003202540",
-    "./app/kinds.js": "./app/kinds.js?v=20261003202540",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003202540",
-    "./app/sheets.js": "./app/sheets.js?v=20261003202540"
+    "./app/ai.js": "./app/ai.js?v=20261003203411",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003203411",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003203411",
+    "./app/ports.js": "./app/ports.js?v=20261003203411",
+    "./app/commands.js": "./app/commands.js?v=20261003203411",
+    "./app/engine.js": "./app/engine.js?v=20261003203411",
+    "./app/exports.js": "./app/exports.js?v=20261003203411",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003203411",
+    "./app/hookup.js": "./app/hookup.js?v=20261003203411",
+    "./app/importers.js": "./app/importers.js?v=20261003203411",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003203411",
+    "./app/library.js": "./app/library.js?v=20261003203411",
+    "./app/names.js": "./app/names.js?v=20261003203411",
+    "./app/network.js": "./app/network.js?v=20261003203411",
+    "./app/pages.js": "./app/pages.js?v=20261003203411",
+    "./app/power.js": "./app/power.js?v=20261003203411",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003203411",
+    "./app/rack.js": "./app/rack.js?v=20261003203411",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003203411",
+    "./app/starters.js": "./app/starters.js?v=20261003203411",
+    "./app/kinds.js": "./app/kinds.js?v=20261003203411",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003203411",
+    "./app/sheets.js": "./app/sheets.js?v=20261003203411"
 } }
 </script>
 <script>
@@ -965,7 +974,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003202540").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003203411").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1940,18 +1949,28 @@ function clearSel() { selWire = null; selDev = null; hideTip(); applySel(); clea
    color where something is plugged in), what comes in and what goes out — each a picker of what else could go there —
    and ＋ buttons for a new input / output. "More…" opens the full editor in the side panel. Same rules as the panel
    (endFits, the plug picker); it redraws after every change and follows the box when the sheet scrolls. */
-let popDev = null, popZone = null;
-function closeDevPop() { popDev = popZone = null; const el = $("#devPop"); if (el) el.hidden = true; }
+let popDev = null, popZone = null, popRename = false;
+const popOpen = new Set(["feeds"]);   // which sections of the room pop-up are open (kept from room to room)
+function closeDevPop() { popDev = popZone = null; popRename = false; const el = $("#devPop"); if (el) el.hidden = true; }
 const popAnchor = () => popDev ? $("#canvas svg")?.querySelector(`[data-device="${CSS.escape(popDev)}"]`) : popZone ? $("#canvas svg")?.querySelector(`[data-zone="${CSS.escape(popZone)}"]`) : null;
 // a room's pop-up: the side panel's own "what feeds this room" controls (same pickers, same handlers), beside the room
 function drawRoomPop() {
   const el = $("#devPop"), sol = S.job.solutions[S.sol], z = S.job.house.zones.find(z => z.id === popZone);
   if (!z || !sol || S.mainView === "rack" || !popAnchor()) { closeDevPop(); return; }
-  const zEff = { ...z, ...(sol.overrides?.zones || {})[z.id] }, hk = hookupHTML(z, sol, S.job.solutions.length > 1);
-  el.innerHTML = `<div class="dph"><div><b>${esc(z.name || "Room")}</b><span class="mini">${esc(SCOPE_LABEL[zEff.scope || "included"] === SCOPE_LABEL.included ? "Room" : SCOPE_LABEL[zEff.scope])}</span></div><button class="dpx" title="Close" aria-label="Close">✕</button></div>
-    <div class="dproom" data-zid="${esc(z.id)}">${hk || `<div class="dpempty" style="margin-top:8px">No TV or speakers in this room yet.</div>`}
-      ${field("Remote", sel("zremote", Object.keys(REMOTE_LABEL), roomRemote(zEff, sol.localDevices) || "none", REMOTE_LABEL))}</div>
-    <div class="dpfoot"><a href="#" class="dpmore">More — TV, speakers, notes ›</a></div>`;
+  const zEff = { ...z, ...(sol.overrides?.zones || {})[z.id] }, hk = hookupHTML(z, sol, S.job.solutions.length > 1), parts = zonesHTML({ zone: z });
+  // one card, folding sections (Ryan 2026-10-03, concept C): each closed section shows its gist; what's open is remembered
+  const cut = hk.indexOf('<details class="more wiring"'), feeds = (cut < 0 ? hk : hk.slice(0, cut)).replace(/^<div class="sect">[\s\S]*?<\/div>/, ""), cabling = cut < 0 ? "" : hk.slice(cut);
+  const sec = (key, title, gist, inner) => `<details class="dpsec" data-pop="${key}" ${popOpen.has(key) ? "open" : ""}><summary><span>${title}</span><span class="mini">${esc(gist || "")}</span></summary>${inner}</details>`;
+  const remote = field("Remote", sel("zremote", Object.keys(REMOTE_LABEL), roomRemote(zEff, sol.localDevices) || "none", REMOTE_LABEL));
+  el.innerHTML = `<div class="dph">${popRename
+      ? `<div class="dprn" data-zid="${esc(z.id)}"><input class="zname" value="${esc(z.name)}" aria-label="Room name" enterkeyhint="done"><button class="dpok" title="Save the name" aria-label="Save the name">✓</button></div>`
+      : `<div><b>${esc(z.name || "Room")}</b> <button class="dppen" title="Rename this room" aria-label="Rename this room">✎</button><span class="mini">${esc((zEff.scope || "included") === "included" ? "Room" : SCOPE_LABEL[zEff.scope])}</span></div>`}
+      <button class="dpx" title="Close" aria-label="Close">✕</button></div>
+    <div class="dproom" data-zid="${esc(z.id)}">
+      ${sec("setup", "TV &amp; SPEAKERS", parts.what, parts.setup)}
+      ${sec("feeds", "WHAT FEEDS THIS ROOM", parts.feed || "not connected yet", (feeds || `<div class="dpempty">No TV or speakers in this room yet.</div>`) + remote)}
+      ${cabling}</div>
+    <div class="dpfoot"><a href="#" class="dpmore">More — brand, model, scope, notes ›</a></div>`;
   el.hidden = false;
   wirePanel(el); enhanceSelects(el);
   const zid = z.id;
@@ -1959,6 +1978,13 @@ function drawRoomPop() {
   el.querySelector(".dpmore").onclick = e => { e.preventDefault(); closeDevPop(); openZone(zid); };
   // "Cabling details" opens and closes in place (the panel's handler redraws the panel instead)
   el.querySelectorAll("details[data-more]").forEach(dt => dt.ontoggle = () => { dt.open ? S.openRows.add(dt.dataset.more) : S.openRows.delete(dt.dataset.more); placeDevPop(); });
+  el.querySelectorAll("details[data-pop]").forEach(dt => dt.ontoggle = () => { dt.open ? popOpen.add(dt.dataset.pop) : popOpen.delete(dt.dataset.pop); placeDevPop(); });
+  // the pencil: the name becomes a text box; Enter or ✓ saves (the panel's own rename handler), Esc backs out
+  const pen = el.querySelector(".dppen"); if (pen) pen.onclick = () => { popRename = true; drawRoomPop(); const inp = $("#devPop .zname"); inp?.focus(); inp?.select(); };
+  const inp = el.querySelector(".dprn .zname");
+  if (inp) { const save = inp.onchange, done = () => { popRename = false; if (inp.value.trim() && inp.value !== z.name) { S.editLabel = "rename room"; save?.call(inp); } else drawRoomPop(); };
+    inp.onchange = null; inp.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); done(); } else if (e.key === "Escape") { e.stopPropagation(); popRename = false; drawRoomPop(); } };
+    el.querySelector(".dpok").onclick = done; }
   placeDevPop();
 }
 function placeDevPop() {
@@ -2533,7 +2559,7 @@ function enhanceSelects(root) {
   });
 }
 
-function zonesHTML() {
+function zonesHTML(o = {}) {
   const sol = S.job.solutions[S.sol] || S.job.solutions[0];
   const ov = sol?.overrides || {};
   const multi = S.job.solutions.length > 1;
@@ -2556,7 +2582,7 @@ function zonesHTML() {
     const has = ovHas(kind, id, f);
     return `<div class="f${has ? " ov" : ""}"><label>${label}${has ? `<button class="ovx" data-ovk="${esc(kind)}" data-ovid="${esc(id)}" data-ovf="${esc(f)}" title="Overridden in ${esc(sol.name)} — revert to House">×</button>` : ""}</label>${inner}</div>`;
   };
-  const rowOf = z => {
+  const rowOf = (z, partsOnly) => {
     const spkH = (z.endpoints || []).find(e => e.type === "speakers");
     const tvH = (z.endpoints || []).find(e => e.type === "display");
     const spk = spkH && { ...spkH, ...(ov.endpoints || {})[spkH.id] };
@@ -2590,10 +2616,8 @@ function zonesHTML() {
     const spkCfg = spk ? spk.config || "stereo" : "none";
     const tvType = tv ? tv.displayType || "tv" : "none";
     const moreKey = "more:" + z.id;
-    return `<div class="row ${open ? "open" : ""}" data-zid="${esc(z.id)}">${head}
-      <div class="fields">
-        ${found.length ? `<div class="zissues">${found.map(f => { const fx = fixButtons(f); return `<div class="${f.level}">${esc(f.msg)}${fx ? `<div class="zfix">${fx}</div>` : ""}</div>`; }).join("")}</div>` : ""}
-        ${(() => {   // the setups used most as chips; the rest behind More (UI refresh 2026-09-30)
+    // what's in the room, as taps: speakers (and which soundbar), display, size, mount — the room pop-up shows the same block
+    const setup = `        ${(() => {   // the setups used most as chips; the rest behind More (UI refresh 2026-09-30)
           const main = ZSPK.filter(([v]) => SPK_MAIN.includes(v) || v === spkCfg);
           const inner = chips("spkcfg", main, spkCfg).replace(/<\/div>$/, `<button type="button" class="chip more" data-more="spkcfg">More ▾</button></div>`);
           return spk ? fieldO("Speakers", inner, "endpoints", spkH.id, "config") : field("Speakers", inner);
@@ -2611,7 +2635,12 @@ function zonesHTML() {
           const list = sizes.includes(cur) ? sizes : [...sizes, cur].sort((a, b) => a - b);
           return chips("tvsize", list.map(n => [String(n), n + "″"]), String(cur)).replace(/<\/div>$/, `<button type="button" class="chip more" data-other="tvsize">Other…</button></div>`);
         })(), "endpoints", tvH.id, "size") : ""}
-        ${tv && tv.displayType !== "projector" ? fieldO("Mount", chips("tvmount", [["flat", "Flat"], ["articulating", "Articulating"], ["stand", "Stand"]], ["articulating", "stand"].includes(tv.mount) ? tv.mount : "flat", "seg"), "endpoints", tvH.id, "mount") : ""}
+        ${tv && tv.displayType !== "projector" ? fieldO("Mount", chips("tvmount", [["flat", "Flat"], ["articulating", "Articulating"], ["stand", "Stand"]], ["articulating", "stand"].includes(tv.mount) ? tv.mount : "flat", "seg"), "endpoints", tvH.id, "mount") : ""}`;
+    if (partsOnly === true) return { setup, what, feed };
+    return `<div class="row ${open ? "open" : ""}" data-zid="${esc(z.id)}">${head}
+      <div class="fields">
+        ${found.length ? `<div class="zissues">${found.map(f => { const fx = fixButtons(f); return `<div class="${f.level}">${esc(f.msg)}${fx ? `<div class="zfix">${fx}</div>` : ""}</div>`; }).join("")}</div>` : ""}
+        ${setup}
         ${hookupHTML(z, sol, multi)}
         ${notesHTML(z.id)}
         <details class="more" data-more="${esc(moreKey)}" ${S.openRows.has(moreKey) ? "open" : ""}><summary>More — name, ${tv ? "brand, model, " : ""}scope, remote</summary>
@@ -2636,14 +2665,15 @@ function zonesHTML() {
   };
   // a job with areas (main house, casita, pool house) lists its rooms under each area (2026-10-03: 30 rooms in
   // one flat list); one area or none — the plain list
+  if (o.zone) return rowOf(o.zone, true);   // the room pop-up: one room's parts
   const areas = S.job.house.areas || [];
   let rows;
   if (areas.length > 1) {
     const by = new Map(areas.map(a => [a.id, []])); const loose = [];
     for (const z of S.job.house.zones) (by.get(z.area) || loose).push(z);
     rows = [...areas.map(a => [a.name || a.id, by.get(a.id)]), ["No area", loose]].filter(([, list]) => list.length)
-      .map(([name, list]) => `<div class="sect zarea-h">${esc(String(name).toUpperCase())} <span class="mini">${list.length} room${list.length > 1 ? "s" : ""}</span></div>${list.map(rowOf).join("")}`).join("");
-  } else rows = S.job.house.zones.map(rowOf).join("");
+      .map(([name, list]) => `<div class="sect zarea-h">${esc(String(name).toUpperCase())} <span class="mini">${list.length} room${list.length > 1 ? "s" : ""}</span></div>${list.map(z => rowOf(z)).join("")}`).join("");
+  } else rows = S.job.house.zones.map(z => rowOf(z)).join("");
   return escope + qa + rows + `<button class="addbtn" id="addZone">＋ Add room</button>`;
 }
 

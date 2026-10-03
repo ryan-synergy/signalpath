@@ -709,6 +709,26 @@ export function quickFixes(job, sol, f, catalog = null) {
       } });
     }
   }
+  // an amp with more rooms than zones (a smaller model picked): those rooms onto an amp with room for them, or another amp
+  if (f.code === "amp-over") {
+    const amp = rackDevices(sol).find(x => x.id === f.ref), zones = +amp?.zones || 0;
+    if (amp && zones) {
+      const feeds = (sol.connections || []).filter(c => c.from === amp.id && c.signal === "speaker");
+      const past = feeds.filter(c => String(c.channels || "").split(/[,-]/).some(n => +n > zones * 2));
+      const over = (past.length ? past : feeds.slice(zones)).map(c => c.to);
+      const zoneOfEp = (j, id) => (j.house.zones || []).find(z => (z.endpoints || []).some(e => e.id === id));
+      const used = id => (sol.connections || []).filter(c => c.from === id && c.signal === "speaker").length;
+      const roomy = rackDevices(sol).find(d => d.type === "amp" && d.id !== amp.id && (+d.zones || 8) - used(d.id) >= over.length);
+      if (roomy) out.push({ label: `Move ${over.length > 1 ? `those ${over.length} rooms` : "it"} to ${roomy.model || "the other amp"} (${(+roomy.zones || 8) - used(roomy.id)} zones free)`,
+        run: (j, s) => { for (const ep of over) { const z = zoneOfEp(j, ep); if (z) setSpeakers(j, s, z, roomy.id); } } });
+      out.push({ label: `Add another ${amp.model || "amp"} for ${over.length > 1 ? "them" : "it"}`, run: (j, s) => {
+        const rk = (s.racks || []).find(r => (r.devices || []).some(d => d.id === amp.id));
+        const id = addRackDevice(j, s, "amp", amp.model || "Multi-zone amp", { ...(amp.catalogRef ? { catalogRef: amp.catalogRef } : {}), zones, ...(rk ? { rackId: rk.id } : {}) });
+        for (const ep of over) { const z = zoneOfEp(j, ep); if (z) setSpeakers(j, s, z, id); }
+        feedAmp(j, s, id);
+      } });
+    }
+  }
   if (f.code === "idle-receiver") {
     const d = rackDevices(sol).find(x => x.id === f.ref);
     if (d) out.push({ label: `Delete ${d.model || "the receiver"}`, run: (j, s) => { removeRackDevice(j, s, f.ref); } });

@@ -108,7 +108,9 @@ export function findDevice(job, sol, text) {
   if (hits.length > 1) {
     const whole = hits.filter(d => new RegExp(`(^|\\s)${t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s|$)`).test(norm(d.model)));
     if (whole.length === 1) return { device: whole[0] };
-    return { error: `"${text}" could be ${hits.map(d => d.model).join(" or ")}`, candidates: hits.map(d => d.model) };
+    // look-alikes are told apart by where they are ("the Anthem MDX-8 in Casita Rack")
+    const where = d => { const r = (sol.racks || []).find(r => (r.devices || []).includes(d)); return hits.filter(x => x.model === d.model).length > 1 && r?.name ? `${d.model} in ${r.name}` : d.model; };
+    return { error: `"${text}" could be ${hits.map(where).join(" or ")} — say which`, candidates: hits.map(d => d.model) };
   }
   return { error: `no box called "${text}" in the rack` };
 }
@@ -586,9 +588,16 @@ function parseOne(p, job, sol) {
   if ((m = t.match(/^move\s+(?:the\s+)?(.+?)\s+(?:to|into|over to)\s+(?:the\s+)?(.+)$/))) {
     const z = findZone(job, m[1]), area = (job.house.areas || []).find(a => { const n = norm(a.name); return n === m[2] || n.includes(m[2]) || m[2].includes(n.replace(/^guest /, "")); });
     if (z.zone && area) return [{ op: "set_zone", zone: z.zone.name, area: area.name }];
-    const d = findDevice(job, sol, m[1]), r = findRack(sol, m[2]);
+    // "the mdx-8 in the casita rack to …": a box named by the rack it's in now
+    const q = m[1].match(/^(.+?)\s+(?:in|from|out of)\s+(?:the\s+)?(.+)$/), fromRack = q ? findRack(sol, q[2]) : null;
+    const name = fromRack ? q[1] : m[1], r = findRack(sol, m[2]);
+    const pool = rackDevices(sol).filter(x => !fromRack || (fromRack.devices || []).includes(x));
+    let d = findDevice(job, { ...sol, racks: [{ devices: pool }] }, name);
+    // two boxes alike (two MDX-8s): the one that isn't already in the rack it's going to, if that settles it
+    if (!d.device && d.candidates && r) { const away = pool.filter(x => d.candidates.includes(x.model) && !(r.devices || []).includes(x)); if (away.length === 1) d = { device: away[0] }; }
     if (d.device && r) return [{ op: "move_device", device: d.device.id, rack: r.name }];
-    return null;
+    // never a room called "Move Mdx-8 Main Rack B": say what's unclear instead
+    return [{ op: "move_device", device: name, rack: m[2] }];
   }
   if ((m = t.match(/^(?:delete|remove)\s+(?:the\s+)?(zone\s+)?(.+)$/))) {
     const z = findZone(job, m[2]); if (z.zone && (m[1] || !findDevice(job, sol, m[2]).device)) return [{ op: "delete_zone", zone: z.zone.name }];

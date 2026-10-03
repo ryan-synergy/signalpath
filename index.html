@@ -197,6 +197,7 @@
   .mstyle[open] > summary::after { content: "▾"; }
   .mstyle > summary em { font-style: normal; font-size: 12px; color: var(--muted, #777); }
   .mstyle > summary { position: relative; }
+  @media (max-width: 760px) { #collapse { display: none; } }   /* the side panel can't collapse on a phone — the layout is stacked */
   #pkList .pk-more { display: block; width: 100%; margin: 10px 0 4px; padding: 10px; border: 1px dashed var(--line, #ccc); border-radius: 10px; background: none; color: var(--accent, #2b6cb0); font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
   #pkList .pk-i { display: block; width: 100%; text-align: left; padding: 9px 10px; border: 0; background: none; border-radius: 8px; font: inherit; font-size: 14px; min-height: 44px; cursor: pointer; color: #1b1d21; }
   #pkList .pk-i:hover:not([disabled]), #pkList .pk-i:focus-visible { background: #eef3fa; outline: none; }
@@ -615,29 +616,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003060051",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003060051",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003060051",
-    "./app/ports.js": "./app/ports.js?v=20261003060051",
-    "./app/commands.js": "./app/commands.js?v=20261003060051",
-    "./app/engine.js": "./app/engine.js?v=20261003060051",
-    "./app/exports.js": "./app/exports.js?v=20261003060051",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003060051",
-    "./app/hookup.js": "./app/hookup.js?v=20261003060051",
-    "./app/importers.js": "./app/importers.js?v=20261003060051",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003060051",
-    "./app/library.js": "./app/library.js?v=20261003060051",
-    "./app/names.js": "./app/names.js?v=20261003060051",
-    "./app/network.js": "./app/network.js?v=20261003060051",
-    "./app/pages.js": "./app/pages.js?v=20261003060051",
-    "./app/power.js": "./app/power.js?v=20261003060051",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003060051",
-    "./app/rack.js": "./app/rack.js?v=20261003060051",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003060051",
-    "./app/starters.js": "./app/starters.js?v=20261003060051",
-    "./app/kinds.js": "./app/kinds.js?v=20261003060051",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003060051",
-    "./app/sheets.js": "./app/sheets.js?v=20261003060051"
+    "./app/ai.js": "./app/ai.js?v=20261003060947",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003060947",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003060947",
+    "./app/ports.js": "./app/ports.js?v=20261003060947",
+    "./app/commands.js": "./app/commands.js?v=20261003060947",
+    "./app/engine.js": "./app/engine.js?v=20261003060947",
+    "./app/exports.js": "./app/exports.js?v=20261003060947",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003060947",
+    "./app/hookup.js": "./app/hookup.js?v=20261003060947",
+    "./app/importers.js": "./app/importers.js?v=20261003060947",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003060947",
+    "./app/library.js": "./app/library.js?v=20261003060947",
+    "./app/names.js": "./app/names.js?v=20261003060947",
+    "./app/network.js": "./app/network.js?v=20261003060947",
+    "./app/pages.js": "./app/pages.js?v=20261003060947",
+    "./app/power.js": "./app/power.js?v=20261003060947",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003060947",
+    "./app/rack.js": "./app/rack.js?v=20261003060947",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003060947",
+    "./app/starters.js": "./app/starters.js?v=20261003060947",
+    "./app/kinds.js": "./app/kinds.js?v=20261003060947",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003060947",
+    "./app/sheets.js": "./app/sheets.js?v=20261003060947"
 } }
 </script>
 <script>
@@ -896,7 +897,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003060051").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003060947").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1040,6 +1041,7 @@ function refresh(save = true) {
     // a kit's rack draws the moment it's picked — rooms join it as they're added
     S.lastAdvice = a;                                          // the rack view draws from the same advice (no second pass)
     // the schematic is laid out and routed only when it's on screen (the rack view hides it)
+    if (S.mainView === "rack" && S.drawWarn?.id === S.id) ({ routeWarn, placeWarn } = S.drawWarn);   // "N to check" doesn't change with the view
     if (S.mainView !== "rack" && (S.job.house.zones.length || job.solutions[S.sol]?.racks?.some(r => r.devices?.length))) {
       const p = place(job, ix, opts);
       const rt = route(job, ix, p, opts);
@@ -1047,6 +1049,7 @@ function refresh(save = true) {
       const marks = isAsBuilt(S.job) ? changeMarks(asBuiltChanges(S.job), p, rt, { grayscale: opts.grayscale }) : "";
       svg = render(job, ix, p, rt, marks ? { ...opts, marks } : opts);
       routeWarn = rt.warnings; placeWarn = p.warnings || [];
+      S.drawWarn = { id: S.id, routeWarn, placeWarn };         // the Rack view (which skips drawing) shows the same count
       S.view.p = p; S.view.opts = opts;                        // reroute picker re-runs the router from these
     }
   } catch (e) { err = e; console.error(e); }
@@ -1086,13 +1089,17 @@ function refresh(save = true) {
   }
   for (const amp of (a?.amps || []).filter(mine)) {
     const t = `${amp.model || amp.amp} — ${amp.zonesTotal != null ? `${amp.zonesUsed}/${amp.zonesTotal} zones` : `${amp.zonesUsed} zone${amp.zonesUsed === 1 ? "" : "s"}`}${amp.reserved ? ` (${amp.reserved} reserved)` : ""}${amp.spare != null ? ` · ${amp.spare} spare` : ""}`;
-    amp.spare != null && amp.spare < 0 ? A("e", t, amp.amp) : R(t, amp.amp);
+    // over capacity is already the validator's error, with the rooms named and a fix — don't say it twice
+    amp.spare != null && amp.spare < 0 ? (errs.some(e => e.code === "amp-over" && e.ref === amp.amp) ? null : A("e", t, amp.amp)) : R(t, amp.amp);
   }
   for (const lic of (a?.licensing || []).filter(mine)) {
     R(`${PLATFORM_NAME[lic.platform] || lic.platform} — ${lic.pick} · ${lic.lines.join(" · ")}`);
     for (const w of lic.warns || []) A("w", `${PLATFORM_NAME[lic.platform] || lic.platform} — ${w}`);
   }
+  // an amp with more rooms than zones: one error names them; its "no jack to land on" per room says it again
+  const overAmps = new Set(errs.filter(e => e.code === "amp-over").map(e => e.ref));
   for (const n of (a?.notes || []).filter(mine)) {
+    if (n.code === "no-port" && overAmps.has(n.ref)) continue;
     if (ACTION_NOTES.has(n.code) || (n.code === "savant-host" && /exceeds/.test(n.msg))) adv.push({ ...n, lvl: "w" });   // the whole note: code, ref and what a fix needs (add, rack, need)
     else R(n.msg, n.ref);
   }
@@ -1130,6 +1137,7 @@ function splitMsg(msg) {
 function goToRef(ref) {
   if (!ref) return;
   const sol = S.job.solutions[S.sol], ix = S.view?.ix;
+  if (sol.racks.some(r => r.id === ref)) { setView("rack"); return; }   // a rack's own finding (height, heat, power): the Rack view
   if (sol.racks.some(r => r.devices.some(d => d.id === ref))) { openGear(ref); return; }
   const comp = (sol.companions || []).find(c => c.id === ref);
   if (comp && sol.racks.some(r => r.devices.some(d => d.id === comp.serves))) { openGear(comp.serves); return; }
@@ -1150,7 +1158,8 @@ function drawAdvisor() {
       ${adv.length || ref.length ? `<button class="advtoggle" data-adv="toggle">${open ? "Hide ▾" : "Show all ▴"}</button>` : ""}
     </div>${open && (adv.length || ref.length) ? `<div class="advlist"><div class="advhd"><b>Advisor</b><button class="advtoggle" data-adv="toggle">Close ✕</button></div>${adv.length ? `<div class="advsec">TO CHECK</div>${adv.map(item).join("")}` : ""}${ref.length ? `<div class="advsec">NOTES</div>${ref.map(item).join("")}` : ""}</div>` : ""}`;
   $("#advisor").querySelectorAll("[data-adv=toggle]").forEach(b => b.onclick = () => { try { localStorage.setItem("sp.advOpen", open ? "0" : "1"); } catch {} drawAdvisor(); });
-  $("#advisor").querySelectorAll("button.advitem").forEach(b => b.onclick = () => goToRef(b.dataset.ref));
+  // "Go to": the sheet steps aside so the room / box it opens is in view (it covered it on an iPad)
+  $("#advisor").querySelectorAll("button.advitem").forEach(b => b.onclick = () => { try { localStorage.setItem("sp.advOpen", "0"); } catch {} drawAdvisor(); goToRef(b.dataset.ref); });
 }
 // the fixes the app knows for a finding, as buttons (hookup.js quickFixes); "" when none
 function fixButtons(f) {
@@ -2099,7 +2108,7 @@ const DEV_TYPE_LABEL = TYPE_NAME, SIGNAL_LABEL = SIGNAL_NAME, SCOPE_LABEL = SCOP
 /* one picker for every long choice: groups of items, grayed items keep their
    reason (Ryan 2026-09-29: gray, don't hide), search narrows; a group marked
    searchOnly (legacy gear, other kinds of box) only shows while searching */
-function openPicker({ title, groups, onPick }) {
+function openPicker({ title, groups, onPick, empty = "" }) {
   const box = $("#picker"), list = $("#pkList"), q = $("#pkSearch"), opener = document.activeElement;
   $("#pkTitle").textContent = title; q.value = ""; list.scrollTop = 0; box.querySelector(".card").style.height = "";
   let all = false;   // the tucked-away groups (another room's receiver, can't-connect) open on search or "Show more"
@@ -2112,7 +2121,7 @@ function openPicker({ title, groups, onPick }) {
       if (!items.length) return "";
       return `<div class="pk-g">${esc(g.label)}</div>` + items.map(it => `<button class="pk-i${it.current ? " cur" : ""}" data-v="${esc(it.value)}" ${it.disabled ? "disabled" : ""}>${esc(it.label)}${(it.disabled ? it.reason : it.sub) ? `<small>${esc(it.disabled ? it.reason : it.sub)}</small>` : ""}</button>`).join("");
     }).join("") + (tucked.some(g => g.items.length) ? `<button class="pk-more">Show ${tucked.reduce((n, g) => n + g.items.length, 0)} ${tucked.every(g => g.items.every(it => it.disabled)) ? "unavailable" : "more"} — ${esc(tucked.map(g => g.label.replace(/\s*\(.*\)$/, "").toLowerCase()).join(", "))}</button>` : "")
-      || `<div class="mini" style="padding:14px">Nothing matches “${esc(q.value)}”.</div>`;
+      || `<div class="mini" style="padding:14px">${!q.value.trim() && empty ? esc(empty) : `Nothing matches “${esc(q.value)}”.`}</div>`;
     list.querySelector(".pk-more")?.addEventListener("click", () => { all = true; draw(); });
     list.querySelectorAll(".pk-i:not([disabled])").forEach(b => b.onclick = () => { close(); onPick(b.dataset.v); });
   };
@@ -2588,6 +2597,14 @@ function hookupHTML(z, sol, multi) {
   return `<div class="sect">WHAT FEEDS THIS ROOM${multi ? ` <span class="mini">${esc(sol.name)}</span>` : ""}</div>${rows.join("")}${nudge}${details}`;
 }
 
+// the catalog name a box should take, or null: a name that only adds to the product's ("Anthem MDX-8 Landscape"),
+// or a source named for its job ("Apple TV 3", "Casita Apple TV"), isn't drift — renaming those lost which was which
+function nameDrift(d, c) {
+  if (!c || (d.model || "") === productName(c)) return null;
+  const cmp = x => String(x || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (d.type === "source" || cmp(d.model).includes(cmp(c.model)) || cmp(d.model).includes(cmp(productName(c)))) return null;
+  return productName(c);
+}
 function gearHTML(o = {}) {
   const sol = S.job.solutions[S.sol];
   // catalog link: powers the port-budget advisor + snapshot lockfile (same-type entries listed first)
@@ -2595,7 +2612,9 @@ function gearHTML(o = {}) {
   // a linked box is called by its product's name — the drawing, this list and
   // the dropdown all read the same words; flag any that drifted
   const catOf = d => d.catalogRef ? EC.devices?.[d.catalogRef] : null;
-  const drifted = d => { const c = catOf(d); return c && (d.model || "") !== productName(c) ? productName(c) : null; };
+  // a name that only adds to the product's ("Anthem MDX-8 Landscape"), or a source named for its job ("Apple TV 3",
+  // "Casita Apple TV") isn't drift — renaming those lost which was which (2026-10-03 rack pass)
+  const drifted = d => nameDrift(d, catOf(d));
   const nDrift = sol.racks.flatMap(r => r.devices).filter(drifted).length;
   const driftBar = nDrift ? `<div class="drift"><span>${nDrift} name${nDrift > 1 ? "s don't" : " doesn't"} match the catalog product ${nDrift > 1 ? "they're" : "it's"} linked to.</span>
     <button class="addbtn" id="matchAll">Use the catalog names</button></div>` : "";
@@ -2662,8 +2681,9 @@ function connRowHTML(c, i, sol, ctx, dir) {
       <div class="head" data-toggle="${esc(key)}"><span class="t">${esc(title)}</span><span class="sub">${esc(tail)}</span></div>
       ${jacks}
       <div class="fields">
-        ${field("Comes from", nodeSel("cfrom", c.from, id => endFits("from", id, c.to, c.signal)))}
-        ${roomOfHookup(c) ? field("Goes to", `<span class="mini" style="line-height:1.5">${esc(nodeInfo(c.to).label)} · <a href="#" class="goroom" data-zone="${esc(roomOfHookup(c).id)}">change it from ${esc(roomOfHookup(c).name)} ›</a></span>`)
+        ${roomOfHookup(c) && c.signal === "audioReturn" ? field("Comes from", `<span class="mini" style="line-height:1.5">${esc(nodeInfo(c.from).label)} · <a href="#" class="goroom" data-zone="${esc(roomOfHookup(c).id)}">change it from ${esc(roomOfHookup(c).name)} ›</a></span>`)
+          : field("Comes from", nodeSel("cfrom", c.from, id => endFits("from", id, c.to, c.signal)))}
+        ${roomOfHookup(c) ? field("Goes to", `<span class="mini" style="line-height:1.5">${esc(nodeInfo(c.to).label)}${c.signal === "audioReturn" ? "" : ` · <a href="#" class="goroom" data-zone="${esc(roomOfHookup(c).id)}">change it from ${esc(roomOfHookup(c).name)} ›</a>`}</span>`)
           : field("Goes to", nodeSel("cto", c.to, id => endFits("to", id, c.from, c.signal)))}
         ${roomOfHookup(c) ? "" : field("Carries", sel("csig", SIGNALS.filter(g => g === c.signal || (endFits("from", c.from, c.to, g) && endFits("to", c.to, c.from, g) && !(tvAdapterWire(c) && g !== "video"))), c.signal, SIGNAL_LABEL))}
         ${c.signal === "video" && fromRcv ? field("eARC", `<input type="checkbox" class="cearc" ${c.earc ? "checked" : ""}> <span class="mini">the TV's audio comes back over this HDMI</span>`) : ""}
@@ -2738,7 +2758,7 @@ function rackHTML(o = {}) {
     }).join("");
     const hw = (r?.hardware || []).map(h => `<tr><td>${esc(h.item)}</td><td>${h.qty}</td><td>${h.key === "kit" ? esc(h.partNo)
       : `<input class="rpart" data-key="${h.key}" data-rack="${esc(rr.id)}" value="${esc(h.partNo || "")}" placeholder="?" style="width:130px">`}</td></tr>`).join("");
-    return `<div class="sect" data-rackid="${esc(rr.id)}">${esc(rr.name || "Equipment Rack")} ${r ? `<span class="badge">${r.used}U / ${r.size}U</span>` : ""}</div>
+    return `<div class="sect" data-rackid="${esc(rr.id)}">${esc(rr.name || "Equipment Rack")} ${r ? `<span class="badge">${r.used}U of ${r.size}U used</span>` : ""}</div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       ${r ? `<div class="mini" style="margin:4px 0">${r.used}U used · ${r.over ? `<b style="color:#b32017">${r.over}U over</b>` : `${r.spare}U spare`}${r.cat6 ? ` · ${r.cat6} Cat6 home runs` : ""}${r.unknown.length ? ` · <span style="color:#a45a12">${r.unknown.length} height${r.unknown.length > 1 ? "s" : ""} unknown (?)</span>` : ""}</div>
       <div class="rackview rkopen" title="Open the rack page — drag to arrange" style="background:#fff;border-radius:6px;padding:6px;margin:6px 0;cursor:zoom-in">${rackFrontSVG(r, 300, { kindColor: $("#kindColor").checked })}</div>
@@ -2780,7 +2800,7 @@ function rackHTML(o = {}) {
   const under = rr => powers.filter(p => p.rack === rr.id).map(p => (placed.add(p), pw(p))).join("");
   if (o.parts) {
     const parts = Object.fromEntries(rs.map(rr => [rr.id, rackRow(rr) + under(rr)]));
-    return { parts, rest: powers.filter(p => !placed.has(p)).map(pw).join(""), badge: Object.fromEntries(racks.map(r => [r.rack, `${r.used}U / ${r.size}U`])),
+    return { parts, rest: powers.filter(p => !placed.has(p)).map(pw).join(""), badge: Object.fromEntries(racks.map(r => [r.rack, `${r.used}U of ${r.size}U used`])),
       plans: Object.fromEntries((a.racks || []).filter(x => x.solution === ix.solutions[S.sol]?.sol.id).map(x => [x.rack, x])) };
   }
   return rs.length ? rs.map(rr => rackRow(rr) + under(rr)).join("") + powers.filter(p => !placed.has(p)).map(pw).join("") : `<div class="mini" style="padding:12px">No rack on this job yet — add gear under GEAR.</div>`;
@@ -2881,7 +2901,7 @@ function renderRackEd(fresh = false) {
   S.rkPlans = (a.racks || []).filter(r => r.solution === solId);
   $("#rkUndo").disabled = !S.undo.length;
   $("#rkBody").innerHTML = S.rkPlans.length ? S.rkPlans.map(r => `<div class="rkcol">
-      <div class="rkhd"><b>${esc(r.name)}</b><span class="badge">${r.used}U / ${r.size}U</span>
+      <div class="rkhd"><b>${esc(r.name)}</b><span class="badge">${r.used}U of ${r.size}U used</span>
         ${r.manual ? `<button class="rkreset" data-rack="${esc(r.rack)}" title="Back to the build-order stack">Reset to auto</button>` : `<span class="mini">auto — build order</span>`}</div>
       ${rackEditSVG(r, { kindColor: $("#kindColor").checked })}
       ${r.over ? `<div class="rkwarn over">Over by ${r.over}U — move something to another rack, or pick a bigger rack on the Rack tab</div>` : ""}
@@ -2968,7 +2988,7 @@ function spaceHTML(rr, plan) {
       ${plan?.belowMin ? `<div class="mini" style="color:#b32017;margin-top:4px">Under Synergy's minimum cabinet — at least 22" wide and 26" deep.</div>` : ""}`;
   } else if (mode === "auto") {
     const two = (S.job.solutions[S.sol].racks || []).find(x => x.autoOf === rr.id), first = rr.autoOf && (S.job.solutions[S.sol].racks || []).find(x => x.id === rr.autoOf);
-    body = `<div class="mini" style="margin:6px 0 4px">Sized to the gear with full spacing — the smallest standard height that takes it (now <b>${plan?.size || "?"}U</b>, the gear needs ${plan?.need ?? "?"}U). Past ${plan?.autoMax || 42}U it becomes two racks side by side, receivers and amps in the second; back to one when it fits again${rr.layout ? " (not while arranged by hand)" : ""}.</div>
+    body = `<div class="mini" style="margin:6px 0 4px"><b>Auto</b> — the smallest standard rack that holds it: <b>${plan?.size || "?"}U</b> (${plan?.used ?? plan?.need ?? "?"}U used, gear plus its spacing and panels). Past ${plan?.autoMax || 42}U it becomes two racks side by side${rr.layout ? " (not while arranged by hand)" : ""}.</div>
       <div style="display:flex;gap:6px;align-items:center;font-size:12px;margin:2px 0 4px">Two racks side by side past <input class="rautomax" inputmode="numeric" value="${esc(S.job.job.autoRackMax || 42)}" style="width:48px"> U <span class="mini" style="color:#8a8f98">(this job, every Auto rack)</span></div>
       ${two ? `<div class="mini">Two-wide: <b>${esc(two.name)}</b> stands beside it.</div>` : ""}${first ? `<div class="mini">The second of a two-wide, beside <b>${esc(first.name)}</b>.</div>` : ""}`;
   } else {
@@ -3845,8 +3865,8 @@ function wirePanel(body) {
   const matchAll = body.querySelector("#matchAll");
   if (matchAll) matchAll.onclick = () => {
     for (const d of S.job.solutions[S.sol].racks.flatMap(r => r.devices)) {
-      const c = d.catalogRef && effectiveCatalog().devices?.[d.catalogRef];
-      if (c) d.model = productName(c);
+      const c = catDev(d.catalogRef), want = nameDrift(d, c);
+      if (want) d.model = want;   // only the drifted ones — a numbered or role name stays
     }
     refresh();
   };
@@ -3958,9 +3978,13 @@ function wirePanel(body) {
       sub: c.disabled ? "" : [c.note, c.other ? `${dir === "in" ? "into" : "from"} ${d.model || d.id} ${c.other}` : ""].filter(Boolean).join(" · ") });
     const ok = cands.filter(c => !c.disabled), no = cands.filter(c => c.disabled);
     const groups = ["In the rack", "Adapters", "In the rooms"].map(g => ({ label: g, items: ok.filter(c => c.group === g).map(item) }));
+    // nothing fits: say so at the top, in words (2026-10-03: an empty sheet with only "Advanced" left you guessing)
+    if (!ok.length) groups.unshift({ label: "Nothing fits", items: [{ value: "__none", disabled: true, label: dir === "in" ? `Nothing in this job can plug into ${d.model || "it"}` : `Nothing in this job can take an output from ${d.model || "it"}`,
+      reason: no.length ? `${no.length} box${no.length > 1 ? "es" : ""} can't — "Show more" says why` : `it has no free ${dir === "in" ? "inputs" : "outputs"} for this job's gear` }] });
     groups.push({ label: "Can't connect (search to see why)", items: no.map(item), searchOnly: true });   // the long list of misfits only while searching (2026-10-03)
     groups.push({ label: "Advanced", items: [{ value: "__free", label: "Any connection — pick both ends and the signal yourself", sub: "for the exceptions: nothing is checked" }] });
-    openPicker({ title: dir === "in" ? `Add an input to ${d.model || d.id}` : `Add an output from ${d.model || d.id}`, groups, onPick: v => {
+    openPicker({ title: dir === "in" ? `Add an input to ${d.model || d.id}` : `Add an output from ${d.model || d.id}`, groups,
+      empty: no.length ? "" : `Nothing in this job can ${dir === "in" ? `plug into ${d.model || "it"} — it has no free inputs (or none at all)` : `take an output from ${d.model || "it"} — it has no free outputs (or none at all)`}. "Any connection" below draws one anyway.`, onPick: v => {
       if (v === "__free") {
         const other = allNodes().find(x => x !== d.id) || "";
         sol.connections.push(dir === "in" ? { from: other, to: d.id, signal: suggestSignal(other, d.id) || "video" } : { from: d.id, to: other, signal: suggestSignal(d.id, other) || "video" });

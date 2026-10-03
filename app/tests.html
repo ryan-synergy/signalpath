@@ -958,6 +958,20 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
       if (fx) fx.run(jb, sb);
       const Lb3 = loadJob(effectiveJob(jb, 0));
       t("a re-added switch: \"Feed all N unfed TVs\" puts every main-house TV back on it", !!fx && !validate(Lb3.job, Lb3.ix).errors.some(e => /TV has nothing feeding it/.test(e.msg) && !/Casita|Pool/.test(e.msg)), fx?.label); }
+    { // a smaller amp picked: one fix moves the rooms that don't fit to an amp with room for them
+      const jo = structuredClone(ba), so = jo.solutions[0], amp = so.racks.flatMap(r => r.devices).find(d => d.id === "amp");
+      amp.catalogRef = "anthem-mdx-8"; amp.model = "Anthem MDX-8"; amp.zones = 4;
+      const Lo = loadJob(effectiveJob(jo, 0)), e = validate(Lo.job, Lo.ix).errors.find(x => x.code === "amp-over");
+      const fx = Hk.quickFixes(jo, so, e, CATp), mv = fx.find(x => /^Move those/.test(x.label));
+      if (mv) mv.run(jo, so);
+      const L2 = loadJob(effectiveJob(jo, 0));
+      t("amp downsized: \"Move those N rooms to <amp with room>\" clears it", !!mv && fx.some(x => /^Add another/.test(x.label)) && !validate(L2.job, L2.ix).errors.some(x => x.code === "amp-over"), fx.map(x => x.label).join(" | ")); }
+    { // "move the mdx-8 …" with two MDX-8s: the rack it's in settles it; alone it asks, never makes a room
+      const cm1 = Cm.parseCommandText("move the mdx-8 in the casita rack to main rack b", ba, ba.solutions[0]);
+      const cm2 = Cm.parseCommandText("move the mdx-8 to the main rack b", ba, ba.solutions[0]);
+      const p2 = Cm.planCommands(ba, 0, cm2 || [], CATp);
+      t("move: \"the mdx-8 in the casita rack\" is that one", cm1?.[0]?.op === "move_device" && ba.solutions[0].racks.find(r => r.name === "Casita Rack").devices.some(d => d.id === cm1[0].device));
+      t("move: an ambiguous box says which two it could be — not a room called \"Move Mdx-8\"", cm2?.[0]?.op === "move_device" && /Casita Rack or .*Pool House Rack/.test(p2.steps[0]?.error || ""), p2.steps[0]?.error); }
     { // move a room to another area: its wiring goes to that area's rack (Ryan 2026-10-03: "fix the area, move wiring to")
       let ja = structuredClone(ba);
       const sayA = txt => { const cm = Cm.parseCommandText(txt, ja, ja.solutions[0]); ja = Cm.planCommands(ja, 0, cm || [], CATp).job; return cm; };

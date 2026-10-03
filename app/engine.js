@@ -4177,9 +4177,9 @@ export function render(job, ix, P, rt, opts = {}) {
         if (kind) push(kindEdge(kind, d.x, d.y, d.h, 3, bw));
         const [brand, ...restName] = tileName(d.model, job.job?.catalogSnapshot?.devices?.[dev.catalogRef]?.brand);
         // lettering (Ryan 2026-10-03, picked from concepts): the model is what the eye lands on — bold white, a size up —
-        // and the line over it is small spaced capitals in a tint of the box's own color
-        const topTint = bw || !kind || !KIND_STYLE[kind]?.edge ? "#cfcfcf" : lighten(KIND_STYLE[kind].edge, 0.55);
-        push(fitText(d.x + d.w / 2, d.y + 15, brand, 8.6, topTint, d.w - 14, { bold: 600, caps: 1.2 }));
+        // and the line over it is small spaced capitals, white too
+        const topTint = "#fff";   // white like the model under it (Ryan 2026-10-03: the tinted line was too quiet for a product or room name)
+        push(fitText(d.x + d.w / 2, d.y + 15.5, brand, 9.2, topTint, d.w - 14, { bold: 700, caps: 1.2 }));
         // channel strip: used (blue), reserved (gray), spare (outline)
         const zones = Math.max(1, Math.floor(+dev.zones) || 8);
         const feeds = (sol.connections || []).filter(c => c.from === d.id && c.signal === "speaker");
@@ -4221,8 +4221,8 @@ export function render(job, ix, P, rt, opts = {}) {
           const rooms = said ? [String(d.model).split(" — ").slice(1).join(" — ")] : drivesRooms(job, sol, d.id);
           if (rooms.length) { brand = rooms[0]; restName = [said ? String(d.model).split(" — ")[0] : d.model]; }
         }
-        const topTint = bw || !kind || !KIND_STYLE[kind]?.edge ? "#cfcfcf" : lighten(KIND_STYLE[kind].edge, 0.55);
-        push(fitText(d.x + d.w / 2, d.y + 15, brand, 8.6, topTint, d.w - 14, { bold: 600, caps: 1.2 }));
+        const topTint = "#fff";   // white like the model under it (Ryan 2026-10-03: the tinted line was too quiet for a product or room name)
+        push(fitText(d.x + d.w / 2, d.y + 15.5, brand, 9.2, topTint, d.w - 14, { bold: 700, caps: 1.2 }));
         // faceplate identity cues (squint-test assists, never the identifier)
         const my = d.y + d.h / 2 + 3;
         const u = usage[d.id] || {}, lit = kind && KIND_STYLE[kind].edge ? KIND_STYLE[kind].edge : "#3b82c4", dim = "#8f8f8f";

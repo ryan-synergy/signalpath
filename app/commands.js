@@ -11,7 +11,7 @@
    Pure functions over the raw job — no DOM. */
 
 import { describeNode, productName, TYPE_NAME, SPEAKER_SETUP, SIGNAL_NAME, SCOPE_NAME, STATUS_NAME, REMOTE_NAME, AUDIO_BACK_NAME } from "./names.js";
-import { readHookup, setVideo, setSpeakers, setAudioBack, addRackDevice, autoHookup, nextFreeOutputs, outputsNeeded, RUNS, setAdapterAudio, encodeSource, removeRackDevice, followReturn } from "./hookup.js";
+import { readHookup, setVideo, setSpeakers, setAudioBack, addRackDevice, autoHookup, nextFreeOutputs, outputsNeeded, RUNS, setAdapterAudio, encodeSource, removeRackDevice, followReturn, rehomeZone } from "./hookup.js";
 import { parseQuick, parseQuickZone, roomTexts } from "./quickadd.js";
 import { fitRacks } from "./racksizes.js";
 
@@ -19,7 +19,7 @@ import { fitRacks } from "./racksizes.js";
 export const OPS = {
   add_zones:   { args: "text", eg: `{"op":"add_zones","text":"theater 7.1 85 sony avr, kitchen stereo"}`,
                  about: "Add zones in quick-add shorthand: name + speaker setup (stereo, 2.1, 5.1, 7.1, soundbar, landscape 8) + TV size + brand; a TV is fed from the rack's matrix / MXNet switch automatically ('local' = an Apple TV at the TV, 'apps' = the TV's own apps, no rack feed); a surround zone gets its own receiver automatically ('avr' = the receiver also feeds the TV); 'ofe', 'prewire', 'future', 'no tv'. Comma = next zone. New zones are wired automatically where the rack allows." },
-  set_zone:    { args: "zone, name?, speakers?, display?, tv_size?, brand?, scope?, speakers_status?, tv_status?, remote?, confirm_size?",
+  set_zone:    { args: "zone, name?, speakers?, display?, tv_size?, brand?, scope?, speakers_status?, tv_status?, remote?, confirm_size?, area?",
                  eg: `{"op":"set_zone","zone":"patio","tv_size":75,"tv_status":"ofe"}`,
                  about: "Change a zone. speakers: none|mono|stereo|2.1|5.1|7.1|7.1.4|soundbar|soundbar-sub|landscape. display: none|tv|projector. scope: included|prewire|future. statuses: new|ofe. remote: none|savant|appletv|josh|factory." },
   delete_zone: { args: "zone", eg: `{"op":"delete_zone","zone":"gym"}`, about: "Remove a zone and everything wired to it." },
@@ -267,6 +267,12 @@ const HANDLERS = {
     for (const [k, e, label] of [["speakers_status", spk, "speakers"], ["tv_status", tv, "TV"]]) if (c[k] != null) {
       const s = norm(c[k]); if (!["new", "ofe"].includes(s)) throw new Error(`${k} must be new or ofe`);
       if (!e) throw new Error(`${z.name} has no ${label}`); e.status = s; did.push(`${label} → ${STATUS_NAME[s]}`); }
+    if (c.area != null) {   // "move the cabana to the pool house": the room and its wiring
+      const t = norm(c.area), a = (job.house.areas || []).find(x => norm(x.name) === t || norm(x.name).includes(t) || t.includes(norm(x.name).replace(/^the /, "")));
+      if (!a) throw new Error(`no area called "${c.area}"${(job.house.areas || []).length ? ` — the areas are ${job.house.areas.map(x => x.name).join(", ")}` : ""}`);
+      z.area = a.id; const moved = rehomeZone(job, sol, z);
+      did.push(`area → ${a.name}${moved.length ? ` (${moved.join(", ")})` : ""}`);
+    }
     if (c.remote != null) { const r = norm(c.remote); if (!REMOTE_NAME[r]) throw new Error(`unknown remote "${c.remote}"`);
       if (r === "none") delete z.remote; else z.remote = r; did.push(`remote → ${REMOTE_NAME[r]}`); }
     if (c.confirm_size != null) { if (!tv) throw new Error(`${z.name} has no TV`); if (c.confirm_size) tv.confirm = ["size"]; else delete tv.confirm;
@@ -570,6 +576,14 @@ function parseOne(p, job, sol) {
   if ((m = t.match(/^rename\s+(.+?)\s+to\s+(.+)$/))) {
     const z = findZone(job, m[1]); if (z.zone) return [{ op: "set_zone", zone: z.zone.name, name: p.match(/\bto\s+(.+)$/i)[1].trim() }];
     const d = findDevice(job, sol, m[1]); if (d.device) return [{ op: "set_device", device: d.device.model, name: p.match(/\bto\s+(.+)$/i)[1].trim() }];
+    return null;
+  }
+  // "move the cabana to the pool house" (a room to an area, wiring and all) / "move the mdx-8 to the casita rack"
+  if ((m = t.match(/^move\s+(?:the\s+)?(.+?)\s+(?:to|into|over to)\s+(?:the\s+)?(.+)$/))) {
+    const z = findZone(job, m[1]), area = (job.house.areas || []).find(a => { const n = norm(a.name); return n === m[2] || n.includes(m[2]) || m[2].includes(n.replace(/^guest /, "")); });
+    if (z.zone && area) return [{ op: "set_zone", zone: z.zone.name, area: area.name }];
+    const d = findDevice(job, sol, m[1]), r = findRack(sol, m[2]);
+    if (d.device && r) return [{ op: "move_device", device: d.device.id, rack: r.name }];
     return null;
   }
   if ((m = t.match(/^(?:delete|remove)\s+(?:the\s+)?(zone\s+)?(.+)$/))) {

@@ -929,6 +929,21 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
       so.connections = so.connections.filter(c => c.to !== dec.id);
       const Lo = loadJob(effectiveJob(jo, 0)), vo = validate(Lo.job, Lo.ix);
       t("a decoder with nothing into it: its TV is flagged", vo.errors.some(e => /isn't connected to anything/.test(e.msg)), vo.errors.map(e => e.msg).join(" | ")); }
+    { // move a room to another area: its wiring goes to that area's rack (Ryan 2026-10-03: "fix the area, move wiring to")
+      let ja = structuredClone(ba);
+      const sayA = txt => { const cm = Cm.parseCommandText(txt, ja, ja.solutions[0]); ja = Cm.planCommands(ja, 0, cm || [], CATp).job; return cm; };
+      const rackOf = id => ja.solutions[0].racks.find(r => r.devices.some(d => d.id === id))?.name;
+      const hk = n => Hk.readHookup(ja, ja.solutions[0], ja.house.zones.find(z => z.name === n));
+      const cm = sayA("move the game room to the casita");
+      t("area move: \"move the game room to the casita\" is a set_zone area", cm?.[0]?.op === "set_zone" && cm[0].area === "Guest Casita", JSON.stringify(cm));
+      t("area move: the room's own receiver moves to the casita rack with it", rackOf(hk("Game Room").speakers?.from) === "Casita Rack");
+      const was = hk("Office").speakers.channels;
+      sayA("move office to the pool house");
+      t("area move: an amp room takes a free zone on the pool house amp", rackOf(hk("Office").speakers?.from) === "Pool House Rack", rackOf(hk("Office").speakers?.from));
+      sayA("move the office to the main house");
+      t("area move: and back again — same amp outputs as before", /Main Rack/.test(rackOf(hk("Office").speakers?.from)) && hk("Office").speakers.channels === was, hk("Office").speakers.channels + " vs " + was);
+      const La = loadJob(effectiveJob(ja, 0));
+      t("area moves leave the job with zero errors", !validate(La.job, La.ix).errors.length, validate(La.job, La.ix).errors.map(e => e.msg).join(" | ")); }
     { // move a room to another receiver: its TV's optical return goes with it
       let jr = Sk.applyStarter(Im.skeletonJob("R"), Sk.STARTERS.find(k => k.id === "theater-receiver"), CATp);
       jr = Cm.planCommands(jr, 0, [{ op: "add_zones", text: "family room 5.1 75, den 5.1 65" }], CATp).job;

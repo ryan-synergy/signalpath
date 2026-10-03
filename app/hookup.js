@@ -429,10 +429,66 @@ function homeRackOf(job, sol, zone) {
   const a = (job.house?.areas || []).find(x => x.id === zone.area);
   return a?.homeRack && (sol.racks || []).find(r => r.id === a.homeRack) || null;
 }
+// the home rack and any rack standing beside it (Main Rack A + B are one equipment room)
+function homeRacksOf(job, sol, zone) {
+  const home = homeRackOf(job, sol, zone); if (!home) return [];
+  return (sol.racks || []).filter(r => r === home || r.beside === home.id || home.beside === r.id);
+}
+
+/* a room moved to another area (main house → casita): its wiring moves to that area's rack (2026-10-03, Ryan:
+   "fix the area, move wiring to"). Its own receiver goes with it; speakers on an amp take a free zone on an amp
+   there (another of the same amp if they're all full); the TV takes that rack's switch or matrix if it has one —
+   a whole-house MXNet switch elsewhere still reaches it over the network, so that stays. Returns what it did. */
+export function rehomeZone(job, sol, zone) {
+  const homes = homeRacksOf(job, sol, zone); if (!homes.length) return [];
+  const said = [], devs = () => rackDevices(sol);
+  const here = id => homes.some(r => (r.devices || []).some(d => d.id === id));
+  const dev = id => devs().find(d => d.id === id);
+  const home = homes[0];
+  let h = readHookup(job, sol, zone);
+  // speakers
+  const sFrom = dev(h.speakers?.from);
+  if (sFrom && !here(sFrom.id)) {
+    const others = (sol.connections || []).filter(c => c.from === sFrom.id && c.signal === "speaker" && c.to !== h.spk?.id);
+    if (sFrom.type === "avr" && !others.length) {
+      // the room's own receiver moves with the room
+      for (const r of sol.racks) { if ((r.devices || []).includes(sFrom)) { r.devices = r.devices.filter(d => d !== sFrom); if (r.layout) delete r.layout[sFrom.id]; } }
+      home.devices.push(sFrom); said.push(`${sFrom.model || sFrom.id} → ${home.name}`);
+    } else if (sFrom.type === "avr") {
+      const busy = new Set((sol.connections || []).filter(c => c.signal === "speaker").map(c => c.from));
+      const free = devs().find(d => d.type === "avr" && here(d.id) && !busy.has(d.id));
+      if (free) { setSpeakers(job, sol, zone, free.id); said.push(`speakers → ${free.model || free.id}`); }
+      else said.push(`no free receiver in ${home.name} — speakers stay on ${sFrom.model || sFrom.id}`);
+    } else if (sFrom.type === "amp") {
+      const used = id => (sol.connections || []).filter(c => c.from === id && c.signal === "speaker").length;
+      const amps = devs().filter(d => d.type === "amp" && here(d.id));
+      let amp = amps.find(d => used(d.id) < (d.zones || 8));
+      if (!amp && amps.length) {
+        const last = amps[amps.length - 1], rk = homes.find(r => r.devices.includes(last));
+        const id = addRackDevice(job, sol, "amp", last.model || "Multi-zone amp", { ...(last.catalogRef ? { catalogRef: last.catalogRef } : {}), zones: last.zones || 8, rackId: rk.id });
+        amp = dev(id); said.push(`added ${amp.model} to ${rk.name}`);
+      }
+      if (amp) { setSpeakers(job, sol, zone, amp.id); if ((zone.scope || "included") === "included") feedAmp(job, sol, amp.id); h = readHookup(job, sol, zone); said.push(`speakers → ${amp.model || amp.id} ${h.speakers?.channels || ""}`.trim()); }
+      else said.push(`${home.name} has no amp — speakers stay on ${sFrom.model || sFrom.id}`);
+    }
+  }
+  // picture
+  h = readHookup(job, sol, zone);
+  const vFrom = dev(h.video?.from);
+  if (vFrom && !here(vFrom.id)) {
+    const hub = devs().find(d => here(d.id) && (d.type === "videoMatrix" || (d.type === "avSwitch" && !d.danteSwitch)));
+    const rcv = dev(h.speakers?.from)?.type === "avr" && here(h.speakers.from) ? dev(h.speakers.from) : null;
+    if (hub) { setVideo(job, sol, zone, hub.id); said.push(`TV → ${hub.model || hub.id}`); }
+    else if (vFrom.type === "avr" && rcv) { setVideo(job, sol, zone, rcv.id, undefined, true); said.push(`TV → ${rcv.model || rcv.id}`); }
+    // else: the house switch keeps feeding it over the network
+  }
+  followReturn(job, sol, zone);
+  return said;
+}
 export function autoHookup(job, sol, zone, hints = {}) {
   const { tv, spk } = endpointsOf(zone);
-  const home = homeRackOf(job, sol, zone);
-  const atHome = d => !!home && (home.devices || []).includes(d);
+  const home = homeRackOf(job, sol, zone), homes = homeRacksOf(job, sol, zone);
+  const atHome = d => homes.some(r => (r.devices || []).includes(d));
   const devs = rackDevices(sol).sort((a, b) => atHome(b) - atHome(a));
   const homeX = home ? { rackId: home.id } : {};
   // "local": the Apple TV quick-add put in the room feeds this TV directly

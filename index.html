@@ -610,29 +610,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003051408",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003051408",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003051408",
-    "./app/ports.js": "./app/ports.js?v=20261003051408",
-    "./app/commands.js": "./app/commands.js?v=20261003051408",
-    "./app/engine.js": "./app/engine.js?v=20261003051408",
-    "./app/exports.js": "./app/exports.js?v=20261003051408",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003051408",
-    "./app/hookup.js": "./app/hookup.js?v=20261003051408",
-    "./app/importers.js": "./app/importers.js?v=20261003051408",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003051408",
-    "./app/library.js": "./app/library.js?v=20261003051408",
-    "./app/names.js": "./app/names.js?v=20261003051408",
-    "./app/network.js": "./app/network.js?v=20261003051408",
-    "./app/pages.js": "./app/pages.js?v=20261003051408",
-    "./app/power.js": "./app/power.js?v=20261003051408",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003051408",
-    "./app/rack.js": "./app/rack.js?v=20261003051408",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003051408",
-    "./app/starters.js": "./app/starters.js?v=20261003051408",
-    "./app/kinds.js": "./app/kinds.js?v=20261003051408",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003051408",
-    "./app/sheets.js": "./app/sheets.js?v=20261003051408"
+    "./app/ai.js": "./app/ai.js?v=20261003051918",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003051918",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003051918",
+    "./app/ports.js": "./app/ports.js?v=20261003051918",
+    "./app/commands.js": "./app/commands.js?v=20261003051918",
+    "./app/engine.js": "./app/engine.js?v=20261003051918",
+    "./app/exports.js": "./app/exports.js?v=20261003051918",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003051918",
+    "./app/hookup.js": "./app/hookup.js?v=20261003051918",
+    "./app/importers.js": "./app/importers.js?v=20261003051918",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003051918",
+    "./app/library.js": "./app/library.js?v=20261003051918",
+    "./app/names.js": "./app/names.js?v=20261003051918",
+    "./app/network.js": "./app/network.js?v=20261003051918",
+    "./app/pages.js": "./app/pages.js?v=20261003051918",
+    "./app/power.js": "./app/power.js?v=20261003051918",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003051918",
+    "./app/rack.js": "./app/rack.js?v=20261003051918",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003051918",
+    "./app/starters.js": "./app/starters.js?v=20261003051918",
+    "./app/kinds.js": "./app/kinds.js?v=20261003051918",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003051918",
+    "./app/sheets.js": "./app/sheets.js?v=20261003051918"
 } }
 </script>
 <script>
@@ -855,7 +855,7 @@ import { rackReference, fitRacks, rackOption, RACK_CLEARANCE, RACK_OPTIONS } fro
 import { STARTERS, applyStarter, starterFromJob, listStarters, duplicateStarter, kitRemoveDevice, kitDuplicateDevice, kitAddDevice } from "./app/starters.js";
 import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/commands.js";
 import { askClaude, handoffPrompt, extractProposal, jobSummary, assess, loadConn, saveConn, connReady, MODELS, quoteRequest, quoteAttachment } from "./app/ai.js";
-import { setDanteAudio, danteAmpFor, encodeSource, removeRackDevice, followReturn, feedAmp } from "./app/hookup.js";
+import { setDanteAudio, danteAmpFor, encodeSource, removeRackDevice, followReturn, feedAmp, rehomeZone } from "./app/hookup.js";
 import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, quickFixes, adapterAudioOut, adapterAudioTargets, setAdapterAudio, addLocalAmp, nextFreeOutputs, outputsNeeded,
          VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS, REACH, bulletFor } from "./app/hookup.js";
 import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME, AUDIO_NET_NAME,
@@ -891,7 +891,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003051408").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003051918").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -3479,7 +3479,11 @@ function wirePanel(body) {
     if (scopeSol) setF("zones", z, "remote", el.value);      // "none" override = explicitly no remote in this solution
     else if (el.value === "none") delete z.remote; else z.remote = el.value;
   });
-  on(".zarea", el => { const z = zoneOf(el); if (z) { if (el.value) z.area = el.value; else delete z.area; } });
+  // a room moved to another area takes its wiring to that area's rack (its receiver, a free amp zone, the local switch)
+  on(".zarea", el => { const z = zoneOf(el); if (!z) return; if (el.value) z.area = el.value; else delete z.area;
+    const did = el.value ? rehomeZone(S.job, S.job.solutions[S.sol], z) : [];
+    const area = (S.job.house.areas || []).find(a => a.id === el.value);
+    if (area) toast(`${z.name} → ${area.name}${did.length ? ": " + did.join(" · ") : " (its wiring already fits)"}`, true); });
   zon(".spkcfg", el => {
     const z = zoneOf(el); if (!z) return;
     z.endpoints = z.endpoints || [];

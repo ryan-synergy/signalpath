@@ -361,14 +361,16 @@ export function parseQuick(text, existing = []) {
   });
 }
 
+// a side of "X and Y …" that reads as a room on its own ("rock and roll room" is one room)
+const ROOMISH = /\b(?:room|bed(?:room)?|bath(?:room)?|kitchen|dining|office|den|theater|theatre|gym|patio|suite|loft|garage|lounge|bar|nook|study|library|lanai|deck|porch|basement|cellar|foyer|hall|nursery|playroom|casita|cabana|kids?|primary|master|guest|family|living|great|media|game|bonus|sun ?room|courtyard|yard|lawn|pool|spa)\b(?:\s+\d+)?\s*$/i;
 function parseQuickRooms(text) {
   const out = [];
   // "bedroom 3 and bedroom 4 with 55 inch tvs": both rooms get it (each side alone names a room and has no gear)
   const texts = roomTexts(text).flatMap(c => {
-    const m = c.match(/^(.+?)\s+(?:and|&)\s+(.+?)\s+((?:with|both|each|get|have|have\s+a|get\s+a)\b.*|\d{2,3}\s*(?:"|in\b|inch).*)$/i);
+    const m = c.match(/^(.+?)\s+(?:and|&)\s+(.+?)\s+((?:with|both|each|get|have|have\s+a|get\s+a)\b.*|\d{2,3}\s*(?:"|in\b|inch)?.*|(?:stereo|mono|soundbar|landscape|surround|[57]\.1(?:\.\d)?|2\.1)\b.*)$/i);
     if (!m) return [c];
     const a = parseQuickZone(m[1]), b = parseQuickZone(m[2]);
-    if (!a.named || !b.named || a.zone.endpoints.length || b.zone.endpoints.length) return [c];
+    if (!a.named || !b.named || a.zone.endpoints.length || b.zone.endpoints.length || !ROOMISH.test(m[1]) || !ROOMISH.test(m[2])) return [c];
     const gear = m[3].replace(/\btvs\b/gi, "tv").replace(/\bprojectors\b/gi, "projector").replace(/^(?:both|each)\s+/i, "");
     return [`${m[1]} ${gear}`, `${m[2]} ${gear}`];
   });

@@ -524,28 +524,28 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003002018",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003002018",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003002018",
-    "./app/ports.js": "./app/ports.js?v=20261003002018",
-    "./app/commands.js": "./app/commands.js?v=20261003002018",
-    "./app/engine.js": "./app/engine.js?v=20261003002018",
-    "./app/exports.js": "./app/exports.js?v=20261003002018",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003002018",
-    "./app/hookup.js": "./app/hookup.js?v=20261003002018",
-    "./app/importers.js": "./app/importers.js?v=20261003002018",
-    "./app/library.js": "./app/library.js?v=20261003002018",
-    "./app/names.js": "./app/names.js?v=20261003002018",
-    "./app/network.js": "./app/network.js?v=20261003002018",
-    "./app/pages.js": "./app/pages.js?v=20261003002018",
-    "./app/power.js": "./app/power.js?v=20261003002018",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003002018",
-    "./app/rack.js": "./app/rack.js?v=20261003002018",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003002018",
-    "./app/starters.js": "./app/starters.js?v=20261003002018",
-    "./app/kinds.js": "./app/kinds.js?v=20261003002018",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003002018",
-    "./app/sheets.js": "./app/sheets.js?v=20261003002018"
+    "./app/ai.js": "./app/ai.js?v=20261003002318",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003002318",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003002318",
+    "./app/ports.js": "./app/ports.js?v=20261003002318",
+    "./app/commands.js": "./app/commands.js?v=20261003002318",
+    "./app/engine.js": "./app/engine.js?v=20261003002318",
+    "./app/exports.js": "./app/exports.js?v=20261003002318",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003002318",
+    "./app/hookup.js": "./app/hookup.js?v=20261003002318",
+    "./app/importers.js": "./app/importers.js?v=20261003002318",
+    "./app/library.js": "./app/library.js?v=20261003002318",
+    "./app/names.js": "./app/names.js?v=20261003002318",
+    "./app/network.js": "./app/network.js?v=20261003002318",
+    "./app/pages.js": "./app/pages.js?v=20261003002318",
+    "./app/power.js": "./app/power.js?v=20261003002318",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003002318",
+    "./app/rack.js": "./app/rack.js?v=20261003002318",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003002318",
+    "./app/starters.js": "./app/starters.js?v=20261003002318",
+    "./app/kinds.js": "./app/kinds.js?v=20261003002318",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003002318",
+    "./app/sheets.js": "./app/sheets.js?v=20261003002318"
 } }
 </script>
 <script>
@@ -771,7 +771,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003002018").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003002318").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {

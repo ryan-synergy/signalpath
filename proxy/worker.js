@@ -14,7 +14,7 @@
    the listed models, caps the response size, and refuses anything without the
    access code. The key never leaves Cloudflare. */
 
-const MODELS = new Set(["claude-opus-5-5", "claude-sonnet-5", "claude-haiku-4-5-20251001"]);
+const MODELS = new Set(["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-4-5-20251001"]);
 const FIELDS = ["model", "max_tokens", "system", "messages", "tools", "tool_choice"];
 
 export default {

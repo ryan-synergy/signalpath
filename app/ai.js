@@ -16,7 +16,7 @@ import { readHookup } from "./hookup.js";
 
 export const MODELS = [
   ["claude-opus-5-5", "Claude Opus 5.5 (best)"],
-  ["claude-sonnet-5", "Claude Sonnet 5 (faster)"],
+  ["claude-sonnet-5-5", "Claude Sonnet 5.5 (faster)"],
   ["claude-haiku-4-5-20251001", "Claude Haiku 4.5 (fastest, cheapest)"],
 ];
 
@@ -179,6 +179,10 @@ export async function askClaude({ conn, job, solIndex, catalog, request, onStatu
 
 /* ---------- connection settings: this browser only, never in the job ---------- */
 const KEY = "signalpath.ai";
-export function loadConn() { try { return { mode: "off", model: MODELS[0][0], ...JSON.parse(localStorage.getItem(KEY) || "{}") }; } catch { return { mode: "off", model: MODELS[0][0] }; } }
+export function loadConn() {
+  let c; try { c = { mode: "off", model: MODELS[0][0], ...JSON.parse(localStorage.getItem(KEY) || "{}") }; } catch { c = { mode: "off", model: MODELS[0][0] }; }
+  if (!MODELS.some(([id]) => id === c.model)) c.model = MODELS[0][0];   // a model since retired (or mistyped) falls back to the best
+  return c;
+}
 export function saveConn(c) { try { localStorage.setItem(KEY, JSON.stringify(c)); } catch {} }
 export const connReady = c => (c.mode === "key" && !!c.key) || (c.mode === "proxy" && /^https:\/\//.test(c.proxy || ""));

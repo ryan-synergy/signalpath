@@ -595,6 +595,7 @@ const PL = {
   areaGapX: 80, secondaryClusterMaxW: 700,
   colA: 80, colB: 260, colC: 470,                 // rack device columns (absolute, aligned across racks)
   smallTile: { w: 100, h: 22, pitch: 70 },
+  puckInset: 15,
   chassisTile: { w: 150, h: 64, pitch: 84 },
   ampTile: { w: 170, h: 84, pitch: 104 },
   rackPadTop: 50, rackPadBottom: 30, rackGapY: 30,
@@ -1003,8 +1004,12 @@ function placeOnce(job, ix, opts, variant) {
       // top of the rack, network infrastructure lives low) — same two-phase
       // treatment the amps get
       if (t.col === "A" && (d.type === "avbSwitch" || d.type === "power")) { aBottom.push({ d, t }); continue; }
+      // an Apple TV / Roku is DRAWN as a narrow puck centred in its slot (`puck` = the inset each side). The slot itself
+      // stays full width — narrowing it moved wire ends and put 16 more runs through boxes — and render() carries each
+      // wire the last few px in to the puck's edge
+      const puck = d.type === "source" && PUCK_FACES.has(sourceFace(d)) ? PL.puckInset : 0;
       const x = t.col === "A" ? PL.colA : colBx;
-      placed.push({ id: d.id, model: d.model, kind: t.kind, col: t.col, x, y: cols[t.col], w: t.w, h: t.h, type: d.type });
+      placed.push({ id: d.id, model: d.model, kind: t.kind, col: t.col, x, y: cols[t.col], w: t.w, h: t.h, type: d.type, ...(puck ? { puck } : {}) });
       maxTileBottom = Math.max(maxTileBottom, cols[t.col] + t.h + (t.kind === "small" ? PL.captionH : 0));
       cols[t.col] += t.pitch;
     }
@@ -3750,7 +3755,7 @@ const fmtDate = iso => { const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d
 // look: { bold } = heavier weight; { caps: spacing } = small spaced capitals (drawn with CSS, so the text itself stays as typed)
 const fitText = (x, y, text, size, fill, maxW, look = {}) => {
   const t = String(text ?? "");
-  const est = t.length * (size * (look.caps != null ? 0.66 : look.bold ? 0.6 : 0.56) + (look.caps || 0));
+  const est = t.length * (size * (look.caps != null ? 0.66 : look.bold === true || look.bold >= 700 ? 0.6 : 0.56) + (look.caps || 0));
   const fit = est > maxW ? ` textLength="${Math.round(maxW)}" lengthAdjust="spacingAndGlyphs"` : "";
   const extra = (look.bold ? ` font-weight="${look.bold === true ? 700 : look.bold}"` : "") + (look.caps != null ? ` letter-spacing="${est > maxW ? 0 : look.caps}" style="text-transform:uppercase"` : "");
   return `<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}" fill="${fill}"${extra}${fit}>${esc(t)}</text>`;
@@ -4159,12 +4164,16 @@ export function render(job, ix, P, rt, opts = {}) {
       const tint = (base) => kind && (!bw || kind === "power") ? KIND_STYLE[kind].tint : base;
       push(`<g class="devtile" data-device="${esc(d.id)}"${kind ? ` data-kind="${kind}"` : ""}>`);
       if (d.kind === "small") {
-        const rx = ["appletv", "streamer"].includes(sourceFace(dev)) ? 8 : 3;
-        push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="${rx}" fill="${tint("#1e1e1e")}"/>`);
-        if (kind) push(kindEdge(kind, d.x, d.y, d.h, rx, bw));
-        push(`<circle cx="${d.x + 9}" cy="${d.y + d.h / 2}" r="2.3" fill="#3fbf5a"/>`);
+        const rx = 3, ownFace = dev.type === "source" ? sourceTile(dev, d, bw) : "";
+        if (ownFace) push(ownFace);
+        else {
+          push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="${rx}" fill="${tint("#1e1e1e")}"/>`);
+          if (kind) push(kindEdge(kind, d.x, d.y, d.h, rx, bw));
+          push(`<circle cx="${d.x + 9}" cy="${d.y + d.h / 2}" r="2.3" fill="#3fbf5a"/>`);
+        }
         const u = usage[d.id] || {}, L = { lit: kind && KIND_STYLE[kind].edge ? KIND_STYLE[kind].edge : "#3b82c4", bw };
-        if (dev.type === "power") {
+        if (ownFace) { /* drawn above */ }
+        else if (dev.type === "power") {
           // WattBox: its outlets, lit for every box plugged in (two rows)
           const o = u.outlets || { used: 0, cap: 0 };
           if (o.cap) push(pipField(d.x + d.w - 34, d.y + d.h / 2 - 6, o, { ...L, rows: 2, maxPer: 9, w: 4.5, h: 5, pitch: 6.5, shape: "outlet", what: "Outlets" }));
@@ -4383,6 +4392,7 @@ export function render(job, ix, P, rt, opts = {}) {
 
   /* wires (under chips so badges sit inline on their runs) */
   const TRK = trunkMode(job, opts), trunkWires = [], mergedTags = {};
+  const puckOf = Object.fromEntries(P.racks.flatMap(r => r.devices).filter(d => d.puck).map(d => [d.id, d]));
   push(`<g fill="none" stroke-width="2.2" stroke-linecap="round">`);
   for (const w of rt.wires) {
     const key = w.scope !== "included" ? "prewire" : w.dante ? "dante" : (w.signal === "speaker" ? "audio" : w.signal);
@@ -4393,6 +4403,12 @@ export function render(job, ix, P, rt, opts = {}) {
     const conn = (sol.connections || []).find(c => c.from === w.from && c.to === w.to && c.signal === w.signal);
     const n = conn ? trunkCount(conn, s) : 1;
     const onTrunk = TRK && w.cls === "trunk";
+    // a wire into a narrow puck (Apple TV, Roku) runs on from its slot's edge to the puck's own edge
+    for (const [id, q] of [[w.from, w.pts[0]], [w.to, w.pts[w.pts.length - 1]]]) {
+      const pd = puckOf[id]; if (!pd || !q) continue;
+      const to = Math.abs(q[0] - (pd.x + pd.w)) < 0.6 ? pd.x + pd.w - pd.puck : Math.abs(q[0] - pd.x) < 0.6 ? pd.x + pd.puck : null;
+      if (to != null) push(`<path d="M${q[0]} ${q[1]}L${to} ${q[1]}" stroke="${color}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`);
+    }
     if (onTrunk) trunkWires.push({ w, color, dash, runs: n });   // drawn as trunks below (they count the runs)
     else push(`<path class="wire${w.dante ? " dante" : ""}" data-wire="${esc(w.id)}" data-from="${esc(w.from)}" data-to="${esc(w.to)}" data-signal="${esc(w.signal)}" d="${wireD(w)}" stroke="${color}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`);
     if (n > 1 && !onTrunk) {
@@ -4629,9 +4645,51 @@ function sourceFace(dev) {
   if (dev.sourceType) return dev.sourceType;
   if (dev.type !== "source") return null;
   const n = `${dev.model || ""} ${dev.catalogRef || ""}`;
-  return /apple\s*-?tv/i.test(n) ? "appletv" : /kaleidescape|strato/i.test(n) ? "kaleidescape"
-    : /cable|directv|dish|xfinity|tivo|u-?verse|satellite/i.test(n) ? "cable" : /turn\s*table|record player/i.test(n) ? "turntable"
+  return /apple\s*-?tv/i.test(n) ? "appletv" : /\broku\b/i.test(n) ? "roku" : /kaleidescape|strato|\bterra\b/i.test(n) ? "kaleidescape"
+    : /direc\s*tv|\bdtv\b|\bdish\b|satellite|genie/i.test(n) ? "sat"
+    : /cable|xfinity|tivo|u-?verse|spectrum|comcast|\bcox\b|set-?top/i.test(n) ? "cable" : /turn\s*table|record player/i.test(n) ? "turntable"
     : /sonos|\bport\b|music|stream|sms\d|bluesound|heos|wiim|\bconnect\b/i.test(n) ? "streamer" : null;
+}
+/* a source's whole face (Ryan 2026-10-03, picked from concept sheets): each kind of source reads as itself at a glance —
+   an Apple TV and a Roku are narrow rounded pucks, a streamer a big note between sound waves, a cable box an amber
+   channel display, a satellite box the same with a dish and a blue display, a Kaleidescape a slab with film sprockets
+   and a lit play button. Anything else keeps the plain black box (returns ""). B&W swaps the accents for grays. */
+const PUCK_FACES = new Set(["appletv", "roku"]);
+const APPLE_MARK = "M0 -2.2C1.2 -3.4 3.6 -3 4.2 -0.8C3.2 -0.2 2.8 1.2 3.6 2.4C3 4.2 1.8 5.2 0.9 5C0.3 4.8 -0.3 4.8 -0.9 5C-2.2 5.2 -4.2 2.6 -4 0C-3.8 -2.6 -1.4 -3.4 0 -2.2ZM0.2 -3C0.2 -4.4 1.2 -5.4 2.4 -5.4C2.4 -4 1.4 -3 0.2 -3Z";
+function sourceTile(dev, d, bw) {
+  const face = sourceFace(dev), ins = d.puck || 0, x = d.x + ins, y = d.y, w = d.w - ins * 2, h = d.h, cx = x + w / 2, cy = y + h / 2, f = v => +v.toFixed(1);
+  const acc = c => bw ? "#d6d6d6" : c, led = `<circle cx="${x + 8.5}" cy="${cy}" r="2.2" fill="#3fbf5a"/>`;
+  if (face === "appletv" || face === "roku") {
+    const ph = Math.min(13, h * 0.58), py = y + 2, my = py + ph / 2;
+    return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="7" fill="#151517"/><rect x="${x + 2.5}" y="${py}" width="${w - 5}" height="${f(ph)}" rx="5" fill="#232327"/>` +
+      (face === "appletv"
+        ? `<path d="${APPLE_MARK}" transform="translate(${f(cx - 7)} ${f(my - 0.3)}) scale(0.98)" fill="#e8e8e8"/><text x="${f(cx - 1)}" y="${f(my + 3.6)}" font-size="9.2" font-weight="600" fill="#e8e8e8">tv</text>`
+        : `<text x="${cx}" y="${f(my + 3.3)}" text-anchor="middle" font-size="9.2" font-weight="800" letter-spacing="0.3" fill="${acc("#a56bf5")}">Roku</text><rect x="${x - 3}" y="${f(cy - 3.5)}" width="4.5" height="7.5" rx="1" fill="${acc("#7b3fe4")}"/>`) +
+      `<circle cx="${x + w - 9}" cy="${f(y + h - 4.2)}" r="1.1" fill="#fff"/>`;
+  }
+  if (face === "streamer") {
+    const wave = (dx, r, half, dir) => `M${f(cx + dir * dx)} ${f(cy - half)}a${r} ${r} 0 0 ${dir > 0 ? 1 : 0} 0 ${half * 2}`;
+    return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="5" fill="#1e1e1e"/>${led}` +
+      `<text x="${cx}" y="${f(cy + 5.2)}" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">♪</text>` +
+      `<path d="${wave(13, 7, 5, 1)}${wave(18, 11, 8, 1)}${wave(13, 7, 5, -1)}${wave(18, 11, 8, -1)}" fill="none" stroke="${acc("#12b5a6")}" stroke-width="1.4" stroke-linecap="round"/>`;
+  }
+  if (face === "cable" || face === "sat") {
+    const sat = face === "sat", dx0 = x + (sat ? 33 : 25), dw = sat ? 42 : 50, glow = acc(sat ? "#4db8ff" : "#ffab2e");
+    const pad = `<circle cx="${x + w - 14.5}" cy="${cy}" r="4.4" fill="none" stroke="#6a6a6a" stroke-width="0.95"/><path d="M${x + w - 14.5} ${f(cy - 2.5)}v5M${x + w - 17} ${cy}h5" stroke="#6a6a6a" stroke-width="0.95" stroke-linecap="round"/>`;
+    const dish = sat ? `<g transform="translate(${x + 22.5} ${f(cy + 0.6)}) scale(0.62)"><path d="M-9 -3A10 10 0 0 0 3 9Z" fill="${glow}"/><path d="M-3 3L4 -4" stroke="${glow}" stroke-width="1.6" stroke-linecap="round"/><circle cx="5" cy="-5" r="1.8" fill="${glow}"/><path d="M8 -9a5 5 0 0 1 0.5 4" fill="none" stroke="${glow}" stroke-width="1.3" stroke-linecap="round"/></g>` : "";
+    return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="#1e1e1e"/>${led}${dish}` +
+      `<rect x="${dx0}" y="${f(cy - 7.5)}" width="${dw}" height="15" rx="2" fill="${bw ? "#0c0c0c" : sat ? "#03101c" : "#150d02"}" stroke="${bw ? "#4a4a4a" : sat ? "#12324f" : "#3a2a10"}" stroke-width="0.8"/>` +
+      (sat ? "" : `<text x="${dx0 + 4}" y="${f(cy + 2.4)}" font-size="5.6" font-weight="700" font-family="Menlo, monospace" fill="${acc("#b9791c")}">CH</text>`) +
+      `<text x="${dx0 + dw - 4}" y="${f(cy + 4)}" text-anchor="end" font-size="11" font-weight="700" font-family="Menlo, monospace" letter-spacing="0.6" fill="${glow}">${sat ? "202" : "002"}</text>` + pad;
+  }
+  if (face === "kaleidescape") {
+    const blue = acc("#5cc8ff"), holes = [0, 1, 2].map(i => { const hy = f(cy - 7.4 + i * 5.3);
+      return `<rect x="${x + 5}" y="${hy}" width="3.8" height="3.1" rx="0.6"/><rect x="${x + w - 8.8}" y="${hy}" width="3.8" height="3.1" rx="0.6"/>`; }).join("");
+    return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="#101012"/><path d="M${x + 2.5} ${y + 2}h${w - 5}" stroke="#fff" stroke-opacity="0.14" stroke-width="1" stroke-linecap="round"/>` +
+      `<g fill="#2e2e34">${holes}</g><circle cx="${cx}" cy="${cy}" r="5.8" fill="${blue}" fill-opacity="0.2"/><circle cx="${cx}" cy="${cy}" r="3.9" fill="none" stroke="${blue}" stroke-width="1"/>` +
+      `<path d="M${f(cx - 1.3)} ${f(cy - 2.2)}L${f(cx + 2.5)} ${cy}L${f(cx - 1.3)} ${f(cy + 2.2)}Z" fill="${blue}"/>`;
+  }
+  return "";
 }
 function faceGlyph(dev, cx, cy) {
   switch (sourceFace(dev)) {

@@ -1222,7 +1222,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const svg = render(job, ix, p, rt);
   t("glyphs: Apple TV wears the tv mark (rack tile + local puck)", (svg.match(/>tv<\/text>/g) || []).length >= 2);
   t("glyphs: streamer note, cable channel readout, turntable platter",
-    svg.includes("♪") && svg.includes(">02</text>") && svg.includes('stroke="#6a6a6a"'));
+    svg.includes("♪") && svg.includes(">002</text>") && svg.includes('stroke="#6a6a6a"'));
   t("glyphs: AVR reads as a receiver (a solid knob with a pointer and a dotted arc of ticks, a dark display with its input lights)",
     svg.includes('fill="#1b1b22" stroke="#e8e8e8"') && svg.includes('stroke-dasharray="1.2 3"') && svg.includes('fill="#0d0f16"'));
   t("look: a rack box's model is bold white under small spaced capitals (the text itself stays as typed)",
@@ -2650,6 +2650,19 @@ for (const [name, raw] of Object.entries(fixtures)) {
     svg.includes("NOTES") && svg.split(`>${esc4(noteText)}</text>`).length === 2);
   t("keynotes: the note's number appears twice — the badge on the room and the legend entry",
     svg.split('font-weight="700" fill="#fff">1</text>').length === 3 && svg.includes('class="notemark" data-note="0" data-near="z-gym"'));
+  { // source faces (Ryan 2026-10-03, from concept sheets): each kind of source reads as itself; Apple TV and Roku are narrow pucks
+    const r = structuredClone(fixtures.residence), devs = r.solutions[0].racks[0].devices, srcs = devs.filter(d => d.type === "source");
+    ["Cable Box", "Apple TV", "Sonos Port", "Kaleidescape Strato"].forEach((m, i) => { srcs[i].model = m; delete srcs[i].sourceType; });
+    devs.push({ ...structuredClone(srcs[0]), id: "dtv1", model: "DirecTV Genie" }, { ...structuredClone(srcs[0]), id: "roku1", model: "Roku Ultra" }, { ...structuredClone(srcs[0]), id: "odd1", model: "Mystery Box" });
+    const L = loadJob(r), pS = place(L.job, L.ix), rS = route(L.job, L.ix, pS), sS = render(L.job, L.ix, pS, rS), dS = new DOMParser().parseFromString(sS, "image/svg+xml");
+    const tile = id => dS.querySelector(`g.devtile[data-device="${id}"]`), has = (id, re) => re.test(tile(id)?.innerHTML || "");
+    t("source faces: Apple TV (mark + tv), Roku, a streamer's note between waves, a cable box's amber CH display, a satellite box's dish + blue display, Kaleidescape's lit play button; an unknown box stays plain",
+      has(srcs[1].id, />tv</) && has("roku1", />Roku</) && has(srcs[2].id, /♪/) && has(srcs[0].id, />CH<[\s\S]*#ffab2e/) && has("dtv1", /#4db8ff/) && !has("dtv1", />CH</) && has(srcs[3].id, /#5cc8ff/) && !has("odd1", /#ffab2e|#5cc8ff|♪|>tv</));
+    const pk = pS.racks[0].devices.find(d => d.id === srcs[1].id), other = pS.racks[0].devices.find(d => d.id === srcs[0].id), rect = tile(srcs[1].id).querySelector("rect");
+    const w0 = rS.wires.find(w => w.from === srcs[1].id), stub = w0 && sS.includes(`d="M${w0.pts[0][0]} ${w0.pts[0][1]}L${pk.x + pk.w - pk.puck} ${w0.pts[0][1]}"`);
+    t("source faces: a puck keeps its full slot for routing, is drawn narrower and centred, and its wire runs on in to the puck's edge",
+      pk.puck > 0 && pk.w === other.w && +rect.getAttribute("width") === pk.w - pk.puck * 2 && +rect.getAttribute("x") === pk.x + pk.puck && !!stub, JSON.stringify([pk, w0?.pts[0]]));
+  }
   { // the speaker look Ryan picked from concepts (2026-10-03): yellow cone, thin dark rim, sound lines per group, a glint on the TV
     const svgB = render(job, ix, p, route(job, ix, p), { grayscale: true });
     t("look: speakers have a yellow cone (light gray in B&W), sound lines beside a group with room, a reflection on each TV",

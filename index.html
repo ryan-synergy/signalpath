@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-phVJ/qOO4OUJZEP1CG8icuYkWIlliE38ITl5YxlMc74=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-1/i0dynTOJXZ+Ix2QXyJcaATTbYlYTLgk4tM6fX/TPI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-el6xpm/3O4KQHo7dM2RutkVhuQzmOEASfBE3P+1HtgM=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-0a/9LJd7pdaNGLQRxbpo4kqOMsgDvKj6Pa5u8rsk2vE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -687,29 +687,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003203411",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003203411",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003203411",
-    "./app/ports.js": "./app/ports.js?v=20261003203411",
-    "./app/commands.js": "./app/commands.js?v=20261003203411",
-    "./app/engine.js": "./app/engine.js?v=20261003203411",
-    "./app/exports.js": "./app/exports.js?v=20261003203411",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003203411",
-    "./app/hookup.js": "./app/hookup.js?v=20261003203411",
-    "./app/importers.js": "./app/importers.js?v=20261003203411",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003203411",
-    "./app/library.js": "./app/library.js?v=20261003203411",
-    "./app/names.js": "./app/names.js?v=20261003203411",
-    "./app/network.js": "./app/network.js?v=20261003203411",
-    "./app/pages.js": "./app/pages.js?v=20261003203411",
-    "./app/power.js": "./app/power.js?v=20261003203411",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003203411",
-    "./app/rack.js": "./app/rack.js?v=20261003203411",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003203411",
-    "./app/starters.js": "./app/starters.js?v=20261003203411",
-    "./app/kinds.js": "./app/kinds.js?v=20261003203411",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003203411",
-    "./app/sheets.js": "./app/sheets.js?v=20261003203411"
+    "./app/ai.js": "./app/ai.js?v=20261003204555",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003204555",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003204555",
+    "./app/ports.js": "./app/ports.js?v=20261003204555",
+    "./app/commands.js": "./app/commands.js?v=20261003204555",
+    "./app/engine.js": "./app/engine.js?v=20261003204555",
+    "./app/exports.js": "./app/exports.js?v=20261003204555",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003204555",
+    "./app/hookup.js": "./app/hookup.js?v=20261003204555",
+    "./app/importers.js": "./app/importers.js?v=20261003204555",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003204555",
+    "./app/library.js": "./app/library.js?v=20261003204555",
+    "./app/names.js": "./app/names.js?v=20261003204555",
+    "./app/network.js": "./app/network.js?v=20261003204555",
+    "./app/pages.js": "./app/pages.js?v=20261003204555",
+    "./app/power.js": "./app/power.js?v=20261003204555",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003204555",
+    "./app/rack.js": "./app/rack.js?v=20261003204555",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003204555",
+    "./app/starters.js": "./app/starters.js?v=20261003204555",
+    "./app/kinds.js": "./app/kinds.js?v=20261003204555",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003204555",
+    "./app/sheets.js": "./app/sheets.js?v=20261003204555"
 } }
 </script>
 <script>
@@ -974,7 +974,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003203411").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003204555").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {

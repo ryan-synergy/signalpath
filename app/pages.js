@@ -45,15 +45,20 @@ const openPage = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W
 
 /* ---------- generic table ---------- */
 function table(x, y, w, cols, rows, pitch = 28) {
+  // text never runs into the next column: a little too long is squeezed, a lot too long is cut with an ellipsis first
+  const colW = ci => (ci + 1 < cols.length ? cols[ci + 1].dx : w) - cols[ci].dx - 10;
+  const fit = (txt, ci, cw) => { let t = String(txt ?? ""); const max = colW(ci); if (!(max > 0) || t.length * cw <= max) return [t, ""];
+    const keep = Math.floor(max / (cw * 0.8)); if (t.length > keep) t = t.slice(0, Math.max(1, keep - 1)).trimEnd() + "…";
+    return [t, t.length * cw > max ? ` textLength="${Math.round(max)}" lengthAdjust="spacingAndGlyphs"` : ""]; };
   const out = [`<g font-size="${pitch < 28 ? 12 : 12.5}">`, `<rect x="${x}" y="${y}" width="${w}" height="30" fill="#16181c"/>`,
-    `<g fill="#fff" font-weight="600">${cols.map(c => `<text x="${x + c.dx}" y="${y + 20}">${esc(c.label)}</text>`).join("")}</g>`];
+    `<g fill="#fff" font-weight="600">${cols.map((c, ci) => { const [t, a] = fit(c.label, ci, 7.1); return `<text x="${x + c.dx}" y="${y + 20}"${a}>${esc(t)}</text>`; }).join("")}</g>`];
   let ry = y + 30;
   rows.forEach((r, i) => {
     const fill = r.gray ? "#f0f0f2" : r.tint ? "#fff9ec" : i % 2 ? "#fff" : "#fbfbfc";
     out.push(`<rect x="${x}" y="${ry}" width="${w}" height="${pitch}" fill="${fill}"/>`);
     const color = r.gray ? "#8a8a8a" : r.spare ? "#9aa" : "#222";
-    out.push(`<g fill="${color}">${r.cells.map((cell, ci) =>
-      `<text x="${x + cols[ci].dx}" y="${ry + Math.round(pitch * 0.68)}"${cell?.color ? ` fill="${cell.color}"` : ""}${r.gray && cell?.bold ? ` font-weight="600"` : ""}>${esc(cell?.text ?? cell)}</text>`).join("")}</g>`);
+    out.push(`<g fill="${color}">${r.cells.map((cell, ci) => { const [t, a] = fit(cell?.text ?? cell, ci, 6.5);
+      return `<text x="${x + cols[ci].dx}" y="${ry + Math.round(pitch * 0.68)}"${cell?.color ? ` fill="${cell.color}"` : ""}${r.gray && cell?.bold ? ` font-weight="600"` : ""}${a}>${t === String(cell?.text ?? cell ?? "") ? "" : `<title>${esc(cell?.text ?? cell)}</title>`}${esc(t)}</text>`; }).join("")}</g>`);
     ry += pitch;
   });
   out.push(`<rect x="${x}" y="${y}" width="${w}" height="${ry - y}" fill="none" stroke="#c8ccd4"/></g>`);
@@ -149,9 +154,10 @@ function channelMapBlocks(job, ix, opts) {
       if (spare.length) rows.push({ spare: true, cells: [runsOf(spare),
         runsOf(spare.flatMap(n => [n * 2 - 1, n * 2])), ...(trunkSrc ? [""] : []), "— spare —", "", ""] });
       const cols = trunkSrc
-        ? [{ label: "Zone Out", dx: 14 }, { label: "Channels", dx: 100 }, { label: `Feed (${devName(s.devices[trunkSrc.from])})`, dx: 180 }, { label: "Zone", dx: 320 }, { label: "Speakers", dx: 470 }, { label: "Status", dx: 610 }]
+        ? [{ label: "Zone Out", dx: 14 }, { label: "Channels", dx: 100 }, { label: "Feed", dx: 180 }, { label: "Zone", dx: 320 }, { label: "Speakers", dx: 470 }, { label: "Status", dx: 610 }]
         : [{ label: "Zone Out", dx: 14 }, { label: "Channels", dx: 110 }, { label: "Zone", dx: 210 }, { label: "Speakers", dx: 400 }, { label: "Status", dx: 580 }];
-      blocks.push({ title: `${devName(d)} — Distributed Audio`, cols, rows });
+      // the feed's source goes in the title — as a column heading it ran into the next one (2026-10-03)
+      blocks.push({ title: `${devName(d)} — Distributed Audio${trunkSrc ? ` · fed by ${devName(s.devices[trunkSrc.from])}` : ""}`, cols, rows });
     }
 
     else if (d.type === "videoMatrix" || d.type === "avSwitch") {

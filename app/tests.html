@@ -838,6 +838,23 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
       ["great room", "kitchen", "home theater"].every(n => email.job.house.zones.some(x => x.name.toLowerCase() === n)) && email.job.house.zones.length === 3 &&
       email.job.solutions[0].racks[0].devices.filter(d => /APPLE TV/i.test(d.model)).length === 2);
     const est = await (await fetch("../mock-system-estate.json")).json();
+    { // paste a design, 2026-10-03 fixes: a room line with no colon isn't swallowed by the room above; one sentence listing rooms;
+      // a bare EQUIPMENT heading; "(client owns)"; pasted sources plug into the one obvious hub
+      const zn = r => r.job.house.zones.map(z => z.name), ep = (r, n, t) => r.job.house.zones.find(z => z.name === n)?.endpoints.find(e => e.type === t);
+      const b = MD.importMarkdown('Smith residence AV\n- Family room: 5.1 surround, 75" Sony\n- Covered patio w/ 65" SunBrite TV + 2 outdoor speakers\n- Primary bedroom - 65" TV (client owns) + soundbar\n- Kitchen: 2 in-ceiling speakers', CATM);
+      t("paste: \"Covered patio w/ 65\" SunBrite TV + 2 outdoor speakers\" is a room of its own (not a detail of the room above), named without the stray +",
+        zn(b).join("|") === "Family room|Covered Patio|Primary bedroom|Kitchen" && ep(b, "Covered Patio", "display")?.size === 65 && ep(b, "Covered Patio", "speakers")?.config === "stereo" && ep(b, "Family room", "display")?.size === 75, zn(b).join("|"));
+      t("paste: \"(client owns)\" marks the room's gear owner-furnished", ep(b, "Primary bedroom", "display")?.status === "ofe" && ep(b, "Family room", "display")?.status === "new");
+      const para = MD.importMarkdown('The Johnsons want a family room with 5.1 surround and a 75 inch Sony, a kitchen with a pair of ceiling speakers and a 55" TV, a covered patio with a 65" SunBrite TV and 2 outdoor speakers, and a primary bedroom with a 65" TV and a soundbar. Equipment goes in a rack in the garage.', CATM);
+      t("paste: one sentence that lists four rooms gives four rooms, each with its own gear",
+        zn(para).join("|") === "Family Room|Kitchen|Covered Patio|Primary Bedroom" && ep(para, "Kitchen", "display")?.size === 55 && ep(para, "Covered Patio", "display")?.size === 65 && ep(para, "Primary Bedroom", "speakers")?.config === "soundbar" && ep(para, "Family Room", "speakers")?.config === "surround-5.1", zn(para).join("|"));
+      const eq = MD.importMarkdown('Rooms\nFamily Room - 5.1, 75" TV\nKitchen - stereo, 55" TV\n\nEQUIPMENT\nAnthem MRX 740\nAnthem MDX-16\nApple TV x2\nCable box', CATM), es = eq.job.solutions[0], ed = es.racks.flatMap(r => r.devices);
+      const hub = ed.find(d => /MRX 740/.test(d.model)), srcs = ed.filter(d => d.type === "source");
+      t("paste: a bare EQUIPMENT line starts the rack list (no bullet, no colon)", zn(eq).length === 2 && !!hub && ed.some(d => /MDX-16/.test(d.model)) && srcs.length === 3, ed.map(d => d.model).join(", "));
+      t("paste: sources listed with one receiver and no matrix plug into it — and the note says so", srcs.every(d => es.connections.some(c => c.from === d.id && c.to === hub.id && c.signal === "video")) && eq.notes.some(n => /3 sources plugged into/.test(n)));
+      const two = MD.importMarkdown('Rooms\nFamily Room - 5.1, 75" TV\nDen - 5.1, 65" TV\n\nEquipment\nAnthem MRX 740\nAnthem MRX 540\nApple TV', CATM), ts = two.job.solutions[0];
+      t("paste: with two receivers and no matrix a loose source is left for you to place", !ts.connections.some(c => ts.racks.flatMap(r => r.devices).find(d => d.id === c.from)?.type === "source"));
+    }
     const pq = MD.importMarkdown(XM.planQueueFiles(est, 0, CATM)[0].text, CATM);
     t("md: a PlanQueue file comes back — rooms, both racks, owner gear, sizes flagged to confirm", pq.job.solutions[0].racks.length === 2 &&
       pq.job.house.zones.some(x => x.endpoints.some(e => e.type === "display" && e.confirm?.includes("size"))) &&
@@ -1259,8 +1276,9 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const svg = render(job, ix, p, rt);
   t("trunk: schematic carries the ×6 bus tick on the trunk", svg.includes(">×6</text>"));
   const cm = renderChannelMap(job, ix, {});
+  // (the feed's source is in the block's title — as a column heading it ran into the next column, 2026-10-03)
   t("trunk: channel map maps each zone to module output → amp input",
-    cm.includes("Out 1 → In 1") && cm.includes("Out 6 → In 6") && cm.includes("Feed ("));
+    cm.includes("Out 1 → In 1") && cm.includes("Out 6 → In 6") && cm.includes(">Feed<") && /Distributed Audio · fed by [^<]+</.test(cm));
 }
 
 /* ---------- audio returns: digital-input budget + local return encoders ---------- */

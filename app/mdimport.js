@@ -188,9 +188,11 @@ export function readMarkdown(text) {
     if (kv && (!["rooms", "rack"].includes(section) || (section === "rooms" && !room && !hroom && metaKey(kv[1]))) && metaLine(out.meta, `${kv[1]}: ${kv[2]}`)) continue;
     const bullet = line.match(/^(\s*)(?:[-*+•]|\d{1,3}(?:\.\d{1,3})+\.?|\d{1,3}[.)]|[a-z][.)])\s+(.*)$/i);
     const indent = bullet ? bullet[1].replace(/\t/g, "    ").length : 0;
-    const body = plain(linkText(bullet ? bullet[2] : line));
+    const body = plain(linkText(bullet ? bullet[2] : line)).replace(/\sw\/\s*(?=\S)/gi, " with ");   // "patio w/ 65 TV"
     if (!body) continue;
-    if (bullet && indent === 0 && /^(equipment|rack|gear|head ?end|equipment rack|rack equipment|hardware|central rack|main rack|system equipment)$/i.test(body)) { closeH(); setSection("rack", 7); continue; }
+    if ((bullet ? indent === 0 : /^\S/.test(line)) && /^(equipment|rack|gear|head ?end|equipment rack|rack equipment|equipment list|hardware|central rack|main rack|system equipment)$/i.test(body)) { closeH(); setSection("rack", 7); continue; }
+    // and so is a bare "Rooms" / "ROOMS" line
+    if (!bullet && /^\S/.test(line) && /^(rooms|zones|spaces|room list|rooms list|room[- ]by[- ]room)$/i.test(body)) { setSection("rooms", 7); continue; }
     // a line of gear models ("MRX540 MRX1140 MDX8 ATV4K x2 WattBox Sonos"): the rack, wherever it sits
     if (!bullet && section !== "rack" && gearTokens(body)) { closeH(); for (const g of gearTokens(body)) out.gear.push({ text: g, line: i + 1, rack: rackName }); continue; }
     if (section === "rooms") {
@@ -599,6 +601,25 @@ export function importMarkdown(text, catalog) {
     if (did.length) notes.push(`${z.name}: ${did.join(", ")} — from the note “${line.slice(0, 80)}”`);
   }
   if (cmdLists.length) for (const c of cmdLists.flat()) { const z = run(c, c.op); if (z) rooms += z.length; }
+  // rack sources listed with nothing said about where they plug in (2026-10-03: pasted gear came in unwired). With one
+  // obvious place to go — the HDMI matrix, or the only receiver when there's no matrix or MXNet switch — they plug in
+  // there, up to its HDMI inputs. Two receivers and no matrix is a design decision: left alone, the warning stays.
+  for (const sol of cur.solutions || []) {
+    const devs = (sol.racks || []).flatMap(r => r.devices || []), conns = (sol.connections ||= []);
+    if (devs.some(d => d.type === "avSwitch" && !d.danteSwitch)) continue;                       // MXNet: sources get encoders when they're added
+    const mats = devs.filter(d => d.type === "videoMatrix"), avrs = devs.filter(d => d.type === "avr");
+    const hub = mats.length === 1 ? mats[0] : !mats.length && avrs.length === 1 ? avrs[0] : null;
+    if (!hub) continue;
+    const cap = catalog?.devices?.[hub.catalogRef]?.inputs?.hdmi ?? hub.hdmiIn ?? (hub.type === "avr" ? 4 : 0);
+    let used = conns.filter(c => c.to === hub.id && c.signal === "video").length, n = 0;
+    for (const d of devs) {
+      if (d.type !== "source" || conns.some(c => c.from === d.id || c.to === d.id) || used >= cap) continue;
+      const cat = catalog?.devices?.[d.catalogRef];
+      if ((cat?.outputs && !cat.outputs.hdmi) || (/turn\s*table|record player|phono|music|streamer|tuner|radio|sonos/i.test(`${d.model || ""} ${d.sourceType || ""}`) && !/apple|roku|kaleidescape|cable|directv|sat/i.test(d.model || ""))) continue;
+      conns.push({ from: d.id, to: hub.id, signal: "video" }); used++; n++;
+    }
+    if (n) notes.push(`${n} source${n === 1 ? "" : "s"} plugged into ${hub.model || (hub.type === "avr" ? "the receiver" : "the matrix")} — it's the only place for them to go; move any that belong elsewhere`);
+  }
   if (cur.house.areas.length === 1) { for (const z of cur.house.zones) delete z.area; cur.house.areas = []; }   // one floor = no floors
   if (!rooms && !boxes) throw new Error("Nothing in that Markdown could be added — see Export → Design brief for an AI for the format.");
   notes.unshift(`Read from Markdown: ${cur.house.zones.length} room${cur.house.zones.length === 1 ? "" : "s"}, ${boxes} rack box${boxes === 1 ? "" : "es"}${cmdLists.length ? `, ${cmdLists.flat().length} commands` : ""} — wired the way quick-add would`);
@@ -608,7 +629,7 @@ export function importMarkdown(text, catalog) {
 /* text with no structure: a tech's shorthand lines ("master 77 samsung 5.1") go to the quick-add reader as they
    are; sentences ("In the great room we'll install a 7.1 system with an 85-inch Sony") give a room by its name
    and the specs around it; a sentence about the rack gives its list of gear */
-const ROOM_MOD = "(?:great|primary|master|guest|home|kids?'?|kid's|children's|family|media|game|rec|recreation|living|dining|sun|bonus|play|music|wine|exercise|fitness|back|front|pool|outdoor|main|upper|lower|second|2nd|third|3rd|junior|jr|mud|powder|laundry|tv|bed|movie|screening|billiards?|card|craft|hobby|in-law|nanny|au pair|man|club|party|great)";
+const ROOM_MOD = "(?:covered|screened|enclosed|rear|side|great|primary|master|guest|home|kids?'?|kid's|children's|family|media|game|rec|recreation|living|dining|sun|bonus|play|music|wine|exercise|fitness|back|front|pool|outdoor|main|upper|lower|second|2nd|third|3rd|junior|jr|mud|powder|laundry|tv|bed|movie|screening|billiards?|card|craft|hobby|in-law|nanny|au pair|man|club|party|great)";
 const ROOM_NOUN = "(?:room|bedroom|bed|bath(?:room)?|kitchen|dining|den|office|study|library|theater|theatre|cinema|gym|patio|deck|pool(?:\\s+area)?|spa|lounge|bar|nursery|suite|loft|garage|entry|foyer|basement|lanai|porch|terrace|balcony|court|yard|backyard|casita|cabana|gazebo|courtyard|veranda|sunroom|studio|workshop|closet|attic|hallway|hall)";
 const ROOM_PHRASE = new RegExp(`\\b((?:${ROOM_MOD}\\s+){0,2}${ROOM_NOUN}(?:\\s+(?:#?\\d{1,2}|one|two|three))?)\\b`, "gi");
 const SENTENCE = /\b(we'?ll|we are|we're|will|would|gets?|getting|has|have|having|install(?:ing)?|putting|put|designed|going|includes?|including|features?|recommend|specif(?:y|ying)|there'?s|is|are)\b/i;
@@ -651,6 +672,15 @@ export function readProse(lines) {
       for (let k = 1; k < hits.length; k++) {
         const between = sen.slice(hits[k - 1].index + hits[k - 1][0].length, hits[k].index);
         if ((firstSpec < 0 || hits[k].index < firstSpec) && /^\s*(?:,|and|&|,\s*and|plus)\s*(?:the\s+)?$/i.test(between)) named.push(hits[k]); else break;
+      }
+      // "…a family room with 5.1 and a 75" Sony, a kitchen with a pair of speakers, and a patio with a 65" TV": a list of
+      // rooms in one sentence — each takes the words up to the next room (two or more must carry their own gear)
+      const SPEC = /\d{2,3}\s*(?:"|''|in\b|inch)|\d\.\d|\b(stereo|mono|surround|soundbar|atmos|speakers?|landscape|projector|tvs?|television)\b/i;
+      const listed = hits.filter((h, k) => k === 0 || /(?:,|;|\band|\bplus)\s*(?:then\s+)?(?:an?|the|our|their)?\s*$/i.test(sen.slice(0, h.index)));
+      const segs = listed.map((h, k) => ({ h, text: sen.slice(h.index + h[0].length, k + 1 < listed.length ? listed[k + 1].index : sen.length) }));
+      if (named.length === 1 && segs.filter(x => SPEC.test(x.text)).length >= 2) {
+        for (const x of segs) if (SPEC.test(x.text)) rooms.push({ name: x.h[1].replace(/^(?:the|a|an|our|your)\s+/i, ""), parts: [x.text.replace(/^\s*(?:with|has|gets?|:)\s+/i, "").replace(/[\s,;]*(?:and|plus)?\s*(?:an?|the)?\s*$/i, "")], prose: true });
+        continue;
       }
       let rest = sen;
       for (const h of named) rest = rest.replace(h[0], " ");

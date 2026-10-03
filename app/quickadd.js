@@ -124,7 +124,7 @@ export function parseQuickZone(text) {
   const futurePre = /\bfuture\s+pre-?wire/.test(text.toLowerCase());
   const prewireOnly = /\bpre-?wire\s+only\b|\bscope\s*:?\s*pre-?wire/.test(text.toLowerCase());
   if (eatAll(/\bfuture\b/) && (zone.scope !== "prewire" || futurePre || !prewireOnly)) { zone.scope = "future"; chips.push({ kind: "scope", label: SCOPE_NAME.future }); }
-  if (eat(/\b(?:customer|client|homeowner)[- ]?(?:supplied|provided|furnished|provides|supplies|owned)\b|\bofe\b|\bexisting\b|\bowner\b(?!'s|s\b)(?:[- ]?(?:supplied|provided|furnished))?/)) ofe = true;   // "owner's suite" is a room, not OFE
+  if (eat(/\b(?:customer|client|homeowner|owner)\s+(?:owns|already\s+(?:has|owns)|has\s+(?:it|one|this)|is\s+keeping|to\s+keep|keeps)\b|\b(?:customer|client|homeowner)[- ]?(?:supplied|provided|furnished|provides|supplies|owned)\b|\bofe\b|\bexisting\b|\bowner\b(?!'s|s\b)(?:[- ]?(?:supplied|provided|furnished))?/)) ofe = true;   // "owner's suite" is a room, not OFE
   if (eat(/\blocal\b/)) local = true;
   if (eat(/\bmatrix\b|\bdistributed\b/)) matrix = true;
   // "apps": the TV plays its own apps — no feed from the rack (a whole-home rack feeds every other TV)
@@ -255,6 +255,9 @@ export function parseQuickZone(text) {
   t = t.replace(/(^|\s)(\d\.\d(?:\.\d)?)(?=\s|$)/g, (m, sp, x) => { oddSetup = x; return " "; });
   const words = t.replace(/#(\d)/g, (m, d) => d).replace(/[.,;:!?–—"“”()]/g, " ").replace(/\s+/g, " ").trim().split(" ")
     .filter(w => w && !FILLER.has(w));
+  // a stray joiner left at either end once the gear was read ("covered patio + 2 speakers" → "covered patio +")
+  while (words.length && !/[a-z0-9]/i.test(words[words.length - 1])) words.pop();
+  while (words.length && !/[a-z0-9]/i.test(words[0])) words.shift();
   const name = words.map(w => w[0] ? w[0].toUpperCase() + w.slice(1) : w).join(" ").trim() || "New Zone";
   zone.name = name;
   const named = words.length > 0;

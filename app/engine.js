@@ -4353,17 +4353,30 @@ export function render(job, ix, P, rt, opts = {}) {
     push(`<g class="zcard" data-zone="${esc(z.id)}">`);
     // un-filled shapes only hit-test on their stroke — this invisible fill makes the whole card tappable
     push(`<rect class="hit" x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="transparent" stroke="none"/>`);
-    push(`<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="none" stroke="${gray ? "#b5b5b5" : "#8a8a8a"}" stroke-width="1.4" stroke-dasharray="7 5"/>`);
-    push(`<text x="${z.x + z.w / 2}" y="${z.y + (z.compact ? 19 : 24)}" text-anchor="middle" font-size="${z.compact ? 13 : 18}" font-weight="700" fill="${gray ? "#999" : "#111"}">${esc(z.name)}</text>`);
-    // room remote, top-right corner: what the client picks up in this room
+    // the room card (Ryan 2026-10-03, from four concept rounds): a white rounded card with a soft shadow and a colored
+    // band across the top — the room's name in the band (medium weight), its kind in small capitals at the right when
+    // there's room. The band's color is the kind of room for now (ROOM_KINDS); he means to give the colors more to say.
+    const rk = roomKind(ix.zonesById[z.id], gray), bandH = z.compact ? 20 : 26, bandC = bw ? (gray ? "#777" : "#2b2b2b") : rk.color, rr = 8;
+    push(`<rect x="${z.x + 1.5}" y="${z.y + 2.5}" width="${z.w}" height="${z.h}" rx="${rr}" fill="#000" fill-opacity="0.1"/>`);
+    push(`<rect class="cardbody" x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="${rr}" fill="#fff" stroke="${gray ? "#c9ccd3" : "#b9bec8"}" stroke-width="1.2"/>`);
+    push(`<path class="cardband" data-kind="${rk.key}" d="M${z.x + rr} ${z.y}h${z.w - 2 * rr}a${rr} ${rr} 0 0 1 ${rr} ${rr}v${bandH - rr}h-${z.w}v-${bandH - rr}a${rr} ${rr} 0 0 1 ${rr} -${rr}z" fill="${bandC}"/>`);
+    {
+      const hasRem = !!REMOTE_LABELS[z.remote], nameFs = z.compact ? 12 : 15, nameW = String(z.name || "").length * nameFs * 0.56, typeW = rk.label.length * 5.4 + 8;
+      const showType = !z.compact && nameW + typeW + 34 + (hasRem ? 22 : 0) < z.w;
+      if (z.compact || !showType && nameW + 28 > z.w * 0.8)
+        push(`<text x="${z.x + z.w / 2 - (hasRem && z.compact ? 6 : 0)}" y="${z.y + bandH - (z.compact ? 6 : 8)}" text-anchor="middle" font-size="${nameFs}" font-weight="500" fill="#fff"${nameW > z.w - 16 ? ` textLength="${Math.round(z.w - 16)}" lengthAdjust="spacingAndGlyphs"` : ""}>${esc(z.name)}</text>`);
+      else push(`<text x="${z.x + 14}" y="${z.y + bandH - 8}" font-size="${nameFs}" font-weight="500" fill="#fff">${esc(z.name)}</text>`);
+      if (showType) push(`<text class="cardkind" x="${z.x + z.w - 12 - (hasRem ? 22 : 0)}" y="${z.y + bandH - 9}" text-anchor="end" font-size="7.6" font-weight="600" letter-spacing="1" fill="#fff" fill-opacity="0.9">${rk.label}</text>`);
+    }
+    // room remote, top-right corner (on the band): what the client picks up in this room
     const rem = REMOTE_LABELS[z.remote];
     if (rem) {
-      const rx = z.x + z.w - 24, ry = z.y + 9;
+      const rx = z.x + z.w - 24, ry = z.y + 2;
       push(`<rect x="${rx}" y="${ry}" width="11" height="22" rx="5" fill="#2d2d2d" stroke="#8a8a8a" stroke-width="0.8"/>`);
       push(`<circle cx="${rx + 5.5}" cy="${ry + 5}" r="1.5" fill="#8f8f8f"/>`);
       push(`<circle cx="${rx + 5.5}" cy="${ry + 10}" r="1.2" fill="#6a6a6a"/>`);
       push(`<rect x="${rx + 3.5}" y="${ry + 14}" width="4" height="4" rx="1" fill="#6a6a6a"/>`);
-      push(`<text x="${rx + 5.5}" y="${ry + 33}" text-anchor="middle" font-size="7" letter-spacing="0.5" fill="#8a8a8a">${rem}</text>`);
+      push(`<text x="${rx + 5.5}" y="${z.y + bandH + 8}" text-anchor="middle" font-size="7" letter-spacing="0.5" fill="#6b7280">${rem}</text>`);
     }
     for (const g of z.groups) {
       const gx = z.x + g.x, gy = z.y + g.y;
@@ -4706,6 +4719,17 @@ export function render(job, ix, P, rt, opts = {}) {
    type so a rack of black boxes passes the squint test */
 // a source's face: its stored sourceType, else read off its name (kit and library boxes
 // carry a model, not a sourceType — an Apple TV from a kit still gets its badge)
+// what kind of room a card is — its band color and the words at the band's right end
+export const ROOM_KINDS = {
+  "surround-tv": { label: "SURROUND + TV", color: "#34449c" }, "tv-speakers": { label: "TV + SPEAKERS", color: "#7340a8" },
+  "speakers": { label: "SPEAKERS", color: "#0b7f74" }, "tv": { label: "TV ONLY", color: "#46556b" },
+  "outdoor": { label: "OUTDOOR", color: "#2f7a35" }, "prewire": { label: "PRE-WIRE", color: "#6b727c" }, "empty": { label: "", color: "#46556b" },
+};
+function roomKind(zone, gray) {
+  const eps = zone?.endpoints || [], tv = eps.some(e => e.type === "display"), spk = eps.find(e => e.type === "speakers");
+  const key = gray ? "prewire" : zone && isOutdoorZone(zone) ? "outdoor" : tv && spk ? (/^surround/.test(spk.config || "") ? "surround-tv" : "tv-speakers") : tv ? "tv" : spk ? "speakers" : "empty";
+  return { key, ...ROOM_KINDS[key], ...(gray && zone?.scope === "future" ? { label: "FUTURE" } : {}) };
+}
 /* a TV or projector's face (Ryan 2026-10-03, from five concept sheets):
    TV — a dark bezel, a NEW (blue) / OFE (amber) banner across the top, the brand in bold capitals, the model under it
      when one is entered, then the size. A Samsung Frame is a wood frame with artwork filling the screen.

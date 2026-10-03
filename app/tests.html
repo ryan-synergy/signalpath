@@ -2715,6 +2715,14 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const Ls = loadJob(small), pS2 = place(Ls.job, Ls.ix), sS2 = render(Ls.job, Ls.ix, pS2, route(Ls.job, Ls.ix, pS2));
     t("TV face: a small TV drops the model line rather than cram it", sS2.includes(">SAMSUNG</text>") && !sS2.includes(">QN32Q60</text>"));
   }
+  { // room cards (Ryan 2026-10-03): a white card with a colored band — the name in the band, the kind of room at its right end
+    const dR = new DOMParser().parseFromString(svg, "image/svg+xml"), card = id => dR.querySelector(`g.zcard[data-zone="${id}"]`), kindOf = id => card(id).querySelector("path.cardband").getAttribute("data-kind");
+    t("room cards: each card's band says its kind — surround + TV, TV + speakers, speakers only, outdoor, pre-wire — and the wide ones spell it out",
+      kindOf("z-family") === "surround-tv" && kindOf("z-master") === "tv-speakers" && kindOf("z-kitchen") === "speakers" && kindOf("z-patio") === "outdoor" && kindOf("z-gym") === "prewire" &&
+      card("z-family").querySelector("text.cardkind")?.textContent === "SURROUND + TV" && !card("z-kitchen").querySelector("text.cardkind") && card("z-family").querySelector("rect.cardbody").getAttribute("fill") === "#fff",
+      ["z-family", "z-master", "z-kitchen", "z-patio", "z-gym"].map(kindOf).join(" "));
+    t("room cards: the room's name sits in the band in white, medium weight", [...card("z-family").querySelectorAll("text")].some(x => x.textContent === "Family Room" && x.getAttribute("font-weight") === "500" && x.getAttribute("fill") === "#fff"));
+  }
   { // the speaker look Ryan picked from concepts (2026-10-03): yellow cone, thin dark rim, sound lines per group, a glint on the TV
     const svgB = render(job, ix, p, route(job, ix, p), { grayscale: true });
     t("look: speakers have a yellow cone (light gray in B&W), sound lines beside a group with room, a reflection on each TV",
@@ -2761,7 +2769,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const svg = render(job, ix, p, route(job, ix, p));
   const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
   const title = [...doc.querySelectorAll("g.zcard text")].find(t2 => t2.textContent === "Kitchen");
-  t("compact: card title steps down to 13px", title?.getAttribute("font-size") === "13");
+  t("compact: card title steps down (12px, in the card's band)", title?.getAttribute("font-size") === "12");
   // the card still grows back when something moves in (local puck)
   const j2 = structuredClone(fixtures.residence);
   const kz = j2.house.zones.find(z => z.id === "z-kitchen");

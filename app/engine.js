@@ -2358,11 +2358,17 @@ function routeOnce(job, ix, placement, opts = {}) {
       F.ports = [];
       for (const m of F.members) done.delete(m.i);
     };
+    // a patch inside the rack (output module → amp, one column to the next) that laps round the column to save a hop
+    // or two reads far worse than the short run with its hops (Ryan 2026-10-03: "it should just go straight up, do one
+    // or two hops") — so its length past 1.5× the box-to-box distance counts in full, not at a tenth
+    const lapCost = w => { if (!w.rackPatch || w.rackLink) return 0;
+      const a = w.pts[0], b = w.pts[w.pts.length - 1], manh = Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1]);
+      return Math.max(0, segLen(w.pts) - 1.5 * manh - 40); };
     const famCost = F => {
       const pts = new Set(), mine = famWires(F);
       for (const w of mine) crossPointsInto(w, F.net, pts);
       const missing = F.members.filter(m => !done.has(m.i)).length;
-      return missing * 1e5 + pts.size * 100 + mine.reduce((n, w) => n + segLen(w.pts), 0) / 10;
+      return missing * 1e5 + pts.size * 100 + mine.reduce((n, w) => n + segLen(w.pts), 0) / 10 + mine.reduce((n, w) => n + lapCost(w), 0);
     };
     const corridors = [gapRightOf("A"), gapRightOf("B"), gapRightOf("C"), [westMarginX[0], westMarginX[1]]].filter(r => r[1] > r[0]);
     // one pass: a second found little more (2,597 → ~2,536 crossings on 325 random jobs) for twice the time
@@ -3410,7 +3416,9 @@ function routeOnce(job, ix, placement, opts = {}) {
      them. Kept only when both new paths are legal (no body, no lane overlap)
      and the pair crosses fewer wires in total; otherwise nothing changes. */
   {
-    const FEEDS = new Set(["zone-west", "zone-east", "return"]);
+    // + chip feeds: a switch's runs down to the decoders in front of receivers (Ryan 2026-10-03: "the lower one should
+    //   land at the lower connector … it wouldn't need that last hop")
+    const FEEDS = new Set(["zone-west", "zone-east", "return", "chip-feed"]);
     const segs2 = pts => ptsSegs(pts);
     const pairCross = (a, b) => { let n = 0;
       for (const s of segs2(a)) for (const t of segs2(b)) {
@@ -3480,8 +3488,20 @@ function routeOnce(job, ix, placement, opts = {}) {
           // the stub still runs right, and the lane still leaves the riser the same way
           const dirOk = (o, n) => n[1][0] > n[0][0] && Math.sign(n[3][0] - n[2][0]) === Math.sign(o[3][0] - o[2][0]) && n[3][0] !== n[2][0];
           return dirOk(pa, nA) && dirOk(pb, nB) ? [nA, nB] : null; };
+        // swap the two jacks AND their risers together: two runs out of one box's edge to two targets below, the
+        // upper target on the outer riser, hop over the other's riser on its way in — the nested order (upper
+        // target: lower jack, inner riser) crosses nothing
+        const jackRiser = (pa, pb) => { if (A.from !== B.from || !riserOk(pa) || !riserOk(pb) || pa[0][0] !== pb[0][0] || pa[0][1] === pb[0][1]) return null;
+          const ya = pa[0][1], yb = pb[0][1], xa = pa[1][0], xb = pb[1][0];
+          const nA = pa.map((q, k) => k === 0 ? [q[0], yb] : k === 1 ? [xb, yb] : k === 2 ? [xb, q[1]] : [q[0], q[1]]);
+          const nB = pb.map((q, k) => k === 0 ? [q[0], ya] : k === 1 ? [xa, ya] : k === 2 ? [xa, q[1]] : [q[0], q[1]]);
+          // every leg still runs the way it did (no flips, no zero-length legs) — a swapped riser landing past the
+          // target's edge would turn its last leg back through the box
+          const ok = (o, n) => n.every((q, k) => !k || [0, 1].every(c => Math.sign(q[c] - n[k - 1][c]) === Math.sign(o[k][c] - o[k - 1][c])));
+          return ok(pa, nA) && ok(pb, nB) ? [nA, nB] : null; };
         const l = lane(oldA, oldB); if (l) moves.push(l);
         const r = riser(oldA, oldB); if (r) moves.push(r);
+        const jr = jackRiser(oldA, oldB); if (jr) moves.push(jr);
         if (l && r) { const both = lane(r[0], r[1]); if (both) moves.push(both); }
         if (!moves.length) continue;
         const mA = membersOf(A), mB = membersOf(B);

@@ -2112,10 +2112,12 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const L = loadJob(j), v = validate(L.job, L.ix), pl = place(L.job, L.ix), rt = route(L.job, L.ix, pl);
     const orphans = v.errors.filter(e => e.code === "orphan-endpoint");
     const bodies = [...pl.racks.flatMap(r => r.devices), ...pl.chips, ...pl.zones];
-    const through = rt.wires.some(w => w.pts && !w.insideCard && w.cls !== "local" && !/fallback/.test(w.cls) && w.pts.some((q, i) => i && bodies.some(o => inside(...w.pts[i - 1], ...q, o))));
+    const throughW = rt.wires.filter(w => w.pts && !w.insideCard && w.cls !== "local" && !/fallback/.test(w.cls) && w.pts.some((q, i) => i && bodies.some(o => inside(...w.pts[i - 1], ...q, o))));
+    const through = throughW.length > 0;
     if (st.id !== "blank") {
       t(`starter ${st.name}: its suggested zones come out wired (no errors)`, v.errors.length === 0, v.errors.map(e => e.msg).join(" | "));
-      t(`starter ${st.name}: routes clean`, !rt.warnings.some(w => /unrouted|fallback/.test(w.code)) && !through);
+      t(`starter ${st.name}: routes clean`, !rt.warnings.some(w => /unrouted|fallback/.test(w.code)) && !through,
+        [...rt.warnings.filter(w => /unrouted|fallback/.test(w.code)).map(w => w.code + " " + w.msg), ...throughW.map(w => `${w.id} ${JSON.stringify(w.pts)}`)].join(" | "));
     } else t("starter Blank rack: zones added but not wired say so", orphans.length > 0);
   }
   /* rooms wire themselves (Ryan 2026-10-02): no "matrix" keyword — on a whole-home rack every TV is fed
@@ -2263,8 +2265,10 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const p = place(job, ix);
     const off = route(job, ix, p), on = route(job, ix, p, { harness: true });
     // (since the 2026-09-27 untwist pass the plain router can beat harness style by a
-    // hop on small sheets — bundled wires aren't swappable; it still wins big on dense ones)
-    t(`harness style: ${name} bundles feeds and crosses no more than a hop over plain routing`, on.wires.some(w => w.bundleOf) && on.crossings <= off.crossings + 1, `${off.crossings} → ${on.crossings}`);
+    // hop on small sheets — bundled wires aren't swappable. 2026-10-03: the untwist learned to swap a fan-out's jacks
+    // and risers together, which bundled wires can't use either — stress went 188 → 175 plain, 183 → 180 harness;
+    // harness stays within a hop or 4% of plain)
+    t(`harness style: ${name} bundles feeds and crosses within a hop (or 4%) of plain routing`, on.wires.some(w => w.bundleOf) && on.crossings <= Math.max(off.crossings + 1, Math.ceil(off.crossings * 1.04)), `${off.crossings} → ${on.crossings}`);
     t(`harness style: ${name} stays legal (no bodies crossed, nothing unrouted)`, clean(p, on) && !on.warnings.some(w => w.code === "unrouted" || w.code === "route-fallback"));
   }
   // the setting rides on the job, so print / export / reroute all agree
@@ -3782,11 +3786,30 @@ for (const [name, raw] of Object.entries(fixtures)) {
       t(`trunks — residence: the output module → amp line (×${n} runs) rides the audio trunk; bundle says ×${n}, ribbon draws ${n} lines`,
         n > 1 && w?.cls === "trunk" && new RegExp(`class="bustick"[^>]*>×${n}<`).test(svgB) && lanes >= n, `cls ${w?.cls} lanes ${lanes}`);
     }
+    { // Ryan's Test Job 1 (2026-10-03): the Savant output module → MDX-16, one column over and up, looped out right, back
+      // left round the column and over — it's the short run with a hop or two now, in every style
+      const tj = await (await fetch("./test-fixtures/test-job-1.json")).json();
+      for (const st of ["ribbon", "bundle", "off"]) { const x = structuredClone(tj); x.job.trunkStyle = st;
+        const Lx = loadJob(effectiveJob(x, 0)), px = enginePlace(Lx.job, Lx.ix), rx = engineRoute(Lx.job, Lx.ix, px), w = rx.wires.find(w => w.id === "sav-out→amp");
+        t(`test job 1 (${st}): output module → MDX-16 is a short run (≤ 3 bends, never west of the module)`, !!w && w.pts.length <= 5 && Math.min(...w.pts.map(q => q[0])) >= w.pts[0][0], JSON.stringify(w?.pts)); }
+    }
+    { // Ryan's second case (2026-10-03): two decoders in front of two receivers, fed from the MXNet switch — the runs
+      // nest (upper decoder: lower jack, inner riser) instead of the upper one hopping the lower one's riser
+      const tj = await (await fetch("./test-fixtures/test-job-1.json")).json(); tj.job.trunkStyle = "ribbon";
+      const Lx = loadJob(effectiveJob(tj, 0)), px = enginePlace(Lx.job, Lx.ix), rx = engineRoute(Lx.job, Lx.ix, px);
+      const a = rx.wires.find(w => w.id === "sw→dec-avr"), b = rx.wires.find(w => w.id === "sw→dec-avr-2");
+      const segs = q => q.slice(1).map((p, i) => [q[i], p]);
+      const cross = segs(a.pts).some(([p1, p2]) => segs(b.pts).some(([q1, q2]) => { const hv = (h1, h2, v1, v2) => h1[1] === h2[1] && v1[0] === v2[0] &&
+        v1[0] > Math.min(h1[0], h2[0]) && v1[0] < Math.max(h1[0], h2[0]) && h1[1] > Math.min(v1[1], v2[1]) && h1[1] < Math.max(v1[1], v2[1]); return hv(p1, p2, q1, q2) || hv(q1, q2, p1, p2); }));
+      t("test job 1: the switch's two runs to the receivers' decoders don't cross each other", !cross, JSON.stringify([a.pts, b.pts])); }
     { // rip-up and reroute: each family retried in every corridor, the fewest crossings kept
       const R = draw(fixtures.residence, "bundle"), R0 = draw(fixtures.residence, false);
       const ret = R.rt.wires.find(w => w.from === "master-tv" && w.to === "sav-in"), sin = R.p.racks.flatMap(r => r.devices).find(d => d.id === "sav-in");
-      t(`trunks — residence: no more crossings than the classic drawing (${visCross(R0.rt)} → ${visCross(R.rt)}); the TV's sound back still lands on the input module's input side`,
-        visCross(R.rt) <= visCross(R0.rt) && ret?.cls === "trunk" && ret.pts.at(-1)[0] === sin.x && !legal(R.p, R.rt).length);
+      // at most one more than the classic drawing: a rack patch now takes the short run with a hop instead of lapping
+      // to the sheet's west margin to save it (Ryan 2026-10-03: "just go straight up, do one or two hops")
+      const lap = R.rt.wires.filter(w => w.rackPatch && w.pts.some(q => q[0] < 60));
+      t(`trunks — residence: crossings within one of the classic drawing (${visCross(R0.rt)} → ${visCross(R.rt)}), no rack patch lapping the west margin; the TV's sound back still lands on the input module's input side`,
+        visCross(R.rt) <= visCross(R0.rt) + 1 && !lap.length && ret?.cls === "trunk" && ret.pts.at(-1)[0] === sin.x && !legal(R.p, R.rt).length, lap.map(w => w.id).join(" | "));
       const H = await (await fetch("./test-fixtures/harlow-dante.json")).json();
       const got = { estate: visCross(draw(fixtures.estate, "bundle").rt), stress: visCross(draw(fixtures.stress, "bundle").rt), harlow: visCross(draw(H, "bundle").rt) };
       // Harlow 30 → 31 on 2026-10-01: its amps now stack in room order, which saves 4 lane swaps inside the ribbons for this 1

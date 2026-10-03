@@ -1,0 +1,1456 @@
+{
+  "generator": "SignalPath",
+  "schemaVersion": 1,
+  "job": {
+    "name": "Test Job 1",
+    "client": {
+      "name": "Customer Name",
+      "address": "Street, City, CA"
+    },
+    "stage": "asBuilt",
+    "drawnBy": "SignalPath",
+    "revisions": [
+      {
+        "rev": 1,
+        "date": "2026-10-03",
+        "description": "Initial proposal",
+        "by": "SP"
+      }
+    ],
+    "catalogSnapshot": {
+      "asOf": "2026-10-03",
+      "devices": {
+        "savant-pav-sms2001": {
+          "brand": "Savant",
+          "model": "PAV-SMS2001-10",
+          "type": "source",
+          "inputs": {},
+          "outputs": {
+            "coax": 1,
+            "optical": 1
+          },
+          "flags": [
+            "avb",
+            "currentSpecPath",
+            "ipAudio",
+            "poeOnDash10"
+          ],
+          "verified": true,
+          "notes": "All-native AVB music streamer/source — 1x Ethernet port carries AVB to feed amps/AOMs directly over the network, plus 1x physical coax and 1x physical optical output for feeding a legacy (non-AVB) zone amp or AVR directly. Max 15W (PoE on -10 SKU; -00 is 5V DC). Supersedes the legacy SMS-1001/SMS-100AM single-stream servers and the older SMS-002A SmartMedia Server (500GB local storage, 2 simultaneous streams — EOL, see Unresolved). AUDIT 2026-09-27: PoE is the -10 SKU only. POWER/RU 2026-09-27: 15W max, 5V 3A brick, fits a 1U shelf — Savant QRG",
+          "partNo": "PAV-SMS2001-10",
+          "powerMaxW": 15,
+          "desktop": true,
+          "aliases": [
+            "Savant Music Server 2 (PAV-SMS2001)"
+          ],
+          "ports": [
+            {
+              "label": "DIGITAL AUDIO OUT 1 (OPTICAL)",
+              "dir": "out",
+              "conn": "optical",
+              "audio": "pcm2"
+            },
+            {
+              "label": "DIGITAL AUDIO OUT 1 (COAX)",
+              "dir": "out",
+              "conn": "coax",
+              "audio": "pcm2"
+            }
+          ],
+          "portsSource": "https://digis.ru/upload/iblock/247/46324_SAVANT_PAV_SMS2001_Deployment_Guide.pdf (high confidence, rear-panel audit 2026-09-29)"
+        },
+        "avpro-mxnet-sw24e": {
+          "brand": "AVPro Edge",
+          "model": "AC-MXNET-SW24E",
+          "type": "avSwitch",
+          "outputs": {
+            "gbe": 24,
+            "sfp": 4
+          },
+          "poeBudgetW": 370,
+          "flags": [
+            "mxnet",
+            "poe",
+            "danteReady"
+          ],
+          "verified": true,
+          "notes": "24 x 1G PoE+ + 4 x 1G SFP + RJ45 console; 370W PoE (450W max draw); rated 23 endpoints + CBOX. Ships PRE-CONFIGURED for MXNet USP, 1G V1/V2 AND Dante (VLAN, QoS, IGMP — 'no additional adjustments required'); 4-switch-hop max. Economy Layer 2.5 sibling of the SW24P. The default dedicated Dante switch too. Source: AVPro datasheet (2026-09-27). POWER/RU 2026-09-27: 450W max incl. PoE, switch alone <30W, 1U — avproglobal.com product page",
+          "gen": "1g",
+          "partNo": "AC-MXNET-SW24E",
+          "powerMaxW": 450,
+          "powerNoPoeW": 30,
+          "rackUnits": 1,
+          "notInPlanQueue": true,
+          "goTo": true,
+          "depthIn": 10.23,
+          "depthSource": "https://www.avproglobal.com/products/ac-mxnet-sw24e (checked 2026-10-02)"
+        },
+        "avpro-mxnet-cbox-ha": {
+          "brand": "AVPro Edge",
+          "model": "AC-MXNET-CBOX-HA",
+          "type": "controlBox",
+          "inputs": {},
+          "outputs": {},
+          "flags": [
+            "mxnet"
+          ],
+          "verified": true,
+          "notes": "MXNet control box, high-availability: 8 RJ45 LAN (one is the 802.3af PoE power port), 5-pin RS-232 (system control), RJ45 RS-232 HA heartbeat, USB-C service, optional 12V DC. HA units run in MATCHED PAIRS and don't mix with older CBOX models. TAA version is its own SKU (AC-MXNET-CBOX-HA-TAA). 10G-CBOX discontinued. AUDIT 2026-09-27: verified from the AVPro datasheet (was '6 LAN ports'). AUDIT 2026-09-27: CBOX-HA runs ONE discrete mode — 1G, USP, 10G or Dante ('only devices of that type are supported'): a 1G + 10G house needs one per platform, plus one for Dante. POWER/RU 2026-09-27: 4.5W max, PoE (af) or 12V brick, small box (AC-MXNET-1G-R15 rack kit) — avproglobal.com product page",
+          "partNo": "AC-MXNET-CBOX-HA",
+          "powerMaxW": 4.5,
+          "rackUnits": null,
+          "desktop": true
+        },
+        "savant-pav-aim7c": {
+          "brand": "Savant",
+          "model": "PAV-AIM7C-20",
+          "rackUnits": 1,
+          "type": "audioInputModule",
+          "inputs": {
+            "analog": 3,
+            "coax": 2,
+            "optical": 2
+          },
+          "outputs": {},
+          "flags": [
+            "avb",
+            "currentSpecPath",
+            "ipAudio",
+            "poeOnDash10"
+          ],
+          "verified": true,
+          "notes": "CURRENT Savant spec path for local-source-to-AVB-network audio input, replacing the legacy AIM-0A16 backplane card. \"7 Source Audio Input IP Transmitter\": 3x analog stereo RCA + 2x coax S/PDIF + 2x optical Toslink = 7 total sources, encoded and sent over a standard AVB-capable IP network (no proprietary backplane). Standalone box (PoE on -10/-20 SKUs; -00 is 5V DC), not a rack card. Also has 2x RS-232 + 6x IR control ports for source control. GOTCHA: nearly 3x fewer analog inputs than the legacy card it replaces — a straight 1:1 module swap on an existing job will likely come up short on analog sources. AUDIT 2026-09-27: the -00 SKU runs on a 5V DC 3A adapter; PoE (802.3af) is the -10/-20 SKUs only — order -10 for PoE.",
+          "partNo": "PAV-AIM7C-20",
+          "aliases": [
+            "PAV-AIM7C-00"
+          ],
+          "depthIn": 3.7,
+          "depthSource": "Savant QRG 009-1945-02 (sav-documentation.s3.amazonaws.com) (checked 2026-10-02)",
+          "halfRack": true,
+          "lowHeat": true,
+          "rackNote": "Half-width, low heat (Ryan 2026-10-02): two side by side in 1U; no vent needed after it — they stack, and can tuck into a vent space"
+        },
+        "savant-pav-aom8c": {
+          "brand": "Savant",
+          "model": "PAV-AOM8C-00",
+          "rackUnits": 1,
+          "type": "audioOutputModule",
+          "inputs": {},
+          "outputs": {
+            "analog": 8
+          },
+          "flags": [
+            "avb",
+            "currentSpecPath",
+            "ipAudio",
+            "poeOnDash10"
+          ],
+          "verified": true,
+          "notes": "CURRENT Savant spec path for AVB-network-to-zone audio output, replacing the legacy AOM-D16U backplane card. Marketed as \"16-Channel Audio Output IP Receiver\" = 8 stereo pairs, unbalanced RCA, any-stream-to-any-output routing. Receives up to 8 AVB streams from the network and can route any stream to any of the 8 stereo outputs (matrix-style, not fixed-assignment). Max 15W draw (PoE on -10 SKU; -00 is 5V DC) (fits 802.3af). Supports mute/volume/PEQ/mono-sum/up to 160ms delay per output, plus GPIO to trigger an external amp. Balanced version: see savant-pav-aombal8c. AUDIT 2026-09-27: connector is RCA only; -00 = 5V DC 3A adapter, PoE on -10 only.",
+          "partNo": "PAV-AOM8C-10",
+          "depthIn": 3.7,
+          "depthSource": "Savant QRG 009-1563-04 (sav-documentation.s3.amazonaws.com) (checked 2026-10-02)",
+          "halfRack": true,
+          "lowHeat": true,
+          "rackNote": "Half-width, low heat (Ryan 2026-10-02): two side by side in 1U; no vent needed after it — they stack, and can tuck into a vent space"
+        },
+        "motu-avb-switch": {
+          "brand": "MOTU",
+          "model": "AVB Switch",
+          "type": "avbSwitch",
+          "outputs": {
+            "gbe": 6
+          },
+          "flags": [
+            "avb"
+          ],
+          "verified": true,
+          "partNo": "MOTU AVB",
+          "powerMaxW": 9,
+          "desktop": true,
+          "notes": "5 AVB ports + 1 standard (non-AVB) Ethernet port, 1G, Avnu-certified; on Savant's IP Audio supported-switch list ('MOTU AVB Switch'). Desktop box (≈5.75 × 3.6 × 1.1 in), external 8–18 V DC 0.5 A supply, no PoE. Synergy's small AVB switch (Ryan 2026-10-01). Sources: Savant IP Audio deployment manual (supported AVB/TSN switches); fullcompass.com / motu.com specs."
+        },
+        "anthem-mdx-16": {
+          "brand": "Anthem",
+          "model": "MDX-16",
+          "type": "amp",
+          "zones": 8,
+          "ampCh": 16,
+          "inputs": {
+            "analog": 8,
+            "coax": 2,
+            "optical": 2
+          },
+          "outputs": {
+            "optical": 1,
+            "sub": 8,
+            "analog": 2
+          },
+          "flags": [
+            "pcmOnlyDigital",
+            "anyInputAnyZone"
+          ],
+          "verified": true,
+          "notes": "Digital ins are PCM-only (bitstream mutes) — pair sources with a 2ch downmix. No HDMI/eARC. AUDIT 2026-09-27: the 2 stereo line outs are hard-wired passthroughs of analog inputs 6 and 7 (live even in standby), not matrix outputs; the optical out repeats the selected digital input. Anthem's web spec omits the 2 coax inputs — the manual (§3.8) confirms 2 coax + 2 optical. POWER/RU 2026-09-27: 2U (rack ears fitted); Anthem publishes no power draw ('--') — anthemav.com + MDX manual 2025-12",
+          "partNo": "MDX-16",
+          "rackUnits": 2,
+          "ports": [
+            {
+              "label": "ANALOG 1",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ANALOG 2",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ANALOG 3",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ANALOG 4",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ANALOG 5",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ANALOG 6",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ANALOG 7",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ANALOG 8",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "OPTICAL 1",
+              "dir": "in",
+              "conn": "optical",
+              "audio": "pcm2"
+            },
+            {
+              "label": "OPTICAL 2",
+              "dir": "in",
+              "conn": "optical",
+              "audio": "pcm2"
+            },
+            {
+              "label": "COAX 1",
+              "dir": "in",
+              "conn": "coax",
+              "audio": "pcm2"
+            },
+            {
+              "label": "COAX 2",
+              "dir": "in",
+              "conn": "coax",
+              "audio": "pcm2"
+            },
+            {
+              "label": "OPTICAL OUT",
+              "dir": "out",
+              "conn": "optical",
+              "audio": "pcm2"
+            },
+            {
+              "label": "ANALOG 6 OUT",
+              "dir": "out",
+              "conn": "analog"
+            },
+            {
+              "label": "ANALOG 7 OUT",
+              "dir": "out",
+              "conn": "analog"
+            },
+            {
+              "label": "ZONE 1 SUB OUT",
+              "dir": "out",
+              "conn": "sub"
+            },
+            {
+              "label": "ZONE 2 SUB OUT",
+              "dir": "out",
+              "conn": "sub"
+            },
+            {
+              "label": "ZONE 3 SUB OUT",
+              "dir": "out",
+              "conn": "sub"
+            },
+            {
+              "label": "ZONE 4 SUB OUT",
+              "dir": "out",
+              "conn": "sub"
+            },
+            {
+              "label": "ZONE 5 SUB OUT",
+              "dir": "out",
+              "conn": "sub"
+            },
+            {
+              "label": "ZONE 6 SUB OUT",
+              "dir": "out",
+              "conn": "sub"
+            },
+            {
+              "label": "ZONE 7 SUB OUT",
+              "dir": "out",
+              "conn": "sub"
+            },
+            {
+              "label": "ZONE 8 SUB OUT",
+              "dir": "out",
+              "conn": "sub"
+            },
+            {
+              "label": "ZONE 1 SPEAKER (L/R Euroblock)",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "ZONE 2 SPEAKER (L/R Euroblock)",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "ZONE 3 SPEAKER (L/R Euroblock)",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "ZONE 4 SPEAKER (L/R Euroblock)",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "ZONE 5 SPEAKER (L/R Euroblock)",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "ZONE 6 SPEAKER (L/R Euroblock)",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "ZONE 7 SPEAKER (L/R Euroblock)",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "ZONE 8 SPEAKER (L/R Euroblock)",
+              "dir": "out",
+              "conn": "speaker"
+            }
+          ],
+          "portsSource": "https://www.sarte-audio.com/sites/default/files/manuales/MDX_Manual.pdf (Anthem MDX-16/MDX-8 Operating Manual) (high confidence, rear-panel audit 2026-09-29)",
+          "goTo": true,
+          "powerUnpublished": true,
+          "depthIn": 17,
+          "depthSource": "Anthem MDX manual p.34 (includes speaker terminal blocks) (checked 2026-10-02)"
+        },
+        "ubiquiti-usw-pro-24-poe": {
+          "brand": "Ubiquiti",
+          "model": "Pro 24 PoE",
+          "type": "networkSwitch",
+          "outputs": {
+            "gbe": 24,
+            "sfpPlus": 2
+          },
+          "poeBudgetW": 400,
+          "flags": [
+            "proAvQos",
+            "igmpSnooping"
+          ],
+          "verified": true,
+          "partNo": "USW-Pro-24-PoE",
+          "powerMaxW": 450,
+          "powerNoPoeW": 50,
+          "rackUnits": 1,
+          "notes": " POWER/RU 2026-09-27: 450W incl. PoE / 50W excl., 1U — techspecs.ui.com",
+          "aliases": [
+            "USW-Pro-24-PoE"
+          ],
+          "depthIn": 11.2,
+          "depthSource": "https://techspecs.ui.com/unifi/switching/usw-pro-24-poe (checked 2026-10-02)"
+        },
+        "wattbox-800vps-ipvm-18": {
+          "brand": "WattBox",
+          "model": "WB-800VPS-IPVM-18",
+          "type": "power",
+          "inputs": {},
+          "outputs": {},
+          "outlets": 18,
+          "controlledOutlets": 18,
+          "amps": 15,
+          "rackUnits": 0,
+          "lan": 1,
+          "flags": [
+            "ipControl",
+            "wattboxPick"
+          ],
+          "verified": true,
+          "notes": "800 Series vertical strip, 18 outlets, 15A, NEMA 5-15P cord. All rear outlets IP-switchable; one Ethernet port (no built-in switch); no battery — OvrC UPS link for a separate WattBox UPS pack. Source: Snap One product pages + WattBox comparison chart (WB-060420), checked 2026-09-27.",
+          "partNo": "WB-800VPS-IPVM-18",
+          "rackNote": "vertical 50.16\" (≥29U rack)",
+          "mount": "vertical"
+        },
+        "anthem-mrx-540-8k": {
+          "brand": "Anthem",
+          "model": "MRX 540",
+          "type": "avr",
+          "ampCh": 5,
+          "processing": "7.2",
+          "inputs": {
+            "hdmi": 7,
+            "analog": 5,
+            "coax": 2,
+            "optical": 3
+          },
+          "outputs": {
+            "hdmi": 2,
+            "sub": 2,
+            "optical": 1,
+            "analog": 1
+          },
+          "flags": [
+            "eARC"
+          ],
+          "verified": true,
+          "notes": "HDMI out 1 = eARC. AUDIT 2026-09-27: added 1 optical out + 1 line out; pre-outs 7.2. Anthem lists NO Zone 2 on the 540 (Zone 2 HDMI + zone-2 amp reassignment are 740/1140 only) — confirm before promising a second zone. POWER/RU 2026-09-27: Typical Load 365W (no max published), 4U with the optional rack kit — Anthem MRX Gen4 8K spec sheet",
+          "partNo": "MRX 540",
+          "powerTypicalW": 365,
+          "rackUnits": 4,
+          "aliases": [
+            "MRX 540 8K"
+          ],
+          "ports": [
+            {
+              "label": "HDMI 1",
+              "dir": "in",
+              "conn": "hdmi",
+              "audio": "full"
+            },
+            {
+              "label": "HDMI 2",
+              "dir": "in",
+              "conn": "hdmi",
+              "audio": "full"
+            },
+            {
+              "label": "HDMI 3",
+              "dir": "in",
+              "conn": "hdmi",
+              "audio": "full"
+            },
+            {
+              "label": "HDMI 4",
+              "dir": "in",
+              "conn": "hdmi",
+              "audio": "full"
+            },
+            {
+              "label": "HDMI 5",
+              "dir": "in",
+              "conn": "hdmi",
+              "audio": "full"
+            },
+            {
+              "label": "HDMI 6",
+              "dir": "in",
+              "conn": "hdmi",
+              "audio": "full"
+            },
+            {
+              "label": "HDMI 7",
+              "dir": "in",
+              "conn": "hdmi",
+              "audio": "full"
+            },
+            {
+              "label": "HDMI OUT 1 (eARC)",
+              "dir": "out",
+              "conn": "hdmi",
+              "audio": "full",
+              "earc": true
+            },
+            {
+              "label": "HDMI OUT 2",
+              "dir": "out",
+              "conn": "hdmi",
+              "audio": "pcm2"
+            },
+            {
+              "label": "COAX 1",
+              "dir": "in",
+              "conn": "coax",
+              "audio": "lossy51"
+            },
+            {
+              "label": "COAX 2",
+              "dir": "in",
+              "conn": "coax",
+              "audio": "lossy51"
+            },
+            {
+              "label": "OPTICAL 1",
+              "dir": "in",
+              "conn": "optical",
+              "audio": "lossy51"
+            },
+            {
+              "label": "OPTICAL 2",
+              "dir": "in",
+              "conn": "optical",
+              "audio": "lossy51"
+            },
+            {
+              "label": "OPTICAL 3",
+              "dir": "in",
+              "conn": "optical",
+              "audio": "lossy51"
+            },
+            {
+              "label": "OPTICAL OUT",
+              "dir": "out",
+              "conn": "optical",
+              "audio": "pcm2"
+            },
+            {
+              "label": "ANALOG 1",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ANALOG 2",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ANALOG 3",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ANALOG 4",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ANALOG 5",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "PRE OUT (height/ext. amp channels)",
+              "dir": "out",
+              "conn": "analog"
+            },
+            {
+              "label": "SUB 1",
+              "dir": "out",
+              "conn": "sub"
+            },
+            {
+              "label": "SUB 2",
+              "dir": "out",
+              "conn": "sub"
+            },
+            {
+              "label": "SPEAKER OUTPUTS",
+              "dir": "out",
+              "conn": "speaker"
+            }
+          ],
+          "portsSource": "https://manuals.anthemav.com/media/manuals/mrx-avm_en.pdf ; https://faq.anthemav.com/support/solutions/articles/43000720540 ; https://anthemav.com/products-current/type=av-receiver/model=mrx-540-8k (medium confidence, rear-panel audit 2026-09-29)",
+          "goTo": true,
+          "depthIn": 15,
+          "depthSource": "Anthem MRX-X40 dimensional drawing: 15.0\" max incl. knob + rear connectors (spec sheet 14.5\") (checked 2026-10-02)"
+        },
+        "audiocontrol-hype-penta": {
+          "brand": "AudioControl",
+          "model": "ACP-HYPE-PENTA",
+          "type": "amp",
+          "zones": 1,
+          "ampCh": 5,
+          "inputs": {
+            "analog": 5,
+            "dante": 5
+          },
+          "outputs": {
+            "analog": 5
+          },
+          "flags": [
+            "dante",
+            "theaterAmp"
+          ],
+          "verified": true,
+          "notes": "Hyperion Penta — 5-channel Class-H theater amp, 230W/ch @8Ω, 300W/ch @4Ω, bridges to 600W @8Ω. Inputs: 5 XLR + 5 RCA (mono, one per channel) and 5 Dante RX channels on one RJ45 (receive only); RCA thru outs pass analog only. Trigger in/out. Counted as ONE zone (one surround set, or a height layer). No IP control in the manual (the Hyperion page mentions a web GUI — conflict). 3U, 43 lb. Pair with an ACP-AXIS16 for a receiver-less theater. Source: avproglobal.com/products/acp-hype-penta + Hepta manual. POWER/RU 2026-09-27: 3U; no power draw published — avproglobal.com PlanQueue 2026-09-28: SKU ACP-HYPE-PENTA is right, but its NAME field reads ACP-HYPE-HEPTA (a copy slip there) — name kept as PENTA so drawings don't mislabel it.",
+          "partNo": "ACP-HYPE-PENTA",
+          "rackUnits": 3,
+          "ports": [
+            {
+              "label": "CH 1 XLR IN",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "CH 1 RCA IN",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "CH 1 RCA THRU",
+              "dir": "out",
+              "conn": "analog"
+            },
+            {
+              "label": "CH 2 XLR IN",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "CH 2 RCA IN",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "CH 2 RCA THRU",
+              "dir": "out",
+              "conn": "analog"
+            },
+            {
+              "label": "CH 3 XLR IN",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "CH 3 RCA IN",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "CH 3 RCA THRU",
+              "dir": "out",
+              "conn": "analog"
+            },
+            {
+              "label": "CH 4 XLR IN",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "CH 4 RCA IN",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "CH 4 RCA THRU",
+              "dir": "out",
+              "conn": "analog"
+            },
+            {
+              "label": "CH 5 XLR IN",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "CH 5 RCA IN",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "CH 5 RCA THRU",
+              "dir": "out",
+              "conn": "analog"
+            },
+            {
+              "label": "CH 1 SPEAKER OUT",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "CH 2 SPEAKER OUT",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "CH 3 SPEAKER OUT",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "CH 4 SPEAKER OUT",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "CH 5 SPEAKER OUT",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "DANTE",
+              "dir": "in",
+              "conn": "dante"
+            }
+          ],
+          "portsSource": "https://www.avproglobal.com/products/acp-hype-penta (connections inferred identical to Hepta manual) (medium confidence, rear-panel audit 2026-09-29)",
+          "powerUnpublished": true,
+          "depthIn": 16.5,
+          "depthSource": "https://www.avproglobal.com/products/acp-hype-penta (checked 2026-10-02)"
+        },
+        "avpro-mxnet-dante-cbox": {
+          "brand": "AVPro Edge",
+          "model": "AC-MXNET-DANTE-CBOX",
+          "type": "controlBox",
+          "inputs": {},
+          "outputs": {
+            "gbe": 8
+          },
+          "flags": [
+            "danteController",
+            "poe"
+          ],
+          "verified": true,
+          "notes": "The Dante controller = an AC-MXNET-CBOX-HA running the Dante firmware (a CBOX-HA is 'converted'; order it as a CBOX-HA if AVPro has no separate SKU on the quote). Uses Audinate's Dante API: discovers AVPro/AudioControl/third-party Dante devices, makes/breaks subscriptions from a web routing grid (Mentor), no PC running Dante Controller needed; not Dante Domain Manager. MODES ARE EXCLUSIVE — in Dante mode it manages no MXNet, so MXNet video + Dante audio = TWO CBOX-HAs. Lets the control system re-route Dante on the fly: Control4 'MXNET Dante Router' driver v103 (needs CBOX Dante fw 1.03; 2-ch virtual I/O, source selection only — volume stays on the amp driver); Savant/RTI/Crestron Home/Q-SYS/ELAN/URC listed as supported — confirm the Savant driver before quoting. 8 RJ45 (7 control/Mentor + 1 AV/network PoE-PD), RS-232, HA RJ45, USB-C; 12V or PoE, 4.5W. Source: AVPro KB 'AC-MXNET-DANTE-CBOX introduction guide' (2026-09-27). POWER/RU 2026-09-27: same hardware as CBOX-HA (4.5W, PoE or brick) — AVPro KB DANTE-CBOX intro guide Same hardware as AC-MXNET-CBOX-HA (PlanQueue SKU); name kept distinct so the app can tell the Dante-mode box from the video CBOX when linking.",
+          "partNo": "AC-MXNET-CBOX-HA",
+          "powerMaxW": 4.5,
+          "rackUnits": null,
+          "desktop": true
+        },
+        "audiocontrol-m6800d": {
+          "brand": "AudioControl",
+          "model": "ACP-DMZ-M6800D",
+          "type": "amp",
+          "zones": 8,
+          "ampCh": 16,
+          "inputs": {
+            "analog": 8,
+            "digitalCombo": 2,
+            "dante": 16
+          },
+          "outputs": {
+            "dante": 16,
+            "analog": 8,
+            "coax": 2
+          },
+          "flags": [
+            "dante",
+            "ipControl"
+          ],
+          "verified": true,
+          "notes": "MANUAL-CONFIRMED (M6400/M6800 user manual): analog inputs are per-zone stereo RCA (8 zones = 8 stereo ins) with hard-wired loop outs; the 2 bus inputs are DIGITAL (coax/Toslink selectable) — analog count corrected from 10 to 8. AUDIT 2026-09-27: Dante 16x16 CONFIRMED in the manual (tx no longer presumed); added 2 coax S/PDIF outs. 8 stereo VIRTUAL Dante inputs; internal 10x10 stereo matrix. Surround from an AXIS16 works with static routing: one zone per pair (FL/FR, SL/SR, SBL/SBR), center and LFE each on their OWN zone (mono/bridged, LFE low-pass) — never pair C with LFE (DSP/crossover are per zone). POWER/RU 2026-09-27: 2400W full power (20A-service limited), 330W at 1/8, 53W idle, 2U; AudioControl recommends its own 15A circuit per unit — M6800D manual",
+          "partNo": "ACP-DMZ-M6800D",
+          "powerMaxW": 2400,
+          "powerTypicalW": 330,
+          "powerIdleW": 53,
+          "rackUnits": 2,
+          "aliases": [
+            "M6800D"
+          ],
+          "ports": [
+            {
+              "label": "ZONE 1 ANALOG IN L/R",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ZONE 2 ANALOG IN L/R",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ZONE 3 ANALOG IN L/R",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ZONE 4 ANALOG IN L/R",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ZONE 5 ANALOG IN L/R",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ZONE 6 ANALOG IN L/R",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ZONE 7 ANALOG IN L/R",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ZONE 8 ANALOG IN L/R",
+              "dir": "in",
+              "conn": "analog"
+            },
+            {
+              "label": "ZONE 1 LOOP OUT L/R",
+              "dir": "out",
+              "conn": "analog"
+            },
+            {
+              "label": "ZONE 2 LOOP OUT L/R",
+              "dir": "out",
+              "conn": "analog"
+            },
+            {
+              "label": "ZONE 3 LOOP OUT L/R",
+              "dir": "out",
+              "conn": "analog"
+            },
+            {
+              "label": "ZONE 4 LOOP OUT L/R",
+              "dir": "out",
+              "conn": "analog"
+            },
+            {
+              "label": "ZONE 5 LOOP OUT L/R",
+              "dir": "out",
+              "conn": "analog"
+            },
+            {
+              "label": "ZONE 6 LOOP OUT L/R",
+              "dir": "out",
+              "conn": "analog"
+            },
+            {
+              "label": "ZONE 7 LOOP OUT L/R",
+              "dir": "out",
+              "conn": "analog"
+            },
+            {
+              "label": "ZONE 8 LOOP OUT L/R",
+              "dir": "out",
+              "conn": "analog"
+            },
+            {
+              "label": "DIGITAL IN A (COAX)",
+              "dir": "in",
+              "conn": "coax",
+              "audio": "pcm2"
+            },
+            {
+              "label": "DIGITAL IN A (TOSLINK)",
+              "dir": "in",
+              "conn": "optical",
+              "audio": "pcm2"
+            },
+            {
+              "label": "DIGITAL IN B (COAX)",
+              "dir": "in",
+              "conn": "coax",
+              "audio": "pcm2"
+            },
+            {
+              "label": "DIGITAL IN B (TOSLINK)",
+              "dir": "in",
+              "conn": "optical",
+              "audio": "pcm2"
+            },
+            {
+              "label": "DIGITAL OUT A",
+              "dir": "out",
+              "conn": "coax",
+              "audio": "pcm2"
+            },
+            {
+              "label": "DIGITAL OUT B",
+              "dir": "out",
+              "conn": "coax",
+              "audio": "pcm2"
+            },
+            {
+              "label": "ZONE 1 SPEAKER OUT (4-pin)",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "ZONE 2 SPEAKER OUT (4-pin)",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "ZONE 3 SPEAKER OUT (4-pin)",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "ZONE 4 SPEAKER OUT (4-pin)",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "ZONE 5 SPEAKER OUT (4-pin)",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "ZONE 6 SPEAKER OUT (4-pin)",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "ZONE 7 SPEAKER OUT (4-pin)",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "ZONE 8 SPEAKER OUT (4-pin)",
+              "dir": "out",
+              "conn": "speaker"
+            },
+            {
+              "label": "DANTE",
+              "dir": "in",
+              "conn": "dante"
+            }
+          ],
+          "portsSource": "https://adeogroup.it/sites/default/files/prodotti_allegati_pubblici/audio-control_manual_acp_dmz-m6800d.pdf (high confidence, rear-panel audit 2026-09-29)",
+          "goTo": true,
+          "depthIn": 15.5,
+          "depthSource": "https://www.avproglobal.com/products/the-director-model-m6800d-dante (checked 2026-10-02)"
+        }
+      }
+    },
+    "starter": "mxnet-savant",
+    "zoneGrouping": "type-outdoor",
+    "trunkStyle": "ribbon"
+  },
+  "house": {
+    "areas": [],
+    "zones": [
+      {
+        "scope": "included",
+        "name": "Family Room",
+        "id": "z-family-room",
+        "endpoints": [
+          {
+            "id": "z-family-room-spk-ns7tv",
+            "type": "speakers",
+            "config": "surround-5.1",
+            "count": 2,
+            "status": "new"
+          },
+          {
+            "id": "z-family-room-tv",
+            "type": "display",
+            "displayType": "tv",
+            "brand": "Sony",
+            "size": 85,
+            "status": "new"
+          }
+        ]
+      },
+      {
+        "scope": "included",
+        "name": "Master Bed",
+        "id": "z-2",
+        "endpoints": [
+          {
+            "id": "z-2-spk",
+            "type": "speakers",
+            "config": "surround-5.1",
+            "status": "new"
+          },
+          {
+            "id": "z-2-tv-2t7c1",
+            "type": "display",
+            "displayType": "tv",
+            "brand": "OFE",
+            "size": 65,
+            "status": "new"
+          }
+        ]
+      },
+      {
+        "scope": "included",
+        "name": "Family Room",
+        "id": "z-family-roomb",
+        "endpoints": [
+          {
+            "id": "z-family-roomb-spk",
+            "type": "speakers",
+            "config": "surround-5.1",
+            "status": "new"
+          },
+          {
+            "id": "z-family-roomb-tv",
+            "type": "display",
+            "displayType": "tv",
+            "brand": "Sony",
+            "size": 85,
+            "status": "new"
+          }
+        ]
+      },
+      {
+        "scope": "included",
+        "name": "Guest Casita",
+        "id": "z-guest-casita",
+        "endpoints": [
+          {
+            "id": "z-guest-casita-spk",
+            "type": "speakers",
+            "config": "stereo",
+            "status": "ofe",
+            "count": 2
+          },
+          {
+            "id": "z-guest-casita-tv",
+            "type": "display",
+            "displayType": "tv",
+            "brand": "Samsung",
+            "size": 75,
+            "status": "new",
+            "confirm": [
+              "size"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "solutions": [
+    {
+      "id": "sol-a",
+      "name": "Proposed System",
+      "videoDistribution": "hybrid",
+      "platforms": [
+        "josh"
+      ],
+      "auxCounts": {},
+      "racks": [
+        {
+          "id": "rack-main",
+          "name": "Equipment Rack",
+          "devices": [
+            {
+              "id": "atv1",
+              "type": "source",
+              "model": "Apple TV 1",
+              "status": "new"
+            },
+            {
+              "id": "atv2",
+              "type": "source",
+              "model": "Apple TV 2",
+              "status": "new"
+            },
+            {
+              "id": "cablebox",
+              "type": "source",
+              "model": "Cable Box",
+              "status": "new"
+            },
+            {
+              "id": "music",
+              "type": "source",
+              "catalogRef": "savant-pav-sms2001",
+              "model": "Savant PAV-SMS2001-10",
+              "status": "new"
+            },
+            {
+              "id": "sw",
+              "type": "avSwitch",
+              "catalogRef": "avpro-mxnet-sw24e",
+              "model": "AVPro Edge AC-MXNET-SW24E",
+              "status": "new"
+            },
+            {
+              "id": "cbx",
+              "type": "controlBox",
+              "catalogRef": "avpro-mxnet-cbox-ha",
+              "model": "AVPro Edge AC-MXNET-CBOX-HA",
+              "status": "new"
+            },
+            {
+              "id": "sav-in",
+              "type": "audioInputModule",
+              "catalogRef": "savant-pav-aim7c",
+              "model": "Savant PAV-AIM7C-20",
+              "status": "new"
+            },
+            {
+              "id": "sav-out",
+              "type": "audioOutputModule",
+              "catalogRef": "savant-pav-aom8c",
+              "model": "Savant PAV-AOM8C-00",
+              "status": "new"
+            },
+            {
+              "id": "avb",
+              "type": "avbSwitch",
+              "catalogRef": "motu-avb-switch",
+              "status": "new",
+              "model": "MOTU AVB Switch"
+            },
+            {
+              "id": "amp",
+              "type": "amp",
+              "catalogRef": "anthem-mdx-16",
+              "model": "Anthem MDX-16",
+              "status": "new",
+              "zones": 8
+            },
+            {
+              "id": "lan",
+              "type": "networkSwitch",
+              "catalogRef": "ubiquiti-usw-pro-24-poe",
+              "model": "Ubiquiti Pro 24 PoE",
+              "status": "new"
+            },
+            {
+              "id": "power",
+              "type": "power",
+              "catalogRef": "wattbox-800vps-ipvm-18",
+              "model": "WattBox WB-800VPS-IPVM-18",
+              "status": "new"
+            },
+            {
+              "id": "avr",
+              "type": "avr",
+              "model": "Anthem MRX 540",
+              "status": "new",
+              "catalogRef": "anthem-mrx-540-8k"
+            },
+            {
+              "id": "avr-2",
+              "type": "avr",
+              "model": "Anthem MRX 540",
+              "status": "new",
+              "catalogRef": "anthem-mrx-540-8k"
+            },
+            {
+              "id": "hype",
+              "type": "amp",
+              "model": "AudioControl ACP-HYPE-PENTA",
+              "status": "new",
+              "zones": 1,
+              "catalogRef": "audiocontrol-hype-penta"
+            },
+            {
+              "id": "dante-cbox",
+              "type": "controlBox",
+              "model": "AVPro Edge AC-MXNET-DANTE-CBOX",
+              "status": "new",
+              "catalogRef": "avpro-mxnet-dante-cbox"
+            },
+            {
+              "id": "dante-sw",
+              "type": "networkSwitch",
+              "model": "AVPro Edge AC-MXNET-SW24E",
+              "status": "new",
+              "catalogRef": "avpro-mxnet-sw24e",
+              "danteSwitch": true
+            },
+            {
+              "id": "director",
+              "type": "amp",
+              "model": "AudioControl M6800D",
+              "status": "new",
+              "zones": 8,
+              "catalogRef": "audiocontrol-m6800d"
+            }
+          ],
+          "sizeMode": "auto",
+          "layout": {
+            "patch:1": 0,
+            "sw": 2,
+            "lan": 7,
+            "dante-sw": 3,
+            "sav-in": 8,
+            "sav-out": 8,
+            "kit:AC-MXNET-1G-R15:1": 9,
+            "shelf:atv1": 16,
+            "shelf:music": 19,
+            "amp": 23,
+            "avr": 26,
+            "avr-2": 31,
+            "hype": 36,
+            "director": 40
+          }
+        }
+      ],
+      "localDevices": [],
+      "companions": [
+        {
+          "id": "enc-atv1",
+          "type": "enc",
+          "serves": "atv1",
+          "auto": true,
+          "avdm": true,
+          "dante": true
+        },
+        {
+          "id": "enc-atv2",
+          "type": "enc",
+          "serves": "atv2",
+          "auto": true,
+          "avdm": true,
+          "dante": true
+        },
+        {
+          "id": "enc-cable",
+          "type": "enc",
+          "serves": "cablebox",
+          "auto": true,
+          "avdm": true,
+          "dante": true
+        },
+        {
+          "id": "dec-z-family-room",
+          "type": "dec",
+          "serves": "z-family-room-tv",
+          "auto": true
+        },
+        {
+          "id": "dec-avr",
+          "type": "dec",
+          "serves": "avr",
+          "auto": true
+        },
+        {
+          "id": "dec-avr-2",
+          "type": "dec",
+          "serves": "avr-2",
+          "auto": true
+        },
+        {
+          "id": "dec-z-family-roomb",
+          "type": "dec",
+          "serves": "z-family-roomb-tv",
+          "auto": true
+        },
+        {
+          "id": "axis16-z-family-roomb",
+          "type": "axis16",
+          "serves": "z-family-roomb-tv",
+          "auto": true
+        },
+        {
+          "id": "dec-z-guest-casita",
+          "type": "dec",
+          "serves": "z-guest-casita-tv",
+          "auto": true,
+          "dante": true
+        },
+        {
+          "id": "balun-z-2",
+          "type": "balun",
+          "serves": "z-2-tv-2t7c1",
+          "auto": true
+        }
+      ],
+      "connections": [
+        {
+          "from": "atv1",
+          "to": "enc-atv1",
+          "signal": "video"
+        },
+        {
+          "from": "enc-atv1",
+          "to": "sw",
+          "signal": "video"
+        },
+        {
+          "from": "atv2",
+          "to": "enc-atv2",
+          "signal": "video"
+        },
+        {
+          "from": "enc-atv2",
+          "to": "sw",
+          "signal": "video"
+        },
+        {
+          "from": "cablebox",
+          "to": "enc-cable",
+          "signal": "video"
+        },
+        {
+          "from": "enc-cable",
+          "to": "sw",
+          "signal": "video"
+        },
+        {
+          "from": "cbx",
+          "to": "sw",
+          "signal": "network"
+        },
+        {
+          "from": "enc-atv1",
+          "to": "sav-in",
+          "signal": "audio"
+        },
+        {
+          "from": "enc-atv2",
+          "to": "sav-in",
+          "signal": "audio"
+        },
+        {
+          "from": "enc-cable",
+          "to": "sav-in",
+          "signal": "audio"
+        },
+        {
+          "from": "avb",
+          "to": "music",
+          "signal": "network"
+        },
+        {
+          "from": "avb",
+          "to": "sav-in",
+          "signal": "network"
+        },
+        {
+          "from": "avb",
+          "to": "sav-out",
+          "signal": "network"
+        },
+        {
+          "from": "sav-out",
+          "to": "amp",
+          "signal": "audio"
+        },
+        {
+          "from": "sw",
+          "to": "dec-z-family-room",
+          "signal": "video"
+        },
+        {
+          "from": "dec-z-family-room",
+          "to": "z-family-room-tv",
+          "signal": "video"
+        },
+        {
+          "from": "avr",
+          "to": "z-2-spk",
+          "signal": "speaker"
+        },
+        {
+          "from": "sw",
+          "to": "dec-avr",
+          "signal": "video"
+        },
+        {
+          "from": "dec-avr",
+          "to": "avr",
+          "signal": "video"
+        },
+        {
+          "from": "avr-2",
+          "to": "z-family-room-spk-ns7tv",
+          "signal": "speaker"
+        },
+        {
+          "from": "sw",
+          "to": "dec-avr-2",
+          "signal": "video"
+        },
+        {
+          "from": "dec-avr-2",
+          "to": "avr-2",
+          "signal": "video"
+        },
+        {
+          "from": "sw",
+          "to": "dec-z-family-roomb",
+          "signal": "video"
+        },
+        {
+          "from": "dec-z-family-roomb",
+          "to": "z-family-roomb-tv",
+          "signal": "video"
+        },
+        {
+          "from": "dante-cbox",
+          "to": "dante-sw",
+          "signal": "network"
+        },
+        {
+          "from": "z-family-roomb-tv",
+          "to": "axis16-z-family-roomb",
+          "signal": "audioReturn",
+          "earc": true
+        },
+        {
+          "from": "axis16-z-family-roomb",
+          "to": "hype",
+          "signal": "audio",
+          "dante": true
+        },
+        {
+          "from": "dante-sw",
+          "to": "hype",
+          "signal": "network"
+        },
+        {
+          "from": "dante-sw",
+          "to": "director",
+          "signal": "network"
+        },
+        {
+          "from": "amp",
+          "to": "z-guest-casita-spk",
+          "signal": "speaker",
+          "channels": "1-2"
+        },
+        {
+          "from": "sw",
+          "to": "dec-z-guest-casita",
+          "signal": "video"
+        },
+        {
+          "from": "dec-z-guest-casita",
+          "to": "z-guest-casita-tv",
+          "signal": "video"
+        },
+        {
+          "from": "avr",
+          "to": "balun-z-2",
+          "signal": "video",
+          "earc": true
+        },
+        {
+          "from": "balun-z-2",
+          "to": "z-2-tv-2t7c1",
+          "signal": "video"
+        },
+        {
+          "from": "z-2-tv-2t7c1",
+          "to": "avr",
+          "signal": "audioReturn",
+          "backup": true
+        },
+        {
+          "from": "amp",
+          "to": "z-family-roomb-spk",
+          "signal": "speaker",
+          "channels": "3-4"
+        }
+      ],
+      "annotations": [],
+      "audioNetwork": "dante"
+    }
+  ]
+}

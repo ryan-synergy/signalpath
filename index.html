@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-el6xpm/3O4KQHo7dM2RutkVhuQzmOEASfBE3P+1HtgM=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-0a/9LJd7pdaNGLQRxbpo4kqOMsgDvKj6Pa5u8rsk2vE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-QQSgDoRKmk3lvp/OMWZvQeP0owEdcFOGXXnPd31BVDA=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-DdEWWC/t7lin1Fiy1aGKsSz1fHnKtVYkSaU0pvj7gW4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -297,6 +297,18 @@
   #devPop .dprn { display: flex; gap: 6px; flex: 1; } #devPop .dprn input { flex: 1; min-width: 0; font: inherit; font-size: 15px; font-weight: 700; padding: 4px 8px; border: 1.6px solid var(--accent); border-radius: 7px; }
   #devPop .dpok { border: none; background: none; color: var(--accent); font-size: 18px; font-weight: 700; cursor: pointer; padding: 0 6px; }
   #devPop .dproom .sect { margin-top: 10px; } #devPop .dproom .f > label { width: 78px; flex: none; } #devPop .dproom details.more { margin: 6px 0; }
+  #devPop .dpdrop { border: 1px solid #b9c4d8; border-radius: 8px; background: #fff; box-shadow: 0 4px 14px rgba(0,0,0,.14); margin: -2px 0 8px; overflow: hidden; }
+  #devPop .dpdrop .ddq { display: block; width: 100%; box-sizing: border-box; border: none; border-bottom: 1px solid #e3e5eb; padding: 8px 10px; font: inherit; font-size: 13px; outline: none; }
+  #devPop .dpdrop .ddlist { max-height: 232px; overflow-y: auto; padding: 3px; }
+  #devPop .dd-g { font-size: 9.5px; letter-spacing: 1px; font-weight: 700; color: #6b7280; text-transform: uppercase; padding: 7px 8px 3px; }
+  #devPop .dd-i, #devPop .dd-more { display: block; width: 100%; text-align: left; border: none; background: none; font: inherit; font-size: 13px; padding: 7px 8px; border-radius: 6px; cursor: pointer; color: #16181c; }
+  #devPop .dd-i:hover:not([disabled]), #devPop .dd-more:hover { background: #eef3fb; }
+  #devPop .dd-i.cur { background: #e6efff; font-weight: 600; } #devPop .dd-i { position: relative; } #devPop .dd-i.cur { padding-right: 26px; } #devPop .dd-i.cur::after { content: "✓"; position: absolute; right: 9px; top: 7px; color: var(--accent); }
+  #devPop .dd-i[disabled] { color: #9aa0a8; cursor: default; } #devPop .dd-i small { display: block; font-size: 11px; color: #6b7280; font-weight: 400; margin-top: 1px; }
+  #devPop .dd-more { color: var(--accent); font-weight: 600; font-size: 12px; }
+  #devPop .ddopen .ch { transform: rotate(180deg); display: inline-block; }
+  #devPop .dpl .fieldbtn { min-width: 0; width: 100%; padding: 5px 8px; font-size: 12.5px; min-height: 0; }
+  @media (pointer: coarse) { #devPop .dd-i, #devPop .dd-more { padding: 11px 10px; } #devPop .dpl .fieldbtn { padding: 9px 8px; } }
   #devPop .dpfoot { display: flex; justify-content: flex-end; margin-top: 8px; } #devPop .dpfoot a { font-size: 12px; color: var(--accent); }
   @media (pointer: coarse) { #devPop .dpl select { padding: 9px 6px; } #devPop .dpadd { padding: 8px 10px; } #devPop .dpx { font-size: 22px; padding: 4px 8px; } }
   #wiretip { position: fixed; z-index: 40; background: #16181c; color: #eee; font-size: 12px;
@@ -687,29 +699,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003204555",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003204555",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003204555",
-    "./app/ports.js": "./app/ports.js?v=20261003204555",
-    "./app/commands.js": "./app/commands.js?v=20261003204555",
-    "./app/engine.js": "./app/engine.js?v=20261003204555",
-    "./app/exports.js": "./app/exports.js?v=20261003204555",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003204555",
-    "./app/hookup.js": "./app/hookup.js?v=20261003204555",
-    "./app/importers.js": "./app/importers.js?v=20261003204555",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003204555",
-    "./app/library.js": "./app/library.js?v=20261003204555",
-    "./app/names.js": "./app/names.js?v=20261003204555",
-    "./app/network.js": "./app/network.js?v=20261003204555",
-    "./app/pages.js": "./app/pages.js?v=20261003204555",
-    "./app/power.js": "./app/power.js?v=20261003204555",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003204555",
-    "./app/rack.js": "./app/rack.js?v=20261003204555",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003204555",
-    "./app/starters.js": "./app/starters.js?v=20261003204555",
-    "./app/kinds.js": "./app/kinds.js?v=20261003204555",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003204555",
-    "./app/sheets.js": "./app/sheets.js?v=20261003204555"
+    "./app/ai.js": "./app/ai.js?v=20261003204806",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003204806",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003204806",
+    "./app/ports.js": "./app/ports.js?v=20261003204806",
+    "./app/commands.js": "./app/commands.js?v=20261003204806",
+    "./app/engine.js": "./app/engine.js?v=20261003204806",
+    "./app/exports.js": "./app/exports.js?v=20261003204806",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003204806",
+    "./app/hookup.js": "./app/hookup.js?v=20261003204806",
+    "./app/importers.js": "./app/importers.js?v=20261003204806",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003204806",
+    "./app/library.js": "./app/library.js?v=20261003204806",
+    "./app/names.js": "./app/names.js?v=20261003204806",
+    "./app/network.js": "./app/network.js?v=20261003204806",
+    "./app/pages.js": "./app/pages.js?v=20261003204806",
+    "./app/power.js": "./app/power.js?v=20261003204806",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003204806",
+    "./app/rack.js": "./app/rack.js?v=20261003204806",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003204806",
+    "./app/starters.js": "./app/starters.js?v=20261003204806",
+    "./app/kinds.js": "./app/kinds.js?v=20261003204806",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003204806",
+    "./app/sheets.js": "./app/sheets.js?v=20261003204806"
 } }
 </script>
 <script>
@@ -974,7 +986,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003204555").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003204806").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1951,12 +1963,48 @@ function clearSel() { selWire = null; selDev = null; hideTip(); applySel(); clea
    (endFits, the plug picker); it redraws after every change and follows the box when the sheet scrolls. */
 let popDev = null, popZone = null, popRename = false;
 const popOpen = new Set(["feeds"]);   // which sections of the room pop-up are open (kept from room to room)
+// the last thing tapped inside the pop-up — a picker it asks for opens under it
+let popTrig = null;
+document.addEventListener("click", e => { if (e.target.closest?.("#devPop") && !e.target.closest(".dpdrop")) popTrig = { el: e.target.closest("button, a, .fieldbtn, .chip") || e.target, at: Date.now() }; }, true);
+function inlinePicker(host, { groups, onPick, empty }) {
+  const pop = $("#devPop"), old = pop.querySelector(".dpdrop"), same = old?._host === host;
+  old?._close();
+  if (same) return;                                           // a second tap on the same field folds it
+  const dd = document.createElement("div"); dd.className = "dpdrop"; dd._host = host;
+  const total = groups.reduce((n, g) => n + g.items.length, 0);
+  dd.innerHTML = `${total >= 8 ? `<input class="ddq" placeholder="Search…" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Search">` : ""}<div class="ddlist"></div>`;
+  (host.closest(".f, .dpl, .chips") || host).insertAdjacentElement("afterend", dd);
+  const q = dd.querySelector(".ddq"), list = dd.querySelector(".ddlist");
+  let all = false;
+  const key = e => { if (e.key === "Escape") { e.stopImmediatePropagation(); e.preventDefault(); close(); } };
+  const close = dd._close = () => { removeEventListener("keydown", key, true); dd.remove(); host.classList?.remove("ddopen"); placeDevPop(); };
+  const draw = () => {
+    const t = (q?.value || "").trim().toLowerCase(), tucked = groups.filter(g => g.searchOnly && !t && !all);
+    list.innerHTML = groups.map(g => {
+      if (tucked.includes(g)) return "";
+      const items = g.items.filter(it => !t || `${it.label} ${it.sub || ""} ${it.reason || ""} ${it.keys || ""}`.toLowerCase().includes(t));
+      if (!items.length) return "";
+      return (groups.length > 1 && g.label ? `<div class="dd-g">${esc(g.label)}</div>` : "") + items.map(it => `<button class="dd-i${it.current ? " cur" : ""}" data-v="${esc(it.value)}" ${it.disabled ? "disabled" : ""}>${esc(it.label)}${(it.disabled ? it.reason : it.sub) ? `<small>${esc(it.disabled ? it.reason : it.sub)}</small>` : ""}</button>`).join("");
+    }).join("") + (tucked.some(g => g.items.length) ? `<button class="dd-more">Show ${tucked.reduce((n, g) => n + g.items.length, 0)} ${tucked.every(g => g.items.every(it => it.disabled)) ? "unavailable" : "more"}</button>` : "")
+      || `<div class="mini" style="padding:8px 10px">${!t && empty ? esc(empty) : "Nothing matches."}</div>`;
+    list.querySelector(".dd-more")?.addEventListener("click", () => { all = true; draw(); });
+    list.querySelectorAll(".dd-i:not([disabled])").forEach(b => b.onclick = () => { close(); onPick(b.dataset.v); });
+  };
+  if (q) q.oninput = draw;
+  addEventListener("keydown", key, true);
+  host.classList?.add("ddopen");
+  draw(); placeDevPop();
+  list.querySelector(".dd-i.cur")?.scrollIntoView({ block: "nearest" }); dd.scrollIntoView({ block: "nearest" });
+  if (q && matchMedia("(pointer: fine)").matches) q.focus({ preventScroll: true });
+}
 function closeDevPop() { popDev = popZone = null; popRename = false; const el = $("#devPop"); if (el) el.hidden = true; }
-const popAnchor = () => popDev ? $("#canvas svg")?.querySelector(`[data-device="${CSS.escape(popDev)}"]`) : popZone ? $("#canvas svg")?.querySelector(`[data-zone="${CSS.escape(popZone)}"]`) : null;
+// the box / room the pop-up belongs to — only while it's actually on screen (the Rack and As-built views hide the sheet)
+const popAnchor = () => { const el = popDev ? $("#canvas svg")?.querySelector(`[data-device="${CSS.escape(popDev)}"]`) : popZone ? $("#canvas svg")?.querySelector(`[data-zone="${CSS.escape(popZone)}"]`) : null;
+  return el && el.getClientRects().length ? el : null; };
 // a room's pop-up: the side panel's own "what feeds this room" controls (same pickers, same handlers), beside the room
 function drawRoomPop() {
   const el = $("#devPop"), sol = S.job.solutions[S.sol], z = S.job.house.zones.find(z => z.id === popZone);
-  if (!z || !sol || S.mainView === "rack" || !popAnchor()) { closeDevPop(); return; }
+  if (!z || !sol || !popAnchor()) { closeDevPop(); return; }
   const zEff = { ...z, ...(sol.overrides?.zones || {})[z.id] }, hk = hookupHTML(z, sol, S.job.solutions.length > 1), parts = zonesHTML({ zone: z });
   // one card, folding sections (Ryan 2026-10-03, concept C): each closed section shows its gist; what's open is remembered
   const cut = hk.indexOf('<details class="more wiring"'), feeds = (cut < 0 ? hk : hk.slice(0, cut)).replace(/^<div class="sect">[\s\S]*?<\/div>/, ""), cabling = cut < 0 ? "" : hk.slice(cut);
@@ -2000,7 +2048,7 @@ function drawDevPop() {
   const el = $("#devPop"); if (popZone) return drawRoomPop();
   if (!popDev) { el.hidden = true; return; }
   const sol = S.job.solutions[S.sol], d = sol?.racks.flatMap(r => r.devices).find(x => x.id === popDev);
-  if (!d || S.mainView === "rack" || !$("#canvas svg")?.querySelector(`[data-device="${CSS.escape(popDev)}"]`)) { closeDevPop(); return; }
+  if (!d || !popAnchor()) { closeDevPop(); return; }
   const conns = sol.connections.map((c, i) => [c, i]), ins = conns.filter(([c]) => c.to === d.id), outs = conns.filter(([c]) => c.from === d.id);
   const colorOf = c => c.dante ? SIGNAL_COLORS.dante : SIGNAL_COLORS[c.signal === "speaker" ? "audio" : c.signal] || "#888";
   // the jack strip: every jack the product has; lit in its wire's color when something is plugged in
@@ -2028,6 +2076,7 @@ function drawDevPop() {
     <button class="dpadd" data-dir="out">＋ Add an output</button>
     <div class="dpfoot"><a href="#" class="dpmore">More — product, name, notes ›</a></div>`;
   el.hidden = false;
+  enhanceSelects(el);
   const id = d.id, connAt = t => sol.connections[+t.closest("[data-ci]").dataset.ci];
   el.querySelector(".dpx").onclick = () => clearSel();
   el.querySelector(".dpmore").onclick = e => { e.preventDefault(); closeDevPop(); openGear(id); };
@@ -2347,6 +2396,9 @@ const DEV_TYPE_LABEL = TYPE_NAME, SIGNAL_LABEL = SIGNAL_NAME, SCOPE_LABEL = SCOP
    reason (Ryan 2026-09-29: gray, don't hide), search narrows; a group marked
    searchOnly (legacy gear, other kinds of box) only shows while searching */
 function openPicker({ title, groups, onPick, empty = "" }) {
+  // asked for from inside the box / room pop-up: the choices drop down right there, under the field that was tapped
+  // (Ryan 2026-10-03: a field that looks like a drop-down shouldn't open another pop-up)
+  if (popTrig && Date.now() - popTrig.at < 900 && !$("#devPop").hidden && popTrig.el.isConnected && $("#devPop").contains(popTrig.el)) return inlinePicker(popTrig.el, { groups, onPick, empty });
   const box = $("#picker"), list = $("#pkList"), q = $("#pkSearch"), opener = document.activeElement;
   $("#pkTitle").textContent = title; q.value = ""; list.scrollTop = 0; box.querySelector(".card").style.height = "";
   let all = false;   // the tucked-away groups (another room's receiver, can't-connect) open on search or "Show more"
@@ -3091,6 +3143,7 @@ function encAudioHTML(sol, d) {
 function setView(v) {
   S.mainView = v === "rack" ? "rack" : v === "asbuilt" ? "asbuilt" : "schematic";
   try { localStorage.setItem("signalpath.view", S.mainView); } catch {}
+  if (S.mainView !== "schematic") closeDevPop();   // the pop-up belongs to the drawing
   document.querySelectorAll("#viewSw button").forEach(b => { const on = b.dataset.view === S.mainView; b.classList.toggle("on", on); b.setAttribute("aria-selected", String(on)); });
   $("#rackView").hidden = S.mainView !== "rack";
   $("#right").classList.toggle("rackmode", S.mainView === "rack");

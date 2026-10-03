@@ -306,7 +306,24 @@ function cloneAs(src, name, scope) {
 }
 const keyOf = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
-export function parseQuick(text) {
+// a floor glued to a room ("upstairs master", "lower bedroom") — "basement" is kept: "Basement Theater" is how the room is named
+const GLUED_FLOOR = /^((?:upstairs|downstairs|upper|lower|main\s+(?:level|floor)|(?:first|second|third|ground|top|lower|upper|1st|2nd|3rd)\s+(?:floor|level)|(?:floor|level)\s+\d))\s+(.+)$/i;
+
+/* text → rooms. `existing` = the job's room names already, so a floor stays in a name only when it's
+   needed to tell two rooms apart (Ryan 2026-10-02: there's only one master — "upstairs master" is
+   Master — but "upper bedroom" and "lower bedroom", or a second bath, keep their floor). */
+export function parseQuick(text, existing = []) {
+  const rooms = parseQuickRooms(text);
+  const base = p => p.zone.name.match(GLUED_FLOOR)?.[2] || p.zone.name;
+  const taken = new Map();   // base name → how many rooms answer to it
+  for (const n of [...existing.map(n => ({ zone: { name: n } })), ...rooms]) { const k = keyOf(base(n)); taken.set(k, (taken.get(k) || 0) + 1); }
+  return rooms.map(p => {
+    const m = p.zone.name.match(GLUED_FLOOR);
+    return m && taken.get(keyOf(m[2])) === 1 ? cloneAs(p, m[2], p.zone.scope) : p;
+  });
+}
+
+function parseQuickRooms(text) {
   const out = [];
   for (const p of roomTexts(text).map(parseQuickZone)) {
     const z = p.zone;

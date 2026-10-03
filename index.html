@@ -532,29 +532,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003024045",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003024045",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003024045",
-    "./app/ports.js": "./app/ports.js?v=20261003024045",
-    "./app/commands.js": "./app/commands.js?v=20261003024045",
-    "./app/engine.js": "./app/engine.js?v=20261003024045",
-    "./app/exports.js": "./app/exports.js?v=20261003024045",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003024045",
-    "./app/hookup.js": "./app/hookup.js?v=20261003024045",
-    "./app/importers.js": "./app/importers.js?v=20261003024045",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003024045",
-    "./app/library.js": "./app/library.js?v=20261003024045",
-    "./app/names.js": "./app/names.js?v=20261003024045",
-    "./app/network.js": "./app/network.js?v=20261003024045",
-    "./app/pages.js": "./app/pages.js?v=20261003024045",
-    "./app/power.js": "./app/power.js?v=20261003024045",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003024045",
-    "./app/rack.js": "./app/rack.js?v=20261003024045",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003024045",
-    "./app/starters.js": "./app/starters.js?v=20261003024045",
-    "./app/kinds.js": "./app/kinds.js?v=20261003024045",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003024045",
-    "./app/sheets.js": "./app/sheets.js?v=20261003024045"
+    "./app/ai.js": "./app/ai.js?v=20261003024441",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003024441",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003024441",
+    "./app/ports.js": "./app/ports.js?v=20261003024441",
+    "./app/commands.js": "./app/commands.js?v=20261003024441",
+    "./app/engine.js": "./app/engine.js?v=20261003024441",
+    "./app/exports.js": "./app/exports.js?v=20261003024441",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003024441",
+    "./app/hookup.js": "./app/hookup.js?v=20261003024441",
+    "./app/importers.js": "./app/importers.js?v=20261003024441",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003024441",
+    "./app/library.js": "./app/library.js?v=20261003024441",
+    "./app/names.js": "./app/names.js?v=20261003024441",
+    "./app/network.js": "./app/network.js?v=20261003024441",
+    "./app/pages.js": "./app/pages.js?v=20261003024441",
+    "./app/power.js": "./app/power.js?v=20261003024441",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003024441",
+    "./app/rack.js": "./app/rack.js?v=20261003024441",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003024441",
+    "./app/starters.js": "./app/starters.js?v=20261003024441",
+    "./app/kinds.js": "./app/kinds.js?v=20261003024441",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003024441",
+    "./app/sheets.js": "./app/sheets.js?v=20261003024441"
 } }
 </script>
 <script>
@@ -795,7 +795,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003024045").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003024441").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -3224,7 +3224,7 @@ function wirePanel(body) {
         chipsEl.innerHTML = planHTML(plan, { acts: false }) + `<span class="mini">${plan.steps.some(x => x.ok) ? "Enter to apply" : "Nothing to apply"}</span>`;
         return;
       }
-      const parses = parseQuick(qaInput.value);
+      const parses = parseQuick(qaInput.value, S.job.house.zones.map(z => z.name));
       // dry-run the add so the preview says what will feed each room before it's committed
       const feeds = new Map();
       try {
@@ -3267,7 +3267,7 @@ function wirePanel(body) {
         if (applyPlan(planCommands(S.job, S.sol, cmds, effectiveCatalog()), label)) qaInput.value = "";
         return;
       }
-      const all = parseQuick(qaInput.value), parses = all.filter(p => !p.empty), skipped = all.filter(p => p.empty).map(p => p.zone.name);
+      const all = parseQuick(qaInput.value, S.job.house.zones.map(z => z.name)), parses = all.filter(p => !p.empty), skipped = all.filter(p => p.empty).map(p => p.zone.name);
       if (skipped.length) toast(`Skipped ${skipped.join(", ")} — nothing in ${skipped.length > 1 ? "them" : "it"} yet. Add a setup or a TV size (e.g. "${skipped[0].toLowerCase()} stereo 65").`);
       if (!parses.length) return;
       pushUndo(`add ${parses.map(p => p.zone.name).join(", ")}`);

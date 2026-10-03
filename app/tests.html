@@ -503,8 +503,11 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     ["mudroom 32 inch but no audio components", ["Mudroom | TV 32\""]],
     ["bathroom 32 with just a single speaker", ["Bathroom | Mono (1 speaker) | TV 32\""]],
     ["okay so uh master bedroom 65 inch with um 7.1 also don't forget the bathroom 32 TV no audio", ["Master Bedroom | 7.1 surround | TV 65\"", "Bathroom | TV 32\""]],
-    ["upstairs bath 32", ["Upstairs Bath | TV 32\""]],
+    ["upstairs master 65 7.1", ["Master | 7.1 surround | TV 65\""]],
+    ["upper bedroom 50 stereo, lower bedroom 43", ["Upper Bedroom | Stereo pair | TV 50\"", "Lower Bedroom | TV 43\""]],
   ];
+  t("quickadd: a floor stays in a name only when the job already has that room (\"upstairs bath\" beside an existing Bath)",
+    parseQuick("upstairs bath 32", ["Bath", "Kitchen"])[0].zone.name === "Upstairs Bath" && parseQuick("upstairs bath 32", ["Kitchen"])[0].zone.name === "Bath");
   for (const [x, want] of D) t(`quickadd dictation: "${x}"`, rooms(x).join(" ‖ ") === want.join(" ‖ "), rooms(x).join(" ‖ "));
   t("quickadd dictation: punctuation stuck to a word ('soundbar:', '50 inch!', '3.1:') is ignored — found by harden/today.mjs",
     rooms("Theater, soundbar: 120-inch projector").join(" ‖ ") === "Theater | Soundbar | Projector 120\"" && rooms("Guest room, TV only 50 inch!").join(" ‖ ") === "Guest Room | TV 50\""

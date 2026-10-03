@@ -200,7 +200,7 @@ function purgeZone(job, zone) {
 
 const HANDLERS = {
   add_zones(job, sol, c) {
-    const parses = parseQuick(c.text || "").filter(p => !p.empty);
+    const parses = parseQuick(c.text || "", job.house.zones.map(z => z.name)).filter(p => !p.empty);
     if (!parses.length) throw new Error(`couldn't read any zones from "${c.text}"`);
     const names = [];
     for (const p of parses) {

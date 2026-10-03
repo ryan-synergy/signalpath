@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-LN/vsgwraTQdP8O92yVh9OBFu8XZtD50g2PIwcbCSJI=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-IAZDbD8HVRFmGiUGXA8FIt9tr2Gf1kCHHRxgx3bqQkg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-sB4kzIHYT6W9QYHB3F2PVFVVp3K64vZmmBgiNSnkkQA=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-Eb3HLBLQUhQiCOEnCIDUeRzQy/qgh4He2eRoKSBjF9g='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -714,29 +714,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003222415",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003222415",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003222415",
-    "./app/ports.js": "./app/ports.js?v=20261003222415",
-    "./app/commands.js": "./app/commands.js?v=20261003222415",
-    "./app/engine.js": "./app/engine.js?v=20261003222415",
-    "./app/exports.js": "./app/exports.js?v=20261003222415",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003222415",
-    "./app/hookup.js": "./app/hookup.js?v=20261003222415",
-    "./app/importers.js": "./app/importers.js?v=20261003222415",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003222415",
-    "./app/library.js": "./app/library.js?v=20261003222415",
-    "./app/names.js": "./app/names.js?v=20261003222415",
-    "./app/network.js": "./app/network.js?v=20261003222415",
-    "./app/pages.js": "./app/pages.js?v=20261003222415",
-    "./app/power.js": "./app/power.js?v=20261003222415",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003222415",
-    "./app/rack.js": "./app/rack.js?v=20261003222415",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003222415",
-    "./app/starters.js": "./app/starters.js?v=20261003222415",
-    "./app/kinds.js": "./app/kinds.js?v=20261003222415",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003222415",
-    "./app/sheets.js": "./app/sheets.js?v=20261003222415"
+    "./app/ai.js": "./app/ai.js?v=20261003224243",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003224243",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003224243",
+    "./app/ports.js": "./app/ports.js?v=20261003224243",
+    "./app/commands.js": "./app/commands.js?v=20261003224243",
+    "./app/engine.js": "./app/engine.js?v=20261003224243",
+    "./app/exports.js": "./app/exports.js?v=20261003224243",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003224243",
+    "./app/hookup.js": "./app/hookup.js?v=20261003224243",
+    "./app/importers.js": "./app/importers.js?v=20261003224243",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003224243",
+    "./app/library.js": "./app/library.js?v=20261003224243",
+    "./app/names.js": "./app/names.js?v=20261003224243",
+    "./app/network.js": "./app/network.js?v=20261003224243",
+    "./app/pages.js": "./app/pages.js?v=20261003224243",
+    "./app/power.js": "./app/power.js?v=20261003224243",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003224243",
+    "./app/rack.js": "./app/rack.js?v=20261003224243",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003224243",
+    "./app/starters.js": "./app/starters.js?v=20261003224243",
+    "./app/kinds.js": "./app/kinds.js?v=20261003224243",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003224243",
+    "./app/sheets.js": "./app/sheets.js?v=20261003224243"
 } }
 </script>
 <script>
@@ -804,6 +804,7 @@
         <label class="chk"><input type="radio" name="layoutStyle" value="packed"><span><b>Packed</b><em>The default: racks down the left, rooms in rows beside them by type</em></span></label>
         <label class="chk"><input type="radio" name="layoutStyle" value="bands"><span><b>Bands</b><em>The same, each kind of room in its own labelled band — with one for rooms not on the system</em></span></label>
         <label class="chk"><input type="radio" name="layoutStyle" value="classic"><span><b>Classic</b><em>TV rooms along the top, racks below, speaker rooms bottom-right (the original)</em></span></label>
+        <label class="chk"><input type="checkbox" id="layoutMine"><span><b id="layoutMineTxt">Start my new projects in this layout</b><em>Remembered on this computer — projects already saved keep their own layout</em></span></label>
       </div>
       <details class="mstyle"><summary><b>Drawing style</b><em>Trunks, harness, Dante labels — how the wires are drawn</em></summary>
       <div class="mgroup" role="group" aria-label="Trunks">
@@ -1008,7 +1009,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003222415").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003224243").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1124,6 +1125,7 @@ function refresh(save = true) {
   $("#splitSheets").checked = !!S.job.job.splitSheets;
   for (const r of document.querySelectorAll('input[name="trunkStyle"]')) r.checked = r.value === (S.job.job.trunkStyle || "bundle");
   for (const r of document.querySelectorAll('input[name="layoutStyle"]')) r.checked = r.value === (["bands", "classic"].includes(S.job.job.layoutStyle) ? S.job.job.layoutStyle : "packed");
+  syncLayoutDefault();
   $("#harnessMode").disabled = !!trunkMode(S.job);          // trunks replace the harness; it applies with trunks off
   $("#danteLabels").checked = S.job.job.danteStyle === "labels";
   $("#legendCompact").checked = S.job.job.legendStyle === "compact";
@@ -1373,6 +1375,16 @@ for (const r of document.querySelectorAll('input[name="layoutStyle"]')) r.onchan
   S.editLabel = "layout"; if (r.value === "packed") delete S.job.job.layoutStyle; else S.job.job.layoutStyle = r.value;   // packed is the default
   refresh();
 };
+// each person's own starting layout (this computer): new projects — from a kit, blank, pasted or imported — begin in it.
+// A project already saved keeps the layout it was saved with; a coworker who likes Classic sets it once here.
+const myLayoutDefault = () => { try { const v = localStorage.getItem("signalpath.layoutDefault"); return ["bands", "classic"].includes(v) ? v : "packed"; } catch { return "packed"; } };
+function myLayout(job) { const v = myLayoutDefault(); if (job?.job && !job.job.layoutStyle && v !== "packed") job.job.layoutStyle = v; return job; }
+const LAYOUT_NAME = { packed: "Packed", bands: "Bands", classic: "Classic" };
+function syncLayoutDefault() { const cur = ["bands", "classic"].includes(S.job?.job?.layoutStyle) ? S.job.job.layoutStyle : "packed", mine = myLayoutDefault();
+  $("#layoutMine").checked = cur === mine; $("#layoutMineTxt").textContent = cur === mine ? `New projects on this computer start in ${LAYOUT_NAME[mine]}` : `Start my new projects in ${LAYOUT_NAME[cur]} (now: ${LAYOUT_NAME[mine]})`; }
+$("#layoutMine").onchange = e => { const cur = ["bands", "classic"].includes(S.job.job.layoutStyle) ? S.job.job.layoutStyle : "packed";
+  try { if (e.target.checked && cur !== "packed") localStorage.setItem("signalpath.layoutDefault", cur); else localStorage.removeItem("signalpath.layoutDefault"); } catch {}
+  syncLayoutDefault(); toast(`New projects on this computer start in ${LAYOUT_NAME[myLayoutDefault()]}`); };
 for (const r of document.querySelectorAll('input[name="trunkStyle"]')) r.onchange = () => {
   if (r.value === "bundle") delete S.job.job.trunkStyle; else S.job.job.trunkStyle = r.value;   // bundle is the default
   refresh();
@@ -1520,7 +1532,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenus()
 // a new job from a kit: its rack, then its starting rooms (quick-add text) if it has any
 async function startJobFrom(st) {
   await flushSave();
-  S.job = applyStarter(blankJob(), st, SETTINGS.catalog); S.id = uid("job"); S.sol = 0; S.editScope = "house";
+  S.job = myLayout(applyStarter(blankJob(), st, SETTINGS.catalog)); S.id = uid("job"); S.sol = 0; S.editScope = "house";
   if (st.rooms) { try { S.job = planCommands(S.job, 0, [{ op: "add_zones", text: st.rooms }], effectiveCatalog()).job; } catch (e) { console.warn("starter rooms", e); } }
   S.qaHint = st.tip;                               // the quick-add box suggests how to add zones to this rack
   S.tab = "zones"; switchTab("zones");
@@ -1757,7 +1769,7 @@ $("#delJob").onclick = async opt => {
   cancelSave();
   await dbDel(S.id);
   const jobs = (await dbAll()).sort((a, b) => b.updated - a.updated);   // the most recently edited job opens next
-  if (jobs.length) { S.id = jobs[0].id; S.job = jobs[0].data; } else { S.job = blankJob(); S.id = uid("job"); await persist(); }
+  if (jobs.length) { S.id = jobs[0].id; S.job = jobs[0].data; } else { S.job = myLayout(blankJob()); S.id = uid("job"); await persist(); }
   refresh();
   toast(`Deleted "${name}" — opened "${S.job.job.name}"`, async () => {
     await flushSave(); await dbPut(was); S.id = was.id; S.job = structuredClone(was.data); S.sol = 0; refresh(); if ($("#jobsHome")?.classList.contains("show")) renderJobsHome(); });
@@ -1945,7 +1957,7 @@ async function showReview(res) {
         const d = drawFromWalk(res, SETTINGS.catalog);
         toast([...d.notes, ...d.warnings.map(x => "⚠ " + x)].join(" · "));
       }
-      S.job = j; S.id = uid("job"); S.sol = 0; await persist(); refresh(false); close();
+      S.job = myLayout(j); S.id = uid("job"); S.sol = 0; await persist(); refresh(false); close();
     };
     $("#rvMerge").onclick = async () => {
       const rec = jobs.find(r => r.id === $("#rvTarget").value); if (!rec) return;

@@ -341,7 +341,15 @@ const BP_MODEL = [
   [/PAV-AOM|\bAOM\b/i, { type: "audioOutputModule", catalogRef: "savant-pav-aom8c" }],
   [/M4250|GSM4212P/i, { type: "avbSwitch", catalogRef: "netgear-m4250-10g2f-poe" }],
   [/ESN-AVB|\bAVB\b/i, { type: "avbSwitch" }],
+  // Savant's AVPro "MXnet 16x16" is a driver profile, not a box: the system is an MXNet switch, run by a control box
+  [/MXnet\s*\d+\s*x\s*\d+/i, { type: "avSwitch", mxProfile: true }],
   [/MXnet|MXNET-SW/i, { type: "avSwitch" }],
+  // Savant Pro AV IP video 8-input transmitter (3U) — sources plug into it over HDMI
+  [/PAV-VIMAP8S/i, { type: "videoMatrix", catalogRef: "savant-pav-vimap8s" }],
+  // a single-channel AVB audio endpoint (PoE), not a switch
+  [/PAV-AIO1C/i, { type: "audioInputModule", catalogRef: "savant-pav-aio1c" }],
+  // the rack's WattBox strips come in under "Power / Trigger"
+  [/\bWB-\d{3}|wattbox/i, { type: "power" }],
   [/MRX|receiver|\bAVR\b/i, { type: "avr" }],
 ];
 
@@ -405,10 +413,14 @@ export function importBlueprinted(raw) {
     const t = !hit && type === "avSwitch" && /matrix|mx/i.test(c.model || c.component) ? "videoMatrix" : type;
     // a placeholder amp named for its channels ("MDX 12") holds that many — not the generic 8 zones
     const ch = t === "amp" && /generic/i.test(c.manufacturer || "") && +(String(c.component || "").match(/(\d+)\s*$/) || [])[1];
-    const d = { id: uid("dev"), type: t, model: [c.manufacturer, c.model].filter(Boolean).join(" ") || c.component, status: "ofe",
+    const d = { id: uid("dev"), type: t, model: hit?.mxProfile ? `MXNet switch (Savant "${c.model || c.component}" profile — confirm the model)` : [c.manufacturer, c.model].filter(Boolean).join(" ") || c.component, status: "ofe",
       ...(hit?.catalogRef ? { catalogRef: hit.catalogRef } : {}), ...(ch >= 4 && ch <= 32 && ch % 2 === 0 ? { zones: ch / 2 } : {}) };
     sol.racks[0].devices.push(d);
     nameToId[c.component] = d.id;
+    if (hit?.mxProfile && !sol.racks[0].devices.some(x => x.catalogRef === "avpro-mxnet-cbox-ha")) {
+      sol.racks[0].devices.push({ id: uid("dev"), type: "controlBox", model: "AVPro Edge AC-MXNET-CBOX-HA", catalogRef: "avpro-mxnet-cbox-ha", status: "ofe" });
+      notes.push(`Savant ran MXNet through its "${c.model || c.component}" profile, which talks to an MXNet control box — added an AC-MXNET-CBOX-HA; check it's on the quote`);
+    }
   }
   for (const c of encoders) {
     const feed = conns.find(k => k.sink === c.component && /hdmi|video/i.test(k.signal || "") && nameToId[k.source]);
@@ -451,10 +463,23 @@ export function importBlueprinted(raw) {
     const amp = sol.racks[0].devices.find(d => d.id === nameToId[k.source] && d.type === "amp");
     if (z && amp) setSpeakers(job, sol, z, amp.id);
   }
-  // powered-speaker placeholders fed line-level from the rack: their real amp isn't in the config
+  // powered-speaker placeholders fed line-level from the rack: their real amp isn't in the config.
+  // One stand-in amp per output that fed them, so the rooms come in driven (not as errors) and the
+  // amp is plainly a thing to confirm (a real config, 2026-10-03: five outdoor zones off one AOM)
+  const lineFed = new Map();
   for (const k of conns.filter(k => /rca|preamp/.test(k.signal || "") && / speakers$/i.test(k.sink || ""))) {
     const z = job.house.zones.find(z => z.name === String(k.sinkZone || "").trim());
-    if (z && !/line-level/.test(z.note || "")) z.note = [z.note, `the old config fed these speakers line-level from ${k.source} — their amp isn't in it`].filter(Boolean).join(" · ");
+    if (!z || /line-level/.test(z.note || "")) continue;
+    z.note = [z.note, `the old config fed these speakers line-level from ${k.source} — their amp isn't in it`].filter(Boolean).join(" · ");
+    if (z.endpoints.some(e => e.type === "speakers")) { if (!lineFed.has(k.source)) lineFed.set(k.source, []); lineFed.get(k.source).push(z); }
+  }
+  for (const [src, zs] of lineFed) {
+    const amp = { id: uid("amp"), type: "amp", model: `Amp for ${zs.map(z => z.name).join(", ")} — not in the Savant config (confirm on the quote)`,
+      zones: zs.length + (zs.length % 2), status: "ofe" };
+    sol.racks[0].devices.push(amp);
+    if (nameToId[src]) sol.connections.push({ from: nameToId[src], to: amp.id, signal: "audio" });
+    for (const z of zs) setSpeakers(job, sol, z, amp.id);
+    warnings.push(`${zs.map(z => z.name).join(", ")}: the speakers were fed line-level from ${src} and their amp isn't in the config — a stand-in amp drives them; confirm the real one`);
   }
   let wired = 0;
   for (const z of job.house.zones) {

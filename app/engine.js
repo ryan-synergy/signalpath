@@ -4752,8 +4752,10 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       out.notes.push({ code: "lan-no-switch", solution: p.solution, add: sug ? { type: "networkSwitch", ref: sug.ref } : null,
         msg: `No LAN switch on this job — ${p.used} Ethernet ports needed on the house network (every TV, the networked rack gear, the AV switch uplinks)${sug ? `; a ${sug.model} (${sug.ports} ports) covers it with spare` : ""}` });
     }
-    if (p.needsInjector) out.notes.push({ code: "switch-no-poe", solution: p.solution, ref: p.switch, ids: p.unpowered,
-      msg: `${p.model} doesn't power PoE — ${p.needsInjector} PoE device${p.needsInjector > 1 ? "s" : ""} on it need${p.needsInjector > 1 ? "" : "s"} an injector or local power supply` });
+    // a switch the catalog doesn't know (an imported "Generic NetworkSwitch", a Savant driver profile) may well be PoE — ask, don't tell
+    if (p.needsInjector) out.notes.push({ code: "switch-no-poe", solution: p.solution, ref: p.switch, ids: p.unpowered, unknown: !p.known,
+      msg: p.known ? `${p.model} doesn't power PoE — ${p.needsInjector} PoE device${p.needsInjector > 1 ? "s" : ""} on it need${p.needsInjector > 1 ? "" : "s"} an injector or local power supply`
+        : `${p.model} isn't in the catalog, so whether it powers PoE is unknown — ${p.needsInjector} PoE device${p.needsInjector > 1 ? "s" : ""} on it: pick the switch's model, or give ${p.needsInjector > 1 ? "them" : "it"} an injector or local power supply` });
   }
   /* -- rack space: the elevation's U count against the rack's size -- */
   out.racks = catalog?.devices ? rackPlans(job, ix, catalog) : [];

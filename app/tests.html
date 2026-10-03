@@ -753,6 +753,28 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
       /line-level from AOM \(1\)/.test(zn("Patio").note || ""));
     t("blueprinted/savant: the import says a Savant config doesn't list everything",
       r.warnings.some(w => /doesn't list everything/.test(w)));
+    // five real Savant configs (2026-10-03, run locally): what they taught the importer
+    t("blueprinted/savant: the \"MXnet 16x16\" profile is an MXNet switch to confirm, with the control box it runs through",
+      /MXNet switch \(Savant "MXnet 16x16" profile/.test(ty("avSwitch")[0].model) && ty("controlBox").some(d => d.catalogRef === "avpro-mxnet-cbox-ha")
+      && r.notes.some(n => /control box — added/.test(n)));
+    t("blueprinted/savant: speakers fed line-level from an AOM get a stand-in amp (not an error), flagged to confirm",
+      (() => { const sa = ty("amp").find(d => /not in the Savant config/.test(d.model));
+        return sa && sol.connections.some(c => c.from === sa.id && c.to === spkOf("Patio")) && sol.connections.some(c => c.from === ty("audioOutputModule")[0].id && c.to === sa.id)
+          && r.warnings.some(w => /Patio: the speakers were fed line-level/.test(w)); })());
+    {
+      const bp2 = { generator: "Blueprinted", client: "Sample, Pat", system: { hostModel: "Savant Pro Host" },
+        rooms: [{ n: 1, name: "Den", zoneType: "2-ch — house amp", tv: true, videoFeed: "matrix" }],
+        rack: [
+          { component: "Savant VIM", manufacturer: "Savant", model: "PAV-VIMAP8S2", category: "Switching" },
+          { component: "AIO", manufacturer: "Savant", model: "PAV-AIO1C", category: "Switching" },
+          { component: "Left Rack Power Strip", manufacturer: "SnapAV", model: "WB-800VPS-IPVM-18", category: "Power / Trigger" },
+          { component: "Pool", manufacturer: "Pentair", model: "IntelliTouch", category: "Pool / Spa" },
+        ], connections: [] };
+      const r2 = importBlueprinted(bp2), d2 = r2.job.solutions[0].racks[0].devices, of = re => d2.find(d => re.test(d.model));
+      t("blueprinted/savant: a VIMAP8S is Savant's 8-input IP video transmitter, an AIO1C an AVB audio endpoint, a WattBox strip is power",
+        of(/VIMAP8S2/)?.type === "videoMatrix" && of(/VIMAP8S2/)?.catalogRef === "savant-pav-vimap8s" && of(/AIO1C/)?.type === "audioInputModule"
+        && of(/WB-800VPS/)?.type === "power" && !of(/IntelliTouch/) && r2.unmapped.some(u => /Pool \(Pool \/ Spa\)/.test(u)));
+    }
     // PoE boxes on a switch that can't power them: pick injectors or local supplies, box by box
     const H = await import("./hookup.js"), XP = await import("./exports.js"), CAT = await (await fetch("./catalog.json")).json();
     const adv = () => { const L = loadJob(structuredClone(r.job)); return { L, a: advise(L.job, L.ix, CAT) }; };

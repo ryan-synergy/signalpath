@@ -5608,6 +5608,56 @@
       ],
       "portsSource": "https://www.avproglobal.com/products/ac-axion-8 (high confidence, rear-panel audit 2026-09-29)",
       "goTo": true
+    },
+    "savant-pav-vimap8s": {
+      "brand": "Savant",
+      "model": "PAV-VIMAP8S-10",
+      "type": "videoMatrix",
+      "inputs": {
+        "hdmi": 8
+      },
+      "outputs": {
+        "hdmi": 24
+      },
+      "flags": [
+        "savantIpVideo",
+        "legacyOnImport"
+      ],
+      "verified": true,
+      "partNo": "PAV-VIMAP8S-10",
+      "aliases": [
+        "PAV-VIMAP8S",
+        "PAV-VIMAP8S2",
+        "PAV-VIMAP8S2-00"
+      ],
+      "rackUnits": 3,
+      "notes": "Savant Pro AV IP Video 8-input transmitter (4K UHD) with audio processing and control: 8 HDMI inputs (one IR + one RS-232 per input), SFP+ to the 10Gb network, audio out over AVB (RJ45); TVs get Savant IP video receivers on the 10G network. 3U, 17.3\" W x 14.24\" D, 14.5 lb, 100-240V 5A max. SignalPath has no Savant IP-video platform, so on an imported job it's drawn as an 8-in video distributor — its 24 'outputs' stand in for its IP streams (any number of receivers can join them); replace it with the new design's video system. Sources: manualslib Savant PAV-VIMAP8S QRG; Wave Electronics PAV-VIMAP8S-10 / PAV-VIMAP8S2-00 listings (checked 2026-10-03).",
+      "depthIn": 14.24,
+      "depthSource": "Savant PAV-VIMAP8S QRG via manualslib (checked 2026-10-03)"
+    },
+    "savant-pav-aio1c": {
+      "brand": "Savant",
+      "model": "PAV-AIO1C-00",
+      "type": "audioInputModule",
+      "inputs": {
+        "analog": 1
+      },
+      "outputs": {
+        "analog": 1
+      },
+      "flags": [
+        "avb",
+        "ipAudio",
+        "poe"
+      ],
+      "verified": true,
+      "partNo": "PAV-AIO1C-00",
+      "aliases": [
+        "PAV-AIO1C"
+      ],
+      "rackUnits": 0,
+      "notes": "Savant IP Audio Single In and Out (AVB endpoint): a bi-directional line-level converter between one IP-audio (AVB) channel and analog / digital audio; 24-bit/96 kHz; PoE Class 3 (802.3af) on its RJ45. A small box, not a rack unit (shelf it or mount it behind gear). Sources: rgbcomms SS-PAV-AIO1C, Savant IP Audio Deployment Guide 009-1571-09 (checked 2026-10-03).",
+      "rackNote": "small PoE box — on a shelf or behind gear, no rack space"
     }
   },
   "licensing": {

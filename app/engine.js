@@ -510,8 +510,12 @@ export function validate(job, ix = indexJob(job)) {
         }
       }
       const zonesUsed = feeds.reduce((n, f) => n + feedZones(f), 0);
-      if (amp?.zones && zonesUsed > amp.zones)
-        E("amp-over", `${nm(ampId)}: ${zonesUsed} zones assigned but it only has ${amp.zones}`, ampId);
+      if (amp?.zones && zonesUsed > amp.zones) {
+        // name the rooms that don't fit: on outputs past the last pair, else the last ones added (2026-10-03 hammer)
+        const past = feeds.filter(f => expandChannels(f.channels).some(ch => ch > amp.zones * 2));
+        const over = (past.length ? past : feeds.slice(-(zonesUsed - amp.zones))).map(f => nm(f.to).replace(/ speakers$/, ""));
+        E("amp-over", `${nm(ampId)} has ${amp.zones} zones but ${zonesUsed} are needed — move ${over.join(", ")} to another amp`, ampId);
+      }
     }
 
     // a local return encoder with no backhaul is a silently dead return in the field

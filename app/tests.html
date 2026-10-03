@@ -897,6 +897,10 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     const amps = sol.racks.flatMap(r => r.devices).filter(d => d.type === "amp");
     const unfed = j.house.zones.filter(z => !Hk.readHookup(j, sol, z).speakers).map(z => z.name);
     t("quick-add: ten stereo rooms on an 8-zone amp — a second amp joins, nobody is left unfed", amps.length === 2 && !unfed.length, `${amps.length} amps, unfed: ${unfed}`);
+    { const jo = structuredClone(j), so = jo.solutions[0], kz = jo.house.zones.find(z => z.name === "K");
+      Hk.setSpeakers(jo, so, kz, amps[0].id, "17-18");
+      const Lo = loadJob(effectiveJob(jo, 0)), msg = validate(Lo.job, Lo.ix).errors.map(e => e.msg).find(m => /zones but/.test(m)) || "";
+      t("an amp with one room too many names that room (it's on outputs past the end)", /move K to another amp/.test(msg), msg); }
     t("names: two identical amps are told apart in every picker", new Set(amps.map(d => Nn.describeNode(j, sol, d.id).short)).size === 2, amps.map(d => Nn.describeNode(j, sol, d.id).short).join(" | "));
     j = Cm.planCommands(j, 0, [{ op: "add_device", product: "Apple TV", name: "Apple TV 9", type: "source" }], CATp).job; sol = j.solutions[0];
     const atv = sol.racks.flatMap(r => r.devices).find(d => d.model === "Apple TV 9");

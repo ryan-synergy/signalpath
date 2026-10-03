@@ -610,29 +610,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003051054",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003051054",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003051054",
-    "./app/ports.js": "./app/ports.js?v=20261003051054",
-    "./app/commands.js": "./app/commands.js?v=20261003051054",
-    "./app/engine.js": "./app/engine.js?v=20261003051054",
-    "./app/exports.js": "./app/exports.js?v=20261003051054",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003051054",
-    "./app/hookup.js": "./app/hookup.js?v=20261003051054",
-    "./app/importers.js": "./app/importers.js?v=20261003051054",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003051054",
-    "./app/library.js": "./app/library.js?v=20261003051054",
-    "./app/names.js": "./app/names.js?v=20261003051054",
-    "./app/network.js": "./app/network.js?v=20261003051054",
-    "./app/pages.js": "./app/pages.js?v=20261003051054",
-    "./app/power.js": "./app/power.js?v=20261003051054",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003051054",
-    "./app/rack.js": "./app/rack.js?v=20261003051054",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003051054",
-    "./app/starters.js": "./app/starters.js?v=20261003051054",
-    "./app/kinds.js": "./app/kinds.js?v=20261003051054",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003051054",
-    "./app/sheets.js": "./app/sheets.js?v=20261003051054"
+    "./app/ai.js": "./app/ai.js?v=20261003051408",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003051408",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003051408",
+    "./app/ports.js": "./app/ports.js?v=20261003051408",
+    "./app/commands.js": "./app/commands.js?v=20261003051408",
+    "./app/engine.js": "./app/engine.js?v=20261003051408",
+    "./app/exports.js": "./app/exports.js?v=20261003051408",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003051408",
+    "./app/hookup.js": "./app/hookup.js?v=20261003051408",
+    "./app/importers.js": "./app/importers.js?v=20261003051408",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003051408",
+    "./app/library.js": "./app/library.js?v=20261003051408",
+    "./app/names.js": "./app/names.js?v=20261003051408",
+    "./app/network.js": "./app/network.js?v=20261003051408",
+    "./app/pages.js": "./app/pages.js?v=20261003051408",
+    "./app/power.js": "./app/power.js?v=20261003051408",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003051408",
+    "./app/rack.js": "./app/rack.js?v=20261003051408",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003051408",
+    "./app/starters.js": "./app/starters.js?v=20261003051408",
+    "./app/kinds.js": "./app/kinds.js?v=20261003051408",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003051408",
+    "./app/sheets.js": "./app/sheets.js?v=20261003051408"
 } }
 </script>
 <script>
@@ -855,7 +855,7 @@ import { rackReference, fitRacks, rackOption, RACK_CLEARANCE, RACK_OPTIONS } fro
 import { STARTERS, applyStarter, starterFromJob, listStarters, duplicateStarter, kitRemoveDevice, kitDuplicateDevice, kitAddDevice } from "./app/starters.js";
 import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/commands.js";
 import { askClaude, handoffPrompt, extractProposal, jobSummary, assess, loadConn, saveConn, connReady, MODELS, quoteRequest, quoteAttachment } from "./app/ai.js";
-import { setDanteAudio, danteAmpFor, encodeSource, removeRackDevice, followReturn } from "./app/hookup.js";
+import { setDanteAudio, danteAmpFor, encodeSource, removeRackDevice, followReturn, feedAmp } from "./app/hookup.js";
 import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, quickFixes, adapterAudioOut, adapterAudioTargets, setAdapterAudio, addLocalAmp, nextFreeOutputs, outputsNeeded,
          VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS, REACH, bulletFor } from "./app/hookup.js";
 import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME, AUDIO_NET_NAME,
@@ -891,7 +891,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003051054").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003051408").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -2471,18 +2471,22 @@ function hookupHTML(z, sol, multi) {
     // eARC rides the receiver's HDMI (default); optical is a pulled Toslink run,
     // alone or as a backup — only offered where it can exist
     const rcv = byDev(h.video?.from)?.type === "avr" ? byDev(h.video.from) : null;
-    const cur = h.audioBack === "optical" ? `optical:${h.ret.to}` : h.audioBack;
-    const kitElsewhere = h.audioBack === "earc-kit" && h.ret.to !== rcv?.id;   // the kit into a receiver that no longer feeds the TV
+    // the receiver driving this room's speakers (an MXNet TV's room receiver isn't the one feeding its picture)
+    const roomAvr = devs.find(d => d.type === "avr" && (sol.connections || []).some(c => c.from === d.id && c.signal === "speaker" && c.to === h.spk?.id));
+    const cur = h.audioBack === "optical" ? `optical:${h.ret.to}` : h.audioBack === "earc-kit" && h.ret?.to !== rcv?.id ? `earc-kit:${h.ret.to}` : h.audioBack;
+    const kitElsewhere = h.audioBack === "earc-kit" && h.ret.to !== rcv?.id && h.ret.to !== roomAvr?.id;   // the kit into a receiver that no longer feeds the TV
+    const mineRet = d => d.id === rcv?.id || d.id === roomAvr?.id || d.type !== "avr" || cur === `optical:${d.id}` || !(sol.connections || []).some(c => c.from === d.id && c.signal === "speaker");
     // the TV's own room's receiver first; a projector has no eARC to send back (2026-10-03)
-    const optTargets = devs.filter(d => RETURN_TO.includes(d.type)).sort((a, b) => (b.id === rcv?.id) - (a.id === rcv?.id));
+    const optTargets = devs.filter(d => RETURN_TO.includes(d.type)).sort((a, b) => (b.id === (rcv || roomAvr)?.id) - (a.id === (rcv || roomAvr)?.id));
     gist.push(h.audioBack === "optical" ? "optical back" : h.audioBack === "none" || !h.audioBack ? "no audio back" : (AUDIO_BACK[h.audioBack] || h.audioBack).replace(/\s*\(.*\)$/, ""));
     fine.push(field("TV audio back", `<select class="hret">
       ${rcv && h.tv.displayType !== "projector" ? opt("earc", `${AUDIO_BACK.earc} (to ${nm(rcv.id)})`, cur) + opt("earc+optical", `${AUDIO_BACK["earc+optical"]} (to ${nm(rcv.id)})`, cur)
         + opt("earc-kit", `${AUDIO_BACK["earc-kit"]} (to ${nm(rcv.id)})`, cur) : ""}
-      ${optTargets.filter(d => d.id === rcv?.id || d.type !== "avr" || cur === `optical:${d.id}` || !(sol.connections || []).some(c => c.from === d.id && c.signal === "speaker")).map(d => opt(`optical:${d.id}`, `Optical only → ${nm(d.id)}`, cur)).join("")}
-      ${(() => { const rest = optTargets.filter(d => !(d.id === rcv?.id || d.type !== "avr" || cur === `optical:${d.id}` || !(sol.connections || []).some(c => c.from === d.id && c.signal === "speaker")));
+      ${!rcv && roomAvr && h.tv.displayType !== "projector" ? opt(`earc-kit:${roomAvr.id}`, `${AUDIO_BACK["earc-kit"]} (to ${nm(roomAvr.id)})`, cur) : ""}
+      ${optTargets.filter(mineRet).map(d => opt(`optical:${d.id}`, `Optical only → ${nm(d.id)}`, cur)).join("")}
+      ${(() => { const rest = optTargets.filter(d => !mineRet(d));
         return rest.length ? `<optgroup label="Another room's receiver" data-search="1">${rest.map(d => opt(`optical:${d.id}`, `Optical only → ${nm(d.id)}`, cur)).join("")}</optgroup>` : ""; })()}
-      ${kitElsewhere ? opt("earc-kit", `${AUDIO_BACK["earc-kit"]} (to ${nm(h.ret.to)})`, cur) : ""}
+      ${kitElsewhere ? opt(`earc-kit:${h.ret.to}`, `${AUDIO_BACK["earc-kit"]} (to ${nm(h.ret.to)})`, cur) : ""}
       ${opt("none", AUDIO_BACK.none, cur)}</select>`));
     if (h.audioBack === "earc-kit")
       fine.push(`<div class="mini" style="margin:-2px 0 6px 80px">AVPro AC-AEX-DEARC-KIT: TX on the TV's eARC HDMI port, one Cat6A home, RX into a receiver HDMI input (RX DIP 2 = HDMI OUT). Video goes into another TV input.</div>`);
@@ -3564,6 +3568,7 @@ function wirePanel(body) {
         const sol = S.job.solutions[S.sol], c = EC.devices?.[ref];
         const area = (S.job.house.areas || []).find(a => a.id === z?.area);
         const id = addRackDevice(S.job, sol, type, c ? productName(c) : generic, { ...(c ? { catalogRef: ref } : {}), ...(c?.zones ? { zones: c.zones } : {}), ...(area?.homeRack ? { rackId: area.homeRack } : {}) });
+        if (type === "amp" && !sol.audioNetwork) feedAmp(S.job, sol, id);   // on an MXNet rack: its audio decoder, so it isn't born silent
         S.editLabel = `Add ${c ? productName(c) : generic}${z ? " — " + z.name : ""}`;
         if (z) then(z, sol, id);
         refresh();
@@ -3585,8 +3590,14 @@ function wirePanel(body) {
       (sol.localDevices ||= []).push({ id: v, type: "source", sourceType: "appletv", model: "Apple TV", status: "new", zone: z.id, location: "at-display" });
     }
     if (v.startsWith("__new_")) { newDev(el, v, (z, sol, id) => { setVideo(S.job, sol, z, id); followReturn(S.job, sol, z); }); return; }
+    const hadDante = !!readHookup(S.job, sol, z).dante;
     setVideo(S.job, sol, z, v || null);
     followReturn(S.job, sol, z);
+    // a Dante room re-fed: its sound goes back on Dante (unhooking the TV had dropped the Dante leg with its decoder)
+    const h2 = readHookup(S.job, sol, z);
+    if (hadDante && !h2.dante && !v) z.danteWas = true;            // remembered so picking a feed again restores it
+    else if (v && (hadDante || z.danteWas) && !h2.dante) { setDanteAudio(S.job, sol, z, h2.spk ? danteAmpFor(S.job, sol, z) : null); delete z.danteWas; }
+    else if (h2.dante) delete z.danteWas;
     if (!v) delete z.endpoints.find(e => e.type === "display")?.ownApps;
   }));
   body.querySelectorAll(".hsfrom").forEach(el => el.onchange = () => hook(el, (z, sol) => {

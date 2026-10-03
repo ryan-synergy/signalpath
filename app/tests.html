@@ -1346,6 +1346,22 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t("remotes: a control line never changes a TV room's card size (it lives in the bottom pad); a small card carries the remote's picture on its band instead",
       mz.w === m0.w && mz.h === m0.h && ss.includes(">Control · Control4 remote</text>") && /class="controlline" data-remote="josh"><title>Control · Josh\.ai remote<\/title>/.test(ss), `${mz.w}x${mz.h} vs ${m0.w}x${m0.h}`);
   }
+  { // wires stay off the words (Ryan 2026-10-03: "wirings that run in front of captions and texts … that can't work")
+    const Q = await import("./commands.js"), St = await import("./starters.js"), Im = await import("./importers.js"), CATw = await (await fetch("./catalog.json")).json();
+    const kit = St.STARTERS.find(k => k.id === "theater-receiver");
+    const jw = Q.planCommands(St.applyStarter(Im.skeletonJob("t"), kit, CATw), 0, [{ op: "add_zones", text: "family room 5.1 75 sony, master 75 sonos arc with sub and rears, den 65 soundbar, guest 55 sonos beam, kitchen stereo 55, office 50" }], CATw).job;
+    const over = [];
+    for (const st of ["bundle", "ribbon"]) { const x = structuredClone(jw); x.job.trunkStyle = st;   // Off: rack-box captions aren't kept clear yet (doing it cost a legal route on the random jobs)
+      const Lw = loadJob(x), pw = enginePlace(Lw.job, Lw.ix), rw = engineRoute(Lw.job, Lw.ix, pw), boxes = [];   // the engine's own calls: the job's trunk style applies
+      for (const z of pw.zones) for (const g of z.groups) if (g.caption) { const w = String(g.caption).length * 5.8 + (g.mount ? 22 : 0); boxes.push({ id: z.id + " " + g.caption, x: z.x + g.cx - w / 2, y: z.y + g.captionY - 10, w, h: 13 }); }
+      for (const r of pw.racks) for (const d of r.devices) if (d.kind === "small") { const w = Math.min(String(d.model || "").length * 6.6, d.w + 36); boxes.push({ id: d.id + " caption", x: d.x + d.w / 2 - w / 2, y: d.y + d.h + 4, w, h: 13 }); }
+      for (const w of rw.wires) { if (/fallback/.test(w.cls)) continue; for (let i = 1; i < w.pts.length; i++) { const a = w.pts[i - 1], b = w.pts[i];
+        for (const o of boxes) if (Math.min(a[0], b[0]) < o.x + o.w && Math.max(a[0], b[0]) > o.x && Math.min(a[1], b[1]) < o.y + o.h && Math.max(a[1], b[1]) > o.y) over.push(`${st}: ${w.id} over ${o.id}`); } }
+      if (st === "bundle") { const link = rw.wires.find(w => w.insideCard && /-tv/.test(w.from) && /-spk/.test(w.to));
+        t("wires: a TV's link to its soundbar runs straight across at the bar's height (it used to dip under and through both captions)", !!link && link.pts.length === 2 && link.pts[0][1] === link.pts[1][1], JSON.stringify(link?.pts)); }
+    }
+    t("wires: no routed wire runs through a caption under a TV, a speaker group or a rack box — in Bundle or Ribbon", over.length === 0, over.slice(0, 6).join(" | "));
+  }
   { // soundbars say what they are (2026-10-03): powered on the TV, passive L·C·R on a receiver, Sonos by model with its Sub and rears
     const Q = await import("./commands.js"), St = await import("./starters.js"), Im = await import("./importers.js"), CATq = await (await fetch("./catalog.json")).json();
     const kit = St.STARTERS.find(k => k.id === "theater-receiver");

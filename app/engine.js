@@ -633,9 +633,9 @@ function speakerGroupSize(ep, gs = 1, bar = null) {
     // set with a Sub and rears is drawn as the set
     const sub = cfg === "soundbar-sub", kind = bar || "powered";
     if (kind === "sonos") { const model = SONOS_BARS[ep.barModel] || "", rears = !!ep.rears;
-      return sz({ w: rears ? 150 : 90, h: rears ? 48 : SPK, bar: kind, caption: cap(`Sonos ${model || "soundbar"}${sub ? " + Sub" : ""}${rears ? " + rears" : ""}`.replace("  ", " ")) }); }
+      return sz({ w: rears ? 150 : 90, h: rears ? 48 : SPK, bar: kind, linkY: Math.round((rears ? 37 : 16) * gs), linkInset: rears ? Math.round(12 * gs) : 0, caption: cap(`Sonos ${model || "soundbar"}${sub ? " + Sub" : ""}${rears ? " + rears" : ""}`.replace("  ", " ")) }); }
     // (the footprint stays what a soundbar always took — 90 wide — so no drawing re-lays itself over the new look)
-    return sz({ w: 90, h: SPK, bar: kind, caption: cap(`${kind === "passive" ? "Passive" : "Powered"} soundbar${sub ? " + Sub" : ""}`) });
+    return sz({ w: 90, h: SPK, bar: kind, linkY: Math.round(16 * gs), caption: cap(`${kind === "passive" ? "Passive" : "Powered"} soundbar${sub ? " + Sub" : ""}`) });
   }
   if (cfg === "landscape") {
     const sats = satCount(ep), subs = ep.buriedSub ? 1 : 0;
@@ -1387,7 +1387,7 @@ function routeOnce(job, ix, placement, opts = {}) {
     ...P.racks.flatMap(r => r.devices.map(d => ({ id: d.id, x: d.x, y: d.y, w: d.w, h: d.h }))),
     // a small tile's caption (its model, up to 18 px wider than the tile each side) — a wire through it cuts the
     // text. Trunk drawings only: the classic router has less room to move and lost routes to it (2 → 5 fallbacks)
-    ...(trunkMode(job, opts) ? P.racks.flatMap(r => r.devices.filter(d => d.kind === "small").map(d => ({ id: d.id + ":caption", x: d.x - 18, y: d.y + d.h + 3, w: d.w + 36, h: 15 }))) : []),
+    ...(trunkMode(job, opts) ? P.racks.flatMap(r => r.devices.filter(d => d.kind === "small").map(d => ({ id: d.id + ":caption", x: d.x - 18, y: d.y + d.h + 3, w: d.w + 36, h: 19 }))) : []),   // 19, not 15: a wire along the old bottom edge ran on the caption's baseline
     ...P.chips.map(c => ({ id: c.id, x: c.x, y: c.y, w: c.w, h: c.h })),
     ...P.zones.map(z => ({ id: z.id, x: z.x, y: z.y, w: z.w, h: z.h })),
   ];
@@ -1695,9 +1695,16 @@ function routeOnce(job, ix, placement, opts = {}) {
       // the card — down from the display, across, up into the speaker group
       const a = slotOf(conn.from), t = slotOf(conn.to);
       const pz = a.pz;
+      // a soundbar beside its TV: straight across from the bar's end to the TV's edge, at the bar's own height — the
+      // old route dipped under both and ran through their captions (Ryan 2026-10-03: "that can't work. Looks sloppy")
+      const ly = t.g.linkY != null ? pz.y + t.g.y + t.g.linkY : null, tvL = pz.x + a.g.x, tvR = tvL + a.g.w, barL = pz.x + t.g.x + (t.g.linkInset || 0), barR = pz.x + t.g.x + t.g.w - (t.g.linkInset || 0);
+      if (ly != null && ly > pz.y + a.g.y + 2 && ly < pz.y + a.g.y + a.g.h - 2 && (barR <= tvL || barL >= tvR))
+        commit(conn, "local", barR <= tvL ? [[tvL, ly], [barR, ly]] : [[tvR, ly], [barL, ly]], { insideCard: pz.id });
+      else {
       const yb = pz.y + Math.max(a.g.y + a.g.h, t.g.y + t.g.h) + 8;
       commit(conn, "local", [[pz.x + a.g.cx - 14, pz.y + a.g.y + a.g.h], [pz.x + a.g.cx - 14, yb],
         [pz.x + t.g.cx, yb], [pz.x + t.g.cx, pz.y + t.g.y + t.g.h]], { insideCard: pz.id });
+      }
       done.add(i);
     } else if (ix.endpointsById[conn.from] && s.locals[conn.to]) {
       // display → local return encoder: the return is handled AT the TV;

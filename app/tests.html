@@ -2648,6 +2648,11 @@ for (const [name, raw] of Object.entries(fixtures)) {
     svg.includes("NOTES") && svg.split(`>${esc4(noteText)}</text>`).length === 2);
   t("keynotes: the note's number appears twice — the badge on the room and the legend entry",
     svg.split('font-weight="700" fill="#fff">1</text>').length === 3 && svg.includes('class="notemark" data-note="0" data-near="z-gym"'));
+  { // the speaker look Ryan picked from concepts (2026-10-03): yellow cone, thin dark rim, sound lines per group, a glint on the TV
+    const svgB = render(job, ix, p, route(job, ix, p), { grayscale: true });
+    t("look: speakers have a yellow cone (light gray in B&W), sound lines beside a group with room, a reflection on each TV",
+      svg.includes('fill="#ffd93b"') && !svgB.includes("#ffd93b") && /a9 9 0 0 1 0 14/.test(svg) && (svg.match(/stroke-opacity="0.6" stroke-width="1.8"/g) || []).length === p.zones.flatMap(z => z.groups).filter(g => g.kind === "display").length);
+  }
   { // notes on boxes, pinned callouts, crew-only (Ryan 2026-10-03)
     const r = structuredClone(fixtures.residence), sol = r.solutions[0], dev = sol.racks[0].devices.find(d => d.id === "mrx540");
     sol.annotations.push({ text: "Leave 6 in. behind this for the conduit stub and the future generator transfer switch feed", near: dev.id, pinned: true, crew: true }, { text: "  ", near: "z-family" });

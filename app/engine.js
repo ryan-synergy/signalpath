@@ -4122,9 +4122,11 @@ export function render(job, ix, P, rt, opts = {}) {
     <path d="M0.5 0V60M0 0.5H60" stroke="#e3e5eb" stroke-width="1" fill="none"/>
   </pattern>
   <linearGradient id="tvg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d6e4f2"/><stop offset="1" stop-color="#9dbcd9"/></linearGradient>
-  <g id="spk"><circle r="16" fill="#2d2d2d" stroke="#151515"/><circle r="9.5" fill="#8f8f8f" stroke="#3a3a3a"/><circle r="3" fill="#2d2d2d"/></g>
-  <g id="spks"><circle r="10" fill="#2d2d2d" stroke="#151515"/><circle r="6" fill="#8f8f8f" stroke="#3a3a3a"/><circle r="1.8" fill="#2d2d2d"/></g>
-  <g id="sub"><rect x="-15" y="-15" width="30" height="30" rx="3" fill="#2d2d2d" stroke="#151515"/><circle r="9" fill="#8f8f8f" stroke="#3a3a3a"/><circle r="2.6" fill="#2d2d2d"/></g>
+  ${/* speakers (Ryan 2026-10-03, picked from concepts): a big flat yellow cone inside a thin dark rim — the cone, not the
+       rim, is what you see — with the white glint on the rim (on the cone it read as a bulge). Light gray in B&W. */""}
+  <g id="spk"><circle r="16" fill="#3f3f3f" stroke="#222" stroke-width="1.2"/><circle r="12" fill="${bw ? "#d9d9d9" : "#ffd93b"}" stroke="#222" stroke-width="0.9"/><circle r="3.3" fill="#2a2a2a"/><path d="M-12.6 -6.2a14 14 0 0 1 6.4 -6.4" fill="none" stroke="#fff" stroke-opacity="0.8" stroke-width="1.2" stroke-linecap="round"/></g>
+  <g id="spks"><circle r="10" fill="#3f3f3f" stroke="#222" stroke-width="1"/><circle r="7.4" fill="${bw ? "#d9d9d9" : "#ffd93b"}" stroke="#222" stroke-width="0.8"/><circle r="2" fill="#2a2a2a"/></g>
+  <g id="sub"><rect x="-15" y="-15" width="30" height="30" rx="3" fill="#3f3f3f" stroke="#222" stroke-width="1.2"/><circle r="10.5" fill="${bw ? "#d9d9d9" : "#ffd93b"}" stroke="#222" stroke-width="0.9"/><circle r="3" fill="#2a2a2a"/></g>
 </defs>`);
 
   /* sheet frame */
@@ -4294,12 +4296,23 @@ export function render(job, ix, P, rt, opts = {}) {
       if (g.kind === "display") {
         const f = Math.min(gls, 1.15);   // the TV's words grow a little with it
         push(`<rect x="${gx}" y="${gy}" width="${g.w}" height="${g.h}" fill="url(#tvg)" stroke="#556" stroke-width="1.2"/>`);
+        // a quiet reflection in the screen's top-left corner
+        push(`<path d="M${gx + 6} ${gy + 19}L${gx + 21} ${gy + 6}M${gx + 7} ${gy + 29}L${gx + 33} ${gy + 6}" stroke="#fff" stroke-opacity="0.6" stroke-width="1.8" stroke-linecap="round"/>`);
         push(`<text x="${gx + g.w / 2}" y="${gy + g.h / 2 - 3 * f}" text-anchor="middle" font-size="${+(11 * f).toFixed(1)}" fill="#233">${esc(g.brand)}</text>`);
         push(`<text x="${gx + g.w / 2}" y="${gy + g.h / 2 + 13 * f}" text-anchor="middle" font-size="${+(12 * f).toFixed(1)}" font-weight="600" fill="#233">${esc(g.sizeText)}</text>`);
       } else if (g.kind === "speakers") {
         // the glyphs are drawn at 1× and scaled with their group (TVs + speakers 25% bigger)
         const sg = speakerGlyphs(ix.endpointsById[g.epId], gx, gy, g.w / gls);
         push(gls === 1 ? sg : `<g transform="translate(${gx} ${gy}) scale(${gls}) translate(${-gx} ${-gy})">${sg}</g>`);
+        // sound lines, once per group (not per speaker), on each side that has the room for them
+        const cfg = ix.endpointsById[g.epId]?.config || "stereo";
+        if (!cfg.startsWith("soundbar")) {
+          const cy = gy + (/^surround/.test(cfg) ? 35 : 16) * gls, others = z.groups.filter(o => o !== g);
+          const leftEdge = Math.max(0, ...others.filter(o => o.x + o.w <= g.x + 1).map(o => o.x + o.w)), rightEdge = Math.min(z.w, ...others.filter(o => o.x >= g.x + g.w - 1).map(o => o.x));
+          const arcs = (x0, dir) => [[7, 9, 0], [12, 15, 5]].map(([h, r, dx]) => `<path d="M${+(x0 + dir * dx).toFixed(1)} ${+(cy - h).toFixed(1)}a${r} ${r} 0 0 ${dir > 0 ? 1 : 0} 0 ${h * 2}" fill="none" stroke="${gray ? "#aaa" : "#555"}" stroke-width="1.3" stroke-linecap="round"/>`).join("");
+          if (rightEdge - (g.x + g.w) >= 15) push(arcs(gx + g.w + 3, 1));
+          if (g.x - leftEdge >= 15) push(arcs(gx - 3, -1));
+        }
       }
       for (const l of g.locals || (g.local ? [g.local] : [])) {
         const ldev = s.locals[l.deviceId] || {};

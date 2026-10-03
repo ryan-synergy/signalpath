@@ -762,6 +762,45 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     sol.poePower = { ...sol.poePower, x: "bogus", [f.ids[0]]: "laser" };
     t("poe: junk choices are dropped on load", Object.values(loadJob(structuredClone(r.job)).job.solutions[0].poePower || {}).every(v => ["injector", "psu"].includes(v)));
   }
+  { // Markdown import (2026-10-02): an AI's design, a tech's notes, a PlanQueue file, an AI review — rooms wired like quick-add
+    const MD = await import("./mdimport.js"), XM = await import("./exports.js"), CATM = await (await fetch("./catalog.json")).json();
+    const D = String.fromCharCode(36);
+    const claude = ["# Johnson Residence — AV Design", "**Client:** Mark Johnson", "**Address:** 42 Ocean View Dr", "**Control platform:** Savant", "",
+      "## Room-by-Room", "### Main Level", "- **Great Room** — 7.1 surround with an 85\" Sony Bravia", "- **Kitchen** — stereo (4 in-ceiling speakers)",
+      "### Upper Level", "- **Primary Suite** — 77\" LG OLED, 5.1 surround", "### Outdoor", "- **Patio** — landscape with 8 satellites, 75\" SunBrite", "",
+      "## Equipment Rack", "| Qty | Manufacturer | Model | Purpose |", "|---|---|---|---|", "| 1 | Anthem | MDX-16 | Audio |", "| 1 | AVPro Edge | AC-MXNET-1G-SW8P | Video |",
+      "| 3 | Apple | Apple TV 4K | Sources |", `| 1 | Middle Atlantic | 42U rack | ${D}1,999 |`, "", "## Notes", `- Pricing: ${D}48,500 estimated`].join("\n");
+    const r = MD.importMarkdown(claude, CATM), j = r.job, z = n => j.house.zones.find(x => x.name === n), sp = n => z(n)?.endpoints.find(e => e.type === "speakers"), tv = n => z(n)?.endpoints.find(e => e.type === "display");
+    t("md: the title is the job, Client / Address / platform come in", j.job.name === "Johnson Residence" && j.job.client.name === "Mark Johnson" && /Ocean View/.test(j.job.client.address) && j.solutions[0].platforms[0] === "savant");
+    t("md: rooms keep the name as written, on their floors", ["Great Room", "Kitchen", "Primary Suite", "Patio"].every(n => z(n)) &&
+      j.house.areas.length === 3 && j.house.areas.find(a => a.id === z("Patio").area)?.name === "Outdoor");
+    t("md: speakers and TVs read (7.1 + 85 Sony, 4 in-ceiling = 4, landscape)", sp("Great Room").config === "surround-7.1" && tv("Great Room").size === 85 && tv("Great Room").brand === "Sony" &&
+      sp("Kitchen").count === 4 && sp("Patio").config === "landscape");
+    const models = j.solutions[0].racks[0].devices.map(d => d.model);
+    t("md: rack table → catalog gear with quantities; a near-miss part number is read and flagged", models.filter(m => /APPLE TV/i.test(m)).length === 3 &&
+      models.some(m => /AC-MXNET-SW8P/.test(m)) && r.warnings.some(w => /isn't a catalog part/.test(w)));
+    t("md: the rack itself is a note, never a box; no money anywhere in the job", !models.some(m => /Middle Atlantic/i.test(m)) && r.notes.some(n => /Middle Atlantic/.test(n)) &&
+      !JSON.stringify(j).includes(D));
+    { const L = loadJob(structuredClone(j)); t("md: an AI's design comes in wired — zero errors", validate(L.job, L.ix).errors.length === 0); }
+    const email = MD.importMarkdown("Hi!\n\nIn the great room we'll install a 7.1 surround setup with an 85-inch Sony. The kitchen gets stereo speakers. We've designed your home theater in the basement with a 7.1.4 Atmos system and a 120-inch projector.\n\nFor the rack, we're specifying an Anthem MRX 1140 receiver, two Apple TV 4K boxes, and an Anthem MDX-16 for the theater power needs.\n\nBest,\nTech", CATM);
+    t("md: an email in sentences — rooms by name, the rack sentence → gear", email.job.house.zones.map(x => x.name).join("|") === "great room|kitchen|home theater".replace(/\b\w/g, c => c) ||
+      ["great room", "kitchen", "home theater"].every(n => email.job.house.zones.some(x => x.name.toLowerCase() === n)) && email.job.house.zones.length === 3 &&
+      email.job.solutions[0].racks[0].devices.filter(d => /APPLE TV/i.test(d.model)).length === 2);
+    const est = await (await fetch("../mock-system-estate.json")).json();
+    const pq = MD.importMarkdown(XM.planQueueFiles(est, 0, CATM)[0].text, CATM);
+    t("md: a PlanQueue file comes back — rooms, both racks, owner gear, sizes flagged to confirm", pq.job.solutions[0].racks.length === 2 &&
+      pq.job.house.zones.some(x => x.endpoints.some(e => e.type === "display" && e.confirm?.includes("size"))) &&
+      pq.job.house.zones.some(x => x.endpoints.some(e => e.status === "ofe")) && pq.notes.some(n => /adds these where they're needed/.test(n)));
+    const review = XM.aiReviewMarkdown(est, 0, CATM) + '\n```json\n{"commands": [{"op": "add_zones", "text": "gym stereo 50"}, {"op": "hookup", "zone": "nowhere"}]}\n```\n';
+    const rv = MD.importMarkdown(review, CATM);
+    t("md: an AI review with a command list → the same job plus the changes; a bad change is reported, not fatal", rv.kind === "signalpath" &&
+      rv.job.house.zones.length === est.house.zones.length + 1 && rv.warnings.some(w => /nowhere/.test(w)));
+    const brief = MD.importMarkdown(MD.designBrief(CATM), CATM);
+    t("md: the design brief itself imports clean", brief.job.house.zones.length === 7 && brief.job.house.areas.length === 3 && !brief.warnings.length && !brief.unmapped.length);
+    let msg = ""; try { MD.importMarkdown("just some words about nothing", CATM); } catch (e) { msg = e.message; }
+    t("md: text with nothing in it says how to write it", /Design brief/.test(msg));
+    t("md: AI JSON slop reads (comments, trailing commas, single quotes)", MD.looseJSON("// x\n{'a': 1, b: [2,],}")?.b?.[0] === 2);
+  }
   { // re-import merge: House refreshes, Solutions and endpoint ids survive
     const target = structuredClone(fixtures.residence);
     const walk = structuredClone(miniWalk);

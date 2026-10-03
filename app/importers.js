@@ -75,7 +75,7 @@ export function sniff(raw) {
 }
 
 /* ---------- shared skeleton ---------- */
-function skeletonJob(name, clientName, address) {
+export function skeletonJob(name, clientName, address) {
   const txt = v => typeof v === "string" || typeof v === "number" ? String(v) : "";   // a list/object here printed "[object Object]"
   name = txt(name); clientName = txt(clientName); address = txt(address);
   return {

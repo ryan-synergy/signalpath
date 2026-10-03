@@ -7,8 +7,8 @@ import { SPEAKER_SETUP, SCOPE_NAME } from "./names.js";
 const uid = p => p + "-" + Math.random().toString(36).slice(2, 7);
 const slug = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || uid("z");
 
-const BRANDS = ["sony", "samsung", "lg", "tcl", "vizio", "hisense", "panasonic", "sharp", "seura", "sunbrite", "c-seed"];
-const BRAND_LABEL = { lg: "LG", tcl: "TCL", "c-seed": "C SEED" };
+const BRANDS = ["sony", "samsung", "lg", "tcl", "vizio", "hisense", "panasonic", "sharp", "seura", "sunbrite", "c-seed", "epson", "jvc", "toshiba", "philips", "insignia", "dell", "barco", "optoma", "benq"];
+const BRAND_LABEL = { lg: "LG", tcl: "TCL", "c-seed": "C SEED", jvc: "JVC", benq: "BenQ" };
 // "#101" or "unit 4" is a room NUMBER, never a TV size. Words like suite/room
 // stay ambiguous on purpose — "family room 75" and "primary suite 85" are the
 // core dictation phrases — so a numbered suite is typed "suite #101".
@@ -21,12 +21,12 @@ const CONFIGS = {
 };
 // spoken forms → canonical tokens (dictation says "five one" / "five point one")
 const SPOKEN = [
-  [/\bfive\s*(point\s*)?one\s*(point\s*)?two\b/g, "5.1.2"],
-  [/\bseven\s*(point\s*)?one\s*(point\s*)?four\b/g, "7.1.4"],
-  [/\bfive\s*(point\s*)?one\b/g, "5.1"],
-  [/\bseven\s*(point\s*)?one\b/g, "7.1"],
-  [/\btwo\s*(point\s*)?one\b/g, "2.1"],
-  [/\btwo\s*(point\s*)?(oh|zero)\b/g, "2.0"],
+  [/\bfive[\s-]*(point[\s-]*)?one[\s-]*(point[\s-]*)?two\b/g, "5.1.2"],
+  [/\bseven[\s-]*(point[\s-]*)?one[\s-]*(point[\s-]*)?four\b/g, "7.1.4"],
+  [/\bfive[\s-]*(point[\s-]*)?one\b/g, "5.1"],
+  [/\bseven[\s-]*(point[\s-]*)?one\b/g, "7.1"],
+  [/\btwo[\s-]*(point[\s-]*)?one\b/g, "2.1"],
+  [/\btwo[\s-]*(point[\s-]*)?(oh|zero)\b/g, "2.0"],
   [/\bsound\s+bar(\s*(and|\+|with)?\s*sub)?\b/g, (m, sub) => sub ? "soundbar-sub" : "soundbar"],
 ];
 
@@ -41,7 +41,10 @@ function wordsToDigits(t) {
   t = t.replace(new RegExp(`\\b(?:a|one)\\s+hundred(?:\\s+and)?(?:\\s+(${W})(?:[\\s-]+(${W}))?)?\\b`, "g"), (m, a, b) =>
     String(100 + (TENS[a] ?? ONES[a] ?? 0) + (b ? ONES[b] ?? 0 : 0)));
   // "one twenty" / "one ten" — how a projector screen is said out loud
-  t = t.replace(new RegExp(`\\bone\\s+(ten|${Object.keys(TENS).join("|")})\\b`, "g"), (m, a) => String(100 + (a === "ten" ? 10 : TENS[a])));
+  // ("one thirty five" = 135, "one oh five" = 105 — the ones place counts too)
+  const ONE9 = Object.keys(ONES).filter(k => ONES[k] > 0 && ONES[k] < 10).join("|");
+  t = t.replace(new RegExp(`\\bone\\s+(?:oh|zero|o)\\s+(${ONE9})\\b`, "g"), (m, b) => String(100 + ONES[b]));
+  t = t.replace(new RegExp(`\\bone\\s+(ten|${Object.keys(TENS).join("|")})(?:[\\s-]+(${ONE9}))?\\b`, "g"), (m, a, b) => String(100 + (a === "ten" ? 10 : TENS[a]) + (b && a !== "ten" ? ONES[b] : 0)));
   t = t.replace(new RegExp(`\\b(${Object.keys(TENS).join("|")})(?:[\\s-]+(${Object.keys(ONES).filter(k => ONES[k] && ONES[k] < 10).join("|")}))?\\b`, "g"),
     (m, a, b) => String(TENS[a] + (b ? ONES[b] : 0)));
   return t.replace(new RegExp(`\\b(${Object.keys(ONES).join("|")})\\b`, "g"), (m, a) => String(ONES[a]));
@@ -52,7 +55,8 @@ const PHRASES = [
   [/\b(\d{2,3})\s*-?\s*(?:inches|inch|in\.|in(?=\s|$)|''|"|”)(?=[\s,]|$)/g, (m, n) => n],    // 65 inch / 65-inch / 65 in. / 65"
   [/\b(?:2|two)[\s-]*(?:channel|ch)\b/g, "2.0"], [/\b(?:5|five)[\s-]*(?:channel|ch)\b/g, "5.1"],
   [/\b(?:7|seven)[\s-]*(?:channel|ch)\b/g, "7.1"], [/\b2\s*ch\b/g, "2.0"],
-  [/\bstereo\s+pair\b/g, "stereo"], [/\b(?:dolby\s+)?atmos\b/g, "7.1.4"], [/\b7\.2\.4\b/g, "7.1.4"], [/\b5\.2\b/g, "5.1"], [/\b7\.2\b/g, "7.1"],
+  [/\bstereo\s+pair\b/g, "stereo"], [/\b(?:dolby\s+)?atmos\b|\b(?:ceiling\s+)?heights?(?:\s+(?:channels?|speakers?))?\b|\bheight\s+channels?\b/g, "__atmos"], [/\b7\.2\.4\b/g, "7.1.4"], [/\b5\.2\b/g, "5.1"], [/\b7\.2\b/g, "7.1"],
+  [/\bsound\s*bar\s*(?:\+|&|and|with|w\/)\s*(?:a\s+)?(?:sub(?:woofer)?)\b/g, "soundbar-sub"],
   [/\b(?:surround(?:\s+sound)?)\b/g, "__surround"],
   [/\btv\s+only\b/g, "tv"],
   [/\b(\d{1,2})\s+(?:(?:in-?)?ceiling|in-?wall|wall|outdoor|rock|bookshelf)\s+(speakers?)\b/g, (m, n, w) => `${n} ${w}`],
@@ -60,7 +64,7 @@ const PHRASES = [
 
 // words a sentence wraps around a room that aren't its name (Wispr Flow / dictation writes full sentences)
 const FILLER = new Set(["the", "a", "an", "with", "and", "in", "on", "of", "has", "have", "had", "is", "are", "was", "will", "be", "gets", "get",
-  "wants", "want", "needs", "need", "would", "like", "also", "plus", "only", "just", "audio", "sound", "speakers", "speaker", "system",
+  "wants", "want", "needs", "need", "would", "like", "also", "plus", "only", "just", "audio", "sound", "speakers", "speaker", "system", "screen", "display", "television", "monitor", "oled", "qled", "led", "lcd", "uhd", "4k", "8k", "bravia", "neo", "frame", "smart",
   "it", "its", "it's", "there", "that", "which", "for", "to", "some", "set", "setup", "up", "we", "they", "i", "it'll", "going", "goes", "using", "use"]);
 
 export function parseQuickZone(text) {
@@ -82,7 +86,7 @@ export function parseQuickZone(text) {
 
   if (eat(/\bprewire(d)?\b|\bpre-wire(d)?\b/)) { zone.scope = "prewire"; chips.push({ kind: "scope", label: SCOPE_NAME.prewire }); }
   if (eat(/\bfuture\b/)) { zone.scope = "future"; chips.push({ kind: "scope", label: SCOPE_NAME.future }); }
-  if (eat(/\bofe\b|\bexisting\b|\bowner\b(?!'s|s\b)/)) ofe = true;   // "owner's suite" is a room, not OFE
+  if (eat(/\b(?:customer|client|homeowner)[- ]?(?:supplied|provided|furnished|provides|supplies|owned)\b|\bofe\b|\bexisting\b|\bowner\b(?!'s|s\b)(?:[- ]?(?:supplied|provided|furnished))?/)) ofe = true;   // "owner's suite" is a room, not OFE
   if (eat(/\blocal\b/)) local = true;
   if (eat(/\bmatrix\b|\bdistributed\b/)) matrix = true;
   // "apps": the TV plays its own apps — no feed from the rack (a whole-home rack feeds every other TV)
@@ -111,7 +115,7 @@ export function parseQuickZone(text) {
     zone.remote = k === "savant" ? "savant" : k === "josh" ? "josh" : (k === "factory" || k === "oem") ? "factory" : "appletv";
     chips.push({ kind: "hint", label: (zone.remote === "appletv" ? "Apple TV" : zone.remote === "factory" ? "factory" : zone.remote) + " remote" });
   }
-  const noTv = !!eat(/\bno\s*tv\b|\baudio\s*only\b/);
+  const noTv = !!eat(/\bno\s*(?:video\s*)?(?:tv|display|screen|television|video)\b|\baudio\s*only\b|\bwithout (?:a )?(?:tv|display|screen)\b/);
   eat(/\bno\s+speakers?\b|\bvideo\s+only\b/);              // said on purpose: a TV-only room (the suggestions stop asking)
 
   // landscape with optional sat count: "landscape 8" / "landscape"
@@ -122,22 +126,41 @@ export function parseQuickZone(text) {
     spk = { config: "landscape", satCount: n ? +n : 6, buriedSub: true };
   }
 
-  // explicit configs
-  if (!spk) for (const [tok, cfg] of Object.entries(CONFIGS)) {
+  // where the speakers go is not a name: "4 in-ceiling speakers" = 4 speakers ("in ceiling", "in-wall", "outdoor rock")
+  t = t.replace(/\b(?:in[- ]?ceiling|in[- ]?wall|on[- ]?wall|ceiling|wall|outdoor|rock|bookshelf|architectural|surface[- ]?mount(?:ed)?)\s+(speakers?|spk)\b/g, () => " speakers ");
+  // "speakers 4" said the other way round (a small number only — "speakers 55" is a TV)
+  t = t.replace(/\b(speakers?)\s*(?:x\s*)?(\d{1,2})\b(?!\s*(?:"|''|in\b|inch|tv\b))/g, (m, w, n) => +n >= 1 && +n <= 12 ? ` ${n} speakers ` : m);
+  // Atmos / height channels: 7.1 + Atmos = 7.1.4; 5.1 + Atmos stays a 5.1 set (5.1.2); Atmos alone = 7.1.4
+  if (/__atmos/.test(t)) { t = t.replace(/__atmos/g, " "); if (!/(^|\s)(5\.1(\.2)?|7\.1\.4)(?=\s|$)/.test(t)) t = /(^|\s)7\.1(?=\s|$)/.test(t) ? t.replace(/(^|\s)7\.1(?=\s|$)/, " 7.1.4 ") : t + " 7.1.4 "; }
+  // "outdoor stereo", "4 in-ceiling stereo": where they go, and how many
+  t = t.replace(/\b(\d{1,2})\s+(?:in[- ]?ceiling|in[- ]?wall|ceiling|wall|outdoor|rock)\s+(?=stereo\b)/g, (m, n) => ` ${n} speakers `)
+    .replace(/\b(?:in[- ]?ceiling|in[- ]?wall|outdoor|rock|ceiling)\s+(?=stereo\b|mono\b|audio\b|music\b|pair\b)/g, " ");
+  // explicit configs (the richest first: "7.1.4" before "7.1")
+  const RICH = ["7.1.4", "5.1.2", "7.1", "5.1", "soundbar-sub", "sb-sub", "2.1", "soundbar", "sb", "landscape", "stereo", "2.0", "mono"];
+  if (!spk) for (const [tok, cfg] of Object.entries(CONFIGS).sort((a, b) => RICH.indexOf(a[0]) - RICH.indexOf(b[0]))) {
     if (tok === "landscape") continue;
     const re = new RegExp(`(^|\\s)${tok.replace(/\./g, "\\.")}(\\s|$)`);
     if (re.test(t)) { t = t.replace(re, " "); spk = { config: cfg }; break; }
   }
+  // "2.1 with a soundbar" / "soundbar 2.1": a soundbar and its sub
+  if (spk && (spk.config === "2.1" && eat(/\bsoundbar\b/) || spk.config === "soundbar" && eat(/(^|\s)2\.1(?=\s|$)/))) spk = { config: "soundbar-sub" };
   // the setup said twice ("two-channel stereo", "7.1.4 Atmos", "5.1 surround") — the rest is not a name
   if (spk) { t = t.replace(/(^|\s)(\d\.\d(?:\.\d)?)(?=\s|$)/g, " "); eat(/\bstereo\b/); }
+  // "stereo, 4 ceiling speakers": a stereo-type set with its count given too
+  if (spk) { const n = eat(/\b(\d{1,2})\s*(?:x\s*)?(?:speakers?|spk)\b/);
+    if (n && +n[1] > 0 && ["stereo", "mono"].includes(spk.config)) spk = { config: "stereo", count: +n[1] };
+    eat(/\bspeakers?\b/); }                                   // "7.1.4 with 6 ceiling speakers": the count isn't a name either
   // "N speakers" / "pair"
   if (!spk) {
     const pairs = eat(/\b(\d{1,2})\s*(x\s*)?pairs?\b/);
     const m = pairs ? [null, String(+pairs[1] * 2)]
       : eat(/\b(\d{1,2})\s*(x\s*)?(speakers?|spk)\b/) || (eat(/\bpair\b/) && [null, "2"]);
     if (m) spk = { config: "stereo", count: +m[1] || 2 };
+    // plain "speakers" (no number, no setup) is a stereo pair
+    else if (eat(/\bspeakers?\b|\baudio\b|\bmusic\b/)) spk = { config: "stereo", count: 2 };
   }
 
+  t = t.replace(/\bprojection(?:\s+screen)?\b/g, " projector ");
   // projector: "projector 120"
   const proj = eat(/\bprojector\s*(\d{2,3})?\b|\bproj\s*(\d{2,3})?\b/);
   // brand

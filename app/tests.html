@@ -1367,7 +1367,27 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const dF = new DOMParser().parseFromString(sF, "image/svg+xml"), cardF = dF.querySelector("g.legendcard"), txt = cardF.textContent;
     t("legend: the full legend has its sections — wires, equipment, rooms, marks — and lists only what the sheet uses",
       cardF.getAttribute("data-style") === "full" && ["WIRES", "EQUIPMENT", "ROOMS", "MARKS", "Surround + TV", "TV + speakers", "Speakers", "Outdoor", "Pre-wire", "New"].every(w => txt.includes(w)) && !txt.includes("Dante audio") && !txt.includes("TV only") && txt.includes("Balun"), txt.slice(0, 200));
-    t("legend: notes sit in their own card beside it, inside the legend's reserved box", !!dF.querySelector("g.notescard") && pF.legend.notesCard.w + pF.legend.card.w <= pF.legend.w && pF.legend.x + pF.legend.w <= SHEET.content.x + SHEET.content.w);
+    { // the bottom strip (Ryan 2026-10-03): title block left, legend right, at one height — nothing stacks under the drawing
+      const lg = pF.legend, tb = pF.titleBlock, nc = lg.notesCard, C = SHEET.content, bottom = C.y + C.h;
+      t("legend: notes sit in their own card just above it, inside the sheet", !!dF.querySelector("g.notescard") && nc.y + nc.h <= lg.y && nc.x + nc.w <= C.x + C.w && nc.x >= C.x);
+      t("bottom strip: the title block and the legend sit side by side on the sheet's bottom edge, the same height, without touching",
+        tb.x === C.x && tb.y + tb.h === bottom && Math.abs(lg.y + lg.h - bottom) <= 3 && tb.h === lg.h && tb.x + tb.w < lg.x && lg.x + lg.w <= C.x + C.w && tb.w >= 780, JSON.stringify({ tb, lx: lg.x, lw: lg.w, lh: lg.h }));
+      const drawnBottom = C.y + (Math.max(...[...pF.zones, ...pF.racks, ...pF.chips].map(r => r.y + r.h))) * pF.fitScale;
+      t("bottom strip: the drawing stops above the strip and the notes card", drawnBottom <= Math.min(tb.y, nc.y), `${drawnBottom.toFixed(0)} vs ${tb.y} / ${nc.y}`);
+      t("bottom strip: layouts are picked on the tuned page (pickScale), the print scale uses the real field — and prints bigger than the tuned fit", (() => { const Le = loadJob(structuredClone(fixtures.estate)), pe = place(Le.job, Le.ix); return pe.pickScale > 0 && pe.fitScale >= pe.pickScale; })(), `${pF.fitScale} / ${pF.pickScale}`);
+      const tbG = dF.querySelector("g.titleblock"), tt = tbG?.textContent || "";
+      t("title block: plain cells with the customer, project, revisions, a bold sheet number and a solid stage stamp (blue for a proposal)",
+        !!tbG && ["SYNERGY", "Customer", "Project", "Revisions", "Sheet", "PROPOSAL", "Design intent only"].every(w => tt.includes(w)) && +tbG.querySelector("text.sheetno").getAttribute("font-weight") >= 700 &&
+        tbG.querySelector("rect.stagestamp").getAttribute("fill") === "#1f6feb" && !tbG.querySelector("[transform*=rotate]") && !dF.querySelector("g.titletab"), tt.slice(0, 160));
+      const ab = structuredClone(fixtures.residence); ab.job.stage = "asBuilt"; const La = loadJob(ab), pa = place(La.job, La.ix);
+      t("title block: an as-built's stamp is green", /class="stagestamp"[^>]*fill="#2f7a3a"/.test(render(La.job, La.ix, pa, route(La.job, La.ix, pa))));
+      const rtF = route(Ll.job, Ll.ix, pF), sTab = render(Ll.job, Ll.ix, pF, rtF, { titleBlock: "tab" }), sOpen = render(Ll.job, Ll.ix, pF, rtF, { titleBlock: "open" });
+      const dT = new DOMParser().parseFromString(sTab, "image/svg+xml"), strip = x => x.replace(/<g class="title(block|tab)"[\s\S]*?<\/g>\s*(?=<\/svg>)/, "");
+      t("title block: on screen it folds to a one-line tab (project, stage, revision, sheet) that opens it — the drawing and the legend are untouched",
+        !!dT.querySelector('g.titletab[data-titleblock="show"]') && !dT.querySelector("g.titleblock") && ["SYNERGY", "PROPOSAL", "Sheet", "Show title block"].every(w => dT.querySelector("g.titletab").textContent.includes(w)) &&
+        dT.documentElement.getAttribute("viewBox") === dF.documentElement.getAttribute("viewBox") && strip(sTab) === strip(sF));
+      t("title block: the open block on screen carries a Hide control; the printed sheet has neither control", sOpen.includes('data-titleblock="hide"') && !sF.includes("data-titleblock") && !sF.includes("noprint"));
+    }
     const rc = structuredClone(fixtures.residence); rc.job.legendStyle = "compact";
     const Lc2 = loadJob(rc), pC2 = place(Lc2.job, Lc2.ix), sC2 = render(Lc2.job, Lc2.ix, pC2, route(Lc2.job, Lc2.ix, pC2));
     t("legend: Compact legend (saved with the project) is three tight rows and about half the height", /class="legendcard" data-style="compact"/.test(sC2) && !sC2.includes(">WIRES<") && sC2.includes(">Surround + TV</text>") && pC2.legend.card.h < pF.legend.card.h * 0.65, `${pC2.legend.card.h} vs ${pF.legend.card.h}`);
@@ -3990,7 +4010,10 @@ for (const [name, raw] of Object.entries(fixtures)) {
       t("wire runs: a projector's runs end at the \"projector location\", not a TV", pr.some(r => r.to === "Guest Casita — projector location") && !pr.some(r => r.to === "Guest Casita — TV location"), pr.map(r => r.to).join(" | "));
       const rj = structuredClone(tj); rj.job.revisions = [{ rev: 1, date: "2026-10-03", description: "Imported from Markdown walk", by: "SP" }];
       const Lr = loadJob(effectiveJob(rj, 0)), prr = enginePlace(Lr.job, Lr.ix), svg = render(Lr.job, Lr.ix, prr, engineRoute(Lr.job, Lr.ix, prr));
-      t("title block: a long revision note wraps onto two lines between words (not \"Imported from Ma\")", svg.includes(">Imported from<") && svg.includes(">Markdown walk<") && !svg.includes(">Imported from Ma<"));
+      t("title block: a revision note prints on one line; one too long is cut at a word with an ellipsis and keeps its full text as the hover title", svg.includes(">Imported from Markdown walk<") && !svg.includes(">Imported from Ma<"));
+      rj.job.revisions = [{ rev: 2, date: "2026-10-03", description: "Added the casita and moved the patio TV to the east wall by the outdoor kitchen, plus two more landscape zones", by: "RB" }];
+      const Lq = loadJob(effectiveJob(rj, 0)), pq = enginePlace(Lq.job, Lq.ix), sq = render(Lq.job, Lq.ix, pq, engineRoute(Lq.job, Lq.ix, pq)), cut = (sq.match(/<g class="revrow"[\s\S]*?<\/g>/) || [""])[0];
+      t("title block: a very long revision note is cut at a word, with an ellipsis", /…<\/text>/.test(cut) && !/\s…/.test(cut) && cut.includes("<title>Added the casita and moved the patio TV to the east wall by the outdoor kitchen, plus two more landscape zones</title>"), cut.slice(0, 300));
     }
   { const CATu = await (await fetch("./catalog.json")).json(), Lu = loadJob(structuredClone(fixtures.residence)), au = advise(Lu.job, Lu.ix, CATu), pu = enginePlace(Lu.job, Lu.ix), ou = { usage: boxUsage(Lu.job, Lu.ix, CATu, au, 0) };
     const su = render(Lu.job, Lu.ix, pu, engineRoute(Lu.job, Lu.ix, pu), ou);
@@ -4454,11 +4477,11 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const R = at(fixtures.residence, { trunks: "bundle" }), R1 = at(fixtures.residence, { trunks: "bundle", glyphScale: 1 });
   const s0 = grp(R1.p, "z-family", "speakers"), s1 = grp(R.p, "z-family", "speakers"), t0 = grp(R1.p, "z-family", "display"), t1 = grp(R.p, "z-family", "display");
   t("glyphs: a small job draws its TVs and speakers 25% bigger (the sheet doesn't shrink for it)",
-    R.p.glyphScale === 1.25 && Math.abs(s1.w / s0.w - 1.25) < 0.03 && Math.abs(t1.w / t0.w - 1.25) < 0.03 && R.p.fitScale >= R1.p.fitScale * 0.97,
+    R.p.glyphScale === 1.25 && Math.abs(s1.w / s0.w - 1.25) < 0.03 && Math.abs(t1.w / t0.w - 1.25) < 0.03 && R.p.pickScale >= R1.p.pickScale * 0.97,
     `${R.p.glyphScale} ${s0.w}→${s1.w} ${t0.w}→${t1.w}`);
   const X = at(fixtures.stress, { trunks: "bundle" }), X1 = at(fixtures.stress, { trunks: "bundle", glyphScale: 1 }), X2 = at(fixtures.stress, { trunks: "bundle", glyphScale: 1.25 });
   t("glyphs: a crowded job steps down instead of shrinking the whole drawing more than 3%",
-    X2.p.fitScale < X1.p.fitScale * 0.97 && X.p.glyphScale < 1.25 && X.p.fitScale >= X1.p.fitScale * 0.97 || X.p.glyphScale === 1, `${X.p.glyphScale} fit ${X.p.fitScale.toFixed(3)} vs ${X1.p.fitScale.toFixed(3)}`);
+    X2.p.pickScale < X1.p.pickScale * 0.97 && X.p.glyphScale < 1.25 && X.p.pickScale >= X1.p.pickScale * 0.97 || X.p.glyphScale === 1, `${X.p.glyphScale} fit ${X.p.pickScale.toFixed(3)} vs ${X1.p.pickScale.toFixed(3)}`);
   t("glyphs: the Off (classic) drawing keeps today's sizes; a pinned glyphScale wins",
     at(fixtures.residence, { trunks: false }).p.glyphScale === 1 && at(fixtures.residence, { trunks: "bundle", glyphScale: 1.12 }).p.glyphScale === 1.12 && GLYPH_SCALES[0] === 1.25);
   const svg = render(R.job, R.ix, R.p, engineRoute(R.job, R.ix, R.p, { trunks: "bundle" }), { trunks: "bundle" });

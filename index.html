@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ZybjfNmE8Y81CzeMSZV5m1aDpaJhWs3g2uUNiSnAOPY=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-sFoR90FRmpkBpZnvzkJ0dkWya0OopWUReXL0LgVaH3s='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Ay+ge1TziS8Vipp/jJLrBxb5CJ62GIzBbkQTZ9s8OK8=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-CV1iMOP3zTHE/c6VyKsxQhsP86rPIh9Mu6S32qQXX3o='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -256,6 +256,8 @@
   /* ---- interactive sheet: wire tracing + card jump ---- */
   #canvas svg .wirehit, #canvas svg .zcard .hit, #canvas svg .devtile, #canvas svg .chiptile, #canvas svg .racklabel { cursor: pointer; }
   #canvas svg .chiptile:hover rect { stroke: #e8842c; stroke-width: 1.5; }
+  #canvas svg [data-titleblock] { cursor: pointer; }
+  #canvas svg .titletab:hover > rect { fill: #f3f7ff; }
   #canvas svg .racklabel:hover { fill: #e8842c; }
   #canvas svg .devtile:hover rect:first-of-type { stroke: #e8842c99; stroke-width: 2; }
   #canvas svg .zcard:hover > rect.hit { stroke: #e8842c66; stroke-width: 1.6; }
@@ -654,29 +656,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003191155",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003191155",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003191155",
-    "./app/ports.js": "./app/ports.js?v=20261003191155",
-    "./app/commands.js": "./app/commands.js?v=20261003191155",
-    "./app/engine.js": "./app/engine.js?v=20261003191155",
-    "./app/exports.js": "./app/exports.js?v=20261003191155",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003191155",
-    "./app/hookup.js": "./app/hookup.js?v=20261003191155",
-    "./app/importers.js": "./app/importers.js?v=20261003191155",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003191155",
-    "./app/library.js": "./app/library.js?v=20261003191155",
-    "./app/names.js": "./app/names.js?v=20261003191155",
-    "./app/network.js": "./app/network.js?v=20261003191155",
-    "./app/pages.js": "./app/pages.js?v=20261003191155",
-    "./app/power.js": "./app/power.js?v=20261003191155",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003191155",
-    "./app/rack.js": "./app/rack.js?v=20261003191155",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003191155",
-    "./app/starters.js": "./app/starters.js?v=20261003191155",
-    "./app/kinds.js": "./app/kinds.js?v=20261003191155",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003191155",
-    "./app/sheets.js": "./app/sheets.js?v=20261003191155"
+    "./app/ai.js": "./app/ai.js?v=20261003194505",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003194505",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003194505",
+    "./app/ports.js": "./app/ports.js?v=20261003194505",
+    "./app/commands.js": "./app/commands.js?v=20261003194505",
+    "./app/engine.js": "./app/engine.js?v=20261003194505",
+    "./app/exports.js": "./app/exports.js?v=20261003194505",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003194505",
+    "./app/hookup.js": "./app/hookup.js?v=20261003194505",
+    "./app/importers.js": "./app/importers.js?v=20261003194505",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003194505",
+    "./app/library.js": "./app/library.js?v=20261003194505",
+    "./app/names.js": "./app/names.js?v=20261003194505",
+    "./app/network.js": "./app/network.js?v=20261003194505",
+    "./app/pages.js": "./app/pages.js?v=20261003194505",
+    "./app/power.js": "./app/power.js?v=20261003194505",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003194505",
+    "./app/rack.js": "./app/rack.js?v=20261003194505",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003194505",
+    "./app/starters.js": "./app/starters.js?v=20261003194505",
+    "./app/kinds.js": "./app/kinds.js?v=20261003194505",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003194505",
+    "./app/sheets.js": "./app/sheets.js?v=20261003194505"
 } }
 </script>
 <script>
@@ -736,6 +738,7 @@
       <label class="chk"><input type="checkbox" id="hideNet"><span><b>Hide network</b><em>Drop the Cat6 network wires from the drawing</em></span></label>
       <label class="chk"><input type="checkbox" id="splitSheets"><span><b>A sheet per rack</b><em>Saved with the project: a pool house or guest house rack gets its own sheet</em></span></label>
       <label class="chk"><input type="checkbox" id="kindColor" checked><span><b>Color by kind</b><em>Tint rack boxes by what they are (remembered on this computer)</em></span></label>
+      <label class="chk"><input type="checkbox" id="showTitle"><span><b>Show title block</b><em>The full band under the drawing (remembered on this computer). Off: a one-line tab. Print and downloads always carry the full band</em></span></label>
       <label class="chk"><input type="checkbox" id="bwMode"><span><b>Black &amp; white</b><em>Dash patterns carry each signal, for office laser printers</em></span></label>
       <details class="mstyle"><summary><b>Drawing style</b><em>Trunks, harness, Dante labels — how the wires are drawn</em></summary>
       <div class="mgroup" role="group" aria-label="Trunks">
@@ -938,7 +941,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003191155").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003194505").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1078,7 +1081,8 @@ function refresh(save = true) {
     // "1 of N" counts the continuation sheets a long schedule/map paginates into
     const opts = { solution: S.sol, hideSignals: $("#hideNet").checked ? ["network"] : [], grayscale: $("#bwMode").checked, kindColor: $("#kindColor").checked, company: SETTINGS.company,
                    usage: boxUsage(whole.job, whole.ix, effectiveCatalog(), a, S.sol),   // the lit windows on every box (whole-job counts)
-                   sheet: `${S.sheet + 1} of ${sheetTotal(whole.job, whole.ix, a, { solution: S.sol, rawJob: S.job, schematicSheets: sheets.length })}` };
+                   sheet: `${S.sheet + 1} of ${sheetTotal(whole.job, whole.ix, a, { solution: S.sol, rawJob: S.job, schematicSheets: sheets.length })}`,
+                   titleBlock: $("#showTitle").checked ? "open" : "tab" };   // screen only — paper and downloads get the full band
     if (trunkMode(job)) opts.wireLabels = wireLabels(job, ix, { solution: S.sol, portMap: S.portMap });
     // a kit's rack draws the moment it's picked — rooms join it as they're added
     S.lastAdvice = a;                                          // the rack view draws from the same advice (no second pass)
@@ -1090,6 +1094,7 @@ function refresh(save = true) {
       // an as-built shows its revision clouds on screen (the service packet prints them too)
       const marks = isAsBuilt(S.job) ? changeMarks(asBuiltChanges(S.job), p, rt, { grayscale: opts.grayscale }) : "";
       svg = render(job, ix, p, rt, marks ? { ...opts, marks } : opts);
+      S.view.fullSvg = () => render(job, ix, p, rt, { ...opts, ...(marks ? { marks } : {}), titleBlock: undefined });   // the sheet as it goes out: full title block
       routeWarn = rt.warnings; placeWarn = p.warnings || [];
       S.drawWarn = { id: S.id, routeWarn, placeWarn };         // the Rack view (which skips drawing) shows the same count
       S.view.p = p; S.view.opts = opts;                        // reroute picker re-runs the router from these
@@ -1290,6 +1295,9 @@ $("#hideNet").onchange = () => refresh(false);
 $("#bwMode").onchange = () => refresh(false);
 // color by kind is a per-computer preference (on unless turned off here)
 try { $("#kindColor").checked = localStorage.getItem("signalpath.kindColor") !== "off"; } catch {}
+try { $("#showTitle").checked = localStorage.getItem("signalpath.titleBlock") === "on"; } catch {}
+const setTitleBlock = on => { $("#showTitle").checked = on; try { localStorage.setItem("signalpath.titleBlock", on ? "on" : "off"); } catch {} refresh(false); };
+$("#showTitle").onchange = e => setTitleBlock(e.target.checked);
 $("#kindColor").onchange = () => { try { localStorage.setItem("signalpath.kindColor", $("#kindColor").checked ? "on" : "off"); } catch {} refresh(false); };
 for (const r of document.querySelectorAll('input[name="trunkStyle"]')) r.onchange = () => {
   if (r.value === "bundle") delete S.job.job.trunkStyle; else S.job.job.trunkStyle = r.value;   // bundle is the default
@@ -1665,13 +1673,11 @@ $("#jobsSel").onchange = async e => {
 const fileBase = () => String(S.job.job.name || "SignalPath project").replace(/[\\/:*?"<>|\u0000-\u001f]+/g, "-").trim() || "SignalPath project";
 $("#exportJson").onclick = () => download(`${fileBase()}.json`, JSON.stringify(S.job, null, 2), "application/json");
 $("#exportSvg").onclick = () => {
-  const svg = $("#canvas svg"); if (!svg) return;
-  // export the drawing, not the editing session: no picker ghosts, no selection dimming
-  const clone = svg.cloneNode(true);
-  clone.querySelector("#altghost")?.remove();
-  clone.classList.remove("wiresel");
-  clone.querySelectorAll(".sel, .selnode, .zglow").forEach(n => n.classList.remove("sel", "selnode", "zglow"));
-  download(`${fileBase()} — schematic.svg`, clone.outerHTML, "image/svg+xml");
+  if (!$("#canvas svg")) return;
+  // export the drawing, not the editing session: a fresh render — no picker ghosts, no selection dimming — with the
+  // full title block whatever the screen shows
+  const full = S.view?.fullSvg?.(); if (!full) return;
+  download(`${fileBase()} — schematic.svg`, full, "image/svg+xml");
 };
 $("#exportPq").onclick = () => {
   const files = planQueueFiles(S.job, S.sol, SETTINGS.catalog);
@@ -2136,11 +2142,14 @@ $("#canvas").addEventListener("click", e => {
   // a rack's name opens the RACK tab at that rack (size, elevation, power)
   const rl = e.target.closest("[data-rack]");
   if (rl) { clearSel(); switchTab("rack"); renderPanel(); openRackEd(); return; }   // a rack's name opens the rack page
+  // the folded tab opens the title block; "Hide" on the band folds it again
+  const tbc = e.target.closest("[data-titleblock]");
+  if (tbc) { clearSel(); setTitleBlock(tbc.dataset.titleblock === "show"); return; }
   // the title block (client, project, revisions) opens the JOB tab at the client
   const svg = $("#canvas svg"), m = svg.getScreenCTM?.();
   if (m) {
-    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse()), tb = SHEET.titleBlock;
-    if (pt.x >= tb.x && pt.x <= tb.x + tb.w && pt.y >= tb.y && pt.y <= tb.y + tb.h) {
+    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse()), tb = S.view?.p?.titleBlock;
+    if (tb && svg.querySelector("g.titleblock") && pt.x >= tb.x && pt.x <= tb.x + tb.w && pt.y >= tb.y && pt.y <= tb.y + tb.h) {
       clearSel(); switchTab("job"); renderPanel(); flashRow(".jclient"); setTimeout(() => $("#panelBody .jclient")?.focus(), 350); return;
     }
   }
@@ -2969,7 +2978,7 @@ async function renderAsBuilt() {
   const ab = J.asBuilt || {}, ch = asBuiltChanges(S.job), rows = installRows(S.job, S.sol), done = rows.filter(r => r.filled).length;
   const parent = (await dbAll()).find(j => j.id !== id && (ab.fromId ? j.id === ab.fromId : j.data.job?.stage !== "asBuilt" && j.data.job?.name === ab.fromName));
   if (S.id !== id || S.mainView !== "asbuilt") return;
-  const drawing = $("#canvas svg")?.outerHTML || `<div class="mini" style="padding:20px">Nothing drawn yet.</div>`;
+  const drawing = S.view?.fullSvg?.() || $("#canvas svg")?.outerHTML || `<div class="mini" style="padding:20px">Nothing drawn yet.</div>`;
   body.innerHTML = `<h2>${esc(J.name || "As-built")}</h2>
     <div class="asb-sub">Copy of <b>${esc(parent?.data.job?.name || ab.fromName || "the proposal")}</b>${ab.fromSolution ? ` (${esc(ab.fromSolution)})` : ""}${ab.started ? ` · started ${esc(ab.started)}` : ""} · ${ch.length} change${ch.length === 1 ? "" : "s"} · install record ${done} of ${rows.length}</div>
     <div class="asb-acts">${parent ? `<button data-asb="parent" data-id="${esc(parent.id)}">Open the proposal</button>` : ""}

@@ -592,12 +592,18 @@ export function expandChannels(spec) {
 export const SHEET = {
   width: 1632, height: 1056,
   outerFrame: { x: 10, y: 10, w: 1612, h: 1036 },
-  content: { x: 16, y: 16, w: 1444, h: 1024 },
-  titleBlock: { x: 1460, y: 16, w: 162, h: 1024 },
+  content: { x: 16, y: 16, w: 1600, h: 1024 },
+  // the bottom strip: the title block on the left, the legend beside it on the right (one strip, so nothing stacks
+  // under the drawing). place() sizes it — P.strip, P.titleBlock, P.legend
+  strip: { minH: 118, gap: 10, tabH: 26 },
 };
 
 const PL = {
   marginX: 50, topY: 60, areaHeaderY: 46,
+  // the page field the layouts and the router were tuned on (title block down the right edge, the legend under the
+  // drawing). Rows still wrap on it and layouts are still picked by how they'd fit it (pickScale) — so the same project
+  // lays out and routes the same — while the sheet's real field (the bottom strip) only sets how big it prints.
+  tuned: { w: 1444, h: 1024 },
   cardTitleH: 36, cardPad: 25, cardGapX: 20, rowGapY: 24, cardBottomPad: 24,
   cardMinW: 130, cardMinH: 140, groupGapX: 30, captionH: 18,
   videoRowGapY: 88, // wrapped video rows: chip strip (38) + feed lanes below each card
@@ -755,7 +761,7 @@ const quant = (need, min) => Math.max(min, Math.ceil(need / PL.corridorQuantum) 
    how the right-of-rack bands share the space: stacked (the classic sheet),
    side by side (mid band left, speaker rooms right — both bottom-aligned with
    the rack), and speaker rows allowed to run to the page edge. The layout that
-   prints biggest (highest fitScale) wins, but only by a clear margin (3%), so
+   prints biggest (highest pickScale — the fit on the tuned field) wins, but only by a clear margin (3%), so
    a job that already fills the width keeps its tuned classic layout. */
 /* TVs and speakers draw 25% bigger (Ryan 2026-10-01) unless that costs the drawing: when the
    bigger room cards shrink the whole sheet by more than 3%, step down (1.12, then today's 1.0) —
@@ -770,9 +776,9 @@ export function place(job, ix = indexJob(job), opts = {}) {
   if (!trunkMode(job, opts)) return placeAt(job, ix, opts, 1);
   const tries = GLYPH_SCALES.map(gs => [gs, null]);
   const at = i => tries[i][1] ||= placeAt(job, ix, opts, tries[i][0]);
-  const floor = () => at(tries.length - 1).fitScale;
+  const floor = () => at(tries.length - 1).pickScale;
   for (let i = 0; i < tries.length - 1; i++) {
-    if (at(i).fitScale >= PL.growMax - 1e-9 || at(i).fitScale >= floor() * 0.97) return at(i);   // grown to the cap = free
+    if (at(i).pickScale >= PL.growMax - 1e-9 || at(i).pickScale >= floor() * 0.97) return at(i);   // grown to the cap = free
   }
   return at(tries.length - 1);
 }
@@ -790,7 +796,7 @@ function placeAt(job, ix, opts, gs) {
     ...[1.15, 1.35, 1.7, 2.1].map(wrap => ({ wrap, sideBySide: true, audioWide: true }))];
   for (const v of opts.layoutVariants || variants) {
     const p = placeOnce(job, ix, opts, { ...v, gs });
-    if (p.fitScale > best.fitScale * 1.03) best = p;
+    if (p.pickScale > best.pickScale * 1.03) best = p;
   }
   return best;
 }
@@ -837,7 +843,7 @@ function stableGroups(list, rank, reorder) {
 
 function placeOnce(job, ix, opts, variant) {
   const s = ix.solutions[opts.solution ?? 0];
-  const wrapRight = SHEET.content.x + SHEET.content.w * (variant.wrap || 1) - PL.marginX;   // where rows wrap (layout units)
+  const wrapRight = SHEET.content.x + PL.tuned.w * (variant.wrap || 1) - PL.marginX;   // where rows wrap (layout units)
   if (!s) throw new Error("no solution to place");
   const sol = s.sol;
   // view filter (e.g. hideSignals: ["network"]): hidden wires get no corridor
@@ -1284,18 +1290,29 @@ function placeOnce(job, ix, opts, variant) {
     const rowsW = [rows.reduce((n, k) => n + 31 + tw(sigLabel(k)) + (k === "danteTag" ? 22 : 0), 0), kindsHere.reduce((n, k) => n + 28 + tw(KIND_STYLE[k].label), 0), roomsHere.reduce((n, k) => n + 28 + tw(ROOM_KINDS[k].label), 0)];
     card = { w: Math.max(150, Math.ceil(Math.max(...rowsW)) + 26), h: 22 + rowsW.filter(Boolean).length * 17 + 9 };
   } else {
-    const eqCols = kindsHere.length > 4 ? 2 : 1, roomCols = roomsHere.length > 3 ? 2 : 1;
-    const cols = { wires: rows.length ? 136 : 0, eq: kindsHere.length || adapters.length ? Math.max(eqCols * 118, adapters.length > 1 ? 196 : 118) : 0, rooms: roomsHere.length || marks.length ? Math.max(roomCols * 114, marks.length > 1 ? 214 : 114) : 0 };
-    const hW = rows.length * 17, hE = Math.min(4, kindsHere.length) * 17 + (adapters.length ? 24 + Math.ceil(adapters.length / 2) * 18 : 0), hR = Math.min(3, roomsHere.length) * 17 + (marks.length ? 24 + Math.ceil(marks.length / 2) * 18 : 0);
-    card = { w: Math.max(150, cols.wires + cols.eq + cols.rooms + 28), h: 22 + 20 + Math.max(hW, hE, hR, 17) + 8, cols, eqCols, roomCols };
+    // sections side by side, each at most R rows tall, so the legend stays as short as the title block beside it
+    const R = 5, n = k => Math.ceil(k / R);
+    const cols = { wires: n(rows.length) * 136, eq: n(kindsHere.length) * 118, adapters: adapters.length ? 108 : 0, rooms: n(roomsHere.length) * 114, marks: marks.length ? (marks.includes("ofe") ? 130 : 80) : 0 };
+    const tall = Math.max(Math.min(R, rows.length), Math.min(R, kindsHere.length), adapters.length, Math.min(R, roomsHere.length), marks.length, 1);
+    card = { w: Math.max(150, cols.wires + cols.eq + cols.adapters + cols.rooms + cols.marks + 28), h: Math.max(SHEET.strip.minH, 22 + 20 + tall * 17 + 8), cols, R };
   }
+  // the strip along the bottom: title block left, legend right; the notes card floats just above the legend
+  const C = SHEET.content, stripH = Math.max(SHEET.strip.minH, card.h), stripY = C.y + C.h - stripH;
   const notesCard = notes.length ? { w: Math.ceil(Math.max(150, noteW - 20)), h: 22 + 10 + noteLines * 13 + notes.length * 3 + 6 } : null;
-  const side = !notesCard || card.w + notesCard.w + 10 <= SHEET.content.w - 90;
-  const lw = notesCard ? (side ? card.w + notesCard.w + 10 : Math.max(card.w, notesCard.w)) : card.w;
-  const lh = notesCard ? (side ? Math.max(card.h, notesCard.h) : card.h + notesCard.h + 8) : card.h;
-  if (notesCard) { notesCard.dx = side ? 0 : lw - notesCard.w; notesCard.dy = side ? lh - notesCard.h : 0; }
-  card.dx = lw - card.w; card.dy = lh - card.h;
-  out.legend = { style, rows, kinds: kindsHere, rooms: roomsHere, adapters, marks, notes, card, notesCard, w: lw, h: lh + 3, x: SHEET.content.x + SHEET.content.w - lw - 60, y: SHEET.content.y + SHEET.content.h - lh - 9 };
+  if (notesCard) { notesCard.x = C.x + C.w - notesCard.w - 3; notesCard.y = stripY - 10 - notesCard.h; }
+  out.strip = { y: stripY, h: stripH };
+  out.legend = { style, rows, kinds: kindsHere, rooms: roomsHere, adapters, marks, notes, card, notesCard, w: card.w, h: card.h, x: C.x + C.w - card.w - 3, y: C.y + C.h - card.h - 3 };   // inset: the card's shadow stays inside the frame
+  out.titleBlock = { x: C.x, y: stripY, w: C.w - card.w - 3 - SHEET.strip.gap, h: stripH };
+  const below = stripH + 12 + (notesCard ? notesCard.h + 10 : 0);   // what the drawing gives up at the bottom of the sheet
+  // the legend's height in the tuned field (sections stacked, notes beside it when they fit) — for pickScale only
+  const tunedLegendH = (() => {
+    const h0 = style === "compact" ? card.h : 22 + 20 + Math.max(rows.length * 17, Math.min(4, kindsHere.length) * 17 + (adapters.length ? 24 + Math.ceil(adapters.length / 2) * 18 : 0),
+      Math.min(3, roomsHere.length) * 17 + (marks.length ? 24 + Math.ceil(marks.length / 2) * 18 : 0), 17) + 8;
+    const w0 = style === "compact" ? card.w : Math.max(150, (rows.length ? 136 : 0) + (kindsHere.length || adapters.length ? Math.max((kindsHere.length > 4 ? 2 : 1) * 118, adapters.length > 1 ? 196 : 118) : 0)
+      + (roomsHere.length || marks.length ? Math.max((roomsHere.length > 3 ? 2 : 1) * 114, marks.length > 1 ? 214 : 114) : 0) + 28);
+    if (!notesCard) return h0 + 3;
+    return (w0 + notesCard.w + 10 <= PL.tuned.w - 90 ? Math.max(h0, notesCard.h) : h0 + notesCard.h + 8) + 3;
+  })();
 
   /* -- bounds + fit scale (one-page rule: drawing scales, never splits) -- */
   const rects = [...out.zones, ...out.racks, ...out.chips];
@@ -1306,7 +1323,8 @@ function placeOnce(job, ix, opts, variant) {
   // (Ryan 2026-09-30: "the scaling grows with the job" — a four-room condo
   // shouldn't sit small in a corner of an 11×17), capped so a one-room job
   // doesn't turn cartoonish; leftover width is split evenly left and right
-  out.fitScale = Math.min(PL.growMax, SHEET.content.w / out.bounds.w, (SHEET.content.h - out.legend.h - 20) / out.bounds.h);
+  out.fitScale = Math.min(PL.growMax, SHEET.content.w / out.bounds.w, (SHEET.content.h - below) / out.bounds.h);
+  out.pickScale = Math.min(PL.growMax, PL.tuned.w / out.bounds.w, (PL.tuned.h - tunedLegendH - 20) / out.bounds.h);
   out.fitOffset = { x: Math.max(0, Math.round((SHEET.content.w - out.bounds.w * out.fitScale) / 2)), y: 0 };
   if (out.fitScale < 0.75) out.warnings.push({ code: "scale", msg: `The drawing fits at ${Math.round(out.fitScale * 100)}% — captions may print small` });
 
@@ -3716,7 +3734,7 @@ function computeHops(out) {
 /* ---------- render ----------
    The finished SVG sheet: placement + routed wires drawn in the approved
    mock-sheet.svg language (grid frame, dashed cards, icon glyphs, chips,
-   colored runs with hop arcs, dynamic legend, vertical Synergy title block).
+   colored runs with hop arcs, dynamic legend, Synergy title block band).
    Pure string builder — no DOM. */
 
 const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -4187,7 +4205,8 @@ export function render(job, ix, P, rt, opts = {}) {
   const out = [];
   const push = (...x) => out.push(...x);
 
-  push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SHEET.width} ${SHEET.height}" font-family="'Avenir Next', Avenir, Futura, 'Helvetica Neue', sans-serif">`);
+  const tabbed = opts.titleBlock === "tab", sheetH = SHEET.height;
+  push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SHEET.width} ${sheetH}" font-family="'Avenir Next', Avenir, Futura, 'Helvetica Neue', sans-serif">`);
 
   /* defs: grid, TV gradient, speaker/sub glyphs, logo sphere clip */
   push(`<defs>
@@ -4204,7 +4223,7 @@ export function render(job, ix, P, rt, opts = {}) {
 </defs>`);
 
   /* sheet frame */
-  push(`<rect width="${SHEET.width}" height="${SHEET.height}" fill="#fff"/>`);
+  push(`<rect width="${SHEET.width}" height="${sheetH}" fill="#fff"/>`);
   push(`<rect x="${SHEET.content.x}" y="${SHEET.content.y}" width="${SHEET.content.w}" height="${SHEET.content.h}" fill="url(#gp)"/>`);
   push(`<rect x="${SHEET.outerFrame.x}" y="${SHEET.outerFrame.y}" width="${SHEET.outerFrame.w}" height="${SHEET.outerFrame.h}" fill="none" stroke="#444" stroke-width="1.5"/>`);
   push(`<rect x="${SHEET.content.x}" y="${SHEET.content.y}" width="${SHEET.content.w}" height="${SHEET.content.h}" fill="none" stroke="#777"/>`);
@@ -4676,7 +4695,7 @@ export function render(job, ix, P, rt, opts = {}) {
     const kindBox = (k, x, y, w = 22, h = 13) => `<rect x="${f(x)}" y="${f(y)}" width="${w}" height="${h}" rx="2" fill="${!bw || k === "power" ? KIND_STYLE[k].tint : "#262626"}"/>` + kindEdge(k, x, y, h, 2, bw);
     const roomBox = (k, x, y, w = 22, h = 12) => `<rect x="${f(x)}" y="${f(y)}" width="${w}" height="${h}" rx="3" fill="${bw ? (k === "prewire" ? "#777" : "#2b2b2b") : ROOM_KINDS[k].color}"/>`;
     const roomName = k => { const l = ROOM_KINDS[k].label.toLowerCase().replace(/\btv\b/g, "TV"); return l[0].toUpperCase() + l.slice(1); };
-    const cx = lg.x + lg.card.dx, cy = lg.y + lg.card.dy;
+    const cx = lg.x, cy = lg.y;
     push(`<g class="legendcard" data-style="${lg.style}">` + cardSvg(cx, cy, lg.card.w, lg.card.h, "LEGEND"));
     if (lg.style === "compact") {
       let y = cy + 22 + 13;
@@ -4685,33 +4704,25 @@ export function render(job, ix, P, rt, opts = {}) {
       row(lg.kinds, (k, x, yy) => kindBox(k, x, yy - 9, 16, 11) + label(x + 20, yy, KIND_STYLE[k].label, 10), k => 28 + KIND_STYLE[k].label.length * 5.6);
       row(lg.rooms, (k, x, yy) => roomBox(k, x, yy - 9, 16, 11) + label(x + 20, yy, roomName(k), 10), k => 28 + roomName(k).length * 5.6);
     } else {
-      const { cols, eqCols, roomCols } = lg.card, top = cy + 22 + 16, bot = cy + lg.card.h - 8;
-      let x = cx + 14;
-      if (cols.wires) { push(head(x, top, "WIRES")); lg.rows.forEach((k, i) => push(sig(k, x, top + 14 + i * 17, 26) + label(x + (k === "danteTag" ? 46 : 34), top + 18 + i * 17, sigName(k)))); x += cols.wires; }
-      if (cols.eq) {
-        if (cols.wires) push(`<path d="M${x - 10} ${top - 8}V${bot}" stroke="#e3e5eb"/>`);
-        if (lg.kinds.length) { push(head(x, top, "EQUIPMENT")); lg.kinds.forEach((k, i) => { const col = Math.floor(i / 4), kx = x + col * 118, ky = top + 8 + (i % 4) * 17; push(kindBox(k, kx, ky) + label(kx + 28, ky + 10, KIND_STYLE[k].label)); }); }
-        if (lg.adapters.length) { const ay = top + (lg.kinds.length ? Math.min(4, lg.kinds.length) * 17 + 20 : 0); push(head(x, ay, "ADAPTERS"));
-          lg.adapters.forEach((k, i) => { const ax = x + (i % 2) * 96, yy = ay + 6 + Math.floor(i / 2) * 18, c = bw ? "#cfcfcf" : k === "balun" ? "#ffab2e" : k === "axis" ? "#3b82c4" : "#e0449e";
-            push((k === "dec" ? `<path d="M${ax + 7} ${yy}h30a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-30l-7 -6.5z" fill="#1b1b1b"/><rect x="${ax + 30}" y="${yy}" width="9" height="13" rx="2" fill="${c}"/>`
-              : k === "balun" ? `<path d="M${ax + 7} ${yy}h25l7 6.5 -7 6.5h-25l-7 -6.5z" fill="#1b1b1b"/><path d="M${ax + 7} ${yy}h7v13h-7l-7 -6.5z" fill="${c}"/>`
-              : `<path d="M${ax + 2} ${yy}h30l7 6.5 -7 6.5h-30a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2z" fill="#1b1b1b"/><rect x="${ax}" y="${yy}" width="9" height="13" rx="2" fill="${c}"/>`) +
-              label(ax + 44, yy + 10, { enc: "Encoder", dec: "Decoder", balun: "Balun", axis: "Dante audio" }[k])); }); }
-        x += cols.eq;
-      }
-      if (cols.rooms) {
-        if (cols.wires || cols.eq) push(`<path d="M${x - 10} ${top - 8}V${bot}" stroke="#e3e5eb"/>`);
-        if (lg.rooms.length) { push(head(x, top, "ROOMS")); lg.rooms.forEach((k, i) => { const col = Math.floor(i / 3), rx = x + col * 114, ry = top + 8 + (i % 3) * 17; push(roomBox(k, rx, ry) + label(rx + 28, ry + 10, roomName(k))); }); }
-        if (lg.marks.length) { const my = top + (lg.rooms.length ? Math.min(3, lg.rooms.length) * 17 + 20 : 0); push(head(x, my, "MARKS"));
-          lg.marks.forEach((k, i) => { const mx = x + (i % 2) * 74 + (i % 2 && lg.marks[i - 1] === "ofe" ? 44 : 0), yy = my + 7 + Math.floor(i / 2) * 18;
-            push(k === "note" ? `<circle cx="${mx + 8}" cy="${yy + 6}" r="8" fill="${bw ? "#111" : "#d92d20"}" fill-opacity="0.22"/><circle cx="${mx + 8}" cy="${yy + 6}" r="6" fill="${bw ? "#111" : "#d92d20"}" stroke="#fff" stroke-width="1.2"/><text x="${mx + 8}" y="${yy + 8.8}" text-anchor="middle" font-size="7.6" font-weight="700" fill="#fff">1</text>` + label(mx + 22, yy + 10, "Note")
-              : `<rect x="${mx}" y="${yy}" width="26" height="12" fill="${bw ? (k === "ofe" ? "#777" : "#2b2b2b") : k === "ofe" ? "#b45309" : "#1f6feb"}"/><text x="${mx + 13}" y="${yy + 9}" text-anchor="middle" font-size="7" font-weight="800" fill="#fff">${k.toUpperCase()}</text>` + label(mx + 32, yy + 10, k === "ofe" ? "Owner-furnished" : "New")); }); }
-      }
+      const { cols, R } = lg.card, top = cy + 22 + 16, bot = cy + lg.card.h - 8;
+      let x = cx + 14, first = true;
+      const sect = (w, title, draw) => { if (!w) return; if (!first) push(`<path d="M${x - 10} ${top - 8}V${bot}" stroke="#e3e5eb"/>`); first = false; push(head(x, top, title)); draw(x); x += w; };
+      sect(cols.wires, "WIRES", x => lg.rows.forEach((k, i) => { const wx = x + Math.floor(i / R) * 136, wy = top + (i % R) * 17; push(sig(k, wx, wy + 14, 26) + label(wx + (k === "danteTag" ? 46 : 34), wy + 18, sigName(k))); }));
+      sect(cols.eq, "EQUIPMENT", x => lg.kinds.forEach((k, i) => { const kx = x + Math.floor(i / R) * 118, ky = top + 8 + (i % R) * 17; push(kindBox(k, kx, ky) + label(kx + 28, ky + 10, KIND_STYLE[k].label)); }));
+      sect(cols.adapters, "ADAPTERS", ax => lg.adapters.forEach((k, i) => { const yy = top + 8 + i * 17, c = bw ? "#cfcfcf" : k === "balun" ? "#ffab2e" : k === "axis" ? "#3b82c4" : "#e0449e";
+        push((k === "dec" ? `<path d="M${ax + 7} ${yy}h30a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-30l-7 -6.5z" fill="#1b1b1b"/><rect x="${ax + 30}" y="${yy}" width="9" height="13" rx="2" fill="${c}"/>`
+          : k === "balun" ? `<path d="M${ax + 7} ${yy}h25l7 6.5 -7 6.5h-25l-7 -6.5z" fill="#1b1b1b"/><path d="M${ax + 7} ${yy}h7v13h-7l-7 -6.5z" fill="${c}"/>`
+          : `<path d="M${ax + 2} ${yy}h30l7 6.5 -7 6.5h-30a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2z" fill="#1b1b1b"/><rect x="${ax}" y="${yy}" width="9" height="13" rx="2" fill="${c}"/>`) +
+          label(ax + 44, yy + 10, { enc: "Encoder", dec: "Decoder", balun: "Balun", axis: "Dante audio" }[k])); }));
+      sect(cols.rooms, "ROOMS", x => lg.rooms.forEach((k, i) => { const rx = x + Math.floor(i / R) * 114, ry = top + 8 + (i % R) * 17; push(roomBox(k, rx, ry) + label(rx + 28, ry + 10, roomName(k))); }));
+      sect(cols.marks, "MARKS", mx => lg.marks.forEach((k, i) => { const yy = top + 8 + i * 17;
+        push(k === "note" ? `<circle cx="${mx + 13}" cy="${yy + 6}" r="8" fill="${bw ? "#111" : "#d92d20"}" fill-opacity="0.22"/><circle cx="${mx + 13}" cy="${yy + 6}" r="6" fill="${bw ? "#111" : "#d92d20"}" stroke="#fff" stroke-width="1.2"/><text x="${mx + 13}" y="${yy + 8.8}" text-anchor="middle" font-size="7.6" font-weight="700" fill="#fff">1</text>` + label(mx + 32, yy + 10, "Note")
+          : `<rect x="${mx}" y="${yy}" width="26" height="12" fill="${bw ? (k === "ofe" ? "#777" : "#2b2b2b") : k === "ofe" ? "#b45309" : "#1f6feb"}"/><text x="${mx + 13}" y="${yy + 9}" text-anchor="middle" font-size="7" font-weight="800" fill="#fff">${k.toUpperCase()}</text>` + label(mx + 32, yy + 10, k === "ofe" ? "Owner-furnished" : "New")); }));
     }
     push(`</g>`);
     if (lg.notesCard) {
       // the notes, numbered to match the badges on the drawing
-      const nx = lg.x + lg.notesCard.dx, ny = lg.y + lg.notesCard.dy;
+      const nx = lg.notesCard.x, ny = lg.notesCard.y;
       push(`<g class="notescard">` + cardSvg(nx, ny, lg.notesCard.w, lg.notesCard.h, "NOTES"));
       let yy = ny + 22 + 17;
       for (const a of lg.notes) {
@@ -4723,70 +4734,67 @@ export function render(job, ix, P, rt, opts = {}) {
     }
   }
 
-  /* title block (vertical right edge, per the approved mock) */
-  const tb = { x: SHEET.titleBlock.x, y: SHEET.titleBlock.y, w: 156, h: SHEET.titleBlock.h };
+  /* title block (Ryan 2026-10-03, picked from concepts): the original plain look, on the left of the bottom strip with the
+     legend beside it — a solid stage stamp under a bolder sheet number, text upright. On screen it can fold to a one-line
+     tab (opts.titleBlock === "tab"); the drawing is the same either way, and paper always gets the full block. */
   const J = job.job || {};
-  const [addr1, ...addrRest] = String(J.client?.address || "").split(",");
   const stage = (J.stage || "proposal").toLowerCase();
   const stageTxt = stage === "asbuilt" || stage === "as-built" ? "AS-BUILT" : "PROPOSAL";
-  const stageCol = stageTxt === "AS-BUILT" ? "#2f7a3a" : "#b32017";
-  const revs = (J.revisions || []).slice(-4);
-  const lastDate = revs.length ? revs[revs.length - 1].date : J.catalogSnapshot?.asOf;
-  const cx = tb.x + tb.w / 2;
-  push(`<rect x="${tb.x}" y="${tb.y}" width="${tb.w}" height="${tb.h}" fill="#fff" stroke="#444" stroke-width="1.2"/>`);
-  push(`<line x1="${tb.x}" y1="300" x2="${tb.x + tb.w}" y2="300" stroke="#444"/>`);
+  const stageCol = bw ? "#222" : stageTxt === "AS-BUILT" ? "#2f7a3a" : "#1f6feb";
+  const revsAll = J.revisions || [];
+  const lastDate = revsAll.length ? revsAll[revsAll.length - 1].date : J.catalogSnapshot?.asOf;
   // logo mark removed for now (text-only wordmark until the authentic logo file lands)
   const co = { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
     info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv", ...(opts.company || {}) };
-  push(`<text transform="rotate(-90 ${tb.x + 56} 160)" x="${tb.x + 56}" y="160" text-anchor="middle" font-size="26" font-weight="700" letter-spacing="7" fill="#111">${esc(co.name)}</text>`);
-  push(`<text transform="rotate(-90 ${tb.x + 88} 160)" x="${tb.x + 88}" y="160" text-anchor="middle" font-size="9" letter-spacing="2.6" fill="#444">${esc(co.tagline)}</text>`);
-  push(`<text transform="rotate(-90 ${tb.x + 118} 160)" x="${tb.x + 118}" y="160" text-anchor="middle" font-size="7.5" fill="#666">${esc(co.info)}</text>`);
-  push(`<line x1="${tb.x}" y1="470" x2="${tb.x + tb.w}" y2="470" stroke="#444"/>`);
-  push(`<text transform="rotate(-90 ${tb.x + 52} 385)" x="${tb.x + 52}" y="385" text-anchor="middle" font-size="14" font-weight="700" fill="#111">${esc(J.client?.name || "")}</text>`);
-  push(`<text transform="rotate(-90 ${tb.x + 76} 385)" x="${tb.x + 76}" y="385" text-anchor="middle" font-size="11" fill="#333">${esc(addr1.trim())}</text>`);
-  push(`<text transform="rotate(-90 ${tb.x + 96} 385)" x="${tb.x + 96}" y="385" text-anchor="middle" font-size="11" fill="#333">${esc(addrRest.join(",").trim())}</text>`);
-  push(`<text x="${tb.x + 8}" y="486" font-size="8" fill="#777">Project</text>`);
-  push(`<text x="${tb.x + 8}" y="500" font-size="11" fill="#111">${esc(J.name || "")}</text>`);
-  push(`<line x1="${tb.x}" y1="510" x2="${tb.x + tb.w}" y2="510" stroke="#999" stroke-width="0.7"/>`);
-  push(`<text x="${tb.x + 8}" y="524" font-size="8" fill="#777">Drawing</text>`);
-  push(`<text x="${tb.x + 8}" y="538" font-size="11" fill="#111">AV Schematic — ${esc(sol.name || "")}${J.sheetLabel ? ` · ${esc(J.sheetLabel)}` : ""}</text>`);
-  push(`<line x1="${tb.x}" y1="548" x2="${tb.x + tb.w}" y2="548" stroke="#444"/>`);
-  push(`<rect x="${tb.x + 18}" y="558" width="120" height="24" fill="none" stroke="${stageCol}" stroke-width="1.6"/>`);
-  push(`<text x="${cx}" y="575" text-anchor="middle" font-size="13" font-weight="700" letter-spacing="2" fill="${stageCol}">${stageTxt}</text>`);
-  push(`<line x1="${tb.x}" y1="592" x2="${tb.x + tb.w}" y2="592" stroke="#444"/>`);
-  push(`<text x="${cx}" y="606" text-anchor="middle" font-size="9" font-weight="700" letter-spacing="1" fill="#333">REVISIONS</text>`);
-  push(`<g stroke="#999" stroke-width="0.7">`);
-  for (let i = 0; i <= 4; i++) push(`<line x1="${tb.x}" y1="${612 + i * 22}" x2="${tb.x + tb.w}" y2="${612 + i * 22}"/>`);
-  push(`<line x1="${tb.x + 18}" y1="612" x2="${tb.x + 18}" y2="700"/><line x1="${tb.x + 76}" y1="612" x2="${tb.x + 76}" y2="700"/><line x1="${tb.x + 136}" y1="612" x2="${tb.x + 136}" y2="700"/></g>`);
-  // a description that won't fit one line takes two smaller ones, broken between words ("Imported from Ma" read as a typo)
-  const revLines = t => {
-    t = String(t || "").replace(/\s+/g, " ").trim();
-    if (t.length <= 16) return [t];
-    const out = []; let line = "";
-    for (const w of t.split(" ")) {
-      if (out.length === 2) break;
-      if (!line) line = w; else if ((line + " " + w).length <= 18) line += " " + w; else { out.push(line); line = w; }
-    }
-    if (out.length < 2 && line) out.push(line);
-    const used = out.join(" ").length;
-    return out.map((l, k) => { l = l.length > 18 ? l.slice(0, 17) + "…" : l; return k === out.length - 1 && used < t.length && !l.endsWith("…") ? l.slice(0, 17) + "…" : l; });
-  };
-  revs.forEach((rv, i) => {
-    const y = 626 + i * 22, d = revLines(rv.description);
-    const desc = d.length === 1 ? `<text x="${tb.x + 106}" y="${y}" text-anchor="middle">${esc(d[0])}</text>`
-      : `<text x="${tb.x + 106}" y="${y - 4}" text-anchor="middle" font-size="7">${esc(d[0])}</text><text x="${tb.x + 106}" y="${y + 4.5}" text-anchor="middle" font-size="7">${esc(d[1])}</text>`;
-    push(`<g font-size="8.5" fill="#333"><text x="${tb.x + 9}" y="${y}" text-anchor="middle">${esc(rv.rev)}</text><text x="${tb.x + 47}" y="${y}" text-anchor="middle">${fmtDate(rv.date)}</text>${desc}<text x="${tb.x + 146}" y="${y}" text-anchor="middle">${esc(rv.by || "")}</text><title>${esc(rv.description || "")}</title></g>`);
-  });
-  const fields = [["Date", fmtDate(lastDate)], ["Scale", "None"], ["Drawn by", esc(J.drawnBy || "SignalPath")], ["Sheet", opts.sheet || "1 of 3"]];
-  let fy = 712;
-  push(`<line x1="${tb.x}" y1="${fy}" x2="${tb.x + tb.w}" y2="${fy}" stroke="#444"/>`);
-  for (const [label, val] of fields) {
-    push(`<text x="${tb.x + 8}" y="${fy + 16}" font-size="8" fill="#777">${label}</text>`);
-    push(`<text x="${cx}" y="${fy + 36}" text-anchor="middle" font-size="13" fill="#111">${val}</text>`);
-    fy += 48;
-    push(`<line x1="${tb.x}" y1="${fy}" x2="${tb.x + tb.w}" y2="${fy}" stroke="#444"/>`);
+  const sheetTxt = opts.sheet || "1 of 3";
+  const drawingTxt = `AV Schematic — ${sol.name || ""}${J.sheetLabel ? ` · ${J.sheetLabel}` : ""}`;
+  const fitL = (...a) => fitText(...a).replace('text-anchor="middle"', 'text-anchor="start"');
+  const stamp = (x, y, w, h, fs) => `<rect class="stagestamp" x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${stageCol}"/><text x="${x + w / 2}" y="${y + h / 2 + fs * 0.36}" text-anchor="middle" font-size="${fs}" font-weight="800" letter-spacing="${(fs * 0.17).toFixed(1)}" fill="#fff">${stageTxt}</text>`;
+  const TB = P.titleBlock;
+  if (tabbed) {
+    const tb = { x: TB.x, y: TB.y + TB.h - SHEET.strip.tabH, w: TB.w, h: SHEET.strip.tabH }, ty = tb.y + 17.5;
+    push(`<g class="titletab" data-titleblock="show"><rect x="${tb.x}" y="${tb.y}" width="${tb.w}" height="${tb.h}" fill="#fff" stroke="#444" stroke-width="1.2"/>`);
+    push(`<text x="${tb.x + 12}" y="${ty}" font-size="12" font-weight="700" letter-spacing="3" fill="#111">${esc(co.name)}</text>`);
+    push(fitL(tb.x + 118, ty, [J.client?.name, J.name].filter(Boolean).join("  ·  "), 11, "#333", tb.w - 118 - 400));
+    push(stamp(tb.x + tb.w - 388, tb.y + 5, 80, 16, 9));
+    push(`<text x="${tb.x + tb.w - 298}" y="${ty}" font-size="11" fill="#333">${esc([revsAll.length ? `Rev ${revsAll[revsAll.length - 1].rev}` : "", `Sheet ${sheetTxt}`].filter(Boolean).join("  ·  "))}</text>`);
+    push(`<text class="noprint" x="${tb.x + tb.w - 12}" y="${ty}" text-anchor="end" font-size="11" font-weight="600" fill="#1f6feb">▴ Show title block</text></g>`);
+  } else {
+    const x0 = TB.x, y0 = TB.y, w = TB.w, h = TB.h, narrow = w < 860;
+    const a = x0 + (narrow ? 210 : 250), c = x0 + w - (narrow ? 150 : 180), b = Math.round(a + (c - a) * 0.52), rowY = y0 + 62;   // logo | customer | project | sheet
+    const lab = (x, y, t) => `<text x="${x}" y="${y}" font-size="8.5" fill="#777">${t}</text>`;
+    push(`<g class="titleblock"><rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#fff" stroke="#444" stroke-width="1.2"/>`);
+    push(`<path d="M${a} ${y0}V${y0 + h}M${c} ${y0}V${y0 + h}M${b} ${y0}V${rowY}M${a} ${rowY}H${c}" stroke="#444" fill="none"/>`);
+    const lx = (x0 + a) / 2, ly = y0 + h / 2, [info1, ...info2] = String(co.info).split(/\s·\s(?=P:)/);
+    push(fitText(lx, ly - 3, co.name, narrow ? 23 : 27, "#111", a - x0 - 30, { bold: true, caps: narrow ? 6 : 7 }).replace(' style="text-transform:uppercase"', ""));
+    push(`<text x="${lx}" y="${ly + 14}" text-anchor="middle" font-size="${narrow ? 8 : 9}" letter-spacing="2.6" fill="#444">${esc(co.tagline)}</text>`);
+    push(fitText(lx, ly + 33, info1, 7.5, "#666", a - x0 - 20));
+    if (info2.length) push(fitText(lx, ly + 43, info2.join(" · "), 7.5, "#666", a - x0 - 20));
+    push(lab(a + 12, y0 + 16, "Customer"));
+    push(fitL(a + 12, y0 + 37, J.client?.name || "", 16, "#111", b - a - 24, { bold: true }));
+    push(fitL(a + 12, y0 + 53, String(J.client?.address || "").replace(/\s*,\s*/g, ", ").trim(), 10.5, "#333", b - a - 24));
+    push(lab(b + 12, y0 + 16, "Project"));
+    push(fitL(b + 12, y0 + 37, J.name || "", 15, "#111", c - b - 24));
+    push(fitL(b + 12, y0 + 53, drawingTxt, 10.5, "#333", c - b - 24));
+    // revisions: the latest ones, in as many rows as the strip is tall and two columns when there's the width;
+    // a long description is cut at a word with an ellipsis (the full text is the hover title)
+    const rows = Math.max(1, Math.floor((h - 62 - 28) / 13.5)), rcols = c - a >= 500 ? 2 : 1, colW = (c - a - 78) / rcols;
+    const revs = revsAll.slice(-Math.min(4, rows * rcols)), maxCh = Math.floor((colW - 96) / 5);
+    const revLine = t => { t = String(t || "").replace(/\s+/g, " ").trim(); if (t.length <= maxCh) return t; const cut = t.slice(0, maxCh), sp = cut.lastIndexOf(" "); return (sp > maxCh * 0.5 ? cut.slice(0, sp) : cut.slice(0, maxCh - 1)) + "…"; };
+    push(lab(a + 12, rowY + 15, "Revisions"));
+    revs.forEach((rv, i) => {
+      const rx = a + 70 + Math.floor(i / rows) * colW, y = rowY + 15 + (i % rows) * 13.5;
+      push(`<g class="revrow" font-size="9.5" fill="#333"><text x="${rx + 8}" y="${y}" text-anchor="end" font-weight="700" fill="#111">${esc(rv.rev)}</text><text x="${rx + 14}" y="${y}">${fmtDate(rv.date)}</text><text x="${rx + 62}" y="${y}">${esc(revLine(rv.description))}</text><text x="${rx + colW - 14}" y="${y}" text-anchor="end">${esc(rv.by || "")}</text><title>${esc(rv.description || "")}</title></g>`);
+    });
+    push(`<text x="${a + 12}" y="${y0 + h - 8}" font-size="8.5" fill="#777">Date  <tspan font-size="9.5" font-weight="500" fill="#111">${fmtDate(lastDate)}</tspan>    Drawn by  <tspan font-size="9.5" font-weight="500" fill="#111">${esc(J.drawnBy || "SignalPath")}</tspan></text>`);
+    push(`<text x="${c - 12}" y="${y0 + h - 8}" text-anchor="end" font-size="7" fill="#999">Design intent only — not engineering / construction documentation</text>`);
+    const sx = (c + x0 + w) / 2, sy = y0 + h / 2;
+    push(`<text x="${sx}" y="${sy - 39}" text-anchor="middle" font-size="8.5" fill="#777">Sheet</text>`);
+    push(`<text class="sheetno" x="${sx}" y="${sy - 5}" text-anchor="middle" font-size="25" font-weight="700" fill="#111">${esc(sheetTxt)}</text>`);
+    push(stamp(sx - 52, sy + 13, 104, 22, 11.5));
+    if (opts.titleBlock === "open") push(`<text class="noprint" data-titleblock="hide" x="${x0 + 8}" y="${y0 + h - 7}" font-size="9.5" font-weight="600" fill="#1f6feb">▾ Hide</text>`);
+    push(`</g>`);
   }
-  push(`<text transform="rotate(-90 ${cx} 972)" x="${cx}" y="972" text-anchor="middle" font-size="7" fill="#999">Design intent only — not engineering / construction documentation</text>`);
   push(`</svg>`);
   return out.join("\n");
 }

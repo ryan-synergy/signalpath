@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-S4678Nnv6Oa/rzODA0eJbV9dti4B/Pi183vNFhJgF20=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-5cNehCJ3JZjs9LcPN7WhEkL66geZIX7DdfMyQWjIN6c='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ZybjfNmE8Y81CzeMSZV5m1aDpaJhWs3g2uUNiSnAOPY=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-sFoR90FRmpkBpZnvzkJ0dkWya0OopWUReXL0LgVaH3s='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -654,29 +654,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003190010",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003190010",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003190010",
-    "./app/ports.js": "./app/ports.js?v=20261003190010",
-    "./app/commands.js": "./app/commands.js?v=20261003190010",
-    "./app/engine.js": "./app/engine.js?v=20261003190010",
-    "./app/exports.js": "./app/exports.js?v=20261003190010",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003190010",
-    "./app/hookup.js": "./app/hookup.js?v=20261003190010",
-    "./app/importers.js": "./app/importers.js?v=20261003190010",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003190010",
-    "./app/library.js": "./app/library.js?v=20261003190010",
-    "./app/names.js": "./app/names.js?v=20261003190010",
-    "./app/network.js": "./app/network.js?v=20261003190010",
-    "./app/pages.js": "./app/pages.js?v=20261003190010",
-    "./app/power.js": "./app/power.js?v=20261003190010",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003190010",
-    "./app/rack.js": "./app/rack.js?v=20261003190010",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003190010",
-    "./app/starters.js": "./app/starters.js?v=20261003190010",
-    "./app/kinds.js": "./app/kinds.js?v=20261003190010",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003190010",
-    "./app/sheets.js": "./app/sheets.js?v=20261003190010"
+    "./app/ai.js": "./app/ai.js?v=20261003191155",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003191155",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003191155",
+    "./app/ports.js": "./app/ports.js?v=20261003191155",
+    "./app/commands.js": "./app/commands.js?v=20261003191155",
+    "./app/engine.js": "./app/engine.js?v=20261003191155",
+    "./app/exports.js": "./app/exports.js?v=20261003191155",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003191155",
+    "./app/hookup.js": "./app/hookup.js?v=20261003191155",
+    "./app/importers.js": "./app/importers.js?v=20261003191155",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003191155",
+    "./app/library.js": "./app/library.js?v=20261003191155",
+    "./app/names.js": "./app/names.js?v=20261003191155",
+    "./app/network.js": "./app/network.js?v=20261003191155",
+    "./app/pages.js": "./app/pages.js?v=20261003191155",
+    "./app/power.js": "./app/power.js?v=20261003191155",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003191155",
+    "./app/rack.js": "./app/rack.js?v=20261003191155",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003191155",
+    "./app/starters.js": "./app/starters.js?v=20261003191155",
+    "./app/kinds.js": "./app/kinds.js?v=20261003191155",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003191155",
+    "./app/sheets.js": "./app/sheets.js?v=20261003191155"
 } }
 </script>
 <script>
@@ -745,6 +745,7 @@
         <label class="chk"><input type="radio" name="trunkStyle" value="off"><span><b>Off</b><em>Each wire takes its own path (the older drawing)</em></span></label>
       </div>
       <label class="chk"><input type="checkbox" id="danteLabels"><span><b>Dante as labels</b><em>Saved with the project: Dante shown as text on each box instead of lines</em></span></label>
+      <label class="chk"><input type="checkbox" id="legendCompact"><span><b>Compact legend</b><em>Saved with the project: three tight rows instead of the sectioned legend — more room for the drawing</em></span></label>
       <label class="chk"><input type="checkbox" id="harnessMode"><span><b>Harness style</b><em>Saved with the project: runs to 3+ rooms share one line and branch off at each room</em></span></label>
       </details>
     </div></div>
@@ -937,7 +938,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003190010").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003191155").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1054,6 +1055,7 @@ function refresh(save = true) {
   for (const r of document.querySelectorAll('input[name="trunkStyle"]')) r.checked = r.value === (S.job.job.trunkStyle || "bundle");
   $("#harnessMode").disabled = !!trunkMode(S.job);          // trunks replace the harness; it applies with trunks off
   $("#danteLabels").checked = S.job.job.danteStyle === "labels";
+  $("#legendCompact").checked = S.job.job.legendStyle === "compact";
   try {
     autoLinkCatalog(S.job, effectiveCatalog());                // self-heal: fill missing catalog links by model
     // Auto racks: two side by side past the limit, back to one when the gear fits again
@@ -1294,6 +1296,7 @@ for (const r of document.querySelectorAll('input[name="trunkStyle"]')) r.onchang
   refresh();
 };
 $("#danteLabels").onchange = e => { if (e.target.checked) S.job.job.danteStyle = "labels"; else delete S.job.job.danteStyle; refresh(); };
+$("#legendCompact").onchange = e => { S.editLabel = "legend style"; if (e.target.checked) S.job.job.legendStyle = "compact"; else delete S.job.job.legendStyle; refresh(); };
 $("#splitSheets").onchange = e => { if (e.target.checked) S.job.job.splitSheets = true; else delete S.job.job.splitSheets; S.sheet = 0; refresh(); };
 $("#harnessMode").onchange = e => { if (e.target.checked) S.job.job.harnessStyle = true; else delete S.job.job.harnessStyle; refresh(); };
 $("#solSel").onchange = e => {

@@ -174,7 +174,7 @@ export function normalizeJob(job) {
   if (typeof job.job.name !== "string") job.job.name = job.job.name == null || typeof job.job.name === "object" ? "Untitled project" : String(job.job.name);
   if (job.job.client != null && typeof job.job.client !== "object") job.job.client = { name: String(job.job.client) };
   for (const k of ["name", "address"]) if (job.job.client && job.job.client[k] != null && typeof job.job.client[k] === "object") delete job.job.client[k];
-  for (const k of ["stage", "trunkStyle", "danteStyle", "drawnBy"]) if (job.job[k] != null && typeof job.job[k] !== "string") delete job.job[k];
+  for (const k of ["stage", "trunkStyle", "danteStyle", "legendStyle", "drawnBy"]) if (job.job[k] != null && typeof job.job[k] !== "string") delete job.job[k];
   // the Auto rack limit (Rack tab): whole U, 8–60
   if (job.job.autoRackMax != null) { const n = Math.floor(+job.job.autoRackMax); if (n >= 8 && n <= 60) job.job.autoRackMax = n; else delete job.job.autoRackMax; }
   // the title block prints each revision's rev / date / description / by — plain values only
@@ -1267,10 +1267,35 @@ function placeOnce(job, ix, opts, variant) {
     const have = new Set(out.racks.flatMap(r => r.devices).map(d => { const dev = s.devices[d.id] || {}; return deviceKind(dev, snap[dev.catalogRef]); }));
     return Object.keys(KIND_STYLE).filter(k => have.has(k));
   })();
-  const eqH = kindsHere.length ? PL.legendEqH : 0;
-  const lw = Math.max(90, 24 + rows.length * PL.legendRowW, noteW, kindsHere.length ? 24 + kindsHere.length * PL.legendEqW : 0);   // "LEGEND" must fit even with no signal rows yet
-  const lh = PL.legendH + eqH + (notes.length ? noteLines * 13 + notes.length * 3 + 12 : 0);
-  out.legend = { rows, kinds: kindsHere, eqH, notes, w: lw, h: lh, x: SHEET.content.x + SHEET.content.w - lw - 60, y: SHEET.content.y + SHEET.content.h - lh - 6 };
+  /* the legend (Ryan 2026-10-03, from the concept sheet): a card in the room cards' style, and the notes as a card of
+     their own beside it (above it when they won't fit side by side) so a long note never stretches the legend.
+       "full" (the default) — sections: WIRES · EQUIPMENT + the adapter shapes · ROOMS (the band colors) + MARKS
+       "compact" (View ▾ → Compact legend, saved with the project) — three tight rows: wires, equipment, rooms
+     Either way it lists only what this sheet uses. */
+  const style = (opts.legendStyle ?? job.job?.legendStyle) === "compact" ? "compact" : "full";
+  const roomsHere = Object.keys(ROOM_KINDS).filter(k => k !== "empty" && out.zones.some(z => roomKind(ix.zonesById[z.id], z.scope !== "included").key === k));
+  const chipKinds = [...new Set(out.chips.map(c => { const sh = chipShape(c); return c.type === "balun" ? "balun" : sh.color === "#3b82c4" ? "axis" : sh.kind; }))];
+  const adapters = ["enc", "dec", "balun", "axis"].filter(k => chipKinds.includes(k));
+  const tvs = out.zones.flatMap(z => (ix.zonesById[z.id]?.endpoints || []).filter(e => e.type === "display" && e.displayType !== "projector"));
+  const marks = [tvs.some(e => e.status !== "ofe") && "new", tvs.some(e => e.status === "ofe") && "ofe", notes.length && "note"].filter(Boolean);
+  const tw = t => String(t).length * 5.6, sigLabel = k => k === "danteTag" ? "Dante (labels)" : LEGEND_LABELS[k] || k;
+  let card;
+  if (style === "compact") {
+    const rowsW = [rows.reduce((n, k) => n + 31 + tw(sigLabel(k)) + (k === "danteTag" ? 22 : 0), 0), kindsHere.reduce((n, k) => n + 28 + tw(KIND_STYLE[k].label), 0), roomsHere.reduce((n, k) => n + 28 + tw(ROOM_KINDS[k].label), 0)];
+    card = { w: Math.max(150, Math.ceil(Math.max(...rowsW)) + 26), h: 22 + rowsW.filter(Boolean).length * 17 + 9 };
+  } else {
+    const eqCols = kindsHere.length > 4 ? 2 : 1, roomCols = roomsHere.length > 3 ? 2 : 1;
+    const cols = { wires: rows.length ? 136 : 0, eq: kindsHere.length || adapters.length ? Math.max(eqCols * 118, adapters.length > 1 ? 196 : 118) : 0, rooms: roomsHere.length || marks.length ? Math.max(roomCols * 114, marks.length > 1 ? 214 : 114) : 0 };
+    const hW = rows.length * 17, hE = Math.min(4, kindsHere.length) * 17 + (adapters.length ? 24 + Math.ceil(adapters.length / 2) * 18 : 0), hR = Math.min(3, roomsHere.length) * 17 + (marks.length ? 24 + Math.ceil(marks.length / 2) * 18 : 0);
+    card = { w: Math.max(150, cols.wires + cols.eq + cols.rooms + 28), h: 22 + 20 + Math.max(hW, hE, hR, 17) + 8, cols, eqCols, roomCols };
+  }
+  const notesCard = notes.length ? { w: Math.ceil(Math.max(150, noteW - 20)), h: 22 + 10 + noteLines * 13 + notes.length * 3 + 6 } : null;
+  const side = !notesCard || card.w + notesCard.w + 10 <= SHEET.content.w - 90;
+  const lw = notesCard ? (side ? card.w + notesCard.w + 10 : Math.max(card.w, notesCard.w)) : card.w;
+  const lh = notesCard ? (side ? Math.max(card.h, notesCard.h) : card.h + notesCard.h + 8) : card.h;
+  if (notesCard) { notesCard.dx = side ? 0 : lw - notesCard.w; notesCard.dy = side ? lh - notesCard.h : 0; }
+  card.dx = lw - card.w; card.dy = lh - card.h;
+  out.legend = { style, rows, kinds: kindsHere, rooms: roomsHere, adapters, marks, notes, card, notesCard, w: lw, h: lh + 3, x: SHEET.content.x + SHEET.content.w - lw - 60, y: SHEET.content.y + SHEET.content.h - lh - 9 };
 
   /* -- bounds + fit scale (one-page rule: drawing scales, never splits) -- */
   const rects = [...out.zones, ...out.racks, ...out.chips];
@@ -3498,6 +3523,12 @@ function routeOnce(job, ix, placement, opts = {}) {
       Math.sign(nu[i][1] - nu[i - 1][1]) === Math.sign(old[i][1] - old[i - 1][1]) && Math.sign(nu[i + 2][1] - nu[i + 1][1]) === Math.sign(old[i + 2][1] - old[i + 1][1]);
     const unreg = net => { for (const arr of [usedH, usedV]) { const k = arr.filter(u => u.net !== net); arr.length = 0; arr.push(...k); } };
     const skipOf = w => new Set([w.from, w.to, s.companions[w.to]?.id].filter(Boolean));
+    // …but a wire's own boxes are exempt only where it lands on them: a swapped lane that runs THROUGH the box it ends
+    // on is not a route (fuzz #34, 2026-10-03: a TV return's lane was swapped to a height inside its input module)
+    const ownHit = (w, pts) => [[w.to, pts.length - 1], [w.from, 1]].some(([id, endSeg]) => { const o = devById[id]; if (!o) return false;
+      for (let i = 1; i < pts.length; i++) { if (i === endSeg) continue; const [x1, y1] = pts[i - 1], [x2, y2] = pts[i];
+        if (Math.min(x1, x2) < o.x + o.w - RT.pad && Math.max(x1, x2) > o.x + RT.pad && Math.min(y1, y2) < o.y + o.h - RT.pad && Math.max(y1, y2) > o.y + RT.pad) return true; }
+      return false; });
     // a fan-out's wires never cross each other (out.groups: the non-relaxed siblings per device side)
     const sibHit = w => {
       const grp = out.groups.find(g => g.nets.includes(w.net));
@@ -3573,7 +3604,7 @@ function routeOnce(job, ix, placement, opts = {}) {
         let best = null, bestN = before2;
         for (const [nA, nB] of moves) {
           const next = [nA, ...mA.map(m => carry(oldA, nA, m)), nB, ...mB.map(m => carry(oldB, nB, m))];
-          if (next.some(p => !p) || unit.some((w, k) => pathBlocked(next[k], skipOf(w)))) continue;
+          if (next.some(p => !p) || unit.some((w, k) => pathBlocked(next[k], skipOf(w)) || ownHit(w, next[k]))) continue;
           // A's bundle against the registry, then B's against the registry plus A's
           const nA2 = next.slice(0, 1 + mA.length), nB2 = next.slice(1 + mA.length);
           let good = nA2.every(p => pathRegisterable(p, A.net));
@@ -4632,38 +4663,63 @@ export function render(job, ix, P, rt, opts = {}) {
 
   /* dynamic legend */
   const lg = P.legend;
-  push(`<rect x="${lg.x}" y="${lg.y}" width="${lg.w}" height="${lg.h}" fill="#fff" stroke="#777"/>`);
-  push(`<text x="${lg.x + 12}" y="${lg.y + 16}" font-size="10" font-weight="700" fill="#555" letter-spacing="1">LEGEND</text>`);
-  lg.rows.forEach((k, i) => {
-    const x = lg.x + 12 + i * 140;
-    if (k === "danteTag") {
-      push(`<text x="${x}" y="${lg.y + 40}" font-size="9" font-weight="700" letter-spacing=".4" fill="${bw ? "#333" : SIGNAL_COLORS.dante}">DANTE ←</text>`);
-      push(`<text x="${x + 50}" y="${lg.y + 40}" font-size="11.5" fill="#333">Dante (labels)</text>`);
-      return;
+  {
+    const band = bw ? "#2b2b2b" : "#23344a", f = v => +v.toFixed(1);
+    const cardSvg = (x, y, w, h, title) => `<rect x="${x + 1.5}" y="${y + 2.5}" width="${w}" height="${h}" rx="8" fill="#000" fill-opacity="0.1"/><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#fff" stroke="#b9bec8" stroke-width="1.2"/>` +
+      `<path d="M${x + 8} ${y}h${w - 16}a8 8 0 0 1 8 8v14h-${w}v-14a8 8 0 0 1 8 -8z" fill="${band}"/><text x="${x + 14}" y="${y + 15.5}" font-size="11.5" font-weight="500" letter-spacing="1.4" fill="#fff">${title}</text>`;
+    const head = (x, y, t) => `<text x="${f(x)}" y="${y}" font-size="8.4" font-weight="700" letter-spacing="1.2" fill="#6b7280">${t}</text>`;
+    const label = (x, y, t, fs = 10.5) => `<text x="${f(x)}" y="${f(y)}" font-size="${fs}" fill="#333">${esc(t)}</text>`;
+    const sig = (k, x, y, len) => { if (k === "danteTag") return `<text x="${f(x)}" y="${f(y + 3.6)}" font-size="8.6" font-weight="700" letter-spacing=".4" fill="${bw ? "#333" : SIGNAL_COLORS.dante}">DANTE ←</text>`;
+      const st = bw ? SIGNAL_DASHES[k] : null, ld = st?.dash || (k === "dante" ? "6 4" : k === "prewire" ? "3 4" : null);
+      return `<path d="M${f(x)} ${f(y)}h${len}" stroke="${st ? st.stroke : SIGNAL_COLORS[k]}" stroke-width="2.6" stroke-linecap="round" fill="none"${ld ? ` stroke-dasharray="${ld}"` : ""}/>`; };
+    const sigName = k => k === "danteTag" ? "Dante (labels)" : LEGEND_LABELS[k] || k;
+    const kindBox = (k, x, y, w = 22, h = 13) => `<rect x="${f(x)}" y="${f(y)}" width="${w}" height="${h}" rx="2" fill="${!bw || k === "power" ? KIND_STYLE[k].tint : "#262626"}"/>` + kindEdge(k, x, y, h, 2, bw);
+    const roomBox = (k, x, y, w = 22, h = 12) => `<rect x="${f(x)}" y="${f(y)}" width="${w}" height="${h}" rx="3" fill="${bw ? (k === "prewire" ? "#777" : "#2b2b2b") : ROOM_KINDS[k].color}"/>`;
+    const roomName = k => { const l = ROOM_KINDS[k].label.toLowerCase().replace(/\btv\b/g, "TV"); return l[0].toUpperCase() + l.slice(1); };
+    const cx = lg.x + lg.card.dx, cy = lg.y + lg.card.dy;
+    push(`<g class="legendcard" data-style="${lg.style}">` + cardSvg(cx, cy, lg.card.w, lg.card.h, "LEGEND"));
+    if (lg.style === "compact") {
+      let y = cy + 22 + 13;
+      const row = (items, draw, width) => { if (!items.length) return; let x = cx + 14; for (const k of items) { push(draw(k, x, y)); x += width(k); } y += 17; };
+      row(lg.rows, (k, x, yy) => sig(k, x, yy - 3.6, 18) + label(x + (k === "danteTag" ? 44 : 23), yy, sigName(k), 10), k => 31 + sigName(k).length * 5.6 + (k === "danteTag" ? 22 : 0));
+      row(lg.kinds, (k, x, yy) => kindBox(k, x, yy - 9, 16, 11) + label(x + 20, yy, KIND_STYLE[k].label, 10), k => 28 + KIND_STYLE[k].label.length * 5.6);
+      row(lg.rooms, (k, x, yy) => roomBox(k, x, yy - 9, 16, 11) + label(x + 20, yy, roomName(k), 10), k => 28 + roomName(k).length * 5.6);
+    } else {
+      const { cols, eqCols, roomCols } = lg.card, top = cy + 22 + 16, bot = cy + lg.card.h - 8;
+      let x = cx + 14;
+      if (cols.wires) { push(head(x, top, "WIRES")); lg.rows.forEach((k, i) => push(sig(k, x, top + 14 + i * 17, 26) + label(x + (k === "danteTag" ? 46 : 34), top + 18 + i * 17, sigName(k)))); x += cols.wires; }
+      if (cols.eq) {
+        if (cols.wires) push(`<path d="M${x - 10} ${top - 8}V${bot}" stroke="#e3e5eb"/>`);
+        if (lg.kinds.length) { push(head(x, top, "EQUIPMENT")); lg.kinds.forEach((k, i) => { const col = Math.floor(i / 4), kx = x + col * 118, ky = top + 8 + (i % 4) * 17; push(kindBox(k, kx, ky) + label(kx + 28, ky + 10, KIND_STYLE[k].label)); }); }
+        if (lg.adapters.length) { const ay = top + (lg.kinds.length ? Math.min(4, lg.kinds.length) * 17 + 20 : 0); push(head(x, ay, "ADAPTERS"));
+          lg.adapters.forEach((k, i) => { const ax = x + (i % 2) * 96, yy = ay + 6 + Math.floor(i / 2) * 18, c = bw ? "#cfcfcf" : k === "balun" ? "#ffab2e" : k === "axis" ? "#3b82c4" : "#e0449e";
+            push((k === "dec" ? `<path d="M${ax + 7} ${yy}h30a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-30l-7 -6.5z" fill="#1b1b1b"/><rect x="${ax + 30}" y="${yy}" width="9" height="13" rx="2" fill="${c}"/>`
+              : k === "balun" ? `<path d="M${ax + 7} ${yy}h25l7 6.5 -7 6.5h-25l-7 -6.5z" fill="#1b1b1b"/><path d="M${ax + 7} ${yy}h7v13h-7l-7 -6.5z" fill="${c}"/>`
+              : `<path d="M${ax + 2} ${yy}h30l7 6.5 -7 6.5h-30a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2z" fill="#1b1b1b"/><rect x="${ax}" y="${yy}" width="9" height="13" rx="2" fill="${c}"/>`) +
+              label(ax + 44, yy + 10, { enc: "Encoder", dec: "Decoder", balun: "Balun", axis: "Dante audio" }[k])); }); }
+        x += cols.eq;
+      }
+      if (cols.rooms) {
+        if (cols.wires || cols.eq) push(`<path d="M${x - 10} ${top - 8}V${bot}" stroke="#e3e5eb"/>`);
+        if (lg.rooms.length) { push(head(x, top, "ROOMS")); lg.rooms.forEach((k, i) => { const col = Math.floor(i / 3), rx = x + col * 114, ry = top + 8 + (i % 3) * 17; push(roomBox(k, rx, ry) + label(rx + 28, ry + 10, roomName(k))); }); }
+        if (lg.marks.length) { const my = top + (lg.rooms.length ? Math.min(3, lg.rooms.length) * 17 + 20 : 0); push(head(x, my, "MARKS"));
+          lg.marks.forEach((k, i) => { const mx = x + (i % 2) * 74 + (i % 2 && lg.marks[i - 1] === "ofe" ? 44 : 0), yy = my + 7 + Math.floor(i / 2) * 18;
+            push(k === "note" ? `<circle cx="${mx + 8}" cy="${yy + 6}" r="8" fill="${bw ? "#111" : "#d92d20"}" fill-opacity="0.22"/><circle cx="${mx + 8}" cy="${yy + 6}" r="6" fill="${bw ? "#111" : "#d92d20"}" stroke="#fff" stroke-width="1.2"/><text x="${mx + 8}" y="${yy + 8.8}" text-anchor="middle" font-size="7.6" font-weight="700" fill="#fff">1</text>` + label(mx + 22, yy + 10, "Note")
+              : `<rect x="${mx}" y="${yy}" width="26" height="12" fill="${bw ? (k === "ofe" ? "#777" : "#2b2b2b") : k === "ofe" ? "#b45309" : "#1f6feb"}"/><text x="${mx + 13}" y="${yy + 9}" text-anchor="middle" font-size="7" font-weight="800" fill="#fff">${k.toUpperCase()}</text>` + label(mx + 32, yy + 10, k === "ofe" ? "Owner-furnished" : "New")); }); }
+      }
     }
-    const st = bw ? SIGNAL_DASHES[k] : null;
-    const ld = st?.dash || (k === "dante" ? "6 4" : null);
-    push(`<path d="M${x} ${lg.y + 36}H${x + 32}" stroke="${st ? st.stroke : SIGNAL_COLORS[k]}" stroke-width="3" fill="none"${ld ? ` stroke-dasharray="${ld}"` : ""}/>`);
-    push(`<text x="${x + 38}" y="${lg.y + 40}" font-size="11.5" fill="#333">${LEGEND_LABELS[k] || k}</text>`);
-  });
-  // equipment key: a small box per kind, tinted and edged like the rack tiles
-  (lg.kinds || []).forEach((k, i) => {
-    const x = lg.x + 12 + i * PL.legendEqW, y = lg.y + PL.legendH - 6;
-    push(`<rect x="${x}" y="${y}" width="26" height="14" rx="2" fill="${!bw || k === "power" ? KIND_STYLE[k].tint : "#262626"}"/>`);
-    push(kindEdge(k, x, y, 14, 2, bw));
-    push(`<text x="${x + 32}" y="${y + 11}" font-size="11.5" fill="#333">${esc(KIND_STYLE[k].label)}</text>`);
-  });
-  const ny = lg.y + PL.legendH + (lg.eqH || 0);   // the NOTES block sits under the equipment key
-  if (lg.notes?.length) {
-    // NOTES block: red caveats stay red (dark in grayscale), numbered to match
-    // the circled markers on their zone cards
-    push(`<line x1="${lg.x}" y1="${ny - 4}" x2="${lg.x + lg.w}" y2="${ny - 4}" stroke="#bbb" stroke-width="0.7"/>`);
-    push(`<text x="${lg.x + 12}" y="${ny + 10}" font-size="9" font-weight="700" fill="#555" letter-spacing="1">NOTES</text>`);
-    let yy = ny + 10;
-    for (const a of lg.notes) {
-      push(`<circle cx="${lg.x + 60}" cy="${yy - 3.4}" r="6" fill="${bw ? "#111" : "#d92d20"}"/><text x="${lg.x + 60}" y="${yy - 0.6}" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">${a.n}</text>`);
-      (a.lines || [a.text]).forEach((l, i) => push(`<text x="${lg.x + 72}" y="${yy + i * 13}" font-size="10" fill="${bw ? "#333" : "#b32017"}">${esc(l)}</text>`));
-      yy += (a.lines || [a.text]).length * 13 + 3;
+    push(`</g>`);
+    if (lg.notesCard) {
+      // the notes, numbered to match the badges on the drawing
+      const nx = lg.x + lg.notesCard.dx, ny = lg.y + lg.notesCard.dy;
+      push(`<g class="notescard">` + cardSvg(nx, ny, lg.notesCard.w, lg.notesCard.h, "NOTES"));
+      let yy = ny + 22 + 17;
+      for (const a of lg.notes) {
+        push(`<circle cx="${nx + 20}" cy="${yy - 3.4}" r="6" fill="${bw ? "#111" : "#d92d20"}"/><text x="${nx + 20}" y="${yy - 0.6}" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">${a.n}</text>`);
+        (a.lines || [a.text]).forEach((l, i) => push(`<text x="${nx + 32}" y="${yy + i * 13}" font-size="10" fill="#222">${esc(l)}</text>`));
+        yy += (a.lines || [a.text]).length * 13 + 3;
+      }
+      push(`</g>`);
     }
   }
 

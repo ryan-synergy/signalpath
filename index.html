@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-4dgA0WpT0/UH/5tGs5LSLNV97C4tgy/FRo8W5JkDyU0=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-lnTdbIBCRYeHo+4H3thLpMd5YZym0uIcxqePj/pBLDw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ijXZDPFD33tnzu+GfZYjhWd1zc77Poy0elDgnZF4GsY=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-1Tvq6ZhkwQQT+y2wTfSJ4cCXqUtmPQ0+d05EsuI0Q1I='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -493,6 +493,15 @@
   .plan .acts { display: flex; gap: 8px; margin-top: 10px; }
   #qaChips .plan { width: 100%; padding: 6px 8px; }
   #qaChips .plan .ps { font-size: 12px; }
+  /* the app's own question box (2026-10-03): a name to type or a yes / no — the browser's native prompt and confirm are gone */
+  #ask { position: fixed; inset: 0; background: rgba(10,12,16,.45); display: none; z-index: 80; align-items: center; justify-content: center; padding: 16px; }
+  #ask.on { display: flex; }
+  #ask .card { background: #fff; border-radius: 14px; box-shadow: 0 16px 44px rgba(0,0,0,.35); padding: 18px 18px 14px; width: min(440px, 100%); }
+  #askMsg { font-size: 15px; line-height: 1.45; white-space: pre-line; color: #16181c; overflow-wrap: anywhere; max-height: 50vh; overflow-y: auto; }
+  #askIn { display: block; width: 100%; box-sizing: border-box; margin-top: 12px; min-height: var(--hit); padding: 0 12px; border: 1.5px solid var(--accent); border-radius: 8px; font: inherit; font-size: 15px; }
+  #ask .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  #ask .row button { min-height: var(--hit); padding: 0 16px; border-radius: 8px; border: 1px solid var(--act-line); background: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+  #ask .row button.primary { background: var(--accent); border-color: var(--accent); color: #fff; } #ask .row button.danger { background: #b3261e; border-color: #b3261e; color: #fff; }
   #toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: #16181c; color: #eee; font-size: 13px;
            padding: 8px 14px; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.35); display: none; z-index: 70; gap: 10px; align-items: center;
            width: max-content; max-width: min(560px, calc(100vw - 32px)); box-sizing: border-box; }
@@ -705,29 +714,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003214643",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003214643",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003214643",
-    "./app/ports.js": "./app/ports.js?v=20261003214643",
-    "./app/commands.js": "./app/commands.js?v=20261003214643",
-    "./app/engine.js": "./app/engine.js?v=20261003214643",
-    "./app/exports.js": "./app/exports.js?v=20261003214643",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003214643",
-    "./app/hookup.js": "./app/hookup.js?v=20261003214643",
-    "./app/importers.js": "./app/importers.js?v=20261003214643",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003214643",
-    "./app/library.js": "./app/library.js?v=20261003214643",
-    "./app/names.js": "./app/names.js?v=20261003214643",
-    "./app/network.js": "./app/network.js?v=20261003214643",
-    "./app/pages.js": "./app/pages.js?v=20261003214643",
-    "./app/power.js": "./app/power.js?v=20261003214643",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003214643",
-    "./app/rack.js": "./app/rack.js?v=20261003214643",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003214643",
-    "./app/starters.js": "./app/starters.js?v=20261003214643",
-    "./app/kinds.js": "./app/kinds.js?v=20261003214643",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003214643",
-    "./app/sheets.js": "./app/sheets.js?v=20261003214643"
+    "./app/ai.js": "./app/ai.js?v=20261003222352",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003222352",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003222352",
+    "./app/ports.js": "./app/ports.js?v=20261003222352",
+    "./app/commands.js": "./app/commands.js?v=20261003222352",
+    "./app/engine.js": "./app/engine.js?v=20261003222352",
+    "./app/exports.js": "./app/exports.js?v=20261003222352",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003222352",
+    "./app/hookup.js": "./app/hookup.js?v=20261003222352",
+    "./app/importers.js": "./app/importers.js?v=20261003222352",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003222352",
+    "./app/library.js": "./app/library.js?v=20261003222352",
+    "./app/names.js": "./app/names.js?v=20261003222352",
+    "./app/network.js": "./app/network.js?v=20261003222352",
+    "./app/pages.js": "./app/pages.js?v=20261003222352",
+    "./app/power.js": "./app/power.js?v=20261003222352",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003222352",
+    "./app/rack.js": "./app/rack.js?v=20261003222352",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003222352",
+    "./app/starters.js": "./app/starters.js?v=20261003222352",
+    "./app/kinds.js": "./app/kinds.js?v=20261003222352",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003222352",
+    "./app/sheets.js": "./app/sheets.js?v=20261003222352"
 } }
 </script>
 <script>
@@ -885,6 +894,7 @@
   <div class="airow"><button id="pasteGo" class="primary">Read it</button><span id="pasteStatus" class="mini"></span></div>
 </div></div>
 <div id="toast" role="status" aria-live="polite"></div>
+<div id="ask" role="dialog" aria-modal="true" aria-labelledby="askMsg"><div class="card"><div id="askMsg"></div><input id="askIn" autocomplete="off" spellcheck="false"><div class="row"><button id="askNo">Cancel</button><button id="askOk" class="primary">OK</button></div></div></div>
 
 <div id="picker" role="dialog" aria-modal="true" aria-labelledby="pkTitle"><div class="card">
   <div class="pk-hd"><b id="pkTitle"></b><button id="pkClose" aria-label="Close">✕</button></div>
@@ -998,7 +1008,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003214643").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003222352").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1394,11 +1404,11 @@ $("#jobBtn").onclick = () => {
     // the rest of the jobs live on the Jobs screen; the last few stay one tap away here
     { label: "Recent projects", items: [...jobs.filter(o => o.tagName === "OPTION" && o.value !== String(S.id)).slice(0, 5).map(o => ({ value: `job:${o.value}`, label: o.textContent })),
       { value: "home", label: "All projects…", sub: "Start, open, rename, copy, back up or delete projects" }] },
-  ], onPick: v => {
+  ], onPick: async v => {
     if (v === "home") return openJobsHome();
     const [k, ...rest] = v.split(":"), val = rest.join(":");
     const set = (sel, x) => { $(sel).value = x; $(sel).dispatchEvent(new Event("change")); };
-    if (k === "rename") { const n = prompt("Project name:", S.job.job.name || ""); if (n != null && n.trim()) set("#jobName", n.trim()); }
+    if (k === "rename") { const n = await askText("Project name:", S.job.job.name || ""); if (n != null && n.trim()) set("#jobName", n.trim()); }
     else if (k === "sol") set("#solSel", val);
     else if (k === "file") $("#" + val).click();
     else if (k === "job") set("#jobsSel", val);
@@ -1413,6 +1423,7 @@ async function openJob(id) {
   await flushSave(); S.editScope = "house";
   const rec = (await dbAll()).find(j => j.id === id);
   if (rec) { S.job = rec.data; S.id = rec.id; S.sol = 0; }
+  if (S.mainView === "asbuilt" && !isAsBuilt(S.job)) setView("schematic");   // the As-built screen is for as-builts: a proposal opens on its drawing
   closeJobsHome(); refresh(false);
 }
 function closeJobsHome() { $("#jobsHome").classList.remove("show"); $("#jobsHomeBtn").setAttribute("aria-expanded", "false"); }
@@ -1433,7 +1444,8 @@ async function renderJobsHome() {
   // an as-built sits under the proposal it was started from (by id; older ones by the proposal's name)
   const parentOf = new Map();
   for (const j of all) { const a = j.data.job?.asBuilt; if (j.data.job?.stage !== "asBuilt" || !a) continue;
-    const p = all.find(x => x.id === a.fromId && x.id !== j.id) || all.find(x => x.id !== j.id && x.data.job?.stage !== "asBuilt" && a.fromName && x.data.job?.name === a.fromName);
+    // (by id when the as-built knows its proposal — a deleted proposal leaves it on its own rather than adopting another project of the same name; by name only for old files with no id)
+    const p = a.fromId ? all.find(x => x.id === a.fromId && x.id !== j.id) : all.find(x => x.id !== j.id && x.data.job?.stage !== "asBuilt" && a.fromName && x.data.job?.name === a.fromName);
     if (p) parentOf.set(j.id, p.id); }
   const kids = id => all.filter(j => parentOf.get(j.id) === id);
   const groups = all.filter(j => !parentOf.has(j.id)).map(j => [j, ...kids(j.id)])
@@ -1476,7 +1488,7 @@ $("#jhList").onclick = async e => {
       { value: "del", label: "Delete", sub: "Removes it from this browser" }] }],
     onPick: v => card.querySelector(`[data-a="${CSS.escape(v)}"]`)?.click() });
   if (a === "ab") { if (id !== S.id) await openJob(id); closeJobsHome(); return $("#startAsBuilt").click(); }
-  if (a === "rename") { const n = prompt("Project name:", name); if (n == null || !n.trim()) return;
+  if (a === "rename") { const n = await askText("Project name:", name); if (n == null || !n.trim()) return;
     if (id === S.id) { S.job.job.name = n.trim(); await persist(); refresh(false); }
     else { rec.data.job.name = n.trim(); await dbPut({ ...rec, updated: Date.now() }); await renderJobsSel(); } }
   else if (a === "dup") { const copy = structuredClone(id === S.id ? S.job : rec.data); copy.job.name = `${name} (copy)`;
@@ -1512,6 +1524,7 @@ async function startJobFrom(st) {
   if (st.rooms) { try { S.job = planCommands(S.job, 0, [{ op: "add_zones", text: st.rooms }], effectiveCatalog()).job; } catch (e) { console.warn("starter rooms", e); } }
   S.qaHint = st.tip;                               // the quick-add box suggests how to add zones to this rack
   S.tab = "zones"; switchTab("zones");
+  if (S.mainView !== "schematic") setView("schematic");   // a new project opens on its drawing (it used to land on the As-built or Rack screen you'd left)
   await persist(); refresh();
   closeJobsHome();                                 // however it was started, the new project is what's on screen
   setTimeout(() => $("#qaInput")?.focus(), 50);
@@ -1600,6 +1613,25 @@ addEventListener("keydown", e => {
   }
 });
 let toastTimer = null;
+// the app's own question box: askText resolves the typed text (null on Cancel), askYes true / false. Enter = OK, Esc = Cancel.
+function askBox(message, { input = null, ok = "OK", no = "Cancel" } = {}) {
+  return new Promise(res => {
+    const box = $("#ask"), inp = $("#askIn"), okB = $("#askOk"), noB = $("#askNo"), opener = document.activeElement;
+    const danger = /^(delete|replace|remove)\b/i.test(String(message));
+    $("#askMsg").textContent = message; inp.hidden = input == null; inp.value = input ?? ""; noB.textContent = no;
+    okB.textContent = ok === "OK" && danger ? String(message).match(/^\w+/)[0] : ok; okB.className = danger ? "danger" : "primary";
+    const done = v => { box.classList.remove("on"); removeEventListener("keydown", key, true); box.onclick = null; if (opener?.isConnected && opener.focus) opener.focus({ preventScroll: true }); res(v); };
+    const key = e => { if (e.key === "Escape") { e.stopImmediatePropagation(); e.preventDefault(); done(input == null ? false : null); }
+      else if (e.key === "Enter" && (input != null || document.activeElement !== noB)) { e.stopImmediatePropagation(); e.preventDefault(); done(input == null ? true : inp.value); } };
+    okB.onclick = () => done(input == null ? true : inp.value); noB.onclick = () => done(input == null ? false : null);
+    box.onclick = e => { if (e.target === box) done(input == null ? false : null); };
+    addEventListener("keydown", key, true);
+    box.classList.add("on");
+    if (input != null) { inp.focus(); inp.select(); } else okB.focus();
+  });
+}
+const askText = (message, value = "") => askBox(message, { input: String(value ?? "") });
+const askYes = (message, o = {}) => askBox(message, o);
 function toast(msg, withUndo = false) {
   const t = $("#toast");
   t.innerHTML = `<span>${esc(msg)}</span>${withUndo ? '<button type="button" id="toastUndo">Undo</button>' : ""}`;
@@ -1837,7 +1869,7 @@ $("#printClient").onclick = () => printPacket("client");
 $("#startAsBuilt").onclick = async () => {
   closeMenus();
   const sol = S.job.solutions[S.sol] || S.job.solutions[0];
-  if (!confirm(`Start an as-built of "${S.job.job.name}" (${sol.name || "this solution"})?\n\nA copy called "${S.job.job.name} — As-Built" opens; edit it to match what was installed. This project stays as it is.`)) return;
+  if (!await askYes(`Start an as-built of "${S.job.job.name}" (${sol.name || "this solution"})?\n\nA copy called "${S.job.job.name} — As-Built" opens; edit it to match what was installed. This project stays as it is.`, { ok: "Start as-built" })) return;
   await flushSave();
   const fromId = S.id;
   S.job = startAsBuilt(S.job, S.sol); S.id = uid("job"); S.sol = 0; S.editScope = "house";
@@ -3180,7 +3212,7 @@ function setView(v) {
   if (S.job) refresh(false);                                 // draws whichever view is now on screen
 }
 document.querySelectorAll("#viewSw button").forEach(b => b.onclick = () => setView(b.dataset.view));
-try { const v = localStorage.getItem("signalpath.view"); if (v === "rack" || v === "asbuilt") setView(v); } catch {}   // the view you left it in
+try { const v = localStorage.getItem("signalpath.view"); if (v === "rack" || (v === "asbuilt" && isAsBuilt(S.job))) setView(v); } catch {}   // the view you left it in (the As-built screen only on an as-built)
 function openRackEd() { setView("rack"); }
 /* ---- the As-built page (Ryan 2026-10-03: "three pages — schematic, rack, as-built — so we can see what everything
    looks like"): on an as-built job, the drawing as installed (changes clouded), what changed from the proposal, and
@@ -3562,14 +3594,14 @@ function wireSettings(body) {
   on(".catop", el => (catOf(el).inputs ||= {}).optical = num(el.value) ?? 0);
   on(".cathd", el => (catOf(el).inputs ||= {}).hdmi = num(el.value) ?? 0);
   on(".catnotes", el => catOf(el).notes = el.value);
-  body.querySelectorAll(".catdel").forEach(el => el.onclick = () => {
+  body.querySelectorAll(".catdel").forEach(el => el.onclick = async () => {
     const id = el.closest("[data-cat]").dataset.cat;
-    if (!confirm(`Delete catalog entry "${id}"?`)) return;
+    if (!await askYes(`Delete catalog entry "${id}"?`)) return;
     delete SETTINGS.catalog.devices[id]; save(); renderPanel();
   });
   const addCat = body.querySelector("#addCat");
-  if (addCat) addCat.onclick = () => {
-    const id = (prompt("Catalog id (e.g. sonos-amp):") || "").trim(); if (!id) return;
+  if (addCat) addCat.onclick = async () => {
+    const id = (await askText("Catalog id (e.g. sonos-amp):") || "").trim(); if (!id) return;
     if (!/^(?!(?:__proto__|constructor|prototype)$)[A-Za-z0-9_.:-]{1,80}$/.test(id)) { alert("Use letters, numbers, dots, dashes or underscores for the id."); return; }
     if (SETTINGS.catalog.devices[id]) { alert(`"${id}" is already in the catalog — edit that entry instead.`); S.openRows.add("cat-" + id); renderPanel(); return; }
     SETTINGS.catalog.devices[id] = { brand: "", model: id, type: "amp", zones: 1, inputs: {}, verified: false };
@@ -3578,8 +3610,8 @@ function wireSettings(body) {
   body.querySelector("#openLib")?.addEventListener("click", () => openLibrary());
   body.querySelector("#openKits")?.addEventListener("click", () => openKits());
   const resetCat = body.querySelector("#resetCat");
-  if (resetCat) resetCat.onclick = () => {
-    if (!confirm("Replace licensing rules and device catalog with the shipped defaults?")) return;
+  if (resetCat) resetCat.onclick = async () => {
+    if (!await askYes("Replace licensing rules and device catalog with the shipped defaults?")) return;
     SETTINGS.catalog = structuredClone(SHIPPED); SETTINGS.catalogBase = {}; syncShippedCatalog(); save(); renderPanel();
   };
 }
@@ -3695,11 +3727,11 @@ function renderLibEditor() {
   const at = ed.querySelector("[data-addtag]");
   if (at) at.onkeydown = ev => { if (ev.key !== "Enter") return; const t = at.value.trim().replace(/\s+/g, ""); if (!t) return;
     e.flags = [...new Set([...(e.flags || []), t])]; save(); };
-  ed.querySelectorAll("[data-act]").forEach(el => el.onclick = () => {
+  ed.querySelectorAll("[data-act]").forEach(el => el.onclick = async () => {
     const a = el.dataset.act, devs = SETTINGS.catalog.devices;
     if (a === "dup") { const r = duplicateDevice(devs, id); devs[r.id] = r.entry; LIB.sel = r.id; LIB.q = ""; save(true); $("#libEd").scrollTop = 0; }
-    if (a === "revert" && confirm(`Replace your version of ${e.brand} ${e.model} with the specs SignalPath ships?`)) { takeShipped(id); save(true); }
-    if (a === "del" && confirm(`Delete ${e.brand} ${e.model} from your library?${used ? ` It's used ${used}× in this project (the project keeps its copy of the specs).` : ""}`)) { delete devs[id]; LIB.sel = null; save(true); }
+    if (a === "revert" && await askYes(`Replace your version of ${e.brand} ${e.model} with the specs SignalPath ships?`)) { takeShipped(id); save(true); }
+    if (a === "del" && await askYes(`Delete ${e.brand} ${e.model} from your library?${used ? ` It's used ${used}× in this project (the project keeps its copy of the specs).` : ""}`)) { delete devs[id]; LIB.sel = null; save(true); }
     if (a === "dropports") { delete e.ports; delete e.portsSource; save(); }
   });
 }
@@ -3727,7 +3759,7 @@ $("#libFile").onchange = async () => {
     const plan = planImport(SETTINGS.catalog.devices, file, stableStr, SETTINGS.starters);
     const kits = plan.kitsAdded.length + plan.kitsUpdated.length;
     if (!plan.added.length && !plan.updated.length && !kits) { alert(`Nothing new in that file (${plan.same.length} device${plan.same.length === 1 ? "" : "s"} already match).`); return; }
-    if (!confirm(`Import ${f.name}?\n\n${plan.added.length} new device${plan.added.length === 1 ? "" : "s"}\n${plan.updated.length} replace${plan.updated.length === 1 ? "s" : ""} your current version\n${plan.same.length} unchanged${kits ? `\n${plan.kitsAdded.length} new starter kit${plan.kitsAdded.length === 1 ? "" : "s"}, ${plan.kitsUpdated.length} updated` : ""}`)) return;
+    if (!await askYes(`Import ${f.name}?\n\n${plan.added.length} new device${plan.added.length === 1 ? "" : "s"}\n${plan.updated.length} replace${plan.updated.length === 1 ? "s" : ""} your current version\n${plan.same.length} unchanged${kits ? `\n${plan.kitsAdded.length} new starter kit${plan.kitsAdded.length === 1 ? "" : "s"}, ${plan.kitsUpdated.length} updated` : ""}`)) return;
     applyImport(SETTINGS.catalog.devices, file, plan, SETTINGS.starters);
     LIB.sel = plan.added[0] || plan.updated[0]; libSaved(true);
   } catch (err) { alert(`Couldn't import that file: ${err.message}`); }
@@ -3832,8 +3864,8 @@ function renderKitEditor(kits) {
     if (a === "up" || a === "down") { const j = idx + (a === "up" ? -1 : 1); [ids[idx], ids[j]] = [ids[j], ids[idx]]; K.order = ids; }
     if (a === "hide") K.hidden = k.hidden ? K.hidden.filter(x => x !== k.id) : [...K.hidden, k.id];
     if (a === "dup") { const c = duplicateStarter(k, kitTaken()); K.mine[c.id] = c; K.order = [...ids.slice(0, idx + 1), c.id, ...ids.slice(idx + 1)]; KIT.sel = c.id; }
-    if (a === "del" && confirm(`Delete the kit "${k.name}"? Projects started from it are unaffected.`)) { delete K.mine[k.id]; K.order = K.order.filter(x => x !== k.id); K.hidden = K.hidden.filter(x => x !== k.id); KIT.sel = null; }
-    if (a === "update" && confirm(`Replace "${k.name}"'s rack with this project's (${(S.job.solutions[S.sol]?.racks?.[0]?.devices || []).length} boxes)?`)) {
+    if (a === "del" && await askYes(`Delete the kit "${k.name}"? Projects started from it are unaffected.`)) { delete K.mine[k.id]; K.order = K.order.filter(x => x !== k.id); K.hidden = K.hidden.filter(x => x !== k.id); KIT.sel = null; }
+    if (a === "update" && await askYes(`Replace "${k.name}"'s rack with this project's (${(S.job.solutions[S.sol]?.racks?.[0]?.devices || []).length} boxes)?`)) {
       const n = starterFromJob(S.job, S.sol, { name: k.name, blurb: k.blurb, tip: k.tip, includeRooms: !!k.rooms, taken: [] });
       K.mine[k.id] = { ...n, id: k.id, name: k.name, ...(k.blurb ? { blurb: k.blurb } : {}), ...(k.tip ? { tip: k.tip } : {}) };
     }
@@ -3843,12 +3875,12 @@ function renderKitEditor(kits) {
 }
 $("#kitClose").onclick = () => { $("#kits").classList.remove("show"); renderPanel(); };
 $("#kits").addEventListener("click", ev => { if (ev.target.id === "kits") $("#kitClose").click(); });
-$("#kitSave").onclick = () => {
+$("#kitSave").onclick = async () => {
   const sol = S.job?.solutions?.[S.sol], rack = sol?.racks?.[0];
   if (!rack?.devices?.length) { alert("This project's rack is empty — add gear first, then save it as a kit."); return; }
-  const name = (prompt("Name this starter kit:", `${S.job.job?.name || "My"} rack`) || "").trim(); if (!name) return;
+  const name = (await askText("Name this starter kit:", `${S.job.job?.name || "My"} rack`) || "").trim(); if (!name) return;
   const rooms = (S.job.house.zones || []).length;
-  const includeRooms = rooms ? confirm(`Include this project's ${rooms} rooms as the kit's starting rooms?\n\nOK = rack + rooms · Cancel = rack only`) : false;
+  const includeRooms = rooms ? await askYes(`Include this project's ${rooms} room${rooms === 1 ? "" : "s"} as the kit's starting rooms?`, { ok: "Rack + rooms", no: "Rack only" }) : false;
   const k = starterFromJob(S.job, S.sol, { name, includeRooms, taken: kitTaken() });
   SETTINGS.starters.mine[k.id] = k; SETTINGS.starters.order = [...listStarters(SETTINGS.starters).map(x => x.id).filter(x => x !== k.id), k.id];
   KIT.sel = k.id; kitsSaved();
@@ -4262,10 +4294,10 @@ function wirePanel(body) {
   body.querySelectorAll(".adddev").forEach(el => el.onclick = () => {
     const sol = S.job.solutions[S.sol];
     const r = sol.racks.find(r => r.id === el.dataset.rid); if (!r) return;
-    openPicker({ title: `Add to ${r.name || r.id}`, groups: addDeviceGroups(), onPick: v => {
+    openPicker({ title: `Add to ${r.name || r.id}`, groups: addDeviceGroups(), onPick: async v => {
       let d;
       if (v === "__free") {
-        const model = prompt("What's the box called?", ""); if (!model) return;
+        const model = await askText("What's the box called?", ""); if (!model) return;
         d = { id: uid("dev"), type: "source", model, status: "new" };
       } else {
         d = { id: uid("dev"), type: "source", status: "new" };
@@ -4477,15 +4509,15 @@ function wirePanel(body) {
   on(".solnet", el => { const sol = S.job.solutions[S.sol]; if (el.value) sol.audioNetwork = el.value; else delete sol.audioNetwork; });
   on(".pgflag", el => { (S.job.job.pages ||= {})[el.dataset.pg] = el.checked; });
   const updCat = body.querySelector("#updCat");
-  if (updCat) updCat.onclick = () => {
+  if (updCat) updCat.onclick = async () => {
     const d = catalogDrift(S.job, SETTINGS.catalog);
-    if (!confirm(`Update ${d.length} device spec${d.length > 1 ? "s" : ""} on this project to the current catalog?\n\n${d.map(x => x.model).join("\n")}\n\nPort budgets and advice may change.`)) return;
+    if (!await askYes(`Update ${d.length} device spec${d.length > 1 ? "s" : ""} on this project to the current catalog?\n\n${d.map(x => x.model).join("\n")}\n\nPort budgets and advice may change.`)) return;
     refreshCatalogLock(S.job, SETTINGS.catalog);
     refresh();
   };
   const addRev = body.querySelector("#addRev");
-  if (addRev) addRev.onclick = () => {
-    const desc = prompt("Revision note:"); if (!desc) return;
+  if (addRev) addRev.onclick = async () => {
+    const desc = await askText("Revision note:"); if (!desc) return;
     const revs = S.job.job.revisions ||= [];
     revs.push({ rev: revs.length + 1, date: new Date().toISOString().slice(0, 10), description: desc, by: S.job.job.drawnBy?.slice(0, 2).toUpperCase() || "SP" });
     refresh();

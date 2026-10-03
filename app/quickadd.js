@@ -124,6 +124,11 @@ export function parseQuickZone(text) {
   const futurePre = /\bfuture\s+pre-?wire/.test(text.toLowerCase());
   const prewireOnly = /\bpre-?wire\s+only\b|\bscope\s*:?\s*pre-?wire/.test(text.toLowerCase());
   if (eatAll(/\bfuture\b/) && (zone.scope !== "prewire" || futurePre || !prewireOnly)) { zone.scope = "future"; chips.push({ kind: "scope", label: SCOPE_NAME.future }); }
+  // how the TV hangs ("den 65 articulating", "on a stand", "flat mount") — said after the room, so it never names it
+  let mount = null;
+  if (eat(/\b(?:on\s+(?:an?\s+)?)?(?:articulating|full[- ]motion|swing[- ]?arm|swivel)(?:\s+(?:mount|arm|bracket))?\b/)) mount = "articulating";
+  else if (eat(/\b(?:on\s+(?:an?\s+|its\s+)?)?(?:tv\s+)?stand\b|\b(?:table|console|credenza)[- ]?top\b/)) mount = "stand";
+  else if (eat(/\b(?:flat|fixed|low[- ]profile)[- ]?mount(?:ed)?\b/)) mount = "flat";
   if (eat(/\b(?:customer|client|homeowner|owner)\s+(?:owns|already\s+(?:has|owns)|has\s+(?:it|one|this)|is\s+keeping|to\s+keep|keeps)\b|\b(?:customer|client|homeowner)[- ]?(?:supplied|provided|furnished|provides|supplies|owned)\b|\bofe\b|\bexisting\b|\bowner\b(?!'s|s\b)(?:[- ]?(?:supplied|provided|furnished))?/)) ofe = true;   // "owner's suite" is a room, not OFE
   if (eat(/\blocal\b/)) local = true;
   if (eat(/\bmatrix\b|\bdistributed\b/)) matrix = true;
@@ -280,6 +285,7 @@ export function parseQuickZone(text) {
     const ep = { id: zone.id + "-tv", type: "display", displayType: tv.displayType, brand: tv.brand || "",
       size: tv.size || 65, status: ofe ? "ofe" : "new" };
     if (!tv.size) ep.confirm = ["size"];
+    if (mount && mount !== "flat" && tv.displayType !== "projector") ep.mount = mount;
     if (apps && !local) ep.ownApps = true;                 // remembered: no rack feed on purpose (not an unwired TV)
     zone.endpoints.push(ep);
     chips.push({ kind: "tv", label: `${tv.brand || (tv.displayType === "projector" ? "Projector" : "TV")} ${ep.size}"${ep.confirm ? " ?" : ""}${ofe ? " · OFE" : ""}` });
@@ -427,7 +433,8 @@ export function zoneToQuick(zone, sol = {}) {
     if (tv.displayType === "projector") words.push(`projector ${tv.size || ""}`.trim());
     // a size, else the brand (a brand alone means a TV), else the word "tv" — "tv" beside a brand stays in the name
     else { const sized = tv.size && !tv.confirm?.includes("size"); if (sized) words.push(String(tv.size));
-      if (tv.brand) words.push(tv.brand.toLowerCase()); else if (!sized) words.push("tv"); }
+      if (tv.brand) words.push(tv.brand.toLowerCase()); else if (!sized) words.push("tv");
+      if (tv.mount === "articulating" || tv.mount === "stand") words.push(tv.mount === "stand" ? "on a stand" : "articulating"); }
   } else if (spk) words.push("no tv");
   const tf = feedOf(tv), sf = feedOf(spk);
   // "avr" only when the receiver feeds the TV itself (the pass-through option); a surround room whose

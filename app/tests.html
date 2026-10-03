@@ -858,6 +858,14 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
       const two = MD.importMarkdown('Rooms\nFamily Room - 5.1, 75" TV\nDen - 5.1, 65" TV\n\nEquipment\nAnthem MRX 740\nAnthem MRX 540\nApple TV', CATM), ts = two.job.solutions[0];
       t("paste: with two receivers and no matrix a loose source is left for you to place", !ts.connections.some(c => ts.racks.flatMap(r => r.devices).find(d => d.id === c.from)?.type === "source"));
     }
+    { // quick-add knows how a TV hangs, and a kit made from rooms says it back (2026-10-03: "den 98 lg articulating" named the room "Den Articulating")
+      const QA = await import("./quickadd.js"), q = t0 => QA.parseQuickZone(t0).zone, tvq = z => z.endpoints.find(e => e.type === "display");
+      const a1 = q("den 98 lg ofe articulating"), a2 = q("loft 55 on a stand"), a3 = q("bar 65 full motion mount"), a4 = q("standing desk room 43"), a5 = q("office 50 flat mount");
+      t("quick-add: articulating / full motion / on a stand set the TV's mount and stay out of the room's name; flat is the default",
+        a1.name === "Den" && tvq(a1).mount === "articulating" && a2.name === "Loft" && tvq(a2).mount === "stand" && a3.name === "Bar" && tvq(a3).mount === "articulating" &&
+        a4.name === "Standing Desk Room" && !tvq(a4).mount && a5.name === "Office" && !tvq(a5).mount, [a1, a2, a3, a4, a5].map(z => `${z.name}:${tvq(z).mount || "flat"}`).join(" | "));
+      t("quick-add: a room written back to text keeps its mount", /articulating/.test(QA.zoneToQuick(a1)) && /on a stand/.test(QA.zoneToQuick(a2)) && tvq(q(QA.zoneToQuick(a2))).mount === "stand", QA.zoneToQuick(a1));
+    }
     const pq = MD.importMarkdown(XM.planQueueFiles(est, 0, CATM)[0].text, CATM);
     t("md: a PlanQueue file comes back — rooms, both racks, owner gear, sizes flagged to confirm", pq.job.solutions[0].racks.length === 2 &&
       pq.job.house.zones.some(x => x.endpoints.some(e => e.type === "display" && e.confirm?.includes("size"))) &&

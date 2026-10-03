@@ -1334,7 +1334,33 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const { job, ix } = loadJob(raw);
   const p = place(job, ix), rt = route(job, ix, p);
   const svg = render(job, ix, p, rt);
-  t("remotes: corner glyphs render with labels", (svg.match(/>SAVANT<\/text>/g) || []).length === 2 && svg.includes(">ATV</text>"));
+  // (2026-10-03: the remote is a control line along the card's bottom — its picture and "Control · Savant remote" / "Local control · Apple TV remote")
+  t("remotes: each room's control line names its remote — system remotes as Control, a local device's as Local control",
+    (svg.match(/>Control · Savant remote<\/text>/g) || []).length === 2 && svg.includes(">Local control · Apple TV remote</text>") && (svg.match(/class="controlline"/g) || []).length === 3);
+  { // a locally fed Apple TV sets the room's remote on its own; "none" turns it off; a small card shows the picture on its band
+    const N = await import("./names.js"), locals = job.solutions[0].localDevices || [], atvZone = locals.find(d => /apple/i.test(d.model || ""))?.zone;
+    const plain = structuredClone(fixtures.residence), Lp = loadJob(plain), pz = place(Lp.job, Lp.ix).zones.find(z => z.id === atvZone);
+    t("remotes: a room with an Apple TV at its TV gets the Apple TV remote without being told", !!atvZone && !plain.house.zones.find(z => z.id === atvZone).remote && pz.remote === "appletv" && N.roomRemote({ id: atvZone, remote: "none" }, locals) === null && N.roomRemote({ id: "z-kitchen" }, locals) === null);
+    const sm = structuredClone(fixtures.residence); sm.house.zones.find(z => z.id === "z-kitchen").remote = "josh"; sm.house.zones.find(z => z.id === "z-master").remote = "control4";
+    const Ls = loadJob(sm), ps = place(Ls.job, Ls.ix), ss = render(Ls.job, Ls.ix, ps, route(Ls.job, Ls.ix, ps)), mz = ps.zones.find(z => z.id === "z-master"), m0 = place(Lp.job, Lp.ix).zones.find(z => z.id === "z-master");
+    t("remotes: a control line never changes a TV room's card size (it lives in the bottom pad); a small card carries the remote's picture on its band instead",
+      mz.w === m0.w && mz.h === m0.h && ss.includes(">Control · Control4 remote</text>") && /class="controlline" data-remote="josh"><title>Control · Josh\.ai remote<\/title>/.test(ss), `${mz.w}x${mz.h} vs ${m0.w}x${m0.h}`);
+  }
+  { // soundbars say what they are (2026-10-03): powered on the TV, passive L·C·R on a receiver, Sonos by model with its Sub and rears
+    const Q = await import("./commands.js"), St = await import("./starters.js"), Im = await import("./importers.js"), CATq = await (await fetch("./catalog.json")).json();
+    const kit = St.STARTERS.find(k => k.id === "theater-receiver");
+    const jq = Q.planCommands(St.applyStarter(Im.skeletonJob("t"), kit, CATq), 0, [{ op: "add_zones", text: "master 75 sonos arc with sub and rears, den 65 soundbar, guest 55 sonos beam, lounge 75 soundbar avr" }], CATq).job;
+    const spk = n => jq.house.zones.find(z => z.name === n).endpoints.find(e => e.type === "speakers"), N = await import("./names.js"), solq = jq.solutions[0];
+    t("soundbars: quick-add keeps a Sonos bar's model, its Sub and its rears; a plain soundbar stays plain",
+      spk("Master").bar === "sonos" && spk("Master").barModel === "arc" && spk("Master").rears === true && spk("Master").config === "soundbar-sub" && spk("Guest").barModel === "beam" && !spk("Guest").rears && !spk("Den").bar, JSON.stringify([spk("Master"), spk("Guest"), spk("Den")]));
+    t("soundbars: the kind follows the wiring — on the TV it's powered, on a receiver it's passive — unless it's marked Sonos",
+      N.soundbarKind(spk("Den"), solq) === "powered" && N.soundbarKind(spk("Lounge"), solq) === "passive" && N.soundbarKind(spk("Master"), solq) === "sonos" && N.soundbarKind({ config: "stereo" }, solq) === null);
+    const Lq = loadJob(jq), pq = place(Lq.job, Lq.ix), sq = render(Lq.job, Lq.ix, pq, route(Lq.job, Lq.ix, pq));
+    t("soundbars: each is drawn and captioned as itself", ["Powered soundbar", "Passive soundbar", "Sonos Beam", "Sonos Arc + Sub + rears"].every(c => sq.includes(`>${c}</text>`)) && (sq.match(/>SONOS<\/text>/g) || []).length === 2 && sq.includes(">L</text>"));
+    const labels = takeoffItems(Lq.job, Lq.ix, {}).map(i => i.label);
+    t("soundbars: the takeoff lists what's there — the Sonos bar, its Sub and its rears as lines; a powered and a passive bar by kind",
+      ["Sonos Arc", "Sonos Sub", "Sonos rear speakers (pair)", "Sonos Beam", "Soundbar, powered", "Soundbar, passive (L·C·R)"].every(l => labels.includes(l)), labels.filter(l => /bar|Sonos/i.test(l)).join(" | "));
+  }
   const items = takeoffItems(job, ix, {});
   const sav = items.find(i => i.label === "Savant Pro Remote");
   t("remotes: billable remotes roll up (2× Savant), Apple TV remote never quoted",

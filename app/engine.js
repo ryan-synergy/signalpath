@@ -2,7 +2,7 @@
    Layers: load → validate → advise → place → route → render(SVG)
    Pure functions, no DOM. Spec: ../DESIGN.md (FROZEN 2026-09-17). */
 
-import { describeNode, drivesRooms, adapterName, adapterTag, isOutdoorZone, SIGNAL_SHORT, SCOPE_NAME } from "./names.js";
+import { describeNode, drivesRooms, adapterName, adapterTag, isOutdoorZone, SIGNAL_SHORT, SCOPE_NAME, roomRemote, remoteLine, soundbarKind, SONOS_BARS } from "./names.js";
 import { bulletFor, isAtmosRoom, knownRunM, RUN_LIMIT_M } from "./hookup.js";
 import { networkPlan, suggestLanSwitch } from "./network.js";
 import { powerPlan } from "./power.js";
@@ -605,6 +605,7 @@ const PL = {
   colA: 80, colB: 260, colC: 470,                 // rack device columns (absolute, aligned across racks)
   smallTile: { w: 100, h: 22, pitch: 70 },
   puckInset: 15,
+  controlStripH: 17,
   chassisTile: { w: 150, h: 64, pitch: 84 },
   ampTile: { w: 170, h: 84, pitch: 104 },
   rackPadTop: 50, rackPadBottom: 30, rackGapY: 30,
@@ -619,7 +620,7 @@ const gridCell = ws => { const a = [...ws].sort((x, y) => x - y); return a.lengt
 
 const SPK = 32, SPK_PITCH = 34; // speaker icon diameter / center pitch
 
-function speakerGroupSize(ep, gs = 1) {
+function speakerGroupSize(ep, gs = 1, bar = null) {
   const sz = r => ({ ...r, w: Math.round(r.w * gs), h: Math.round(r.h * gs) });   // glyph scale (TVs + speakers 25% bigger, 2026-10-01)
   const cfg = ep.config || "stereo";
   const cap = s => (ep.status === "ofe" ? "OFE " : "") + s;
@@ -627,7 +628,15 @@ function speakerGroupSize(ep, gs = 1) {
   if (cfg === "2.1" || cfg === "stereo-2.1") return sz({ w: SPK_PITCH * 3 - 2, h: SPK, caption: cap("2.1 Speakers") });
   if (cfg === "surround-5.1") return sz({ w: SPK_PITCH * 3 - 2, h: 70, caption: cap("5.1 Surround") });
   if (cfg === "surround-7.1" || cfg === "surround-7.1.4") return sz({ w: SPK_PITCH * 4 - 2, h: 70, caption: cap(cfg.slice(9) + " Surround") });
-  if (cfg.startsWith("soundbar")) return sz({ w: 90, h: SPK, caption: cap(cfg === "soundbar-sub" ? "Soundbar + Sub" : "Soundbar") });
+  if (cfg.startsWith("soundbar")) {
+    // a soundbar says what it is (2026-10-03): powered (on the TV), passive L·C·R (on a receiver), or Sonos — and a Sonos
+    // set with a Sub and rears is drawn as the set
+    const sub = cfg === "soundbar-sub", kind = bar || "powered";
+    if (kind === "sonos") { const model = SONOS_BARS[ep.barModel] || "", rears = !!ep.rears;
+      return sz({ w: rears ? 150 : 90, h: rears ? 48 : SPK, bar: kind, caption: cap(`Sonos ${model || "soundbar"}${sub ? " + Sub" : ""}${rears ? " + rears" : ""}`.replace("  ", " ")) }); }
+    // (the footprint stays what a soundbar always took — 90 wide — so no drawing re-lays itself over the new look)
+    return sz({ w: 90, h: SPK, bar: kind, caption: cap(`${kind === "passive" ? "Passive" : "Powered"} soundbar${sub ? " + Sub" : ""}`) });
+  }
   if (cfg === "landscape") {
     const sats = satCount(ep), subs = ep.buriedSub ? 1 : 0;
     return sz({ w: sats * 26 + subs * 34, h: SPK, caption: cap(`Landscape ${sats}${subs ? "+" + subs : ""}`) });
@@ -657,11 +666,13 @@ function displaySize(ep, gs = 1) {
 /* Card geometry: groups run left→right [speakers, display]; a local
    "at-display" source sits under the display footprint (the touch-the-TV
    exception renders from this slot). Card sizes to contents (compactness rule). */
-function zoneCard(zone, localsInZone, hasNote = false, gs = 1) {
+function zoneCard(zone, localsInZone, hasNote = false, gs = 1, sol = null) {
   const groups = [];
   for (const ep of zone.endpoints || []) {
-    if (ep.type === "speakers") groups.push({ epId: ep.id, kind: "speakers", ...speakerGroupSize(ep, gs) });
+    if (ep.type === "speakers") groups.push({ epId: ep.id, kind: "speakers", ...speakerGroupSize(ep, gs, soundbarKind(ep, sol)) });
   }
+  // how the room is run: a control line along the card's bottom (its remote — picked, or the local Apple TV's)
+  const remote = roomRemote(zone, localsInZone), ctl = remoteLine(remote);
   for (const ep of zone.endpoints || []) {
     if (ep.type === "display") groups.push({ epId: ep.id, kind: "display", ...displaySize(ep, gs) });
   }
@@ -704,15 +715,15 @@ function zoneCard(zone, localsInZone, hasNote = false, gs = 1) {
   // the centered title — widen symmetrically so the title stays centered
   const minW = compact ? Math.max(72, nameW + (zone.remote ? 40 : 0) + (hasNote ? 28 : 0)) : PL.cardMinW;
   const minH = compact ? titleH + 24 : PL.cardMinH;   // an endpoint-less zone still reads as a card
-  const w = Math.max(minW, contentRight + pad);
-  const h = Math.max(minH, contentBottom + (compact ? 12 : PL.cardBottomPad));
+  const w = Math.max(minW, contentRight + pad);   // the control line never widens a card: it shortens to fit (render)
+  const h = Math.max(minH, contentBottom + (compact ? 12 : PL.cardBottomPad));   // the control line lives in the bottom pad: no card changes size for it
   // widen: center content when min width won
   const innerW = contentRight - pad;
   if (w > innerW + 2 * pad - 1) {
     const shift = (w - innerW) / 2 - pad;
     for (const g of groups) { g.x += shift; g.cx += shift; for (const l of g.locals || []) l.x += shift; }
   }
-  return { w, h, groups, compact };
+  return { w, h, groups, compact, remote };
 }
 
 function deviceTileSpec(d, inCount = 0, rackOuts = 0) {
@@ -905,7 +916,7 @@ function placeOnce(job, ix, opts, variant) {
   const notedZones = new Set((sol.annotations || []).map(a => a?.near));
   for (const z of job.house.zones) {
     const locals = Object.values(s.locals).filter(d => d.zone === z.id && d.location === "at-display");
-    cardOf[z.id] = zoneCard(z, locals, notedZones.has(z.id), variant.gs || 1);
+    cardOf[z.id] = zoneCard(z, locals, notedZones.has(z.id), variant.gs || 1, sol);
   }
 
   /* -- primary top band: video zones of cluster 0, rows wrapping at content right --
@@ -1279,7 +1290,7 @@ function placeOnce(job, ix, opts, variant) {
 
 function placeZone(out, zone, card, x, y, band) {
   out.zones.push({
-    id: zone.id, name: zone.name, scope: zone.scope || "included", band, remote: zone.remote,
+    id: zone.id, name: zone.name, scope: zone.scope || "included", band, remote: card.remote || null,
     x, y, w: card.w, h: card.h, compact: card.compact || false,
     groups: card.groups.map(g => ({ ...g })),
   });
@@ -4361,22 +4372,25 @@ export function render(job, ix, P, rt, opts = {}) {
     push(`<rect class="cardbody" x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="${rr}" fill="#fff" stroke="${gray ? "#c9ccd3" : "#b9bec8"}" stroke-width="1.2"/>`);
     push(`<path class="cardband" data-kind="${rk.key}" d="M${z.x + rr} ${z.y}h${z.w - 2 * rr}a${rr} ${rr} 0 0 1 ${rr} ${rr}v${bandH - rr}h-${z.w}v-${bandH - rr}a${rr} ${rr} 0 0 1 ${rr} -${rr}z" fill="${bandC}"/>`);
     {
-      const hasRem = !!REMOTE_LABELS[z.remote], nameFs = z.compact ? 12 : 15, nameW = String(z.name || "").length * nameFs * 0.56, typeW = rk.label.length * 5.4 + 8;
+      const hasRem = false, nameFs = z.compact ? 12 : 15, nameW = String(z.name || "").length * nameFs * 0.56, typeW = rk.label.length * 5.4 + 8;
       const showType = !z.compact && nameW + typeW + 34 + (hasRem ? 22 : 0) < z.w;
       if (z.compact || !showType && nameW + 28 > z.w * 0.8)
         push(`<text x="${z.x + z.w / 2 - (hasRem && z.compact ? 6 : 0)}" y="${z.y + bandH - (z.compact ? 6 : 8)}" text-anchor="middle" font-size="${nameFs}" font-weight="500" fill="#fff"${nameW > z.w - 16 ? ` textLength="${Math.round(z.w - 16)}" lengthAdjust="spacingAndGlyphs"` : ""}>${esc(z.name)}</text>`);
       else push(`<text x="${z.x + 14}" y="${z.y + bandH - 8}" font-size="${nameFs}" font-weight="500" fill="#fff">${esc(z.name)}</text>`);
       if (showType) push(`<text class="cardkind" x="${z.x + z.w - 12 - (hasRem ? 22 : 0)}" y="${z.y + bandH - 9}" text-anchor="end" font-size="7.6" font-weight="600" letter-spacing="1" fill="#fff" fill-opacity="0.9">${rk.label}</text>`);
     }
-    // room remote, top-right corner (on the band): what the client picks up in this room
-    const rem = REMOTE_LABELS[z.remote];
-    if (rem) {
-      const rx = z.x + z.w - 24, ry = z.y + 2;
-      push(`<rect x="${rx}" y="${ry}" width="11" height="22" rx="5" fill="#2d2d2d" stroke="#8a8a8a" stroke-width="0.8"/>`);
-      push(`<circle cx="${rx + 5.5}" cy="${ry + 5}" r="1.5" fill="#8f8f8f"/>`);
-      push(`<circle cx="${rx + 5.5}" cy="${ry + 10}" r="1.2" fill="#6a6a6a"/>`);
-      push(`<rect x="${rx + 3.5}" y="${ry + 14}" width="4" height="4" rx="1" fill="#6a6a6a"/>`);
-      push(`<text x="${rx + 5.5}" y="${z.y + bandH + 8}" text-anchor="middle" font-size="7" letter-spacing="0.5" fill="#6b7280">${rem}</text>`);
+    // how the room is run (Ryan 2026-10-03, placement C): a line along the card's bottom — the remote as a small
+    // picture of itself and "Local control · Apple TV remote" (a local device's remote) or "Control · Savant remote"
+    if (z.remote && remoteLine(z.remote) && z.compact) {
+      // a small speaker-only card has no room for the line: the remote's picture sits on the band's right end
+      push(`<g class="controlline" data-remote="${esc(z.remote)}"><title>${esc(remoteLine(z.remote))}</title>${remoteIcon(z.remote, z.x + z.w - 12, z.y + 2, 0.44, bw)}</g>`);
+    } else if (z.remote && remoteLine(z.remote)) {
+      const sy = z.y + z.h - PL.controlStripH;
+      push(`<g class="controlline" data-remote="${esc(z.remote)}"><path d="M${z.x + 10} ${sy}H${z.x + z.w - 10}" stroke="#e3e5eb"/>${remoteIcon(z.remote, z.x + 12, sy + 1.6, 0.4, bw)}` +
+        (() => { // the full line when it fits; the remote's name alone on a narrower card; just the picture on a tiny one
+          const room = z.w - 34, full = remoteLine(z.remote), short = full.replace(/^(Local control|Control) · /, "").replace(/^the /, "").replace(/^./, c => c.toUpperCase());
+          const say = full.length * 5.3 <= room ? full : short.length * 5.3 <= room ? short : "";
+          return say ? `<text x="${z.x + 24}" y="${sy + 12}" font-size="9.6" font-weight="600" fill="${gray ? "#8a8f98" : "#333"}">${esc(say)}</text>` : `<title>${esc(full)}</title>`; })() + `</g>`);
     }
     for (const g of z.groups) {
       const gx = z.x + g.x, gy = z.y + g.y;
@@ -4384,7 +4398,7 @@ export function render(job, ix, P, rt, opts = {}) {
         push(displayFace(g, gx, gy, { bw, gray }));
       } else if (g.kind === "speakers") {
         // the glyphs are drawn at 1× and scaled with their group (TVs + speakers 25% bigger)
-        const sg = speakerGlyphs(ix.endpointsById[g.epId], gx, gy, g.w / gls);
+        const sg = speakerGlyphs(ix.endpointsById[g.epId], gx, gy, g.w / gls, g.bar, bw);
         push(gls === 1 ? sg : `<g transform="translate(${gx} ${gy}) scale(${gls}) translate(${-gx} ${-gy})">${sg}</g>`);
         // sound lines, once per group (not per speaker), on each side that has the room for them
         const cfg = ix.endpointsById[g.epId]?.config || "stereo";
@@ -4719,6 +4733,20 @@ export function render(job, ix, P, rt, opts = {}) {
    type so a rack of black boxes passes the squint test */
 // a source's face: its stored sourceType, else read off its name (kit and library boxes
 // carry a model, not a sourceType — an Apple TV from a kit still gets its badge)
+// a remote, drawn as itself in a 14×36 box at (x, y), scaled — hand-drawn likenesses, used to say which remote runs a room
+function remoteIcon(kind, x, y, sc = 1, bw = false) {
+  const btn = "#8a8f98", grid = (x0, y0, cols, rows, dx, dy, w, c) => Array.from({ length: cols * rows }, (_, i) => `<rect x="${x0 + (i % cols) * dx}" y="${y0 + Math.floor(i / cols) * dy}" width="${w}" height="${w}" rx="0.5" fill="${c}"/>`).join("");
+  const art = {
+    appletv: `<rect width="14" height="36" rx="4" fill="#d9dce1" stroke="#8a8f98" stroke-width="0.8"/><circle cx="7" cy="9" r="5" fill="#1c1c1e"/><circle cx="7" cy="9" r="2" fill="#3a3a3e"/><circle cx="4.5" cy="19" r="1.5" fill="#1c1c1e"/><circle cx="9.5" cy="19" r="1.5" fill="#1c1c1e"/><circle cx="4.5" cy="24" r="1.5" fill="#1c1c1e"/><rect x="8" y="22.5" width="3" height="6" rx="1.5" fill="#1c1c1e"/>`,
+    savant: `<rect width="14" height="36" rx="3.5" fill="#22252b" stroke="#000" stroke-width="0.8"/><rect x="2.5" y="3" width="9" height="9" rx="1.2" fill="${bw ? "#ddd" : "#4db8ff"}"/><circle cx="7" cy="19" r="3.6" fill="none" stroke="#9aa3b2"/><circle cx="7" cy="19" r="1.2" fill="#9aa3b2"/>${grid(3, 26, 2, 2, 5, 4, 3, "#9aa3b2")}`,
+    josh: `<rect width="14" height="36" rx="5" fill="#2b2b30" stroke="#000" stroke-width="0.8"/><circle cx="7" cy="8" r="3.6" fill="#f2f2f2"/><circle cx="7" cy="8" r="1.4" fill="#2b2b30"/><circle cx="7" cy="18" r="1.3" fill="${btn}"/><rect x="3.5" y="23" width="7" height="2" rx="1" fill="${btn}"/><rect x="3.5" y="28" width="7" height="2" rx="1" fill="${btn}"/>`,
+    control4: `<rect width="14" height="36" rx="3" fill="#17181b" stroke="#000" stroke-width="0.8"/><rect x="2" y="3" width="10" height="6" rx="1" fill="${bw ? "#ddd" : "#e5484d"}"/><circle cx="7" cy="17" r="4" fill="none" stroke="#b8bcc4"/><circle cx="3.5" cy="26" r="1.2" fill="${bw ? "#ddd" : "#e5484d"}"/><circle cx="7" cy="26" r="1.2" fill="${bw ? "#bbb" : "#3fbf5a"}"/><circle cx="10.5" cy="26" r="1.2" fill="${bw ? "#999" : "#ffab2e"}"/><rect x="3" y="30" width="8" height="2" rx="1" fill="#b8bcc4"/>`,
+    factory: `<rect width="14" height="36" rx="2.5" fill="#1c1c1e" stroke="#000" stroke-width="0.8"/><circle cx="4" cy="4.5" r="1.5" fill="${bw ? "#ddd" : "#e5484d"}"/>${grid(2.5, 9, 3, 4, 3.2, 4, 2.2, btn)}<circle cx="7" cy="29.5" r="3" fill="none" stroke="${btn}"/>`,
+    roku: `<rect width="14" height="36" rx="5" fill="#1c1c1e" stroke="#000" stroke-width="0.8"/><path d="M7 5v8M3 9h8" stroke="${bw ? "#ddd" : "#8a4fbf"}" stroke-width="3" stroke-linecap="round"/><rect x="3" y="17" width="3.5" height="2.5" rx="1" fill="${btn}"/><rect x="7.5" y="17" width="3.5" height="2.5" rx="1" fill="${btn}"/><rect x="3" y="22" width="8" height="2.5" rx="1" fill="${bw ? "#ddd" : "#8a4fbf"}"/>`,
+    cable: `<rect width="14" height="36" rx="3" fill="#4a4f58" stroke="#22252b" stroke-width="0.8"/><rect x="2.5" y="3" width="9" height="3" rx="1.2" fill="${bw ? "#ddd" : "#4db8ff"}"/>${grid(2.6, 9, 3, 3, 3.4, 3.6, 2, "#d9dce1")}<circle cx="7" cy="25.5" r="3.2" fill="none" stroke="#d9dce1"/><rect x="3" y="31" width="8" height="2" rx="1" fill="#d9dce1"/>`,
+  }[kind];
+  return art ? `<g transform="translate(${+x.toFixed(1)} ${+y.toFixed(1)}) scale(${sc})">${art}</g>` : "";
+}
 // what kind of room a card is — its band color and the words at the band's right end
 export const ROOM_KINDS = {
   "surround-tv": { label: "SURROUND + TV", color: "#34449c" }, "tv-speakers": { label: "TV + SPEAKERS", color: "#7340a8" },
@@ -4864,7 +4892,7 @@ function faceGlyph(dev, cx, cy) {
   return "";
 }
 
-function speakerGlyphs(ep, gx, gy, gw) {
+function speakerGlyphs(ep, gx, gy, gw, bar = null, bw = false) {
   const cfg = ep?.config || "stereo";
   const use = (id, x, y) => `<use href="#${id}" x="${gx + x}" y="${gy + y}"/>`;
   const row = (ids, y) => ids.map((id, i) => use(id, 16 + i * 34, y)).join("");
@@ -4874,10 +4902,34 @@ function speakerGlyphs(ep, gx, gy, gw) {
     return row(["spk", "spk", "spk", "spk"], 16) + `<g transform="translate(17,0)">` + row(["spk", "sub", "spk"], 54) + `</g>`;   // row() already adds gx
   if (cfg === "2.1" || cfg === "stereo-2.1") return row(["spk", "sub", "spk"], 16);
   if (cfg.startsWith("soundbar")) {
-    const barW = cfg === "soundbar-sub" ? gw - 38 : gw;
-    let out2 = `<rect x="${gx}" y="${gy + 6}" width="${barW}" height="16" rx="8" fill="#2d2d2d" stroke="#151515"/>`;
-    if (cfg === "soundbar-sub") out2 += use("sub", gw - 15, 16);
-    return out2;
+    const sub = cfg === "soundbar-sub", kind = bar || "powered", rears = kind === "sonos" && !!ep.rears;
+    // a Sonos set: the Sub and rears across the top, the bar along the bottom — where the TV's link lands
+    const barW = rears ? gw - 24 : sub ? gw - 38 : gw, bx = rears ? gx + 12 : gx, by = rears ? gy + 28 : gy + 7, f = v => +v.toFixed(1);
+    const WHITE = bw ? "#fff" : "#f4f4f2", dots = (x0, n, step, c) => Array.from({ length: n }, (_, i) => `<circle cx="${f(x0 + i * step)}" cy="${by + 9}" r="1" fill="${c}"/>`).join("");
+    let o = "";
+    if (kind === "sonos") {
+      o += `<rect x="${f(bx)}" y="${by}" width="${f(barW)}" height="18" rx="9" fill="${WHITE}" stroke="#1c1c1c" stroke-width="1.3"/>` + (barW >= 84 ? dots(bx + 9, barW >= 110 ? 6 : 3, 4.4, "#b9b9b4") + dots(bx + barW - 9 - (barW >= 110 ? 22 : 8.8), barW >= 110 ? 6 : 3, 4.4, "#b9b9b4") : "") +
+        `<text x="${f(bx + barW / 2)}" y="${by + 12.4}" text-anchor="middle" font-size="8" font-weight="800" letter-spacing="1.6" fill="#1c1c1c">SONOS</text>`;
+      const sonosSub = (x, y) => `<rect x="${f(x)}" y="${f(y)}" width="24" height="24" rx="6" fill="${WHITE}" stroke="#1c1c1c" stroke-width="1.3"/><rect x="${f(x + 7.5)}" y="${f(y + 5.5)}" width="9" height="13" rx="4.5" fill="#1c1c1c"/>`;
+      const rear = x => `<rect x="${f(x)}" y="${gy + 1}" width="14" height="21" rx="5.5" fill="${WHITE}" stroke="#1c1c1c" stroke-width="1.3"/><circle cx="${f(x + 7)}" cy="${gy + 14.5}" r="2.8" fill="none" stroke="#b9b9b4" stroke-width="1"/>`;
+      if (rears) o += rear(gx + 12) + rear(gx + gw - 26) + (sub ? sonosSub(gx + gw / 2 - 12, gy) : "");
+      else if (sub) o += sonosSub(gx + gw - 26, by - 3);
+      return o;
+    }
+    if (kind === "passive") {
+      // three driver pairs — left, centre, right — and no light: the receiver powers it
+      const dr = Math.min(5.2, barW / 17.5), pair = cx => [-dr * 1.22, dr * 1.22].map(d => `<circle cx="${f(cx + d)}" cy="${by + 9}" r="${f(dr)}" fill="${bw ? "#d9d9d9" : "#ffd93b"}" stroke="#222" stroke-width="0.9"/><circle cx="${f(cx + d)}" cy="${by + 9}" r="${f(dr * 0.29)}" fill="#2a2a2a"/>`).join("");
+      o += `<rect x="${f(bx)}" y="${by}" width="${f(barW)}" height="18" rx="4" fill="#3f3f3f" stroke="#222" stroke-width="1.2"/>` + [0.17, 0.5, 0.83].map(t => pair(bx + barW * t)).join("") +
+        ["L", "C", "R"].map((l, i) => `<text x="${f(bx + barW * [0.17, 0.5, 0.83][i])}" y="${by - 2.5}" text-anchor="middle" font-size="6.6" font-weight="700" fill="#555">${l}</text>`).join("");
+    } else {
+      // powered: its own power light; the brand when one is entered
+      const brand = String(ep.brand || "").trim().toUpperCase();
+      o += `<rect x="${f(bx)}" y="${by}" width="${f(barW)}" height="18" rx="9" fill="#2a2d33" stroke="#111" stroke-width="1.1"/>` + (() => { const n = Math.max(2, Math.floor((barW - (brand ? 56 : 34)) / 9.2)); return dots(bx + 10, n, 4.6, "#5a606b") + dots(bx + barW - 14 - n * 4.6, n, 4.6, "#5a606b"); })() +
+        (brand ? `<text x="${f(bx + barW / 2 - 3)}" y="${by + 12.3}" text-anchor="middle" font-size="${Math.min(7.4, f((barW - 60) / Math.max(1, brand.length * 0.72)))}" font-weight="800" letter-spacing="0.6" fill="#fff">${esc(brand)}</text>` : "") +
+        `<circle cx="${f(bx + barW - 8)}" cy="${by + 9}" r="3.2" fill="#3fbf5a" fill-opacity="0.25"/><circle cx="${f(bx + barW - 8)}" cy="${by + 9}" r="1.7" fill="#3fbf5a"/>`;
+    }
+    if (sub) o += use("sub", gw - 15, 16);
+    return o;
   }
   if (cfg === "landscape") {
     const sats = satCount(ep), subs = ep?.buriedSub ? 1 : 0;

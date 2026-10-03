@@ -4,7 +4,7 @@
    is not on Sheet 1. Pure string builders, no DOM. */
 
 import { expandChannels, effectiveJob, indexJob } from "./engine.js";
-import { TYPE_NAME, PLATFORM_NAME, adapterName, describeNode, productName } from "./names.js";
+import { TYPE_NAME, PLATFORM_NAME, adapterName, describeNode, productName, soundbarKind, SONOS_BARS } from "./names.js";
 import { bulletFor, knownRunM } from "./hookup.js";
 import { NET_ROLE_NAME, switchSetup, companionSku, networkPlan, POE_INJECTOR } from "./network.js";
 import { isAsBuilt, asBuiltChanges, installRows } from "./asbuilt.js";
@@ -310,8 +310,16 @@ export function takeoffItems(job, ix, opts = {}) {
           items.push({ label: partName("avpro-ac-aex-dearc-kit", "AVPro AC-AEX-DEARC-KIT eARC extender"), status: "new", where: z.name });
       } else {
         // "Speakers, 2× speakers" read twice — a plain pair is "Speakers (2×)", a set keeps its name
-        const sd = spkDescr(ep), plain = sd.match(/^(\d+)× speakers?$/);
-        items.push({ label: plain ? `Speakers (${plain[1]}×)` : `Speakers, ${sd}`, status: gray ? "prewire" : ep.status || "new", where: z.name });
+        const sd = spkDescr(ep), plain = sd.match(/^(\d+)× speakers?$/), st = gray ? "prewire" : ep.status || "new";
+        // a soundbar is listed as what it is (2026-10-03): powered or passive L·C·R; a Sonos bar by model, its Sub and
+        // its rear pair as lines of their own
+        const bar = soundbarKind(ep, sol), sub = ep.config === "soundbar-sub";
+        if (bar === "sonos") {
+          items.push({ label: `Sonos ${SONOS_BARS[ep.barModel] || "soundbar"}`, status: st, where: z.name });
+          if (sub) items.push({ label: "Sonos Sub", status: st, where: z.name });
+          if (ep.rears) items.push({ label: "Sonos rear speakers (pair)", status: st, where: z.name });
+        } else if (bar) items.push({ label: `Soundbar, ${bar === "passive" ? "passive (L·C·R)" : "powered"}${sub ? " + sub" : ""}`, status: st, where: z.name });
+        else items.push({ label: plain ? `Speakers (${plain[1]}×)` : `Speakers, ${sd}`, status: st, where: z.name });
       }
     }
   }
@@ -321,7 +329,7 @@ export function takeoffItems(job, ix, opts = {}) {
     if (inj) items.push({ label: partName(POE_INJECTOR.ref, `${POE_INJECTOR.mfr} ${POE_INJECTOR.model} PoE injector`), status: "new", where: sol.racks?.[0]?.name || "Equipment Rack", qty: inj });
   }
   // billable room remotes (Apple TV / factory remotes ship with the gear — drawn, never quoted)
-  const REMOTE_BOM = { savant: "Savant Pro Remote", josh: "Josh Remote" };
+  const REMOTE_BOM = { savant: "Savant Pro Remote", josh: "Josh Remote", control4: "Control4 Remote" };
   for (const z of job.house.zones) {
     const lbl = REMOTE_BOM[z.remote];
     if (lbl && (z.scope || "included") === "included") items.push({ label: lbl, status: "new", where: z.name });

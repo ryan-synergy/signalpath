@@ -55,7 +55,26 @@ export const SPEAKER_SETUP = {
   "soundbar-sub": "Soundbar + sub", landscape: "Landscape (in-ground)",
 };
 export const DISPLAY_NAME = { none: "None", tv: "TV", projector: "Projector" };
-export const REMOTE_NAME = { none: "None", savant: "Savant remote", appletv: "Apple TV remote", josh: "Josh.ai", factory: "Factory remote" };
+export const REMOTE_NAME = { none: "None", savant: "Savant remote", appletv: "Apple TV remote", josh: "Josh.ai", control4: "Control4 remote", factory: "Factory remote", roku: "Roku remote", cable: "Cable / satellite remote" };
+// remotes that belong to a control system (the rest are a local device's own remote: "local control")
+export const SYSTEM_REMOTES = new Set(["savant", "josh", "control4"]);
+// the remote a room is run with: what was picked ("none" = none, on purpose), else — when an Apple TV sits at the room's
+// TV — the Apple TV's own remote (Ryan 2026-10-03: a locally fed Apple TV means its remote runs the room)
+export function roomRemote(zone, localDevices = []) {
+  if (zone?.remote) return zone.remote === "none" ? null : zone.remote;
+  const atv = (localDevices || []).some(d => d && d.zone === zone?.id && (d.sourceType === "appletv" || /apple\s*-?tv/i.test(`${d.model || ""} ${d.catalogRef || ""}`)));
+  return atv ? "appletv" : null;
+}
+// what the control line on a room card says
+export const remoteLine = r => !r || !REMOTE_NAME[r] ? "" : SYSTEM_REMOTES.has(r) ? `Control · ${r === "josh" ? "Josh.ai remote" : REMOTE_NAME[r]}` : `Local control · ${r === "factory" ? "the TV's own remote" : REMOTE_NAME[r]}`;
+// a soundbar's kind: Sonos when it's marked so; else passive when an amp or receiver drives it, powered when it rides the TV
+export function soundbarKind(ep, sol) {
+  if (!ep || !String(ep.config || "").startsWith("soundbar")) return null;
+  if (ep.bar === "sonos") return "sonos";
+  const rackIds = new Set((sol?.racks || []).flatMap(r => (r.devices || []).map(d => d.id)));
+  return (sol?.connections || []).some(c => c.to === ep.id && c.signal === "speaker" && rackIds.has(c.from)) ? "passive" : "powered";
+}
+export const SONOS_BARS = { arc: "Arc", beam: "Beam", ray: "Ray" };
 export const AUDIO_BACK_NAME = { earc: "eARC over the HDMI", "earc+optical": "eARC + optical backup", "earc-kit": "eARC extender kit — full Atmos", optical: "Optical only", none: "None" };
 export const PLATFORM_NAME = { "": "—", savant: "Savant", josh: "Josh.ai", control4: "Control4" };
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-QI2i90lAcbMdABIs7BtoJONtmv+Vr7sfhh5ya46nlbE=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-7MPgjsyQhxd5mq4p7AvPZTTk0dCgL2lZV1WshDowE28='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-HfPY1gaNyDmRxHNq67OlsbfdUd2PFaz/R10WB+hrW+w=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-o8f6yCSKm+k2qyGl1T4C/el7FsctbNOk9Ymd/R0Va+k='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -558,6 +558,7 @@
   /* packet pages: the whole row is the checkbox's label, tall enough for a finger (iPad pass 2026-10-03) */
   .pgrow { display: flex; align-items: center; gap: 10px; min-height: 34px; cursor: pointer; }
   .pgrow input { width: 18px; height: 18px; flex: none; }
+  .barrow { display: flex; align-items: center; gap: 8px; min-height: 30px; cursor: pointer; font-size: 13px; } .barrow input { width: 18px; height: 18px; }
   @media (pointer: coarse) { .pgrow { min-height: 44px; } .pgrow input { width: 22px; height: 22px; }
     #zoomBar button { min-height: 40px; min-width: 40px; } .asb td input { min-height: 40px; } }
   /* top bar: [job] … [AI · status] … [View · Export · Print · tools] */
@@ -653,29 +654,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003182614",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003182614",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003182614",
-    "./app/ports.js": "./app/ports.js?v=20261003182614",
-    "./app/commands.js": "./app/commands.js?v=20261003182614",
-    "./app/engine.js": "./app/engine.js?v=20261003182614",
-    "./app/exports.js": "./app/exports.js?v=20261003182614",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003182614",
-    "./app/hookup.js": "./app/hookup.js?v=20261003182614",
-    "./app/importers.js": "./app/importers.js?v=20261003182614",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003182614",
-    "./app/library.js": "./app/library.js?v=20261003182614",
-    "./app/names.js": "./app/names.js?v=20261003182614",
-    "./app/network.js": "./app/network.js?v=20261003182614",
-    "./app/pages.js": "./app/pages.js?v=20261003182614",
-    "./app/power.js": "./app/power.js?v=20261003182614",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003182614",
-    "./app/rack.js": "./app/rack.js?v=20261003182614",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003182614",
-    "./app/starters.js": "./app/starters.js?v=20261003182614",
-    "./app/kinds.js": "./app/kinds.js?v=20261003182614",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003182614",
-    "./app/sheets.js": "./app/sheets.js?v=20261003182614"
+    "./app/ai.js": "./app/ai.js?v=20261003184550",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003184550",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003184550",
+    "./app/ports.js": "./app/ports.js?v=20261003184550",
+    "./app/commands.js": "./app/commands.js?v=20261003184550",
+    "./app/engine.js": "./app/engine.js?v=20261003184550",
+    "./app/exports.js": "./app/exports.js?v=20261003184550",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003184550",
+    "./app/hookup.js": "./app/hookup.js?v=20261003184550",
+    "./app/importers.js": "./app/importers.js?v=20261003184550",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003184550",
+    "./app/library.js": "./app/library.js?v=20261003184550",
+    "./app/names.js": "./app/names.js?v=20261003184550",
+    "./app/network.js": "./app/network.js?v=20261003184550",
+    "./app/pages.js": "./app/pages.js?v=20261003184550",
+    "./app/power.js": "./app/power.js?v=20261003184550",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003184550",
+    "./app/rack.js": "./app/rack.js?v=20261003184550",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003184550",
+    "./app/starters.js": "./app/starters.js?v=20261003184550",
+    "./app/kinds.js": "./app/kinds.js?v=20261003184550",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003184550",
+    "./app/sheets.js": "./app/sheets.js?v=20261003184550"
 } }
 </script>
 <script>
@@ -902,7 +903,8 @@ import { setDanteAudio, danteAmpFor, encodeSource, removeRackDevice, followRetur
 import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, quickFixes, adapterAudioOut, adapterAudioTargets, setAdapterAudio, addLocalAmp, nextFreeOutputs, outputsNeeded,
          VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS, REACH, bulletFor } from "./app/hookup.js";
 import { TYPE_NAME, SIGNAL_NAME, STATUS_NAME, SCOPE_NAME, SPEAKER_SETUP, REMOTE_NAME, PLATFORM_NAME, DISPLAY_NAME, AUDIO_NET_NAME,
-         signalName, describeNode, drivesRooms, humanizeWireIds, productName, productSku, ADAPTER, adapterName, isOutdoorZone, ZONE_GROUPING_NAME } from "./app/names.js";
+         signalName, describeNode, drivesRooms, humanizeWireIds, productName, productSku, ADAPTER, adapterName, isOutdoorZone, ZONE_GROUPING_NAME,
+         roomRemote, soundbarKind, SONOS_BARS } from "./app/names.js";
 
 /* ============ IndexedDB jobs store ============ */
 const DB = await new Promise((res, rej) => {
@@ -935,7 +937,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003182614").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003184550").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -2467,6 +2469,13 @@ function zonesHTML() {
           const inner = chips("spkcfg", main, spkCfg).replace(/<\/div>$/, `<button type="button" class="chip more" data-more="spkcfg">More ▾</button></div>`);
           return spk ? fieldO("Speakers", inner, "endpoints", spkH.id, "config") : field("Speakers", inner);
         })()}
+        ${spk && String(spkCfg).startsWith("soundbar") ? (() => {   // which soundbar: Sonos is picked; powered / passive follows how it's wired
+          const kind = soundbarKind(spk, sol), sonos = kind === "sonos";
+          return field("Soundbar", chips("barkind", [["std", "Standard"], ["sonos", "Sonos"]], sonos ? "sonos" : "std", "seg")) +
+            (sonos ? field("Sonos bar", chips("barmodel", Object.entries(SONOS_BARS), spk.barModel || "arc", "seg")) +
+                `<label class="f barrow"><input type="checkbox" class="barrears" ${spk.rears ? "checked" : ""}> <span>Rear speakers (a pair)</span></label>`
+              : `<div class="mini" style="margin:-2px 0 6px">${kind === "passive" ? "Passive — a receiver or amp drives it (left, centre, right)." : "Powered — it plays the TV's sound over HDMI eARC. Feed it from a receiver under “Sound from” to make it passive."}</div>`);
+        })() : ""}
         ${tv ? fieldO("Display", chips("tvtype", ZTV, tvType, "seg"), "endpoints", tvH.id, "displayType") : field("Display", chips("tvtype", ZTV, tvType, "seg"))}
         ${tv ? fieldO(tv.displayType === "projector" ? "Screen size" : "TV size", (() => {
           const sizes = [55, 65, 75, 85, 98], cur = +tv.size || 65;
@@ -2482,7 +2491,8 @@ function zonesHTML() {
         ${tv ? fieldO("Model", `<input class="tvmodel" value="${esc(tv.model || "")}" placeholder="${tv.displayType === "projector" ? "e.g. Epson LS12000 — blank quotes “Unspecified Projector”" : "e.g. K-85XR90 — blank quotes “Unspecified TV”"}" autocorrect="off" spellcheck="false">`, "endpoints", tvH.id, "model") : ""}
 
           ${fieldO("Scope", chips("zscope", ["included", "prewire", "future"].map(k => [k, SCOPE_LABEL[k]]), zEff.scope || "included", "seg"), "zones", z.id, "scope")}
-          ${fieldO("Remote", sel("zremote", ["none", "savant", "appletv", "josh", "factory"], zEff.remote || "none", REMOTE_LABEL), "zones", z.id, "remote")}
+          ${fieldO("Remote", sel("zremote", Object.keys(REMOTE_LABEL), roomRemote(zEff, sol.localDevices) || "none", REMOTE_LABEL), "zones", z.id, "remote")}
+          ${!zEff.remote && roomRemote(zEff, sol.localDevices) ? `<div class="mini" style="margin:-2px 0 6px">Set by the Apple TV at this TV — pick another, or None, to change it.</div>` : ""}
           ${field("Outdoor", sel("zoutdoor", ["auto", "yes", "no"], typeof z.outdoor === "boolean" ? (z.outdoor ? "yes" : "no") : "auto",
             { auto: `Auto (${isOutdoorZone({ ...z, outdoor: undefined }) ? "outdoor" : "indoor"})`, yes: "Outdoor", no: "Indoor" }))}
           ${(S.job.house.areas || []).length ? field("Area", sel("zarea", ["", ...S.job.house.areas.map(a => a.id)], z.area || "", { "": "No area", ...Object.fromEntries(S.job.house.areas.map(a => [a.id, a.name || a.id])) })) : ""}
@@ -3680,14 +3690,22 @@ function wirePanel(body) {
   });
   on(".zremote", el => {
     const z = zoneOf(el); if (!z) return;
+    S.editLabel = "remote";
     if (scopeSol) setF("zones", z, "remote", el.value);      // "none" override = explicitly no remote in this solution
-    else if (el.value === "none") delete z.remote; else z.remote = el.value;
+    // "None" is stored only where the room would otherwise get one on its own (a local Apple TV's remote)
+    else if (el.value === "none") { if (roomRemote({ ...z, remote: undefined }, S.job.solutions[S.sol].localDevices)) z.remote = "none"; else delete z.remote; }
+    else z.remote = el.value;
   });
   // a room moved to another area takes its wiring to that area's rack (its receiver, a free amp zone, the local switch)
   on(".zarea", el => { const z = zoneOf(el); if (!z) return; if (el.value) z.area = el.value; else delete z.area;
     const did = el.value ? rehomeZone(S.job, S.job.solutions[S.sol], z) : [];
     const area = (S.job.house.areas || []).find(a => a.id === el.value);
     if (area) toast(`${z.name} → ${area.name}${did.length ? ": " + did.join(" · ") : " (its wiring already fits)"}`, true); });
+  // soundbar kind: Sonos (with its model and rears) is stored on the speakers; powered / passive isn't — it follows the wiring
+  const barOf = el => zoneOf(el)?.endpoints.find(e => e.type === "speakers");
+  zon(".barkind", el => { const e = barOf(el); if (!e) return; S.editLabel = "soundbar"; if (el.value === "sonos") { e.bar = "sonos"; e.barModel ||= "arc"; } else { delete e.bar; delete e.barModel; delete e.rears; } });
+  zon(".barmodel", el => { const e = barOf(el); if (e) { S.editLabel = "soundbar"; e.barModel = el.value; } });
+  on(".barrears", el => { const e = barOf(el); if (e) { S.editLabel = "soundbar"; if (el.checked) e.rears = true; else delete e.rears; } });
   zon(".spkcfg", el => {
     const z = zoneOf(el); if (!z) return;
     z.endpoints = z.endpoints || [];

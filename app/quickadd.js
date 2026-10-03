@@ -147,17 +147,21 @@ export function parseQuickZone(text) {
   if (eat(/\bdirector\b/)) { director = true; dante = true; }
 
   // room remote: "savant remote", "atv remote", "josh remote", "factory remote"
-  const rm = eat(/\b(savant|josh|apple\s*tv|appletv|atv|apple|factory|oem)\s+remote\b/);
+  const rm = eat(/\b(savant|josh|control\s*4|c4|roku|cable|directv|satellite|apple\s*tv|appletv|atv|apple|factory|oem)\s+remote\b/);
   if (rm) {
     const k = rm[1].replace(/\s+/g, "");
-    zone.remote = k === "savant" ? "savant" : k === "josh" ? "josh" : (k === "factory" || k === "oem") ? "factory" : "appletv";
-    chips.push({ kind: "hint", label: (zone.remote === "appletv" ? "Apple TV" : zone.remote === "factory" ? "factory" : zone.remote) + " remote" });
+    zone.remote = k === "savant" ? "savant" : k === "josh" ? "josh" : /^(control4|c4)$/.test(k) ? "control4" : k === "roku" ? "roku" : /^(cable|directv|satellite)$/.test(k) ? "cable" : (k === "factory" || k === "oem") ? "factory" : "appletv";
+    chips.push({ kind: "hint", label: ({ appletv: "Apple TV", factory: "factory", control4: "Control4", cable: "cable / satellite" }[zone.remote] || zone.remote) + " remote" });
   }
   // things said ABOUT the room that aren't its name (Ryan 2026-10-03: "it's still creating random rooms") —
   // a source, a sub, where the TV hangs, the mount. Kept as the room's note, never its name, never a new room.
   const said = [];
   // a Sonos soundbar is a soundbar ("master 65 with a sonos arc")
-  t = t.replace(/\bsonos\s+(?:arc(?:\s+ultra)?|beam|ray|playbar|playbase)\b/g, " soundbar ");
+  // …and stays a Sonos one: the model is kept (Arc / Beam / Ray), and "rears" / "surrounds" / "Era 100s" add the rear pair
+  let sonosBar = null;
+  t = t.replace(/\bsonos\s+(arc(?:\s+ultra)?|beam|ray|playbar|playbase)\b/g, (m, w) => { sonosBar = /^arc/.test(w) ? "arc" : /^(beam|ray)$/.test(w) ? w : "arc"; return " soundbar "; });
+  const sonosRears = !!sonosBar && /\b(?:rears?|rear speakers|surrounds?|era\s*\d+s?)\b/.test(t);
+  if (sonosRears) t = t.replace(/\b(?:(?:and|with|\+|&|plus|two|2|a pair of)\s+)*(?:sonos\s+)?(?:rears?|rear speakers|surrounds?|era\s*\d+s?)\b/g, " ");
   // sources: "with an apple tv", "and a cable box", "kaleidescape", "Apple TV and cable."
   t = t.replace(/\b(?:an?\s+|the\s+)?(apple\s*tv(?:\s*4k)?|appletv|atv|cable(?:\s+box)?(?!\s+(?:run|runs|pull|drop|wire|wiring))|directv(?:\s+box)?|dish(?:\s+box)?|satellite(?:\s+box)?|roku|fire\s*tv|kaleidescape|blu-?ray(?:\s+player)?|xbox|playstation|ps5|nintendo|switch\s+console|game\s+console|turntable|record\s+player)\b/g,
     (m, w) => { said.push(w.replace(/\s+/g, " ")); return " "; });
@@ -262,6 +266,7 @@ export function parseQuickZone(text) {
     // pre-wire is the ZONE's scope, not a speaker status — tagging the endpoint
     // left it filed under PRE-WIRE after the zone was later switched to included
     const ep = { id: zone.id + "-spk", type: "speakers", ...spk, status: ofe ? "ofe" : "new" };
+    if (sonosBar && String(ep.config).startsWith("soundbar")) { ep.bar = "sonos"; ep.barModel = sonosBar; if (sonosRears) ep.rears = true; }
     if (ep.config === "stereo" && !ep.count) ep.count = 2;
     zone.endpoints.push(ep);
     // chip words match the editor's (names.js); landscape adds its count
@@ -431,6 +436,6 @@ export function zoneToQuick(zone, sol = {}) {
   if (conns.some(c => c.dante && (c.from.startsWith(zone.id) || comps.some(k => k.id === c.from && eps.some(e => e.id === k.serves))))) words.push("dante");
   if (tf?.bullet) words.push("bullet");
   if (zone.runFt) words.push(`${zone.runFt}ft`); else if (zone.reach === "far") words.push("far"); else if (zone.reach === "short") words.push("short run");
-  if (zone.remote) words.push({ savant: "savant remote", josh: "josh remote", appletv: "atv remote", factory: "factory remote" }[zone.remote] || "");
+  if (zone.remote) words.push({ savant: "savant remote", josh: "josh remote", appletv: "atv remote", factory: "factory remote", control4: "control4 remote", roku: "roku remote", cable: "cable remote" }[zone.remote] || "");
   return words.filter(Boolean).join(" ");
 }

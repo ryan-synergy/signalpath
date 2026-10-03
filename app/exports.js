@@ -24,6 +24,7 @@ import { vocabularyText } from "./commands.js";
 import { NET_ROLE_NAME, companionSku, POE_INJECTOR } from "./network.js";
 import { isAsBuilt, asBuiltChanges } from "./asbuilt.js";
 import { describeNode, adapterName, isOutdoorZone, SPEAKER_SETUP, STATUS_NAME, SCOPE_NAME, PLATFORM_NAME, AUDIO_NET_NAME, signalName } from "./names.js";
+const pl = (n, one, many = one + "s") => `${n} ${n === 1 ? one : many}`;
 
 // Synergy's own PlanQueue items (manufacturer "Synergy") — placeholders and pre-wire
 const SYN = model => ({ mfr: "Synergy", model });
@@ -268,7 +269,7 @@ export function aiReviewMarkdown(job, solIndex, catalog, { today = new Date().to
   o.push("## Summary", "",
     `- ${zones.length} zones (${zones.filter(z => (z.scope || "included") === "prewire").length} pre-wire only, ${zones.filter(z => z.scope === "future").length} future)`,
     `- ${tvs.length} displays, ${spks.length} speaker sets`,
-    `- ${devs.length} rack devices, ${(sol.companions || []).length} adapters, ${(sol.localDevices || []).length} in-room devices, ${(sol.connections || []).length} connections`,
+    `- ${pl(devs.length, "rack device")}, ${pl((sol.companions || []).length, "adapter")}, ${pl((sol.localDevices || []).length, "in-room device")}, ${pl((sol.connections || []).length, "connection")}`,
     `- Checks: ${v.errors.length} errors, ${v.warnings.length} warnings, ${(adv.notes || []).filter(mine).length} advisor notes`, "");
 
   // open items first — what a reviewer should chase

@@ -3412,9 +3412,12 @@ for (const [name, raw] of Object.entries(fixtures)) {
   d2.install = { ip: "192.168.1.50", mac: "zz" };
   const recs = AB.installRows(ab);
   const r1 = recs.find(r => r.id === d1.id), r2 = recs.find(r => r.id === d2.id);
-  t("install record: one row per box, rack gear first, in-room gear after with its room",
-    recs.length === rack.devices.length + (ab.solutions[0].localDevices || []).length && recs.slice(0, rack.devices.length).every(r => r.where === rack.name) &&
-    recs.slice(rack.devices.length).every(r => ab.house.zones.some(z => z.name === r.where)));
+  // (adapters joined 2026-10-03: an adapter at a rack box is "in" that rack, one at a TV is in its room)
+  const nIn = (ab.solutions[0].localDevices || []).length, nAd = (ab.solutions[0].companions || []).length;
+  t("install record: one row per box, rack gear first, in-room gear after with its room, then the adapters",
+    recs.length === rack.devices.length + nIn + nAd && recs.slice(0, rack.devices.length).every(r => r.where === rack.name) &&
+    recs.slice(rack.devices.length, rack.devices.length + nIn).every(r => ab.house.zones.some(z => z.name === r.where)) &&
+    recs.slice(rack.devices.length + nIn).every(r => r.where === rack.name || ab.house.zones.some(z => z.name === r.where)), `${recs.length} rows, ${nAd} adapters`);
   t("install record: a duplicate IP and a malformed MAC are flagged; a clean box isn't",
     r1.filled && r2.warn.some(w => /same IP/.test(w)) && r2.warn.some(w => /MAC/.test(w)) && r1.warn.some(w => /same IP/.test(w)) &&
     recs.filter(r => !r.filled).every(r => !r.warn.length), JSON.stringify([r1.warn, r2.warn]));
@@ -3802,6 +3805,21 @@ for (const [name, raw] of Object.entries(fixtures)) {
       const cross = segs(a.pts).some(([p1, p2]) => segs(b.pts).some(([q1, q2]) => { const hv = (h1, h2, v1, v2) => h1[1] === h2[1] && v1[0] === v2[0] &&
         v1[0] > Math.min(h1[0], h2[0]) && v1[0] < Math.max(h1[0], h2[0]) && h1[1] > Math.min(v1[1], v2[1]) && h1[1] < Math.max(v1[1], v2[1]); return hv(p1, p2, q1, q2) || hv(q1, q2, p1, p2); }));
       t("test job 1: the switch's two runs to the receivers' decoders don't cross each other", !cross, JSON.stringify([a.pts, b.pts])); }
+    { // agent hammer 2026-10-03 (Jobs / Settings / Export / Print): the install record lists the adapters, the takeoff names a
+      // place once, a projector's runs end at the projector, a long revision note wraps between words
+      const tj = await (await fetch("./test-fixtures/test-job-1.json")).json();
+      const AB = await import("./asbuilt.js"), rows = AB.installRows(tj, 0);
+      t("install record: the MXNet decoders and encoders are rows too (they're the boxes that need a MAC and IP)",
+        rows.filter(r => /decoder/i.test(r.name)).length >= 4 && rows.some(r => /encoder/i.test(r.name) && r.where === "Equipment Rack") && rows.some(r => /decoder at Family Room TV/.test(r.name) && r.where === "Family Room"), rows.map(r => r.name).join(" | "));
+      const Lt = loadJob(effectiveJob(tj, 0)), items = takeoffItems(Lt.job, Lt.ix, {});
+      t("takeoff: a place is listed once however many boxes sit there (no \"Equipment Rack · Equipment Rack\")", items.every(i => new Set(String(i.where).split(" · ")).size === String(i.where).split(" · ").length), items.map(i => i.where).join(" / "));
+      const pj = structuredClone(tj), gz = pj.house.zones.find(z => z.name === "Guest Casita"); gz.endpoints.find(e => e.type === "display").displayType = "projector";
+      const Lp = loadJob(effectiveJob(pj, 0)), pr = wireRuns(Lp.job, Lp.ix, {});
+      t("wire runs: a projector's runs end at the \"projector location\", not a TV", pr.some(r => r.to === "Guest Casita — projector location") && !pr.some(r => r.to === "Guest Casita — TV location"), pr.map(r => r.to).join(" | "));
+      const rj = structuredClone(tj); rj.job.revisions = [{ rev: 1, date: "2026-10-03", description: "Imported from Markdown walk", by: "SP" }];
+      const Lr = loadJob(effectiveJob(rj, 0)), prr = enginePlace(Lr.job, Lr.ix), svg = render(Lr.job, Lr.ix, prr, engineRoute(Lr.job, Lr.ix, prr));
+      t("title block: a long revision note wraps onto two lines between words (not \"Imported from Ma\")", svg.includes(">Imported from<") && svg.includes(">Markdown walk<") && !svg.includes(">Imported from Ma<"));
+    }
     { // Ryan's third case (2026-10-03): the Master Bed TV's sound back to its receiver ran out past the speaker ribbon and
       // crossed back over it; it stays inside the speaker riser now, in both trunk looks
       const tj = await (await fetch("./test-fixtures/test-job-1.json")).json();

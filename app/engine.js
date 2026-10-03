@@ -4497,9 +4497,24 @@ export function render(job, ix, P, rt, opts = {}) {
   push(`<g stroke="#999" stroke-width="0.7">`);
   for (let i = 0; i <= 4; i++) push(`<line x1="${tb.x}" y1="${612 + i * 22}" x2="${tb.x + tb.w}" y2="${612 + i * 22}"/>`);
   push(`<line x1="${tb.x + 18}" y1="612" x2="${tb.x + 18}" y2="700"/><line x1="${tb.x + 76}" y1="612" x2="${tb.x + 76}" y2="700"/><line x1="${tb.x + 136}" y1="612" x2="${tb.x + 136}" y2="700"/></g>`);
+  // a description that won't fit one line takes two smaller ones, broken between words ("Imported from Ma" read as a typo)
+  const revLines = t => {
+    t = String(t || "").replace(/\s+/g, " ").trim();
+    if (t.length <= 16) return [t];
+    const out = []; let line = "";
+    for (const w of t.split(" ")) {
+      if (out.length === 2) break;
+      if (!line) line = w; else if ((line + " " + w).length <= 18) line += " " + w; else { out.push(line); line = w; }
+    }
+    if (out.length < 2 && line) out.push(line);
+    const used = out.join(" ").length;
+    return out.map((l, k) => { l = l.length > 18 ? l.slice(0, 17) + "…" : l; return k === out.length - 1 && used < t.length && !l.endsWith("…") ? l.slice(0, 17) + "…" : l; });
+  };
   revs.forEach((rv, i) => {
-    const y = 626 + i * 22;
-    push(`<g font-size="8.5" fill="#333"><text x="${tb.x + 9}" y="${y}" text-anchor="middle">${esc(rv.rev)}</text><text x="${tb.x + 47}" y="${y}" text-anchor="middle">${fmtDate(rv.date)}</text><text x="${tb.x + 106}" y="${y}" text-anchor="middle">${esc(String(rv.description || "").slice(0, 16))}</text><text x="${tb.x + 146}" y="${y}" text-anchor="middle">${esc(rv.by || "")}</text></g>`);
+    const y = 626 + i * 22, d = revLines(rv.description);
+    const desc = d.length === 1 ? `<text x="${tb.x + 106}" y="${y}" text-anchor="middle">${esc(d[0])}</text>`
+      : `<text x="${tb.x + 106}" y="${y - 4}" text-anchor="middle" font-size="7">${esc(d[0])}</text><text x="${tb.x + 106}" y="${y + 4.5}" text-anchor="middle" font-size="7">${esc(d[1])}</text>`;
+    push(`<g font-size="8.5" fill="#333"><text x="${tb.x + 9}" y="${y}" text-anchor="middle">${esc(rv.rev)}</text><text x="${tb.x + 47}" y="${y}" text-anchor="middle">${fmtDate(rv.date)}</text>${desc}<text x="${tb.x + 146}" y="${y}" text-anchor="middle">${esc(rv.by || "")}</text><title>${esc(rv.description || "")}</title></g>`);
   });
   const fields = [["Date", fmtDate(lastDate)], ["Scale", "None"], ["Drawn by", esc(J.drawnBy || "SignalPath")], ["Sheet", opts.sheet || "1 of 3"]];
   let fy = 712;

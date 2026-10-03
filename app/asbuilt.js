@@ -144,6 +144,13 @@ export function installRows(job, solIndex = 0) {
   const order = new Map(zones.map((z, i) => [z.id, i]));
   const locals = [...(sol.localDevices || [])].sort((a, b) => (order.get(a.zone) ?? 1e9) - (order.get(b.zone) ?? 1e9));
   rows.push(...locals.map(d => row(d, zname(d.zone))));
+  // the adapters too — MXNet encoders/decoders and Dante boxes are the networked gear that most needs a MAC and IP
+  // (agent hammer 2026-10-03: the record listed 5 rack boxes and none of a job's 8 decoders)
+  const rackOf = id => (sol.racks || []).find(r => (r.devices || []).some(d => d.id === id));
+  const zoneOf = id => zones.find(z => (z.endpoints || []).some(e => e.id === id)) || zones.find(z => z.id === id);
+  const adapters = (sol.companions || []).map(c => { const rk = rackOf(c.serves), z = rk ? null : zoneOf(c.serves);
+    return { c, where: rk ? rk.name || rk.id : z ? z.name : "", at: z ? order.get(z.id) ?? 1e9 : -1 }; });
+  rows.push(...adapters.sort((a, b) => a.at - b.at).map(({ c, where }) => row(c, where)));
   // flags: a malformed IP or MAC, or the same address on two boxes
   const seen = k => { const m = new Map(); for (const r of rows) if (r[k]) m.set(r[k].toLowerCase(), (m.get(r[k].toLowerCase()) || 0) + 1); return m; };
   const ips = seen("ip"), macs = seen("mac");

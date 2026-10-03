@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ABVndlxOr9fLLKo0IwUYDj+IiVA6y5m6ZMVZT21JAs0=' 'sha256-oohLqRAr1Dvsa1svXVVDSwMjF8Kg3ADy9PXiKZK9OZA=' 'sha256-s3hq6e4dtXtGxTjgxXg2zpJ7wI3lyqbQ9TcEYKWR56U='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-OBHDN/0HoeRkADOWWfigvBgKAgOmtPpJw2RcKGw4u6Q=' 'sha256-oohLqRAr1Dvsa1svXVVDSwMjF8Kg3ADy9PXiKZK9OZA=' 'sha256-b4wZvpj92XOcFdUWYP5h+IOZHYrf1cD6eNwrgxjC7ZQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -404,7 +404,9 @@
   #review table { width: 100%; border-collapse: collapse; margin: 8px 0; }
   #review td, #review th { text-align: left; padding: 5px 8px; border-bottom: 1px solid #eee; font-size: 12px; }
   #review th { font-size: 10.5px; letter-spacing: 1px; color: #888; }
-  #review .ft { padding: 12px 18px; border-top: 1px solid var(--line); display: flex; gap: 8px; align-items: center; }
+  #review .ft { padding: 12px 18px; border-top: 1px solid var(--line); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #review .ft select { min-width: 0; max-width: 100%; }
+  @media (max-width: 560px) { #review .ft select { flex: 1 1 100%; } #review .ft button { flex: 1 1 auto; } }
   #review .ft button, #review .ft select { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 7px;
     border: 1px solid var(--line); background: #fff; cursor: pointer; }
   #review .ft .primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
@@ -617,29 +619,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003133333",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003133333",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003133333",
-    "./app/ports.js": "./app/ports.js?v=20261003133333",
-    "./app/commands.js": "./app/commands.js?v=20261003133333",
-    "./app/engine.js": "./app/engine.js?v=20261003133333",
-    "./app/exports.js": "./app/exports.js?v=20261003133333",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003133333",
-    "./app/hookup.js": "./app/hookup.js?v=20261003133333",
-    "./app/importers.js": "./app/importers.js?v=20261003133333",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003133333",
-    "./app/library.js": "./app/library.js?v=20261003133333",
-    "./app/names.js": "./app/names.js?v=20261003133333",
-    "./app/network.js": "./app/network.js?v=20261003133333",
-    "./app/pages.js": "./app/pages.js?v=20261003133333",
-    "./app/power.js": "./app/power.js?v=20261003133333",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003133333",
-    "./app/rack.js": "./app/rack.js?v=20261003133333",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003133333",
-    "./app/starters.js": "./app/starters.js?v=20261003133333",
-    "./app/kinds.js": "./app/kinds.js?v=20261003133333",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003133333",
-    "./app/sheets.js": "./app/sheets.js?v=20261003133333"
+    "./app/ai.js": "./app/ai.js?v=20261003135425",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003135425",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003135425",
+    "./app/ports.js": "./app/ports.js?v=20261003135425",
+    "./app/commands.js": "./app/commands.js?v=20261003135425",
+    "./app/engine.js": "./app/engine.js?v=20261003135425",
+    "./app/exports.js": "./app/exports.js?v=20261003135425",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003135425",
+    "./app/hookup.js": "./app/hookup.js?v=20261003135425",
+    "./app/importers.js": "./app/importers.js?v=20261003135425",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003135425",
+    "./app/library.js": "./app/library.js?v=20261003135425",
+    "./app/names.js": "./app/names.js?v=20261003135425",
+    "./app/network.js": "./app/network.js?v=20261003135425",
+    "./app/pages.js": "./app/pages.js?v=20261003135425",
+    "./app/power.js": "./app/power.js?v=20261003135425",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003135425",
+    "./app/rack.js": "./app/rack.js?v=20261003135425",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003135425",
+    "./app/starters.js": "./app/starters.js?v=20261003135425",
+    "./app/kinds.js": "./app/kinds.js?v=20261003135425",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003135425",
+    "./app/sheets.js": "./app/sheets.js?v=20261003135425"
 } }
 </script>
 <script>
@@ -882,6 +884,7 @@ const dbAllRaw = () => DB
 // a saved job from an older version is normalized as it's read (missing lists,
 // unnamed zones); a record that isn't a job at all is left in storage untouched
 // but skipped — one damaged record must not stop the app from starting
+const plural = (n, one, many = one + "s") => `${n} ${+n === 1 ? one : many}`;
 const dbAll = async () => (await dbAllRaw()).filter(r => {
   if (r.id === "__settings") return false;
   if (r.data?.generator !== "SignalPath" || r.data.schemaVersion !== 1) { console.warn("skipping unreadable saved job", r.id); return false; }
@@ -898,7 +901,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003133333").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003135425").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1362,12 +1365,10 @@ $("#jhList").onclick = async e => {
     await dbPut({ id: uid("job"), updated: Date.now(), data: copy }); await renderJobsSel(); toast(`Copied — "${copy.job.name}" is at the top`); }
   else if (a === "dl") { const base = String(name).replace(/[\\/:*?"<>|\u0000-\u001f]+/g, "-").trim() || "SignalPath job";
     download(`${base}.json`, JSON.stringify(id === S.id ? S.job : rec.data, null, 2), "application/json"); }
+  // no confirm — the toast's Undo puts it back (agent hammer 2026-10-03: delete was the one destructive step with no undo)
   else if (a === "del") {
-    const hasAb = card.nextElementSibling?.classList.contains("sub");
-    if (!confirm(`Delete "${name}"?\n\nIt's removed from this browser. Download it first if you might want it back.${hasAb ? "\n\nIts as-built stays — it just won't be filed under this proposal any more." : ""}`)) return;
     if (id === S.id) { await $("#delJob").onclick.call(null, { skipConfirm: true }); }
-    else { await dbDel(id); await renderJobsSel(); }
-    toast(`Deleted "${name}"`); }
+    else { await dbDel(id); await renderJobsSel(); toast(`Deleted "${name}"`, async () => { await dbPut(rec); await renderJobsSel(); renderJobsHome(); }); } }
   renderJobsHome();
 };
 
@@ -1481,7 +1482,7 @@ function toast(msg, withUndo = false) {
   const t = $("#toast");
   t.innerHTML = `<span>${esc(msg)}</span>${withUndo ? '<button type="button" id="toastUndo">Undo</button>' : ""}`;
   t.classList.add("show");
-  if (withUndo) $("#toastUndo").onclick = () => { t.classList.remove("show"); undo(); };
+  if (withUndo) $("#toastUndo").onclick = () => { t.classList.remove("show"); typeof withUndo === "function" ? withUndo() : undo(); };
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 6000);
 }
 function applyPlan(plan, label) {
@@ -1597,12 +1598,15 @@ if (new URLSearchParams(location.search).has("audit")) window.__spAudit = {
 };
 $("#starter").onclick = e => { if (e.target.id === "starter") $("#starter").classList.remove("show"); };
 $("#delJob").onclick = async opt => {
-  if (!opt?.skipConfirm && !confirm(`Delete "${S.job.job.name}"?`)) return;
+  // the open job as it stands (unsaved edits included), so Undo brings it back exactly and opens it again
+  const was = { id: S.id, updated: Date.now(), data: structuredClone(S.job) }, name = S.job.job.name;
   cancelSave();
   await dbDel(S.id);
   const jobs = (await dbAll()).sort((a, b) => b.updated - a.updated);   // the most recently edited job opens next
   if (jobs.length) { S.id = jobs[0].id; S.job = jobs[0].data; } else { S.job = blankJob(); S.id = uid("job"); await persist(); }
   refresh();
+  toast(`Deleted "${name}" — opened "${S.job.job.name}"`, async () => {
+    await flushSave(); await dbPut(was); S.id = was.id; S.job = structuredClone(was.data); S.sol = 0; refresh(); if ($("#jobsHome")?.classList.contains("show")) renderJobsHome(); });
 };
 $("#jobsSel").onchange = async e => {
   const v = e.target.value;
@@ -1755,7 +1759,7 @@ async function showReview(res) {
   const j = res.job, sol = j.solutions[0];
   const KINDS = { sitewalk: "SiteWalk / AVWalk survey", blueprinted: "Blueprinted takeoff (old Savant system)", markdown: "Markdown design", signalpath: "SignalPath job (from Markdown)" };
   $("#rvTitle").textContent = `Import review — ${KINDS[res.kind] || res.kind}`;
-  $("#rvSub").textContent = `${j.job.name} · ${j.house.zones.length} zones · ${sol.racks.reduce((n, r) => n + (r.devices || []).length, 0)} rack devices${sol.racks.length > 1 ? ` in ${sol.racks.length} racks` : ""} · ${sol.connections.length} connections${sol.platforms.length ? " · platform: " + sol.platforms[0] : ""}`;
+  $("#rvSub").textContent = `${j.job.name} · ${plural(j.house.zones.length, "zone")} · ${plural(sol.racks.reduce((n, r) => n + (r.devices || []).length, 0), "rack box", "rack boxes")}${sol.racks.length > 1 ? ` in ${sol.racks.length} racks` : ""} · ${plural(sol.connections.length, "connection")}${sol.platforms.length ? " · platform: " + sol.platforms[0] : ""}`;
   const zoneRow = z => {
     const scopeTag = z.scope && z.scope !== "included" ? ` <span class="u">(${esc(z.scope === "prewire" ? "pre-wire" : z.scope)})</span>` : "";
     const spk = z.endpoints.filter(e => e.type === "speakers").map(e => SPEAKER_SETUP[e.config] || e.config).join(" + ");
@@ -1770,7 +1774,12 @@ async function showReview(res) {
     `<table><tr><th>ZONE</th><th>SPEAKERS</th><th>DISPLAY</th><th>NOTES</th></tr>${j.house.zones.map(zoneRow).join("")}</table>` +
     (res.unmapped.length ? `<div class="u">${res.kind === "markdown" ? "Not read — add these by hand if they matter" : "Unmapped (kept as reference)"}: ${res.unmapped.map(esc).join(" · ")}</div>` : "");
   const jobs = await dbAll();
-  $("#rvTarget").innerHTML = jobs.map(r => `<option value="${r.id}">${esc(r.data.job.name)}</option>`).join("");
+  // the open job first and picked (agent hammer 2026-10-03: it defaulted to whatever job sat first in storage, and ten
+  // "New Job"s read alike) — then newest first, each with its room count and date so look-alikes can be told apart
+  jobs.sort((a, b) => (b.id === S.id) - (a.id === S.id) || (b.updated || 0) - (a.updated || 0));
+  const jobTag = r => { const n = r.data.house?.zones?.length || 0, d = r.updated ? new Date(r.updated).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
+    return [r.id === S.id ? "open now" : "", `${n} room${n === 1 ? "" : "s"}`, d].filter(Boolean).join(" · "); };
+  $("#rvTarget").innerHTML = jobs.map(r => `<option value="${esc(r.id)}"${r.id === S.id ? " selected" : ""}>${esc(r.data.job.name)} — ${esc(jobTag(r))}</option>`).join("");
   $("#rvMerge").disabled = !jobs.length;
   $("#review").classList.add("show");
   return new Promise(done => {
@@ -2150,7 +2159,7 @@ function productGroups(d) {
   const EC = effectiveCatalog(), all = Object.entries(EC.devices || {});
   const kind = DEV_TYPE_LABEL[d.type] || d.type;
   const item = ([id, c]) => ({ value: id, label: productName(c), current: d.catalogRef === id,
-    sub: [c.processing ? `${c.processing} processing` : "", c.zones && c.type === "amp" ? `${c.zones} zones` : "", productSku(c) && productSku(c) !== c.model ? productSku(c) : "", c.notInPlanQueue ? "not in PlanQueue" : "", c.verified === false ? "⚠ unverified" : "",
+    sub: [c.processing ? `${c.processing} processing` : "", c.zones && c.type === "amp" ? plural(c.zones, "zone") : "", productSku(c) && productSku(c) !== c.model ? productSku(c) : "", c.notInPlanQueue ? "not in PlanQueue" : "", c.verified === false ? "⚠ unverified" : "",
           c.type !== d.type ? `makes this box a ${DEV_TYPE_LABEL[c.type] || c.type}` : ""].filter(Boolean).join(" · "),
     keys: `${c.brand || ""} ${c.model} ${(c.aliases || []).join(" ")} ${c.partNo || ""}` });
   // receivers and amps small → big within a brand, so "bigger" is further down the list (2026-10-03)
@@ -2172,7 +2181,7 @@ function addDeviceGroups() {
   const all = Object.entries(effectiveCatalog().devices || {}).filter(([, c]) => !(c.flags || []).includes("legacy"));
   const byName = (a, b) => String((a[1].brand || "") + a[1].model).localeCompare(String((b[1].brand || "") + b[1].model));
   const item = ([id, c]) => ({ value: id, label: productName(c),
-    sub: [DEV_TYPE_LABEL[c.type] || c.type, productSku(c) && productSku(c) !== c.model ? productSku(c) : "", c.zones ? `${c.zones} zones` : "",
+    sub: [DEV_TYPE_LABEL[c.type] || c.type, productSku(c) && productSku(c) !== c.model ? productSku(c) : "", c.zones ? plural(c.zones, "zone") : "",
           c.verified === false ? "⚠ unverified" : ""].filter(Boolean).join(" · "),
     keys: `${c.brand || ""} ${c.model} ${(c.aliases || []).join(" ")} ${c.partNo || ""} ${DEV_TYPE_LABEL[c.type] || ""}` });
   const kinds = [...LIB_TYPES.map(([t, l]) => [t, l]), ...[...new Set(all.map(([, c]) => c.type))].filter(t => !LIB_TYPES.some(([x]) => x === t)).map(t => [t, DEV_TYPE_LABEL[t] || t])];
@@ -2644,7 +2653,7 @@ function gearHTML(o = {}) {
       return `<div class="row ${open ? "open" : ""}" data-did="${esc(d.id)}" data-rid="${esc(r.id)}">
       <div class="head zhead" data-toggle="${esc(d.id)}">${statusMark(found, ins.length || outs.length)}
         <div class="zmain"><div class="zt"><span class="t">${esc(nodeInfo(d.id).short || d.model || d.id)}${drifted(d) ? ' <span class="mini" style="color:#b26a00" title="Name differs from its catalog product">●</span>' : ""}</span></div>
-          <div class="zsum">${esc(DEV_TYPE_LABEL[d.type] || d.type)}${d.type === "avr" && drivesRooms(S.job, sol, d.id).length ? ` · drives ${esc(drivesRooms(S.job, sol, d.id).join(", "))}` : ""}${d.zones ? ` · ${esc(d.zones)} zones` : ""} · ${ins.length} in · ${outs.length} out${cap.short ? " · " + esc(cap.short) : ""}</div>
+          <div class="zsum">${esc(DEV_TYPE_LABEL[d.type] || d.type)}${d.type === "avr" && drivesRooms(S.job, sol, d.id).length ? ` · drives ${esc(drivesRooms(S.job, sol, d.id).join(", "))}` : ""}${d.zones ? ` · ${esc(plural(d.zones, "zone"))}` : ""} · ${ins.length} in · ${outs.length} out${cap.short ? " · " + esc(cap.short) : ""}</div>
           ${issue && !open ? `<div class="ziss ${issue.level}">${esc(issue.msg)}</div>` : ""}</div></div>
       <div class="fields">
         ${found.length ? `<div class="zissues">${found.map(f => { const fx = fixButtons(f); return `<div class="${f.level}">${esc(f.msg)}${fx ? `<div class="zfix">${fx}</div>` : ""}</div>`; }).join("")}</div>` : ""}
@@ -2895,7 +2904,7 @@ async function renderAsBuilt() {
         : `<div class="mini">No gear on this job yet.</div>`}</div>`;
   body.querySelectorAll("tr[data-asbid] input").forEach(el => el.onchange = () => {
     const did = el.closest("tr").dataset.asbid, sol = S.job.solutions[S.sol];
-    const d = [...sol.racks.flatMap(r => r.devices), ...(sol.localDevices || [])].find(d => d.id === did);
+    const d = [...sol.racks.flatMap(r => r.devices), ...(sol.localDevices || []), ...(sol.companions || [])].find(d => d.id === did);
     if (!d) return;
     const k = el.dataset.k, v = k === "mac" ? tidyMac(el.value) : el.value.trim();
     d.install = { ...(d.install || {}), [k]: v };
@@ -3141,7 +3150,7 @@ function settingsHTML() {
     const io = d.inputs || {};
     return `<div class="row ${open ? "open" : ""}" data-cat="${esc(id)}">
       <div class="head" data-toggle="cat-${esc(id)}"><span class="t">${esc(d.brand)} ${esc(d.model)}</span>
-        <span class="sub">${esc(TYPE_NAME[d.type] || d.type)}${d.zones ? ` · ${esc(d.zones)} zones` : ""}${d.verified === false ? " · ⚠ unverified" : ""}</span></div>
+        <span class="sub">${esc(TYPE_NAME[d.type] || d.type)}${d.zones ? ` · ${esc(plural(d.zones, "zone"))}` : ""}${d.verified === false ? " · ⚠ unverified" : ""}</span></div>
       <div class="fields">
         ${field("Model", `<input class="catmodel" value="${esc(d.model)}">`)}
         ${field("Zones", numf("catzones", d.zones, "-"))}
@@ -3157,12 +3166,12 @@ function settingsHTML() {
     <div class="sect">AI <span class="mini">the ✦ AI button</span></div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       ${field("Connect", chips("aimode", [["off", "Off"], ["key", "My API key"], ["proxy", "Proxy"]], conn.mode))}
-      ${conn.mode === "key" ? `<div class="mini" style="margin:0 0 6px;color:#8a5a00;line-height:1.4">A key typed here is saved in this browser, which every tool on ryan-synergy.github.io shares. For the crew, use the <b>Proxy</b> — the key stays on Cloudflare (proxy/worker.js in the repo). On your own device, “forget the key” when you're done.</div>` : ""}
+      ${conn.mode === "key" ? `<div class="mini" style="margin:0 0 6px;color:#8a5a00;line-height:1.4">A key typed here is saved in this browser, which every tool on ryan-synergy.github.io shares. For the crew, use <b>Proxy</b> instead — the key stays on the server, not in anyone's browser. On your own device, “forget the key” when you're done.</div>` : ""}
       ${conn.mode === "key" ? field("API key", `<input class="aikey" type="password" autocomplete="off" spellcheck="false" placeholder="${conn.key ? "saved — type a new one to replace it" : "sk-ant-…"}">`) + (conn.key ? `<div style="text-align:right"><button class="del" id="aiForget">forget the key</button></div>` : "") : ""}
       ${conn.mode === "proxy" ? field("Proxy URL", `<input class="aiproxy" placeholder="https://…" value="${esc(conn.proxy || "")}">`) +
         field("Access code", `<input class="aicode" type="password" autocomplete="off" placeholder="${conn.code ? "saved — type to replace" : "from whoever set up the proxy"}">`) : ""}
       ${conn.mode !== "off" ? field("Model", sel("aimodel", MODELS.map(m => m[0]), conn.model, Object.fromEntries(MODELS))) : ""}
-      <div class="mini" style="line-height:1.45;margin-top:4px">Saved in this browser only — never in jobs, exports or backups. Claude sees this job (rooms, gear, client name) only when you press Ask Claude, and every proposal is previewed before anything changes. “Copy prompt for Claude” works without any setup.</div>
+      <div class="mini" style="line-height:1.45;margin-top:4px">Never saved in jobs, exports or backups. Claude sees this job (rooms, gear, client name) only when you send it something from ✦ Ask AI, and every change is previewed before it's made. “Copy prompt for Claude” works with no setup.</div>
     </div></div>`;
   return ai + `
     <div class="sect">COMPANY (title block)</div>
@@ -3293,7 +3302,7 @@ function renderLibList() {
   if (other.length) groups.push(["Other", other]);
   $("#libList").innerHTML = groups.length ? groups.map(([l, g]) => `<div class="grp">${esc(l)} · ${g.length}</div>` + g.map(([id, d]) =>
     `<div class="it${id === LIB.sel ? " on" : ""}" data-id="${esc(id)}"><div class="m">${esc(`${d.brand || ""} ${d.model || id}`.trim())}${libBadges(id, d)}</div>
-     <div class="s">${esc(d.partNo || "no part #")}${d.zones ? ` · ${esc(d.zones)} zones` : ""}</div></div>`).join("")).join("")
+     <div class="s">${esc(d.partNo || "no part #")}${d.zones ? ` · ${esc(plural(d.zones, "zone"))}` : ""}</div></div>`).join("")).join("")
     : `<div class="empty">Nothing matches.</div>`;
   $("#libList").querySelectorAll(".it").forEach(el => el.onclick = () => { LIB.sel = el.dataset.id; renderLibList(); renderLibEditor(); $("#libEd").scrollTop = 0; });
 }
@@ -3417,7 +3426,7 @@ function renderKits() {
   if (!kits.some(k => k.id === KIT.sel)) KIT.sel = kits[0]?.id || null;
   $("#kitList").innerHTML = `<div class="grp">New-job picker order · ${kits.filter(k => !k.hidden).length} shown</div>` + kits.map(k =>
     `<div class="it kit${k.id === KIT.sel ? " on" : ""}" data-id="${esc(k.id)}"><div class="tx" style="${k.hidden ? "opacity:.5" : ""}"><div class="m">${esc(k.name)}${k.custom ? `<span class="badge2">yours</span>` : ""}${k.hidden ? `<span class="badge2 ed">hidden</span>` : ""}</div>
-     <div class="s">${k.devices.length} boxes${k.rooms ? ` · ${k.rooms.split(",").length} rooms` : ""}</div></div>
+     <div class="s">${plural(k.devices.length, "box", "boxes")}${k.rooms ? ` · ${plural(k.rooms.split(",").length, "room")}` : ""}</div></div>
      <button type="button" class="eye${k.hidden ? " off" : ""}" data-eye="${esc(k.id)}" aria-pressed="${!k.hidden}" aria-label="${k.hidden ? "Show" : "Hide"} ${esc(k.name)} in ＋ New job" title="${k.hidden ? "Hidden from ＋ New job — tap to show" : "Shown in ＋ New job — tap to hide"}">${k.hidden ? EYE_OFF : EYE_ON}</button></div>`).join("");
   $("#kitList").querySelectorAll(".it").forEach(el => el.onclick = () => { KIT.sel = el.dataset.id; renderKits(); });
   // the eye: show / hide in one tap, without opening the kit
@@ -3684,7 +3693,7 @@ function wirePanel(body) {
     const EC = effectiveCatalog();
     const items = Object.entries(EC.devices || {}).filter(([, c]) => c.type === type && !/LEGACY/.test(c.notes || ""))
       .sort(([, a], [, b]) => String(a.brand || "").localeCompare(String(b.brand || "")) || (+String(a.processing || "").split(".")[0] || +a.zones || 0) - (+String(b.processing || "").split(".")[0] || +b.zones || 0) || productName(a).localeCompare(productName(b)))
-      .map(([id, c]) => ({ value: id, label: productName(c), sub: [c.processing ? `${c.processing} processing` : "", c.zones ? `${c.zones} zones` : "", productSku(c) !== c.model ? productSku(c) : ""].filter(Boolean).join(" · ") }));
+      .map(([id, c]) => ({ value: id, label: productName(c), sub: [c.processing ? `${c.processing} processing` : "", c.zones ? plural(c.zones, "zone") : "", productSku(c) !== c.model ? productSku(c) : ""].filter(Boolean).join(" · ") }));
     const generic = type === "amp" ? "Multi-zone amp" : "AV receiver";
     openPicker({ title: type === "amp" ? "Add a multi-zone amp" : "Add an AV receiver",
       groups: [{ label: "From the catalog", items }, { label: "Not in the catalog", items: [{ value: "__generic", label: `${generic} (model to be picked)` }] }],
@@ -4039,7 +4048,7 @@ function wirePanel(body) {
   /* job */
   on(".inst", el => {
     const id = el.closest("[data-inst]")?.dataset.inst, sol = S.job.solutions[S.sol];
-    const d = [...sol.racks.flatMap(r => r.devices), ...(sol.localDevices || [])].find(d => d.id === id);
+    const d = [...sol.racks.flatMap(r => r.devices), ...(sol.localDevices || []), ...(sol.companions || [])].find(d => d.id === id);
     if (!d) return;
     const k = el.dataset.k, v = k === "mac" ? tidyMac(el.value) : el.value.trim();
     d.install = { ...(d.install || {}), [k]: v };

@@ -294,7 +294,7 @@ export function takeoffItems(job, ix, opts = {}) {
     (compGroups[kind] ||= []).push(where || "");
   }
   for (const [label, wheres] of Object.entries(compGroups))
-    items.push({ label, status: "new", where: wheres.filter(Boolean).join(" · "), qty: wheres.length });
+    items.push({ label, status: "new", where: [...new Set(wheres.filter(Boolean))].join(" · "), qty: wheres.length });
   for (const z of job.house.zones) {
     const gray = (z.scope || "included") !== "included";
     for (const ep of z.endpoints || []) {
@@ -309,7 +309,9 @@ export function takeoffItems(job, ix, opts = {}) {
         if (!gray && (sol.connections || []).some(c => c.from === ep.id && c.signal === "audioReturn" && c.earcKit))
           items.push({ label: partName("avpro-ac-aex-dearc-kit", "AVPro AC-AEX-DEARC-KIT eARC extender"), status: "new", where: z.name });
       } else {
-        items.push({ label: `Speakers, ${spkDescr(ep)}`, status: gray ? "prewire" : ep.status || "new", where: z.name });
+        // "Speakers, 2× speakers" read twice — a plain pair is "Speakers (2×)", a set keeps its name
+        const sd = spkDescr(ep), plain = sd.match(/^(\d+)× speakers?$/);
+        items.push({ label: plain ? `Speakers (${plain[1]}×)` : `Speakers, ${sd}`, status: gray ? "prewire" : ep.status || "new", where: z.name });
       }
     }
   }
@@ -328,7 +330,8 @@ export function takeoffItems(job, ix, opts = {}) {
   const rolled = [];
   for (const it of items) {
     const hit = rolled.find(r => r.label === it.label && r.status === it.status);
-    if (hit) { hit.qty += it.qty || 1; hit.where += " · " + it.where; hit.confirm ||= it.confirm; }
+    // one place listed once ("Equipment Rack · Equipment Rack" for two amps in the one rack) — the qty already counts them
+    if (hit) { hit.qty += it.qty || 1; if (it.where && !hit.where.split(" · ").includes(it.where)) hit.where += (hit.where ? " · " : "") + it.where; hit.confirm ||= it.confirm; }
     else rolled.push({ ...it, qty: it.qty || 1 });
   }
   return rolled;
@@ -450,6 +453,8 @@ export function wireRuns(job, ix, opts = {}) {
     if (c.startsWith("surround")) return "14/2";
     return "16/2";
   };
+  // a projector's runs end at the projector, not a "TV location" (agent hammer 2026-10-03)
+  const dispLoc = id => ix.endpointsById[id]?.displayType === "projector" ? "projector location" : "TV location";
   // the jack at the rack end of each run (ports.js, via advise → opts.portMap)
   const shortPort = p => p ? String(p.label).replace(/\s*\((?!eARC)[^)]*\)/g, "").trim() : "";
   const at = (id, p) => p ? `${rackAt(id)} · ${devName(s.devices[id] || { model: nameOf(job, s, id) })} ${shortPort(p)}` : rackAt(id);
@@ -468,7 +473,7 @@ export function wireRuns(job, ix, opts = {}) {
       const comp = s.companions[c.from];
       if (comp && (comp.type === "axis" || comp.type === "axis16") && !runs.some(r => r.danteFrom === comp.id)) {
         const dsw = Object.values(s.devices).find(d => d.danteSwitch);
-        runs.push({ prefix: "N", cable: "Cat6", from: `${zoneName(ix, comp.serves)} — TV location`, to: dsw ? devName(dsw) : rackFor(zoneOfEp[comp.serves]),
+        runs.push({ prefix: "N", cable: "Cat6", from: `${zoneName(ix, comp.serves)} — ${dispLoc(comp.serves)}`, to: dsw ? devName(dsw) : rackFor(zoneOfEp[comp.serves]),
           carries: `Dante audio (${adapterName(comp)})`, color: "#2b6cb8", term: "RJ45 (PoE) at the AXIS", count: 1, gray, danteFrom: comp.id });
       }
       continue;                                          // DANTE-DV2 rides its video cable (VLAN 99); rack Dante gear is patched in the rack
@@ -483,16 +488,16 @@ export function wireRuns(job, ix, opts = {}) {
       continue;
     }
     if (c.signal === "video" && toComp) {                // rack video feed to a display chip
-      runs.push({ prefix: "V", cable: "Cat6", from: s.devices[c.from] ? at(c.from, pm.from) : rackAt(c.from, toComp.serves), to: `${zoneName(ix, toComp.serves)} — TV location`,
+      runs.push({ prefix: "V", cable: "Cat6", from: s.devices[c.from] ? at(c.from, pm.from) : rackAt(c.from, toComp.serves), to: `${zoneName(ix, toComp.serves)} — ${dispLoc(toComp.serves)}`,
         carries: `${toComp.type === "balun" ? "Video (HDBaseT)" : "Video (MXNet)"}${toComp.dante ? " + Dante (VLAN 99)" : ""}${c.earc ? " + eARC back" : ""}`, color: "#b32017",
         term: `${adapterName(toComp)} at TV`, count: 1, gray });
     } else if (c.signal === "video" && toEp && s.devices[c.from] && c.run === "bullet") {   // Bullet Train fiber HDMI, rack → TV
       const b = bulletFor(zoneOf(ix, c.to));
-      runs.push({ prefix: "V", cable: b.m ? `Bullet Train fiber HDMI ${b.m} m` : "Bullet Train — over 40 m, won't reach", from: s.devices[c.from] ? at(c.from, pm.from) : rackAt(c.from, c.to), to: `${zoneName(ix, c.to)} — TV location`,
+      runs.push({ prefix: "V", cable: b.m ? `Bullet Train fiber HDMI ${b.m} m` : "Bullet Train — over 40 m, won't reach", from: s.devices[c.from] ? at(c.from, pm.from) : rackAt(c.from, c.to), to: `${zoneName(ix, c.to)} — ${dispLoc(c.to)}`,
         carries: `Video (48 Gbps)${c.earc ? b.earc ? " + eARC back" : " + ARC back (over 10 m)" : ""}`, color: "#b32017",
         term: `display head → TV HDMI${c.earc ? " (eARC port)" : ""} · source head at the rack`, count: 1, gray });
     } else if (c.signal === "video" && toEp && s.devices[c.from]) {   // direct rack → display (no extender chip drawn)
-      runs.push({ prefix: "V", cable: "HDMI / extender", from: rackAt(c.from, c.to), to: `${zoneName(ix, c.to)} — TV location`,
+      runs.push({ prefix: "V", cable: "HDMI / extender", from: rackAt(c.from, c.to), to: `${zoneName(ix, c.to)} — ${dispLoc(c.to)}`,
         carries: `Video (direct)${c.earc ? " + eARC back" : ""}`, color: "#b32017", term: knownRunM(zoneOf(ix, c.to)) != null && knownRunM(zoneOf(ix, c.to)) <= 10 ? "TV input" : "TV input — verify run length", count: 1, gray });
     } else if (c.signal === "speaker" && toEp) {
       const ep = toEp;
@@ -519,7 +524,7 @@ export function wireRuns(job, ix, opts = {}) {
           term: `${amp ? devName(amp) : nameOf(job, s, c.from)}${chs.length ? ` ch ${chs[0]}–${chs[chs.length - 1]}` : ""}`, count: 1, gray });
     } else if (c.signal === "audioReturn" && fromEp) {
       if (s.locals[c.to] || ix.endpointsById[c.to]) continue;   // handled at the TV (local encoder / soundbar) — no pull
-      runs.push({ prefix: "R", cable: c.earcKit ? "Cat6A" : "Optical (Toslink)", from: `${zoneName(ix, c.from)} — TV location`, to: s.devices[c.to] ? at(c.to, pm.to) : rackAt(c.to, c.from),
+      runs.push({ prefix: "R", cable: c.earcKit ? "Cat6A" : "Optical (Toslink)", from: `${zoneName(ix, c.from)} — ${dispLoc(c.from)}`, to: s.devices[c.to] ? at(c.to, pm.to) : rackAt(c.to, c.from),
         carries: c.earcKit ? "Audio return — eARC extender (AVPro AC-AEX-DEARC-KIT)" : c.backup ? "Audio return — optical backup to eARC" : "Audio return", color: "#a45a12", term: s.devices[c.to]?.model || nameOf(job, s, c.to), count: 1, gray });
     } else if (c.signal === "audio" && s.locals[c.to] && (s.devices[c.from] || s.devices[s.companions[c.from]?.serves])) {
       // line-level audio from the rack out to gear in a room (an encoder's analog out to a local amp)
@@ -535,7 +540,7 @@ export function wireRuns(job, ix, opts = {}) {
   for (const z of job.house?.zones || []) {
     if ((z.scope || "included") === "future") continue;
     for (const e of z.endpoints || []) if (e.type === "display")
-      runs.push({ prefix: "N", cable: "Cat6", from: rackFor(z.id), to: `${z.name} — TV location`,
+      runs.push({ prefix: "N", cable: "Cat6", from: rackFor(z.id), to: `${z.name} — ${dispLoc(e.id)}`,
         carries: `Network (${e.displayType === "projector" ? "projector" : "TV"})`, color: "#2f9e44", term: "RJ45 at TV", count: 1,
         gray: (z.scope || "included") !== "included" });
   }
@@ -592,7 +597,7 @@ function speakerLegs(ep, n, sm) {
 export function cableLabels(job, ix, opts = {}) {
   const out = [];
   const pad = n => String(n).padStart(2, "0");
-  const shortTo = t => String(t).replace(/ — TV location$/, " TV").replace(/ — (buried )?sub( location)?$/, (m, b) => b ? " BURIED SUB" : " SUB").replace(/ — /g, " · ");
+  const shortTo = t => String(t).replace(/ — TV location$/, " TV").replace(/ — projector location$/, " projector").replace(/ — (buried )?sub( location)?$/, (m, b) => b ? " BURIED SUB" : " SUB").replace(/ — /g, " · ");
   for (const r of wireRuns(job, ix, opts)) {
     const field = String(r.from).includes(" — ") ? r.from : r.to;   // the end that isn't the rack (returns run field → rack)
     const base = { cable: r.cable.split(" ×")[0], from: r.from, to: r.to, carries: r.carries, prewire: !!r.gray, copies: 2 };
@@ -981,7 +986,7 @@ function networkPowerPages(job, ix, adviseResult, opts, label) {
     }
   };
   const ab = isAsBuilt(opts.rawJob || job);           // as-built: recorded ports black, suggested ones gray
-  const short = w => String(w).replace(/ — TV location$/, " TV");
+  const short = w => String(w).replace(/ — TV location$/, " TV").replace(/ — projector location$/, " projector");
   const cols = [{ label: "Port", dx: 12 }, { label: "Device", dx: 92 }, { label: "Location", dx: 350 }, { label: "Network", dx: 500 }, { label: "Power", dx: 676 }];
   const clip = (v, n) => String(v).length > n ? String(v).slice(0, n - 1) + "…" : String(v);
   for (const p of net) {

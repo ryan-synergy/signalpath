@@ -201,7 +201,8 @@ function purgeZone(job, zone) {
 const HANDLERS = {
   add_zones(job, sol, c) {
     // one: true — the text is ONE room (an imported room with its name and a description of several sentences)
-    const parses = (c.one ? [parseQuickZone(c.text || "")] : parseQuick(c.text || "", job.house.zones.map(z => z.name))).filter(p => !p.empty);
+    // a room said by name with nothing in it yet ("garage") is still a room — a clause that names no room isn't
+    const parses = (c.one ? [parseQuickZone(c.text || "")] : parseQuick(c.text || "", job.house.zones.map(z => z.name))).filter(p => !p.empty || (p.named && p.zone?.name));
     if (!parses.length) throw new Error(`couldn't read any zones from "${c.text}"`);
     const names = [];
     for (const p of parses) {
@@ -211,6 +212,9 @@ const HANDLERS = {
       if (z.id !== oldId) for (const ep of z.endpoints) ep.id = ep.id.replace(oldId, z.id);
       if (hints.local) (sol.localDevices ||= []).push({ id: freeId(job, sol, z.id + "-src"), type: "source", sourceType: "appletv",
         model: "Apple TV", status: "new", zone: z.id, location: "at-display" });
+      // a soundbar plays off its TV — "office with a soundbar" means there's a TV there; its size is to confirm (2026-10-03)
+      if (/^soundbar/.test(z.endpoints.find(e => e.type === "speakers")?.config || "") && !z.endpoints.some(e => e.type === "display") && (z.scope || "included") !== "future")
+        z.endpoints.push({ id: `${z.id}-tv`, type: "display", displayType: "tv", brand: "", size: 65, status: "new", confirm: ["size"] });
       // a job with areas (main house, casita, pool house): "casita bedroom" lands in the Guest Casita and wires to its rack
       if (!z.area && (job.house.areas || []).length) {
         // the area's name without "the / guest / area" has to be in the room's name ("pool house bar", not "pool deck")
@@ -598,7 +602,10 @@ function parseOne(p, job, sol) {
     return [{ op: "add_zones", text: p.replace(/^add\s+/i, "") }];
   }
   // dictation dresses a room up: "The family room.", "in the kitchen", "patio. landscape speakers"
-  const lz = leadingZones(job, t.replace(/[.!?:]+(?=\s|$)/g, " ").replace(/^(?:and\s+|also\s+|so\s+|ok(?:ay)?\s+|um\s+|uh\s+)*(?:in\s+)?(?:the|our|their|my)\s+/, "").replace(/\s+/g, " ").trim());
+  // "change the kitchen to a 75", "make the patio landscape 8", "set office to stereo": an edit said with a verb
+  const verb = /^(?:please\s+)?(?:change|make|set|update|switch|turn|swap)\s+/.test(t);
+  const lz0 = leadingZones(job, t.replace(/[.!?:]+(?=\s|$)/g, " ").replace(/^(?:please\s+)?(?:change|make|set|update|switch|turn|swap)\s+/, "").replace(/^(?:and\s+|also\s+|so\s+|ok(?:ay)?\s+|um\s+|uh\s+)*(?:in\s+)?(?:the|our|their|my)\s+/, "").replace(/\s+/g, " ").trim());
+  const lz = lz0 && verb ? { ...lz0, rest: lz0.rest.replace(/^(?:to|into)\s+(?:be\s+)?(?:an?\s+)?/, "").replace(/^(?:it'?s|its)\s+/, "") } : lz0;
   if (!lz) {
     // "<box> into/to <thing>" without a verb: both ends must resolve, or it's not a command
     if ((m = t.match(/^(.+?)\s+(?:into|to|→|->)\s+(.+)$/)) && findNode(job, sol, m[1]).id && findNode(job, sol, m[2], "speakers").id !== undefined)

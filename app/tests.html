@@ -3472,9 +3472,10 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("walkthrough: 7.1.4 reads '7.1.4 Atmos' everywhere, not surround-7.1.4", SPEAKER_SETUP["surround-7.1.4"] === "7.1.4 Atmos" &&
     parseQuickZone("theater 7.1.4 98 avr").chips.some(c => c.label === "7.1.4 Atmos"));
 
-  // an empty room says it will be skipped
-  const pe = parseQuickZone("bonus room future");
-  t("walkthrough: a room with nothing in it is flagged in the preview before Add skips it", pe.empty && pe.chips.some(c => c.kind === "warn"));
+  // a room named with nothing in it is added empty (2026-10-03 PM build: "garage, …" lost the garage); words that name no room say so
+  const pe = parseQuickZone("bonus room future"), pn = parseQuickZone("so we also need");
+  t("walkthrough: a named room with nothing in it is added empty — the preview says so; text naming no room is flagged",
+    pe.empty && pe.named && pe.chips.some(c => /empty room for now/.test(c.label)) && pn.empty && !pn.named && pn.chips.some(c => c.kind === "warn"));
 
   // an amp with no input is flagged
   const j3 = starter("theater-receiver"); const pat = addQ(j3, "patio stereo");

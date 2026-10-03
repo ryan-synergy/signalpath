@@ -725,8 +725,12 @@ export function quickFixes(job, sol, f, catalog = null) {
     if (d?.type === "amp" && devs.some(x => x.type === "avSwitch" && !x.danteSwitch))
       out.push({ label: "Feed it from the MXNet switch", run: (j, s) => feedAmp(j, s, d.id) });
     else if (d?.type === "avr") {
-      // a receiver nothing plays into (no matrix on the rack): a rack source, or a new Apple TV
-      const srcs = devs.filter(x => x.type === "source").slice(0, 2);
+      // a receiver nothing plays into: the rack's switch / matrix when there is one (its own output or decoder);
+      // else a rack source whose HDMI out is free, or a new Apple TV (2026-10-03: "Feed it from the Apple TV 1"
+      // offered an Apple TV already on its encoder — the fix made a new warning)
+      const hub = devs.find(x => x.type === "videoMatrix") || devs.find(x => x.type === "avSwitch" && !x.danteSwitch);
+      if (hub) out.push({ label: `Feed it from the ${hub.model || "rack switch"}`, run: (j, s) => feedReceiver(j, s, rackDevices(s).find(x => x.id === hub.id), d.id, {}) });
+      const srcs = devs.filter(x => x.type === "source" && !(sol.connections || []).some(c => c.from === x.id && c.signal === "video")).slice(0, 2);
       for (const src of srcs) out.push({ label: `Feed it from the ${src.model}`, run: (j, s) => (s.connections ||= []).push({ from: src.id, to: d.id, signal: "video" }) });
       out.push({ label: "Add an Apple TV in the rack", run: (j, s) => { const id = addRackDevice(j, s, "source", "Apple TV", { sourceType: "appletv", idBase: "atv" }); s.connections.push({ from: id, to: d.id, signal: "video" }); } });
     }

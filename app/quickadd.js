@@ -84,7 +84,9 @@ const FIXUP = new RegExp(`(?:\\bno\\s+)?(?:\\baudio\\s+)?\\b${VAL}(?:\\s+tv)?\\s
 export function parseQuickZone(text) {
   let t = " " + String(text || "").toLowerCase().trim() + " ";
   // dictation punctuation never sticks to a word ("soundbar:", "50 inch!", "3.1:") — decimals (5.1) and the inch mark stay
+  t = t.replace(/\bw\/\s*/g, " with ").replace(/\bw\/o\b/g, " without ");   // "w/ 5.1" before the slash is lost
   t = t.replace(/[,;:!?–—()]/g, " ").replace(/\.(?=\s|$)/g, " ");
+  t = t.replace(/^\s*(?:(?:and|also|plus|then)\s+)?(?:my|our|their)\s+/, " ");   // "my office" is the Office ("his / her office" are real names)
   // tech shorthand: "4 ic spkrs" = 4 in-ceiling speakers, "iw spk" = in-wall
   t = t.replace(/\bspkrs?\b|\bspks\b/g, "speakers").replace(/\bic\b(?=\s+speakers?)|\bic\b(?=\s+spk)/g, "in-ceiling").replace(/\biw\b(?=\s+(?:speakers?|spk))/g, "in-wall");
   t = t.replace(/\bsurround-(\d\.\d(?:\.\d)?)\b/g, (m, c) => ` ${c} `).replace(/\bspeaker[_\s]?count\s*:?\s*(\d{1,2})\b/g, (m, n) => ` ${n} speakers `);
@@ -284,8 +286,8 @@ export function parseQuickZone(text) {
   zone._hints = { local, matrix, apps, avr, dante, director, bullet };
   if (said.length) { zone.note = [...new Set(said)].join(" · "); chips.push({ kind: "hint", label: `noted: ${zone.note}` }); }
   if (oddSetup && !spk) chips.push({ kind: "warn", label: `${oddSetup} isn't a setup here — pick stereo, 5.1, 7.1 or 7.1.4` });
-  // a room with no speakers and no TV has nothing to draw — say so before Add skips it
-  if (!zone.endpoints.length) chips.push({ kind: "warn", label: "nothing to add — give it a setup or a TV size" });
+  // a room with no speakers and no TV: named, it's added empty (its gear can come later); unnamed, Add skips it
+  if (!zone.endpoints.length) chips.push({ kind: named ? "hint" : "warn", label: named ? "empty room for now — add a setup or a TV size later" : "nothing to add — start with the room's name" });
   return { zone, chips, empty: !zone.endpoints.length, named };
 }
 
@@ -361,7 +363,16 @@ export function parseQuick(text, existing = []) {
 
 function parseQuickRooms(text) {
   const out = [];
-  for (const p of roomTexts(text).map(parseQuickZone)) {
+  // "bedroom 3 and bedroom 4 with 55 inch tvs": both rooms get it (each side alone names a room and has no gear)
+  const texts = roomTexts(text).flatMap(c => {
+    const m = c.match(/^(.+?)\s+(?:and|&)\s+(.+?)\s+((?:with|both|each|get|have|have\s+a|get\s+a)\b.*|\d{2,3}\s*(?:"|in\b|inch).*)$/i);
+    if (!m) return [c];
+    const a = parseQuickZone(m[1]), b = parseQuickZone(m[2]);
+    if (!a.named || !b.named || a.zone.endpoints.length || b.zone.endpoints.length) return [c];
+    const gear = m[3].replace(/\btvs\b/gi, "tv").replace(/\bprojectors\b/gi, "projector").replace(/^(?:both|each)\s+/i, "");
+    return [`${m[1]} ${gear}`, `${m[2]} ${gear}`];
+  });
+  for (const p of texts.map(parseQuickZone)) {
     const z = p.zone;
     // "den same as the office": that room's gear (the room named, else the one before)
     if (z._same !== undefined && !z.endpoints.length) {

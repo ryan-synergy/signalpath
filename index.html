@@ -615,29 +615,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003054732",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003054732",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003054732",
-    "./app/ports.js": "./app/ports.js?v=20261003054732",
-    "./app/commands.js": "./app/commands.js?v=20261003054732",
-    "./app/engine.js": "./app/engine.js?v=20261003054732",
-    "./app/exports.js": "./app/exports.js?v=20261003054732",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003054732",
-    "./app/hookup.js": "./app/hookup.js?v=20261003054732",
-    "./app/importers.js": "./app/importers.js?v=20261003054732",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003054732",
-    "./app/library.js": "./app/library.js?v=20261003054732",
-    "./app/names.js": "./app/names.js?v=20261003054732",
-    "./app/network.js": "./app/network.js?v=20261003054732",
-    "./app/pages.js": "./app/pages.js?v=20261003054732",
-    "./app/power.js": "./app/power.js?v=20261003054732",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003054732",
-    "./app/rack.js": "./app/rack.js?v=20261003054732",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003054732",
-    "./app/starters.js": "./app/starters.js?v=20261003054732",
-    "./app/kinds.js": "./app/kinds.js?v=20261003054732",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003054732",
-    "./app/sheets.js": "./app/sheets.js?v=20261003054732"
+    "./app/ai.js": "./app/ai.js?v=20261003060051",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003060051",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003060051",
+    "./app/ports.js": "./app/ports.js?v=20261003060051",
+    "./app/commands.js": "./app/commands.js?v=20261003060051",
+    "./app/engine.js": "./app/engine.js?v=20261003060051",
+    "./app/exports.js": "./app/exports.js?v=20261003060051",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003060051",
+    "./app/hookup.js": "./app/hookup.js?v=20261003060051",
+    "./app/importers.js": "./app/importers.js?v=20261003060051",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003060051",
+    "./app/library.js": "./app/library.js?v=20261003060051",
+    "./app/names.js": "./app/names.js?v=20261003060051",
+    "./app/network.js": "./app/network.js?v=20261003060051",
+    "./app/pages.js": "./app/pages.js?v=20261003060051",
+    "./app/power.js": "./app/power.js?v=20261003060051",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003060051",
+    "./app/rack.js": "./app/rack.js?v=20261003060051",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003060051",
+    "./app/starters.js": "./app/starters.js?v=20261003060051",
+    "./app/kinds.js": "./app/kinds.js?v=20261003060051",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003060051",
+    "./app/sheets.js": "./app/sheets.js?v=20261003060051"
 } }
 </script>
 <script>
@@ -896,7 +896,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003054732").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003060051").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -2136,10 +2136,12 @@ function productGroups(d) {
   const EC = effectiveCatalog(), all = Object.entries(EC.devices || {});
   const kind = DEV_TYPE_LABEL[d.type] || d.type;
   const item = ([id, c]) => ({ value: id, label: productName(c), current: d.catalogRef === id,
-    sub: [productSku(c) && productSku(c) !== c.model ? productSku(c) : "", c.notInPlanQueue ? "not in PlanQueue" : "", c.verified === false ? "⚠ unverified" : "",
+    sub: [c.processing ? `${c.processing} processing` : "", c.zones && c.type === "amp" ? `${c.zones} zones` : "", productSku(c) && productSku(c) !== c.model ? productSku(c) : "", c.notInPlanQueue ? "not in PlanQueue" : "", c.verified === false ? "⚠ unverified" : "",
           c.type !== d.type ? `makes this box a ${DEV_TYPE_LABEL[c.type] || c.type}` : ""].filter(Boolean).join(" · "),
     keys: `${c.brand || ""} ${c.model} ${(c.aliases || []).join(" ")} ${c.partNo || ""}` });
-  const byName = (a, b) => String((a[1].brand || "") + a[1].model).localeCompare(String((b[1].brand || "") + b[1].model));
+  // receivers and amps small → big within a brand, so "bigger" is further down the list (2026-10-03)
+  const size = c => +String(c.processing || "").split(".")[0] || +c.zones || 0;
+  const byName = (a, b) => String(a[1].brand || "").localeCompare(String(b[1].brand || "")) || size(a[1]) - size(b[1]) || String(a[1].model).localeCompare(String(b[1].model));
   const mine = all.filter(([, c]) => c.type === d.type && !(c.flags || []).includes("legacy")).sort(byName);
   return [
     { label: "Our go-to", items: mine.filter(([, c]) => c.goTo).map(item) },
@@ -2341,7 +2343,7 @@ function zonesHTML() {
     // closed, a row answers "what is it, what feeds it, is it done?"
     // closed, a row says what's in the room in plain words — which box feeds it is one tap away (2026-10-03, Ryan:
     // "simplify the room cards, but able to reveal more info if needed")
-    const what = [spk && (SPEAKER_SETUP[spk.config || "stereo"] || spk.config),
+    const what = [spk && (spk.config === "landscape" ? `Landscape · ${spk.satCount || spk.count || "?"} speakers${spk.buriedSub === false ? "" : " + sub"}` : SPEAKER_SETUP[spk.config || "stereo"] || spk.config),
                   tv && `${tv.size || "?"}″${tv.brand ? " " + tv.brand : ""} ${tv.displayType === "projector" ? "projector" : "TV"}`].filter(Boolean).join(" · ") || "Nothing in this room yet";
     // inside the zone's own row, "Apple TV in Patio" is just "Apple TV (in room)"
     // a receiver named for the room it drives: in that room's own line the room goes without saying
@@ -2462,7 +2464,7 @@ function hookupHTML(z, sol, multi) {
     const hasLocalAtv = locals.some(d => /apple/i.test(d.model || ""));
     // with a switch or matrix, a source already on it is just noise here (it's picked through the switch)
     const srcs = hubs.some(d => d.type !== "avr") ? srcsAll.filter(d => !busyOut(d) || d.id === cur) : srcsAll;
-    rows.push(field("Picture from", `<select class="hvfrom">${opt("", "— not connected —", cur)}${opt("__apps", "TV's own apps (no rack feed)", cur)}
+    rows.push(field(z.scope === "prewire" ? "TV wired back to" : "Picture from", `<select class="hvfrom">${opt("", "— not connected —", cur)}${opt("__apps", "TV's own apps (no rack feed)", cur)}
       ${hubs.length ? `<optgroup label="In the rack">${hubs.map(d => opt(d.id, nm(d.id), cur)).join("")}</optgroup>` : ""}
       ${srcs.length ? `<optgroup label="${hubs.some(d => d.type !== "avr") ? "Straight from a source (skips the switch)" : "Sources in the rack"}">${srcs.map(srcOpt).join("")}</optgroup>` : ""}
       ${away.length ? `<optgroup label="Another room's receiver" data-search="1">${away.map(d => opt(d.id, nm(d.id), cur)).join("")}</optgroup>` : ""}
@@ -2508,12 +2510,15 @@ function hookupHTML(z, sol, multi) {
     const spkOpt = d => { const why = full(d); return why ? `<option value="${esc(d.id)}" disabled title="${esc(why)}">${esc(nm(d.id))}</option>`
       : `<option value="${esc(d.id)}" data-sub="${esc(subOf(d))}" ${d.id === cur ? "selected" : ""}>${esc(nm(d.id))}</option>`; };
     const drivers = devs.filter(d => SPEAKERS_FROM.includes(d.type)).sort((a, b) => SPEAKERS_FROM.indexOf(a.type) - SPEAKERS_FROM.indexOf(b.type));
-    rows.push(field("Sound from", `<select class="hsfrom">${opt("", "— not connected —", cur)}
+    rows.push(field(z.scope === "prewire" ? "Speakers wired back to" : "Sound from", `<select class="hsfrom">${opt("", "— not connected —", cur)}
       ${bar ? `<optgroup label="In this room">${opt("__tv", "The TV (soundbar on HDMI eARC)", h.speakers?.viaTv ? "__tv" : cur)}</optgroup>` : ""}
       <optgroup label="In the rack">${drivers.filter(d => !((d.type === "avr" || surround) && full(d))).map(spkOpt).join("")}</optgroup>
       ${drivers.some(d => d.type === "avr" && full(d)) ? `<optgroup label="Receivers already in use" data-search="1">${drivers.filter(d => d.type === "avr" && full(d)).map(spkOpt).join("")}</optgroup>` : ""}
       ${surround && drivers.some(d => d.type === "amp" && full(d)) ? `<optgroup label="Amps (2-channel zones)" data-search="1">${drivers.filter(d => d.type === "amp" && full(d)).map(spkOpt).join("")}</optgroup>` : ""}
       <optgroup label="Add">${opt("__new_avr", "＋ New AV receiver…", "")}${surround ? "" : opt("__new_amp", "＋ New multi-zone amp…", "")}</optgroup></select>`));
+    // the room's own receiver: change its model right here ("make the theater's receiver bigger" — 2026-10-03 PM build)
+    if (byDev(cur)?.type === "avr" && !(sol.connections || []).some(c => c.from === cur && c.signal === "speaker" && c.to !== h.spk.id))
+      rows.push(field("Receiver", `<button class="pickbtn rcvswap" data-dev="${esc(cur)}">${esc(byDev(cur).model || "Receiver")} <span class="mini">· change model</span> ▾</button>`));
     if (byDev(cur)?.type === "amp") {
       gist.push(`outputs ${h.speakers.channels || "?"}`);
       // the amp's outputs as a list — free ones to pick, taken ones greyed with the room on them (was a typed field)
@@ -3565,7 +3570,10 @@ function wirePanel(body) {
         for (const so of S.job.solutions) so.connections = (so.connections || []).filter(c => !(c.to === spk.id && c.from === tvId));
       }
       setF("endpoints", spk, "config", el.value);
-      if (!scopeSol && /^soundbar/.test(el.value)) wireAdded(S.job, S.job.solutions[S.sol], z);   // a soundbar plays off its TV again
+      if (!scopeSol && /^soundbar/.test(el.value)) {
+        if (!z.endpoints.some(e => e.type === "display")) z.endpoints.push({ id: uid(z.id + "-tv"), type: "display", displayType: "tv", brand: "", size: 65, status: "new", confirm: ["size"] });   // a soundbar plays off a TV
+        wireAdded(S.job, S.job.solutions[S.sol], z);
+      }
     }
     else { z.endpoints.unshift({ id: uid(z.id + "-spk"), type: "speakers", config: el.value, count: 2, status: "new" }); wireAdded(S.job, S.job.solutions[S.sol], z); }
   });
@@ -3638,8 +3646,8 @@ function wirePanel(body) {
     const type = v === "__new_amp" ? "amp" : "avr", z = zoneOf(el);
     const EC = effectiveCatalog();
     const items = Object.entries(EC.devices || {}).filter(([, c]) => c.type === type && !/LEGACY/.test(c.notes || ""))
-      .map(([id, c]) => ({ value: id, label: productName(c), sub: [productSku(c) !== c.model ? productSku(c) : "", c.zones ? `${c.zones} zones` : ""].filter(Boolean).join(" · ") }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+      .sort(([, a], [, b]) => String(a.brand || "").localeCompare(String(b.brand || "")) || (+String(a.processing || "").split(".")[0] || +a.zones || 0) - (+String(b.processing || "").split(".")[0] || +b.zones || 0) || productName(a).localeCompare(productName(b)))
+      .map(([id, c]) => ({ value: id, label: productName(c), sub: [c.processing ? `${c.processing} processing` : "", c.zones ? `${c.zones} zones` : "", productSku(c) !== c.model ? productSku(c) : ""].filter(Boolean).join(" · ") }));
     const generic = type === "amp" ? "Multi-zone amp" : "AV receiver";
     openPicker({ title: type === "amp" ? "Add a multi-zone amp" : "Add an AV receiver",
       groups: [{ label: "From the catalog", items }, { label: "Not in the catalog", items: [{ value: "__generic", label: `${generic} (model to be picked)` }] }],
@@ -3727,7 +3735,7 @@ function wirePanel(body) {
         const before = new Set((S.job.solutions[S.sol].racks || []).flatMap(r => (r.devices || []).map(d => d.id)));
         const added = pj.house.zones.filter(z => !had.has(z.id));
         const name = id => `${(ps.racks || []).some(r => r.devices?.some(d => d.id === id)) && !before.has(id) ? "new " : ""}${describeNode(pj, ps, id).short}`;
-        parses.filter(p => !p.empty).forEach((p, k) => {
+        parses.filter(p => !p.empty || p.named).forEach((p, k) => {
           const z = added[k]; if (!z) return;
           const h = readHookup(pj, ps, z), out = [];
           const tv = z.endpoints?.some(e => e.type === "display"), spk = z.endpoints?.some(e => e.type === "speakers");
@@ -3761,26 +3769,18 @@ function wirePanel(body) {
         if (applyPlan(planCommands(S.job, S.sol, cmds, effectiveCatalog()), label)) qaInput.value = "";
         return;
       }
-      const all = parseQuick(qaInput.value, S.job.house.zones.map(z => z.name)), parses = all.filter(p => !p.empty), skipped = all.filter(p => p.empty).map(p => p.zone.name);
-      if (skipped.length) toast(`Skipped ${skipped.join(", ")} — nothing in ${skipped.length > 1 ? "them" : "it"} yet. Add a setup or a TV size (e.g. "${skipped[0].toLowerCase()} stereo 65").`);
-      if (!parses.length) return;
-      pushUndo(`add ${parses.map(p => p.zone.name).join(", ")}`);
-      for (const p of parses) {
-        const z = p.zone, hints = z._hints || {}; delete z._hints;
-        const oldId = z.id;
-        while (S.job.house.zones.some(x => x.id === z.id)) z.id += "b";
-        if (z.id !== oldId) for (const ep of z.endpoints) ep.id = ep.id.replace(oldId, z.id);
-        const notes = [];
-        if (hints.local) {
-          notes.push("TV fed by a source in the room");
-          S.job.solutions[S.sol].localDevices.push({ id: uid(z.id + "-src"), type: "source",
-            sourceType: "appletv", model: "Apple TV", status: "new", zone: z.id, location: "at-display" });
-        }
-        if (notes.length) z.note = notes.join(" · ");
-        S.job.house.zones.push(z);
-        autoHookup(S.job, S.job.solutions[S.sol], z, hints);   // "matrix" / "avr" wire it up now
-        S.openRows.add(z.id);
-      }
+      // the same add-rooms command the AI, dictation and kits use (2026-10-03: this box had its own copy, so
+      // rooms didn't join their area, a full amp didn't add another, a soundbar got no TV, "garage" was skipped)
+      const text = qaInput.value, before = new Set(S.job.house.zones.map(z => z.id));
+      const all = parseQuick(text, S.job.house.zones.map(z => z.name)), skipped = all.filter(p => p.empty && !p.named).map(p => p.zone.name);
+      if (skipped.length) toast(`Skipped "${skipped.join(", ")}" — no room named. Start with the room (e.g. "kitchen stereo 65").`);
+      if (!all.some(p => !p.empty || p.named)) return;
+      if (!applyPlan(planCommands(S.job, S.sol, [{ op: "add_zones", text }], effectiveCatalog()), `add ${all.filter(p => !p.empty || p.named).map(p => p.zone.name).join(", ")}`)) return;
+      // the last room added opens (one card at a time) and comes into view
+      const added = S.job.house.zones.filter(z => !before.has(z.id));
+      for (const z of S.job.house.zones) S.openRows.delete(z.id);
+      if (added.length) { const last = added[added.length - 1]; S.openRows.add(last.id); renderPanel();
+        document.querySelector(`[data-zid="${CSS.escape(last.id)}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
       qaInput.value = "";
       refresh();
     };
@@ -3819,6 +3819,11 @@ function wirePanel(body) {
   };
   on(".dmodel", el => { const { d } = devOf(el); if (d) d.model = el.value; });
   body.querySelectorAll(".libedit").forEach(el => el.onclick = () => openLibrary(el.dataset.cat));
+  body.querySelectorAll(".rcvswap").forEach(el => el.onclick = () => {
+    const d = S.job.solutions[S.sol].racks.flatMap(r => r.devices).find(x => x.id === el.dataset.dev); if (!d) return;
+    openPicker({ title: `Receiver for ${zoneOf(el)?.name || "this room"}`, groups: productGroups(d).filter(g => !/kinds of box|not linked/i.test(g.label)),
+      onPick: v => { if (v === "__none") return; S.editLabel = `Receiver — ${zoneOf(el)?.name || ""}`; linkProduct(d, v); refresh(); } });
+  });
   body.querySelectorAll(".dcatbtn").forEach(el => el.onclick = () => {
     const { d } = devOf(el); if (!d) return;
     openPicker({ title: `Product — ${d.model || d.id}`, groups: productGroups(d), onPick: v => { linkProduct(d, v === "__none" ? "" : v); refresh(); } });

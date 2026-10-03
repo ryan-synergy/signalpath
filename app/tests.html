@@ -3802,6 +3802,19 @@ for (const [name, raw] of Object.entries(fixtures)) {
       const cross = segs(a.pts).some(([p1, p2]) => segs(b.pts).some(([q1, q2]) => { const hv = (h1, h2, v1, v2) => h1[1] === h2[1] && v1[0] === v2[0] &&
         v1[0] > Math.min(h1[0], h2[0]) && v1[0] < Math.max(h1[0], h2[0]) && h1[1] > Math.min(v1[1], v2[1]) && h1[1] < Math.max(v1[1], v2[1]); return hv(p1, p2, q1, q2) || hv(q1, q2, p1, p2); }));
       t("test job 1: the switch's two runs to the receivers' decoders don't cross each other", !cross, JSON.stringify([a.pts, b.pts])); }
+    { // Ryan's third case (2026-10-03): the Master Bed TV's sound back to its receiver ran out past the speaker ribbon and
+      // crossed back over it; it stays inside the speaker riser now, in both trunk looks
+      const tj = await (await fetch("./test-fixtures/test-job-1.json")).json();
+      for (const st of ["ribbon", "bundle"]) { const x = structuredClone(tj); x.job.trunkStyle = st;
+        const Lx = loadJob(effectiveJob(x, 0)), px = enginePlace(Lx.job, Lx.ix), rx = engineRoute(Lx.job, Lx.ix, px);
+        const ret = rx.wires.find(w => w.from === "z-2-tv-2t7c1" && w.to === "avr"), spk = rx.wires.filter(w => w.signal === "speaker" && w.cls === "trunk");
+        const segs = q => q.slice(1).map((p, i) => [q[i], p]);
+        const hits = new Set();
+        for (const [p1, p2] of segs(ret?.pts || [])) for (const s of spk) for (const [q1, q2] of segs(s.pts)) {
+          const hv = (h1, h2, v1, v2) => h1[1] === h2[1] && v1[0] === v2[0] && v1[0] > Math.min(h1[0], h2[0]) && v1[0] < Math.max(h1[0], h2[0]) && h1[1] > Math.min(v1[1], v2[1]) && h1[1] < Math.max(v1[1], v2[1]);
+          if (hv(p1, p2, q1, q2)) hits.add(`${p1}|${p2}`); }   // its runs across the speaker riser (dropping past the bus under the TVs is unavoidable)
+        t(`test job 1 (${st}): the Master Bed TV's sound back never runs across the speaker riser (stays inside it)`, !!ret && hits.size === 0, JSON.stringify(ret?.pts)); }
+    }
     { // rip-up and reroute: each family retried in every corridor, the fewest crossings kept
       const R = draw(fixtures.residence, "bundle"), R0 = draw(fixtures.residence, false);
       const ret = R.rt.wires.find(w => w.from === "master-tv" && w.to === "sav-in"), sin = R.p.racks.flatMap(r => r.devices).find(d => d.id === "sav-in");

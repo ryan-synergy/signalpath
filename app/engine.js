@@ -1930,8 +1930,12 @@ function routeOnce(job, ix, placement, opts = {}) {
     // a family's whole route, re-runnable: cfg can move its riser (range / want) or stack its
     // buses farthest from the rooms; every port it books is recorded so it can be ripped up
     // the points where wire w crosses wires of any other net (a family's crossings are the union)
-    function crossPointsInto(w, net, pts) {
-      const c = wireSegs(w);
+    // A return coming back from a room that crosses a trunk and then crosses back over it reads as tangled even when
+    // the count is low (Ryan 2026-10-03, Test Job 1: the Master Bed return ran out past the speaker ribbon and back
+    // across it, where inside it, crossing two single feeds, was the clean run) — each crossing back over the same
+    // trunk costs one more. Only for feeds coming in: on every family it moved risers it had no business moving.
+    function crossPointsInto(w, net, pts, backs = false) {
+      const c = wireSegs(w), back = new Map();
       for (const o of out.wires) {
         if (o.net === net) continue;
         const d = wireSegs(o);
@@ -1939,9 +1943,13 @@ function routeOnce(job, ix, placement, opts = {}) {
         for (const s of c.segs) for (const t of d.segs) {
           if (s.vert === t.vert) continue;
           const v = s.vert ? s : t, h = s.vert ? t : s;
-          if (v.x1 > Math.min(h.x1, h.x2) + 1 && v.x1 < Math.max(h.x1, h.x2) - 1 && h.y1 > Math.min(v.y1, v.y2) + 1 && h.y1 < Math.max(v.y1, v.y2) - 1) pts.add(`${v.x1},${h.y1}`);
+          if (v.x1 > Math.min(h.x1, h.x2) + 1 && v.x1 < Math.max(h.x1, h.x2) - 1 && h.y1 > Math.min(v.y1, v.y2) + 1 && h.y1 < Math.max(v.y1, v.y2) - 1) {
+            pts.add(`${v.x1},${h.y1}`);
+            if (backs && o.cls === "trunk" && o.net != null) (back.get(o.net) || back.set(o.net, new Set()).get(o.net)).add(s.vert ? `v${s.x1}` : `h${s.y1}`);
+          }
         }
       }
+      for (const [n, legs] of back) for (let k = 1; k < legs.size; k++) pts.add(`back:${w.id}:${n}:${k}`);
     }
     let trialMode = false;
     const routeFam = (F, cfg = {}) => {
@@ -1955,7 +1963,7 @@ function routeOnce(job, ix, placement, opts = {}) {
       const tally = cfg.bound != null ? { pts: new Set(), len: 0 } : null;
       const over = w => {
         if (!tally || !w) return false;
-        crossPointsInto(w, F.net, tally.pts); tally.len += segLen(w.pts);
+        crossPointsInto(w, F.net, tally.pts, F.dir === "in"); tally.len += segLen(w.pts);
         return (F.aborted = tally.pts.size * 100 + tally.len / 10 >= cfg.bound);
       };
       // a member the trial can't place costs 1e5 (famCost's price) — usually more than the bound already
@@ -2366,7 +2374,7 @@ function routeOnce(job, ix, placement, opts = {}) {
       return Math.max(0, segLen(w.pts) - 1.5 * manh - 40); };
     const famCost = F => {
       const pts = new Set(), mine = famWires(F);
-      for (const w of mine) crossPointsInto(w, F.net, pts);
+      for (const w of mine) crossPointsInto(w, F.net, pts, F.dir === "in");
       const missing = F.members.filter(m => !done.has(m.i)).length;
       return missing * 1e5 + pts.size * 100 + mine.reduce((n, w) => n + segLen(w.pts), 0) / 10 + mine.reduce((n, w) => n + lapCost(w), 0);
     };

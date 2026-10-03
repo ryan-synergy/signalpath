@@ -71,7 +71,8 @@ export const LIB_SECTIONS = [
   { title: "Cable", types: ["cable"], fields: [["lengthM", "Length (m)", "num"]] },
   { title: "Rack & power draw", fields: [
     ["rackUnits", "Rack units (U)", "num"], ["rackUnitsConfirm", "Height needs to be confirmed", "bool", "drawn at that height, listed in the advisor's confirm note"],
-    ["halfRack", "Half-width", "bool", "two side by side on one shelf"],
+    ["halfRack", "Half-width", "bool", "two side by side in one rack space"],
+    ["lowHeat", "Low heat, can tuck", "bool", "no vent needed after it — these stack, and one can tuck into a vent space (even over an amp)"],
     ["mount", "Mount", "select"], ["desktop", "Sits on a shelf (no rack ears)", "bool"],
     ["lan", "Ethernet jacks", "num", "ports it needs on the house network"],
     ["powerTypicalW", "Typical draw (W)", "num"], ["powerMaxW", "Max draw (W)", "num"], ["powerIdleW", "Idle draw (W)", "num"],

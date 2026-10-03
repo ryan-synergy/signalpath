@@ -417,7 +417,7 @@ export function importMarkdown(text, catalog) {
   // racks the file names: the first names the main rack, each other one is a rack of its own (a pool house)
   const rackNames = [...new Set(doc.gear.map(g => g.rack).filter(Boolean))];
   if (rackNames[0]) job.solutions[0].racks[0].name = rackNames[0];
-  rackNames.slice(1).forEach((n, k) => job.solutions[0].racks.push({ id: `rack-${k + 2}`, name: n, devices: [] }));
+  rackNames.slice(1).forEach((n, k) => job.solutions[0].racks.push({ id: `rack-${k + 2}`, name: n, devices: [], sizeMode: "auto" }));
   const rackIdOf = n => n ? job.solutions[0].racks.find(r => r.name === n)?.id : undefined;
   // 3. gear first, so the rooms wire to it
   for (const g of doc.gear) {
@@ -517,15 +517,16 @@ export function importMarkdown(text, catalog) {
       }
     }
     const aid = areaId(r.area);
-    made.forEach((z, k) => { if (aid) z.area = aid; orderOf.set(z.id, order + k / 100); rooms++; });
+    made.forEach((z, k) => { if (String(z.name).length > 60) z.name = String(z.name).slice(0, 60).trim(); if (aid) z.area = aid; orderOf.set(z.id, order + k / 100); rooms++; });
   }
   cur.house.zones.sort((a, b) => (orderOf.get(a.id) ?? 1e9) - (orderOf.get(b.id) ?? 1e9));
   // notes that name a room: "pool deck prewire only", "customer provides master tv"
   for (const line of doc.noteLines || []) {
     const l = line.toLowerCase();
     const alias = n => [n, n.replace(/\bprimary\b/, "master"), n.replace(/\bmaster\b/, "primary")];
-    const z = [...cur.house.zones].sort((a, b) => b.name.length - a.name.length).find(z => z.name.length >= 3 &&
-      alias(z.name.toLowerCase()).some(n => new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, c => "\\" + c)}\\b`).test(l)));
+    const hasName = n => { try { return new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, c => "\\" + c)}\\b`).test(l); } catch { return false; } };
+    const z = [...cur.house.zones].sort((a, b) => b.name.length - a.name.length).find(z => z.name.length >= 3 && z.name.length <= 60 &&
+      alias(z.name.toLowerCase()).some(hasName));
     if (!z) continue;
     const did = [];
     if (/\bpre-?wire\b/.test(l) && !/\bfuture\b.*\b(expansion|upgrade)\b/.test(l)) { z.scope = "prewire"; did.push("pre-wire"); }

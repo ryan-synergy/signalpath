@@ -532,29 +532,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003010309",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003010309",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003010309",
-    "./app/ports.js": "./app/ports.js?v=20261003010309",
-    "./app/commands.js": "./app/commands.js?v=20261003010309",
-    "./app/engine.js": "./app/engine.js?v=20261003010309",
-    "./app/exports.js": "./app/exports.js?v=20261003010309",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003010309",
-    "./app/hookup.js": "./app/hookup.js?v=20261003010309",
-    "./app/importers.js": "./app/importers.js?v=20261003010309",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003010309",
-    "./app/library.js": "./app/library.js?v=20261003010309",
-    "./app/names.js": "./app/names.js?v=20261003010309",
-    "./app/network.js": "./app/network.js?v=20261003010309",
-    "./app/pages.js": "./app/pages.js?v=20261003010309",
-    "./app/power.js": "./app/power.js?v=20261003010309",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003010309",
-    "./app/rack.js": "./app/rack.js?v=20261003010309",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003010309",
-    "./app/starters.js": "./app/starters.js?v=20261003010309",
-    "./app/kinds.js": "./app/kinds.js?v=20261003010309",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003010309",
-    "./app/sheets.js": "./app/sheets.js?v=20261003010309"
+    "./app/ai.js": "./app/ai.js?v=20261003012020",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003012020",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003012020",
+    "./app/ports.js": "./app/ports.js?v=20261003012020",
+    "./app/commands.js": "./app/commands.js?v=20261003012020",
+    "./app/engine.js": "./app/engine.js?v=20261003012020",
+    "./app/exports.js": "./app/exports.js?v=20261003012020",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003012020",
+    "./app/hookup.js": "./app/hookup.js?v=20261003012020",
+    "./app/importers.js": "./app/importers.js?v=20261003012020",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003012020",
+    "./app/library.js": "./app/library.js?v=20261003012020",
+    "./app/names.js": "./app/names.js?v=20261003012020",
+    "./app/network.js": "./app/network.js?v=20261003012020",
+    "./app/pages.js": "./app/pages.js?v=20261003012020",
+    "./app/power.js": "./app/power.js?v=20261003012020",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003012020",
+    "./app/rack.js": "./app/rack.js?v=20261003012020",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003012020",
+    "./app/starters.js": "./app/starters.js?v=20261003012020",
+    "./app/kinds.js": "./app/kinds.js?v=20261003012020",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003012020",
+    "./app/sheets.js": "./app/sheets.js?v=20261003012020"
 } }
 </script>
 <script>
@@ -742,6 +742,7 @@
 </div></div>
 
 <script type="module">
+import { autoRacks } from "./app/engine.js";
 import { loadJob, normalizeJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock, trunkMode, boxUsage, SHEET, KIND_STYLE, deviceKind } from "./app/engine.js";
 import { importAny, mergeHouse, drawFromWalk, decodeHandoff, stripUnsafe } from "./app/importers.js";
 import { importMarkdown, designBrief } from "./app/mdimport.js";
@@ -794,7 +795,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003010309").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003012020").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -874,7 +875,7 @@ function blankJob(name = "New Job") {
            catalogSnapshot: { asOf: new Date().toISOString().slice(0, 10) } },
     house: { areas: [], zones: [] },
     solutions: [{ id: "sol-a", name: "Proposed System", videoDistribution: "hybrid", platforms: [], auxCounts: {},
-                  racks: [{ id: "rack-main", name: "Equipment Rack", devices: [] }],
+                  racks: [{ id: "rack-main", name: "Equipment Rack", devices: [], sizeMode: "auto" }],
                   localDevices: [], companions: [], connections: [], annotations: [] }],
   };
 }
@@ -903,6 +904,11 @@ function refresh(save = true) {
   $("#danteLabels").checked = S.job.job.danteStyle === "labels";
   try {
     autoLinkCatalog(S.job, effectiveCatalog());                // self-heal: fill missing catalog links by model
+    // Auto racks: two side by side past the limit, back to one when the gear fits again
+    if ((S.job.solutions || []).some(x => (x.racks || []).some(r => r.sizeMode === "auto"))) {
+      const said = autoRacks(S.job, effectiveCatalog());
+      if (said.length) { toast(said.join(" · ")); save = true; }
+    }
     const full = effectiveJob(S.job, S.sol);                   // active solution's overrides applied
     const whole = loadJob(full);
     v = validate(whole.job, whole.ix); a = advise(whole.job, whole.ix, effectiveCatalog());   // checks see the whole job
@@ -2491,40 +2497,48 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && S.mainView
    and the door it goes through — picks the tallest Middle Atlantic / Strong floor rack that fits (on
    casters); then the gear is fitted to it (squeeze the spacing, a second rack, the rack page). */
 function spaceHTML(rr, plan) {
-  const sp = rr.space || {}, n1 = v => String(Math.round(v * 10) / 10), model = plan?.model, mode = plan?.sizeMode || "units";
-  const R = esc(rr.id);
-  const tabs = [["space", "Fit the space"], ["model", "Pick a rack"], ["units", "By U"]].map(([k, l]) =>
+  const sp = rr.space || {}, n1 = v => String(Math.round(v * 10) / 10), model = plan?.model, mode0 = plan?.sizeMode || "units";
+  const mode = mode0 === "model" ? "units" : mode0;      // a rack picked by model (older jobs) shows under Fixed U
+  const R = esc(rr.id), casters = rr.casters !== false, ht = o => casters ? o.hc : o.h, on = casters ? "on casters" : "without casters";
+  // three ways to size a rack (Ryan 2026-10-02, second pass)
+  const tabs = [["space", "Locked to space"], ["auto", "Auto"], ["units", "Fixed U"]].map(([k, l]) =>
     `<button class="chip rmode${mode === k ? " on" : ""}" data-rack="${R}" data-mode="${k}">${l}</button>`).join("");
-  const line = model ? `<div class="mini" style="margin:6px 0 0">${mode === "space" ? "Using" : "Picked"} <b>${esc(model.part)}</b> (${esc(model.brand)}) — ${model.u}U, ${n1(model.hc)}" tall on casters, ${n1(model.w)}" wide, ${n1(model.depth)}" deep (${n1(model.usable)}" usable)</div>` : "";
+  const line = model ? `<div class="mini" style="margin:6px 0 0">${mode0 === "space" ? "Using" : "Picked"} <b>${esc(model.part)}</b> (${esc(model.brand)}) — ${model.u}U, ${n1(ht(model))}" tall ${on}, ${n1(model.w)}" wide, ${n1(model.depth)}" deep (${n1(model.usable)}" usable)</div>` : "";
+  const locked = mode0 === "space" && rr.locked;
+  const inp = (k, ph) => `<input class="rspace" data-rack="${R}" data-k="${k}" inputmode="decimal" value="${esc(sp[k] ?? "")}" placeholder="${ph}" style="width:62px"${locked ? " readonly title=\"Unlock to change the space\"" : ""}>`;
+  const casterTgl = `<span class="chips seg" style="display:inline-flex"><button class="chip rcast${casters ? " on" : ""}" data-rack="${R}" data-v="1">Casters</button><button class="chip rcast${casters ? "" : " on"}" data-rack="${R}" data-v="0">No casters</button></span>`;
+  const spaceRow = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px">H ${inp("h", "height")} W ${inp("w", "width")} D ${inp("d", "depth")} ${casterTgl}</div>`;
   let body = "";
   if (mode === "space") {
-    const inp = (k, ph) => `<input class="rspace" data-rack="${R}" data-k="${k}" inputmode="decimal" value="${esc(sp[k] ?? "")}" placeholder="${ph}" style="width:62px">`;
-    const fits = sp.h || sp.w || sp.d ? fitRacks(sp) : null;
+    const fits = sp.h || sp.w || sp.d ? fitRacks(sp, undefined, casters) : null;
     const seen = new Set(), top = (fits || []).filter(o => !seen.has(o.u + o.brand) && seen.add(o.u + o.brand)).slice(0, 6);   // the tallest few, one per height and brand
-    body = `<div class="mini" style="margin:6px 0 4px">The opening it has to fit — the lower of the cabinet opening and the door — in inches. The tallest rack that fits is used.</div>
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px">H ${inp("h", "height")} W ${inp("w", "width")} D ${inp("d", "depth")}</div>
-      ${fits ? fits.length ? `<div class="mini" style="margin:6px 0 2px">Fits (tallest first, on casters + ${RACK_CLEARANCE.top}" clearance):</div><div class="chips" style="flex-wrap:wrap">${top.map(o =>
-          `<button class="chip rpick${model?.part === o.part ? " on" : ""}" data-rack="${R}" data-part="${esc(o.part)}" title="${esc(`${o.brand} · ${n1(o.hc)}" tall on casters · ${n1(o.w)}" wide · ${n1(o.depth)}" deep (${n1(o.usable)}" usable)`)}"${plan?.needDepth && o.usable < plan.needDepth ? ' style="opacity:.55"' : ""}>${esc(o.part)} · ${o.u}U${plan?.needDepth && o.usable < plan.needDepth ? " · shallow" : ""}</button>`).join("")}</div>`
+    body = `<div class="mini" style="margin:6px 0 4px">The opening it has to fit — the lower of the cabinet opening and the door — in inches. The tallest rack that fits is locked in; it never grows on its own. If the gear doesn't fit, the spacing is squeezed first, then a second rack beside it is offered.</div>
+      ${spaceRow}
+      ${locked ? `<div class="mini" style="margin:6px 0 0">🔒 <b>Locked</b> to this space${line ? "" : ""} <button class="chip runlock" data-rack="${R}" style="margin-left:6px">Unlock</button></div>`
+        : fits ? fits.length ? `<div class="mini" style="margin:6px 0 2px">Fits (tallest first, ${on} + ${RACK_CLEARANCE.top}" clearance) — tap one to lock it in:</div><div class="chips" style="flex-wrap:wrap">${top.map(o =>
+          `<button class="chip rpick${model?.part === o.part ? " on" : ""}" data-rack="${R}" data-part="${esc(o.part)}" title="${esc(`${o.brand} · ${n1(ht(o))}" tall ${on} · ${n1(o.w)}" wide · ${n1(o.depth)}" deep (${n1(o.usable)}" usable)`)}"${plan?.needDepth && o.usable < plan.needDepth ? ' style="opacity:.55"' : ""}>${esc(o.part)} · ${o.u}U${plan?.needDepth && o.usable < plan.needDepth ? " · shallow" : ""}</button>`).join("")}</div>`
         : `<div class="mini" style="color:#b32017;margin-top:4px">No Middle Atlantic or Strong floor rack fits that — check the opening, or plan a wall-mount rack.</div>`
-        : `<div class="mini" style="margin-top:4px;color:#888">Type the height to see the racks that fit.</div>`}
+        : `<div class="mini" style="margin-top:4px;color:#888">Type the height to lock in the tallest rack that fits.</div>`}
       ${line}
+      ${plan?.autoTight ? `<div class="mini" style="margin-top:4px;color:#a45a12">Squeezed to fit — only the vents round receivers and amps kept${plan.over ? `; still ${plan.over}U over` : ""}.</div>` : ""}
       ${plan?.belowMin ? `<div class="mini" style="color:#b32017;margin-top:4px">Under Synergy's minimum cabinet — at least 22" wide and 26" deep.</div>` : ""}`;
-  } else if (mode === "model") {
-    const cur = rr.rackModel || "", opt = o => `<option value="${esc(o.part)}" ${o.part === cur ? "selected" : ""}>${esc(`${o.part} — ${o.u}U · ${n1(o.hc)}" H · ${n1(o.depth)}" D`)}</option>`;
-    const brands = ["Middle Atlantic", "Strong"].map(b => `<optgroup label="${b}">${RACK_OPTIONS.filter(o => o.brand === b).sort((x, y) => y.u - x.u || x.depth - y.depth).map(opt).join("")}</optgroup>`).join("");
-    body = `<div class="mini" style="margin:6px 0 4px">Choose the rack by model — Middle Atlantic or Strong, every height and depth.</div>
-      ${field("Rack", `<select class="rmodel" data-rack="${R}"><option value="" ${cur ? "" : "selected"}>— pick a rack —</option>${brands}</select>`)}
-      ${line}${plan?.spaceFit && !plan.spaceFit.ok ? `<div class="mini" style="color:#b32017;margin-top:4px">It doesn't fit the space you entered (${esc([sp.h && `${sp.h}" high`, sp.w && `${sp.w}" wide`, sp.d && `${sp.d}" deep`].filter(Boolean).join(", "))}).</div>` : ""}`;
+  } else if (mode === "auto") {
+    const two = (S.job.solutions[S.sol].racks || []).find(x => x.autoOf === rr.id), first = rr.autoOf && (S.job.solutions[S.sol].racks || []).find(x => x.id === rr.autoOf);
+    body = `<div class="mini" style="margin:6px 0 4px">Sized to the gear with full spacing — the smallest standard height that takes it (now <b>${plan?.size || "?"}U</b>, the gear needs ${plan?.need ?? "?"}U). Past ${plan?.autoMax || 42}U it becomes two racks side by side, receivers and amps in the second; back to one when it fits again${rr.layout ? " (not while arranged by hand)" : ""}.</div>
+      ${two ? `<div class="mini">Two-wide: <b>${esc(two.name)}</b> stands beside it.</div>` : ""}${first ? `<div class="mini">The second of a two-wide, beside <b>${esc(first.name)}</b>.</div>` : ""}`;
   } else {
-    const cur = +rr.units || +S.job.job.rackUnits || DEFAULT_RACK_U, sizes = [...new Set([...RACK_SIZES, cur])].sort((a, b) => a - b);
-    body = `<div class="mini" style="margin:6px 0 4px">A plain rack height, no brand — the elevation and packet use this U count.</div>
-      ${field("Rack size", `<select class="rsize" data-rack="${R}">${sizes.map(n => `<option value="${n}" ${cur === n ? "selected" : ""}>${n}U</option>`).join("")}</select>`)}`;
+    const cur = +rr.units || plan?.size || +S.job.job.rackUnits || DEFAULT_RACK_U, sizes = [...new Set([...RACK_SIZES, cur])].sort((a, b) => a - b);
+    const sf = plan?.spaceFit;
+    body = `<div class="mini" style="margin:6px 0 4px">A plain rack height, no brand — the elevation and packet use this U count. Enter the space to check it fits (optional).</div>
+      ${field("Rack size", `<select class="rsize" data-rack="${R}">${sizes.map(n => `<option value="${n}" ${cur === n ? "selected" : ""}>${n}U</option>`).join("")}</select>`)}
+      ${spaceRow}${mode0 === "model" ? line : ""}
+      ${sf && !sf.ok ? `<div class="mini" style="color:#b32017;margin-top:4px">${sf.typed ? `A ${plan.size}U rack stands ${sf.est.exact ? "" : "about "}${n1(sf.est.h)}" ${on} — taller than the ${n1(sp.h)}" space${sf.best ? `; the tallest that fits is ${esc(sf.best.part)} (${sf.best.u}U)` : ""}.` : `It doesn't fit the space you entered.`}</div>` : sf?.typed ? `<div class="mini" style="margin-top:4px;color:#2e7d32">Fits the ${n1(sp.h)}" space (${sf.est.exact ? "" : "about "}${n1(sf.est.h)}" ${on}).</div>` : ""}`;
   }
   // the cabinet / closet it needs: Synergy's minimum (22" W × 26" D), never less than the rack itself
   const cab = plan?.cabinet;
   const dp = plan?.depth;   // the deepest box against the picked rack's usable depth
   const depthLine = dp?.deepest ? `<div class="mini" style="margin-top:4px${dp.over.length ? ";color:#b32017" : dp.tight.length ? ";color:#a45a12" : ""}">Deepest: ${esc(dp.deepest.label)} ${n1(dp.deepest.d)}" of ${n1(dp.usable)}" usable${dp.over.length ? " — too deep" : dp.tight.length ? " — tight for cables" : ""}</div>` : "";
-  const cabLine = cab ? `<div class="mini" style="margin-top:6px"><b>Cabinet needs at least</b> ${n1(cab.w)}" wide × ${n1(cab.d)}" deep${cab.h ? ` × ${n1(cab.h)}" high (on casters + ${RACK_CLEARANCE.top}")` : ""} <span style="color:#8a8f98">· Synergy minimum 22" × 26"</span></div>` : "";
+  const cabLine = cab ? `<div class="mini" style="margin-top:6px"><b>Cabinet needs at least</b> ${n1(cab.w)}" wide × ${n1(cab.d)}" deep${cab.h ? ` × ${n1(cab.h)}" high (${cab.casters === false ? "no casters" : "on casters"} + ${RACK_CLEARANCE.top}")` : ""} <span style="color:#8a8f98">· Synergy minimum 22" × 26"</span></div>` : "";
   return `<div class="rkspace"><div class="mini" style="margin:0 0 4px"><b>Rack size</b></div><div class="chips seg" style="max-width:420px">${tabs}</div>${body}${cabLine}${depthLine}</div>`;
 }
 /* RACK tab (build order, Ryan 2026-10-02): one place per rack — its boxes first (what used to be
@@ -3486,28 +3500,40 @@ function wirePanel(body) {
   const rackOf = id => (S.job.solutions[S.sol].racks || []).find(r => r.id === id);
   on(".rsize", el => { const r = rackOf(el.dataset.rack), n = Math.floor(+el.value); if (r && n >= 1 && n <= 60) { r.units = n; r.sizeMode = "units"; } });
   on(".rmodel", el => { const r = rackOf(el.dataset.rack); if (!r) return; if (el.value) r.rackModel = el.value; else delete r.rackModel; r.sizeMode = "model"; });
-  // the mode switch: keeps each mode's inputs; "By U" starts from the size the rack is now
+  // the tallest rack that fits the space — and is deep enough for the deepest box (the plan knows how deep that is)
+  const bestFor = r => { const fits = fitRacks(r.space || {}, undefined, r.casters !== false), need = (S.lastAdvice?.racks || []).find(p => p.rack === r.id)?.needDepth || 0;
+    return { best: fits.find(o => o.usable >= need) || fits[0], deep: !!need, fits }; };
+  const lockIn = r => { const { best, deep } = bestFor(r); if (!best) return; r.rackModel = best.part; r.locked = true;
+    toast(`Locked in the ${best.part} (${best.u}U) — the tallest that fits${deep && best.usable >= ((S.lastAdvice?.racks || []).find(p => p.rack === r.id)?.needDepth || 0) ? " and is deep enough" : ""}`); };
+  // the mode switch: keeps each mode's inputs; Fixed U starts from the size the rack is now
   body.querySelectorAll(".rmode").forEach(b => b.onclick = () => {
-    const r = rackOf(b.dataset.rack); if (!r || r.sizeMode === b.dataset.mode) return;
+    const r = rackOf(b.dataset.rack); if (!r) return;
+    const want = b.dataset.mode, cur = r.sizeMode === "model" ? "units" : r.sizeMode;
+    if (cur === want) return;
     const nowU = (S.lastAdvice?.racks || []).find(p => p.rack === r.id)?.size;
-    pushUndo("rack size mode"); r.sizeMode = b.dataset.mode;
-    if (b.dataset.mode === "units" && nowU) r.units = nowU;
+    pushUndo("rack size mode"); r.sizeMode = want;
+    if (want === "units" && nowU) r.units = nowU;
+    if (want === "space" && r.space?.h && !r.locked) lockIn(r);
     refresh();
   });
-  // the space a rack has to fit: entering it picks the tallest rack that fits (unless the one picked still fits)
+  // the space a rack has to fit: in Locked to space, entering it locks in the tallest rack that fits;
+  // in Fixed U it's only checked against (Ryan 2026-10-02: a typed size wasn't)
   on(".rspace", el => {
-    const r = rackOf(el.dataset.rack); if (!r) return;
+    const r = rackOf(el.dataset.rack); if (!r || (r.sizeMode === "space" && r.locked)) return;
     const v = parseFloat(String(el.value).replace(/[^\d.]/g, ""));
     r.space ||= {}; if (v > 0 && v < 400) r.space[el.dataset.k] = v; else delete r.space[el.dataset.k];
     if (!Object.keys(r.space).length) { delete r.space; return; }
-    const fits = fitRacks(r.space);
-    r.sizeMode = "space";
-    // the tallest that fits — and is deep enough for the deepest box (the plan knows how deep that is)
-    const need = (S.lastAdvice?.racks || []).find(p => p.rack === r.id)?.needDepth || 0;
-    const best = fits.find(o => o.usable >= need) || fits[0];
-    if (best && !fits.some(o => o.part === r.rackModel)) { r.rackModel = best.part; toast(`Picked the ${best.part} (${best.u}U) — the tallest that fits${need && best.usable >= need ? " and is deep enough" : ""}`); }
+    if (r.sizeMode === "space" && r.space.h) lockIn(r);
   });
-  body.querySelectorAll(".rpick").forEach(b => b.onclick = () => { const r = rackOf(b.dataset.rack); if (!r) return; pushUndo("pick rack"); r.rackModel = b.dataset.part; r.sizeMode = "space"; refresh(); });
+  body.querySelectorAll(".rpick").forEach(b => b.onclick = () => { const r = rackOf(b.dataset.rack); if (!r) return; pushUndo("pick rack"); r.rackModel = b.dataset.part; r.sizeMode = "space"; r.locked = true; refresh(); });
+  body.querySelectorAll(".runlock").forEach(b => b.onclick = () => { const r = rackOf(b.dataset.rack); if (!r) return; pushUndo("unlock rack"); r.locked = false; toast("Unlocked — change the space or pick another rack; it locks again when you do"); refresh(); });
+  body.querySelectorAll(".rcast").forEach(b => b.onclick = () => {
+    const r = rackOf(b.dataset.rack); if (!r) return;
+    const want = b.dataset.v === "1"; if ((r.casters !== false) === want) return;
+    pushUndo("casters"); if (want) delete r.casters; else r.casters = false;
+    if (r.sizeMode === "space" && !r.locked && r.space?.h) lockIn(r);   // locked stays put — the advisor says if it no longer fits
+    refresh();
+  });
   on(".rpart", el => {
     const r = rackOf(el.dataset.rack), v = el.value.trim();
     if (el.dataset.key === "rack" && r) { if (v) r.partNo = v; else delete r.partNo; return; }

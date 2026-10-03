@@ -313,7 +313,7 @@ export const STARTERS = [
    takes its product's name, so the drawing, lists and catalog agree */
 export function applyStarter(job, starter, catalog) {
   const sol = job.solutions[0];
-  const rack = (sol.racks ||= [])[0] || (sol.racks[0] = { id: "rack-main", name: "Equipment Rack", devices: [] });
+  const rack = (sol.racks ||= [])[0] || (sol.racks[0] = { id: "rack-main", name: "Equipment Rack", devices: [], sizeMode: "auto" });
   rack.devices = starter.devices.map(d => {
     const c = d.catalogRef ? catalog?.devices?.[d.catalogRef] : null;
     const out = { ...d, model: d.model || (c ? productName(c) : d.id) };

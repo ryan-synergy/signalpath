@@ -57,8 +57,8 @@ export const RACK_CLEARANCE = { top: 1, side: 0, depth: 0, source: "1\" over the
 // Synergy's minimum cabinet / closet opening for a floor rack (Ryan 2026-10-02): 22" wide, 26" deep
 export const MIN_CABINET = { w: 22, d: 26 };
 // what the cabinet must be for a rack: never under Synergy's minimum, never under the rack itself (+ clearance)
-export function cabinetNeeds(o, clr = RACK_CLEARANCE) {
-  return { w: Math.max(MIN_CABINET.w, o ? o.w + clr.side : 0), d: Math.max(MIN_CABINET.d, o ? o.depth + clr.depth : 0), h: o ? +(o.hc + clr.top).toFixed(1) : null };
+export function cabinetNeeds(o, clr = RACK_CLEARANCE, casters = true) {
+  return { w: Math.max(MIN_CABINET.w, o ? o.w + clr.side : 0), d: Math.max(MIN_CABINET.d, o ? o.depth + clr.depth : 0), h: o ? +((casters ? o.hc : o.h) + clr.top).toFixed(1) : null, casters };
 }
 // the space entered is under Synergy's minimum (null = fine / not entered)
 export function belowMinimum(space = {}) {
@@ -69,7 +69,17 @@ export const RACK_OPTIONS = RACK_MODELS.flatMap(m => m.depths.map(([depth, usabl
   hc: m.hc, h: m.h, w: m.wPanels || m.w, depth, usable })));
 export const rackOption = part => RACK_OPTIONS.find(o => o.part === part) || null;
 // every rack that fits the space (inches; a missing dimension doesn't limit), tallest first
-export function fitRacks(space = {}, clr = RACK_CLEARANCE) {
-  const ok = o => (!(+space.h > 0) || o.hc + clr.top <= +space.h) && (!(+space.w > 0) || o.w + clr.side <= +space.w) && (!(+space.d > 0) || o.depth + clr.depth <= +space.d);
+// casters (Ryan 2026-10-02: a toggle — at a 35" opening it decides between Strong's 12U and 16U): on
+// casters a rack stands on its caster height (hc), without on its own (h)
+export function fitRacks(space = {}, clr = RACK_CLEARANCE, casters = true) {
+  const ok = o => (!(+space.h > 0) || (casters ? o.hc : o.h) + clr.top <= +space.h) && (!(+space.w > 0) || o.w + clr.side <= +space.w) && (!(+space.d > 0) || o.depth + clr.depth <= +space.d);
   return RACK_OPTIONS.filter(ok).sort((a, b) => b.u - a.u || b.usable - a.usable || a.hc - b.hc);
+}
+
+/* how tall a plain "nU" rack stands — for a size typed by hand (no brand picked) checked against the
+   space: the shortest Middle Atlantic / Strong rack that height, else rails + a typical frame
+   (≈4.5" of top and base over the rails, ≈2" more on casters). */
+export function estimateHeight(u, casters = true) {
+  const same = RACK_MODELS.filter(m => m.u === u).map(m => casters ? m.hc : m.h);
+  return same.length ? { h: Math.min(...same), exact: true } : { h: +(u * 1.75 + 4.5 + (casters ? 2 : 0)).toFixed(1), exact: false };
 }

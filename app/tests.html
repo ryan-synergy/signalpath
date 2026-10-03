@@ -4048,6 +4048,60 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const nb = loadJob(bad).job.solutions[0].racks[0].layout;
     t("rack page: a saved layout keeps whole rows only (junk dropped on load)", JSON.stringify(nb) === JSON.stringify({ cbx: 7 }));
   }
+  {   // rack sizing, second pass (Ryan 2026-10-02): Locked to space / Auto / Fixed U, casters, half-width + low heat
+    const RS = await import("./racksizes.js"), RK2 = await import("./rack.js"), H3 = await import("./hookup.js");
+    const E2 = await import("./engine.js");
+    t("casters: a 35\" opening takes Strong's 12U on casters, the 16U without", RS.fitRacks({ h: 35 })[0].part === "SR-CS-RACK-12U" && RS.fitRacks({ h: 35 }, undefined, false)[0].part === "SR-CS-RACK-16U");
+    const jj = structuredClone(fixtures.estate), rr = jj.solutions[0].racks[0];
+    rr.devices.push({ id: "aimA", type: "audioInputModule", model: "PAV-AIM7C", catalogRef: "savant-pav-aim7c" }, { id: "aomA", type: "audioOutputModule", model: "PAV-AOM8C", catalogRef: "savant-pav-aom8c" });
+    const P = j => { const L = loadJob(structuredClone(j)); const a = advise(L.job, L.ix, CAT); return { a, p: a.racks.find(x => x.rack === j.solutions[0].racks[0].id) }; };
+    let { p } = P(jj);
+    const aim = p.items.find(i => i.key === "aimA"), aom = p.items.find(i => i.key === "aomA");
+    t("Savant AIM / AOM: half-width — two in one row, side by side, each its own box", aim.row === aom.row && aim.side === "L" && aom.side === "R" && p.used === RK2.rowsUsed(p.items));
+    { const k = p.items.indexOf(aom); t("Savant AIM / AOM: low heat — no vent right after them", p.items[k + 1]?.kind !== "vent" || p.items[k + 1].row > aom.row + 1); }
+    // locked: the rack stays, squeezes, and never grows
+    const lk = structuredClone(jj); Object.assign(lk.solutions[0].racks[0], { sizeMode: "space", space: { h: 60 }, rackModel: "SR-CS-RACK-12U", locked: true });
+    ({ p } = P(lk)); let full = P(lk).a.notes.find(n => n.code === "rack-full");
+    t("locked to space: stays 12U, squeezed first, then says how much is over and offers only a second rack beside it", p.size === 12 && p.autoTight && p.over > 0 && full?.locked &&
+      H3.quickFixes(lk, lk.solutions[0], full, CAT).map(x => x.label).join("|") === "Add a second rack beside it (then drag gear onto it)");
+    const lk2 = structuredClone(lk); lk2.solutions[0].racks[0].casters = false; lk2.solutions[0].racks[0].space = { h: 20 };
+    t("locked to space: a later change that makes it not fit is a note — the rack is not swapped", P(lk2).p.model.part === "SR-CS-RACK-12U" && P(lk2).a.notes.some(n => n.code === "rack-space"));
+    // Auto: sized to the gear; two-wide past the limit, one again when it fits
+    const au = structuredClone(jj); au.solutions[0].racks[0].sizeMode = "auto";
+    ({ p } = P(au));
+    t("Auto: the smallest standard height that takes the gear with full spacing", RK2.RACK_SIZES.includes(p.size) && p.size >= p.need && !RK2.RACK_SIZES.some(n => n >= p.need && n < p.size));
+    for (let n = 0; n < 9; n++) au.solutions[0].racks[0].devices.push({ id: "xa" + n, type: "amp", model: "MDX-16", catalogRef: "anthem-mdx-16" });
+    const ids0 = au.solutions[0].racks.flatMap(r => r.devices.map(d => d.id)).sort().join();
+    E2.autoRacks(au, CAT);
+    const two = au.solutions[0].racks.find(r => r.autoOf === au.solutions[0].racks[0].id);
+    t("Auto: past 42U it becomes two racks side by side — receivers and amps in the second", two && two.beside === au.solutions[0].racks[0].id && two.devices.every(d => ["avr", "amp"].includes(d.type)) &&
+      !au.solutions[0].racks[0].devices.some(d => ["avr", "amp"].includes(d.type)) && au.solutions[0].racks.flatMap(r => r.devices.map(d => d.id)).sort().join() === ids0);
+    const hand = structuredClone(au); hand.solutions[0].racks[0].layout = { x: 1 }; two.devices = two.devices.filter(d => !/^xa/.test(d.id));
+    const hand2 = structuredClone(au); hand2.solutions[0].racks[0].layout = { [hand2.solutions[0].racks[0].devices[0].id]: 0 };
+    E2.autoRacks(hand2, CAT);
+    t("Auto: arranged by hand, the two racks stay as they are", hand2.solutions[0].racks.some(r => r.autoOf));
+    E2.autoRacks(au, CAT);
+    t("Auto: back under the limit, the second rack folds back in", !au.solutions[0].racks.some(r => r.autoOf));
+    // Fixed U: a typed size is checked against the space
+    const fx = structuredClone(jj); Object.assign(fx.solutions[0].racks[0], { sizeMode: "units", units: 44, space: { h: 72 } });
+    t("Fixed U: a 44U rack typed for a 72\" space is flagged, with the tallest that fits", P(fx).a.notes.some(n => n.code === "rack-space" && /44U rack stands/.test(n.msg) && /tallest that fits/.test(n.msg)));
+    // the rack page: a half-width box into the empty half of a row, or tucked over an amp (a note, not a block)
+    const mv = structuredClone(jj), ms = mv.solutions[0];
+    let plans = P(mv).a.racks.filter(x => x.solution === ms.id);
+    RK2.moveRackItem(ms, plans, { from: ms.racks[0].id, key: "aomA", to: ms.racks[0].id, row: 30 });
+    plans = P(mv).a.racks.filter(x => x.solution === ms.id);
+    const amp = plans[0].items.find(i => i.type === "amp");
+    RK2.moveRackItem(ms, plans, { from: ms.racks[0].id, key: "aomA", to: ms.racks[0].id, row: amp.row - 1 });
+    const t2 = P(mv);
+    t("rack page: a low-heat box tucked into the vent over an amp → a soft note, no spacing warning", t2.a.notes.some(n => n.code === "rack-tuck" && /PAV-AOM8C/.test(n.msg)) &&
+      !t2.a.notes.some(n => n.code === "rack-spacing" && /MDX-16: no vent above/.test(n.msg)));
+    const back = RK2.moveRackItem(ms, t2.a.racks.filter(x => x.solution === ms.id), { from: ms.racks[0].id, key: "aomA", to: ms.racks[0].id, row: t2.p.items.find(i => i.key === "aimA").row });
+    const t3 = P(mv).p, a1 = t3.items.find(i => i.key === "aimA"), a2 = t3.items.find(i => i.key === "aomA");
+    t("rack page: a half-width box dropped on a lone half-width box pairs up beside it", /paired beside/.test(back.msg) && a1.row === a2.row && a1.side && a2.side && a1.side !== a2.side);
+    { const svg = (await import("./pages.js")).rackEditSVG(t3, {}), rw = +svg.match(/data-rw="([\d.]+)"/)[1];
+      const halves = [...svg.matchAll(/<rect x="[\d.]+" y="[\d.]+" width="([\d.]+)"/g)].filter(m => Math.abs(+m[1] - (rw / 2 - 2)) < 0.01).length;
+      t("rack page: the pair draws as two half-width boxes", halves >= 2, halves); }
+  }
   {   // start from the space (Ryan 2026-10-02): the opening picks the rack, then the gear is fitted to it
     const RS = await import("./racksizes.js"), H2 = await import("./hookup.js");
     t("space: an 80\" opening fits Middle Atlantic's 41U (Strong's 42U is 79.9\" on casters + clearance); 72\" + 26\" deep → 32U",
@@ -4060,12 +4114,10 @@ for (const [name, raw] of Object.entries(fixtures)) {
       r.size === 32 && r.hardware.find(h => h.key === "rack").partNo === "SR-CUSTOM-32U-24IN" && /Strong/.test(r.hardware.find(h => h.key === "rack").item));
     const full = notes.find(n => n.code === "rack-full");
     const labels = H2.quickFixes(sj, sj.solutions[0], full, CAT).map(x => x.label);
-    t("space: over-full in the tallest rack that fits → squeeze the spacing, or a second rack beside it (no 'bigger rack' — none fits)",
-      /tallest that fits the space/.test(full.msg) && labels.some(l => /^Squeeze/.test(l)) && labels.some(l => /second rack beside/.test(l)) && !labels.some(l => /^Use the/.test(l)), labels.join(" | "));
-    const used0 = r.used;
-    H2.quickFixes(sj, sj.solutions[0], full, CAT).find(x => /^Squeeze/.test(x.label)).run(sj, sj.solutions[0]);
-    ({ r, notes } = plan());
-    t("space: squeezed — fewer U, every receiver / amp still has its vent above", r.used < used0 && r.items.every((x, i) => !(x.kind === "device" && ["avr", "amp"].includes(x.type)) || i === 0 || r.items[i - 1].kind === "vent"));
+    // (2026-10-02 second pass) fit to the space never grows the rack: it squeezes on its own first, then offers a second rack
+    t("space: over-full in the tallest rack that fits → already squeezed (vents round amps kept); the fix is a second rack beside it — no bigger rack, no squeeze button",
+      r.autoTight && /tallest that fits the space/.test(full.msg) && labels.some(l => /second rack beside/.test(l)) && !labels.some(l => /^Use the|^Squeeze/.test(l)) &&
+      r.items.every((x, i) => !(x.kind === "device" && ["avr", "amp"].includes(x.type)) || i === 0 || r.items[i - 1].kind === "vent"), labels.join(" | "));
     H2.quickFixes(sj, sj.solutions[0], notes.find(n => n.code === "rack-full"), CAT).find(x => /second rack/.test(x.label)).run(sj, sj.solutions[0]);
     const r2 = sj.solutions[0].racks[1];
     t("space: the second rack stands beside the first — same space, same rack model", r2?.beside === r0.id && r2.rackModel === r0.rackModel && r2.space.h === 72);
@@ -4087,7 +4139,8 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t("size modes: an older job picks its mode from what it has — a model → Pick a rack, a space → Fit the space, nothing → By U",
       planOf(r => { r.rackModel = "BGR-4132"; }).r.sizeMode === "model" && planOf(r => { r.space = { h: 72 }; }).r.sizeMode === "space" && planOf(() => {}).r.sizeMode === "units");
     const u = planOf(r => { r.sizeMode = "units"; r.units = 27; r.rackModel = "SR-CUSTOM-42U-24IN"; r.space = { h: 50 }; }).r;
-    t("size modes: By U uses the typed count and ignores the picked model and the space (no brand, no fit check)", u.size === 27 && !u.model && !u.spaceFit);
+    // (second pass) Fixed U checks a typed size against the space — a 27U rack stands ~54" on casters, over a 50" space
+    t("size modes: Fixed U uses the typed count, ignores the picked model, and checks it against the space", u.size === 27 && !u.model && u.spaceFit?.typed && !u.spaceFit.ok);
     const m = planOf(r => { r.sizeMode = "model"; r.rackModel = "SR-AV-CAB-42U-30IN"; r.space = { h: 80 }; });
     t("size modes: Pick a rack uses that model — and says so when it doesn't fit the space entered", m.r.size === 42 && m.r.model.part === "SR-AV-CAB-42U-30IN" && m.notes.some(n => n.code === "rack-space"));
     const sp = planOf(r => { r.sizeMode = "space"; r.rackModel = "SR-AV-CAB-42U-30IN"; r.space = { h: 80 }; }).r;
@@ -4096,7 +4149,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   {   // Synergy's minimum cabinet (22" W × 26" D) and gear depth against the rack (Ryan 2026-10-02)
     const RSx = await import("./racksizes.js"), Hx = await import("./hookup.js");
     t("cabinet: never under Synergy's 22\" × 26\", never under the rack itself (a 23\"-wide BGR needs 23\")",
-      JSON.stringify(RSx.cabinetNeeds(null)) === JSON.stringify({ w: 22, d: 26, h: null }) && RSx.cabinetNeeds(RSx.rackOption("BGR-4132")).w === 23 && RSx.cabinetNeeds(RSx.rackOption("BGR-4132")).d === 32
+      JSON.stringify(RSx.cabinetNeeds(null)) === JSON.stringify({ w: 22, d: 26, h: null, casters: true }) && RSx.cabinetNeeds(RSx.rackOption("BGR-4132")).w === 23 && RSx.cabinetNeeds(RSx.rackOption("BGR-4132")).d === 32
       && RSx.cabinetNeeds(RSx.rackOption("SR-CUSTOM-42U-20IN")).d === 26);
     const planOf = mut => { const j = structuredClone(fixtures.residence); mut(j.solutions[0].racks[0]); const L = loadJob(j), a = advise(L.job, L.ix, CAT); return { r: a.racks[0], notes: a.notes }; };
     const small = planOf(r => { r.space = { h: 80, w: 20, d: 24 }; });

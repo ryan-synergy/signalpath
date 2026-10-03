@@ -2821,7 +2821,6 @@
       "brand": "Savant",
       "model": "PAV-AIM7C-20",
       "rackUnits": 1,
-      "rackUnitsConfirm": true,
       "type": "audioInputModule",
       "inputs": {
         "analog": 3,
@@ -2842,13 +2841,15 @@
         "PAV-AIM7C-00"
       ],
       "depthIn": 3.7,
-      "depthSource": "Savant QRG 009-1945-02 (sav-documentation.s3.amazonaws.com) (checked 2026-10-02)"
+      "depthSource": "Savant QRG 009-1945-02 (sav-documentation.s3.amazonaws.com) (checked 2026-10-02)",
+      "halfRack": true,
+      "lowHeat": true,
+      "rackNote": "Half-width, low heat (Ryan 2026-10-02): two side by side in 1U; no vent needed after it — they stack, and can tuck into a vent space"
     },
     "savant-pav-aom8c": {
       "brand": "Savant",
       "model": "PAV-AOM8C-00",
       "rackUnits": 1,
-      "rackUnitsConfirm": true,
       "type": "audioOutputModule",
       "inputs": {},
       "outputs": {
@@ -2864,7 +2865,10 @@
       "notes": "CURRENT Savant spec path for AVB-network-to-zone audio output, replacing the legacy AOM-D16U backplane card. Marketed as \"16-Channel Audio Output IP Receiver\" = 8 stereo pairs, unbalanced RCA, any-stream-to-any-output routing. Receives up to 8 AVB streams from the network and can route any stream to any of the 8 stereo outputs (matrix-style, not fixed-assignment). Max 15W draw (PoE on -10 SKU; -00 is 5V DC) (fits 802.3af). Supports mute/volume/PEQ/mono-sum/up to 160ms delay per output, plus GPIO to trigger an external amp. Balanced version: see savant-pav-aombal8c. AUDIT 2026-09-27: connector is RCA only; -00 = 5V DC 3A adapter, PoE on -10 only.",
       "partNo": "PAV-AOM8C-10",
       "depthIn": 3.7,
-      "depthSource": "Savant QRG 009-1563-04 (sav-documentation.s3.amazonaws.com) (checked 2026-10-02)"
+      "depthSource": "Savant QRG 009-1563-04 (sav-documentation.s3.amazonaws.com) (checked 2026-10-02)",
+      "halfRack": true,
+      "lowHeat": true,
+      "rackNote": "Half-width, low heat (Ryan 2026-10-02): two side by side in 1U; no vent needed after it — they stack, and can tuck into a vent space"
     },
     "savant-pav-aombal8c": {
       "brand": "Savant",
@@ -2885,7 +2889,11 @@
       "partNo": "PAV-AOMBAL8C-10",
       "aliases": [
         "PAV-AOMBAL8C-00"
-      ]
+      ],
+      "rackUnits": 1,
+      "halfRack": true,
+      "lowHeat": true,
+      "rackNote": "Half-width, low heat (Ryan 2026-10-02): two side by side in 1U; no vent needed after it — they stack, and can tuck into a vent space"
     },
     "savant-ip-audio-125": {
       "brand": "Savant",

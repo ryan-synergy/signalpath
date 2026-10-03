@@ -789,6 +789,7 @@ function rackTag(it) {
 function drawRack(r, x0, top, uPx, { kindColor = true, bw = false, labelW = 280, fs = 11.5, dims = true, interactive = false } = {}) {
   const out = [];
   const rows = Math.max(r.size, ...r.items.map(i => (i.row ?? 0) + i.u)), ppi = uPx / 1.75;
+  r = { ...r, items: [...r.items].sort((a, b) => (a.row ?? 0) - (b.row ?? 0) || (a.side === "R") - (b.side === "R")) };
   const railW = 19 * ppi, frameW = 22 * ppi, rx = x0 + (frameW - railW) / 2, h = rows * uPx;
   out.push(`<rect x="${x0}" y="${top - uPx * 0.8}" width="${frameW}" height="${h + uPx * 1.6}" rx="3" fill="${bw ? "#444" : "#2b2e33"}"/>`);
   out.push(`<rect x="${rx}" y="${top}" width="${railW}" height="${h}" fill="#f4f5f7"/>`);
@@ -814,14 +815,17 @@ function drawRack(r, x0, top, uPx, { kindColor = true, bw = false, labelW = 280,
     const st = it.boxKind && KIND_STYLE[it.boxKind];
     const dark = it.kind === "device" && kindColor && !bw && st;
     const fill = dark ? st.tint : RACK_FILL[it.kind] || (it.kind === "device" ? "#fff" : TIER_FILL[it.tier] || "#fff");
-    out.push(`<rect x="${rx + 1}" y="${y + 0.5}" width="${railW - 2}" height="${ih - 1}" rx="1.5" fill="${fill}" stroke="${it.guess ? "#a45a12" : "#7d8591"}" stroke-width="${it.guess ? 1 : 0.6}"${it.guess ? ' stroke-dasharray="3 2"' : ""}/>`);
-    if (kindColor && st?.edge) out.push(`<rect x="${rx + 1}" y="${y + 0.5}" width="${Math.max(3, railW * 0.025)}" height="${ih - 1}" fill="${bw ? "#666" : st.edge}"/>`);
+    // a half-width box takes its half of the row (left, or right when paired); alone, the other half stays open
+    const bx = rx + 1 + (it.half && it.side === "R" ? railW / 2 : 0), bwid = it.half ? railW / 2 - 2 : railW - 2;
+    if (it.half && !it.side) out.push(`<rect x="${rx + railW / 2 + 1}" y="${y + 0.5}" width="${railW / 2 - 2}" height="${ih - 1}" rx="1.5" fill="none" stroke="#c4c9d1" stroke-width="0.6" stroke-dasharray="2 2"/>`);
+    out.push(`<rect x="${bx}" y="${y + 0.5}" width="${bwid}" height="${ih - 1}" rx="1.5" fill="${fill}" stroke="${it.guess ? "#a45a12" : "#7d8591"}" stroke-width="${it.guess ? 1 : 0.6}"${it.guess ? ' stroke-dasharray="3 2"' : ""}/>`);
+    if (kindColor && st?.edge) out.push(`<rect x="${bx}" y="${y + 0.5}" width="${Math.max(3, railW * 0.025)}" height="${ih - 1}" fill="${bw ? "#666" : st.edge}"/>`);
     if (it.kind === "vent") for (let k = 1; k < 6; k++) out.push(`<line x1="${rx + railW * k / 6}" y1="${y + 2}" x2="${rx + railW * k / 6}" y2="${y + ih - 2}" stroke="#b9bec7" stroke-width="0.7"/>`);
     if (it.kind === "brush") out.push(`<rect x="${rx + railW * 0.18}" y="${y + ih / 2 - Math.min(2.5, ih * 0.18)}" width="${railW * 0.64}" height="${Math.min(5, ih * 0.36)}" rx="1.5" fill="#3a3d42"/>`);
-    const tag = rackTag(it), tfs = Math.min(fs - 1, ih * 0.6, railW / Math.max(6, tag.length) * 1.75);
-    if (tag && ih >= 9 && tfs >= 6) out.push(`<text x="${rx + railW / 2}" y="${y + ih / 2 + tfs * 0.36}" text-anchor="middle" font-size="${tfs.toFixed(1)}" font-weight="600" fill="${dark ? "#fff" : "#222"}">${esc(tag)}</text>`);
+    const tag = rackTag(it), tw = it.half ? railW / 2 : railW, tfs = Math.min(fs - 1, ih * 0.6, tw / Math.max(6, tag.length) * 1.75);
+    if (tag && ih >= 9 && tfs >= 6) out.push(`<text x="${bx - 1 + tw / 2}" y="${y + ih / 2 + tfs * 0.36}" text-anchor="middle" font-size="${tfs.toFixed(1)}" font-weight="600" fill="${dark ? "#fff" : "#222"}">${esc(tag)}</text>`);
     if (interactive && it.key) out.push(`</g>`);
-    marks.push({ y: y + ih / 2, it, quiet });
+    marks.push({ y: y + ih / 2, it, quiet, x: it.half ? bx + bwid : rx + railW });
   }
   // the labels column: in order, never closer than a line apart; pulled back up if they'd run past the rack
   const lx = x0 + frameW + 34, lh = fs + 3, maxCh = Math.floor(labelW / (fs * 0.55));
@@ -832,7 +836,7 @@ function drawRack(r, x0, top, uPx, { kindColor = true, bw = false, labelW = 280,
   marks.forEach((m, i) => {
     const it = m.it, ly = ys[i];
     const name = it.label.length > maxCh ? it.label.slice(0, maxCh - 1) + "…" : it.label;
-    out.push(`<polyline points="${rx + railW},${m.y} ${lx - 22},${m.y} ${lx - 5},${ly}" fill="none" stroke="${m.quiet ? "#d0d4da" : "#8a93a3"}" stroke-width="0.7"/>`);
+    out.push(`<polyline points="${m.x},${m.y} ${lx - 22},${m.y} ${lx - 5},${ly}" fill="none" stroke="${m.quiet ? "#d0d4da" : "#8a93a3"}" stroke-width="0.7"/>`);
     out.push(`<text${interactive && it.key ? ` class="rk-label" data-key="${esc(it.key)}" data-rack="${esc(r.rack)}" style="cursor:grab"` : ""} x="${lx}" y="${ly + fs * 0.36}" font-size="${fs}" fill="${m.quiet ? "#9aa1ab" : "#222"}"${it.kind === "device" ? ' font-weight="600"' : ""}>${esc(name)} <tspan font-weight="400" fill="${it.guess ? "#a45a12" : "#999"}">· ${it.guess ? "?U" : it.u + "U"}</tspan></text>`);
   });
   return { svg: out, width: lx - x0 + labelW, height: h + uPx * 2, rails: { x: rx, w: railW, top, uPx, rows } };

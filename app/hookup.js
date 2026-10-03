@@ -471,7 +471,8 @@ export function quickFixes(job, sol, f, catalog = null) {
       const r = rackOf(s); if (!r) return;
       const n = (s.racks || []).filter(x => x.beside === r.id).length + 2;
       s.racks.push({ id: freeId(j, s, `${r.id}-b`), name: `${r.name} ${n}`, devices: [], beside: r.id,
-        ...(r.space ? { space: { ...r.space } } : {}), ...(r.rackModel ? { rackModel: r.rackModel } : r.units ? { units: r.units } : {}) });
+        ...(r.space ? { space: { ...r.space } } : {}), ...(r.rackModel ? { rackModel: r.rackModel } : r.units ? { units: r.units } : {}),
+        ...(r.sizeMode ? { sizeMode: r.sizeMode } : {}), ...(r.locked ? { locked: true } : {}), ...(r.casters === false ? { casters: false } : {}) });
     } });
     return out;
   }

@@ -11,9 +11,11 @@
 import { wireRuns } from "./pages.js";
 import { companionRef, specFor } from "./network.js";
 import { deviceKind } from "./kinds.js";
-import { rackOption, fitRacks, cabinetNeeds, belowMinimum } from "./racksizes.js";
+import { rackOption, fitRacks, cabinetNeeds, belowMinimum, estimateHeight, RACK_CLEARANCE } from "./racksizes.js";
 
 export const DEFAULT_RACK_U = 42;
+// Auto racks (Ryan 2026-10-02): past this height a rack becomes two side by side (job.job.autoRackMax)
+export const AUTO_RACK_MAX = 42;
 export const RACK_SIZES = [12, 16, 20, 24, 27, 32, 36, 38, 40, 42, 44, 45];
 const SHELF_U = 2, PER_SHELF = 3, PATCH_PORTS = 24;
 
@@ -41,6 +43,8 @@ function spaceRack(items, size, tight = false) {
     const a = k ? items[k - 1] : null;
     if (!a || a.kind === "patch" && b.kind === "patch") { gaps.push(null); return; }
     const ta = type(a), tb = type(b);
+    // low heat (Savant AIM / AOM modules, Ryan 2026-10-02): nothing needed after it — they stack
+    if (a.lowHeat && !HOT.has(tb)) { gaps.push(null); return; }
     // squeezed (a rack the space limits): only the vents round receivers / amps stay
     if (tight) { gaps.push(HOT.has(ta) || HOT.has(tb) ? { kind: "vent", tier: HOT.has(tb) ? b.tier : a.tier, u: 1, label: "Vent panel", need: true } : null); return; }
     if (a.kind === "patch" || (ta === "gateway" && SWITCHES.has(tb)) || (tb === "gateway" && SWITCHES.has(ta)))
@@ -85,34 +89,50 @@ function autoRows(items, size) {
    under the patch panels and the router, vents round hot and warm gear; a short gap is all vent),
    and a rule the arrangement breaks comes back as a warning instead of being forced. */
 function manualRows(items, size, layout) {
-  const real = items.filter(i => i.key), taken = new Set();
-  const free = (row, u) => { if (row < 0) return false; for (let k = row; k < row + u; k++) if (taken.has(k)) return false; return true; };
-  const take = (it, row) => { it.row = row; for (let k = row; k < row + it.u; k++) taken.add(k); };
+  const real = items.filter(i => i.key);
+  for (const it of real) { delete it.side; }
+  // a row holds one full-width box, or two half-width boxes side by side (Ryan 2026-10-02: a half-width
+  // box dropped into the empty half of a row pairs up there)
+  const taken = new Map();
+  const fits = (it, row) => { if (row < 0) return null; let mate = null;
+    for (let k = row; k < row + it.u; k++) { const t = taken.get(k); if (!t) continue;
+      if (it.half && t !== "full" && t.half && !t.mate && t.u === it.u && t.row === row && (!mate || mate === t)) { mate = t; continue; }
+      return null; }
+    return { mate }; };
+  const take = (it, row, mate) => { it.row = row;
+    if (mate) { mate.mate = it; it.mate = mate; mate.side = "L"; it.side = "R"; return; }
+    for (let k = row; k < row + it.u; k++) taken.set(k, it.half ? it : "full"); };
   const pinned = real.filter(i => Number.isInteger(layout[i.key])).sort((a, b) => layout[a.key] - layout[b.key]);
-  for (const it of pinned) if (free(layout[it.key], it.u)) take(it, layout[it.key]); else it.row = null;
+  for (const it of pinned) { const f = fits(it, layout[it.key]); if (f) take(it, layout[it.key], f.mate); else it.row = null; }
   for (const it of real.filter(i => i.row == null)) {
-    let row = -1;
-    if (it.tier >= 4) { for (let r = size - it.u; r >= 0 && row < 0; r--) if (free(r, it.u)) row = r; }
-    else for (let r = 0; r + it.u <= size && row < 0; r++) if (free(r, it.u)) row = r;
-    if (row < 0) { row = size; while (!free(row, it.u)) row++; }   // no room: past the floor (shows over-full)
-    take(it, row);
+    let row = -1, mate = null;
+    const tryRow = r => { const f = fits(it, r); if (f) { row = r; mate = f.mate; } };
+    if (it.tier >= 4) { for (let r = size - it.u; r >= 0 && row < 0; r--) tryRow(r); }
+    else for (let r = 0; r + it.u <= size && row < 0; r++) tryRow(r);
+    if (row < 0) { row = size; while (!fits(it, row)) row++; mate = fits(it, row).mate; }   // no room: past the floor (shows over-full)
+    take(it, row, mate);
   }
-  real.sort((a, b) => a.row - b.row);
+  for (const it of real) delete it.mate;
+  // the spacers go between rows: the right half of a pair rides with its left
+  const rowsOf = real.filter(i => i.side !== "R").sort((a, b) => a.row - b.row);
   const type = i => i.kind === "device" ? i.type : null;
   const warmish = i => WARM.has(type(i)) || i.kind === "shelf";
-  const out = [], warnings = [];
+  const out = [], warnings = [], tucks = [];
   const spacer = (kind, row, u) => ({ kind, tier: 0, u, row, label: kind === "brush" ? "Brush plate" : "Vent panel" });
-  real.forEach((b, k) => {
-    const a = real[k - 1];
+  rowsOf.forEach((b, k) => {
+    const a = rowsOf[k - 1];
     if (a) {
       let r0 = a.row + a.u, gap = b.row - r0;
       const ta = type(a), tb = type(b);
       const brush = a.kind === "patch" && b.kind !== "patch" || (ta === "gateway" && SWITCHES.has(tb)) || (tb === "gateway" && SWITCHES.has(ta));
       const below = HOT.has(ta) || warmish(a), above = HOT.has(tb);
       if (gap <= 0) {
-        if (HOT.has(ta)) warnings.push(`${a.label}: no vent below it`);
+        // a low-heat box tucked into an amp's vent space is fine — said, not flagged (Ryan 2026-10-02)
+        if (HOT.has(ta) && b.lowHeat) tucks.push(`${b.label} is tucked into the vent space under ${a.label} — low heat, fine`);
+        else if (HOT.has(ta)) warnings.push(`${a.label}: no vent below it`);
         else if (warmish(a)) warnings.push(`${a.label}: no space after it — it runs warm`);
-        if (above) warnings.push(`${b.label}: no vent above it`);
+        if (above && a.lowHeat) tucks.push(`${a.label} is tucked into the vent space above ${b.label} — low heat, fine`);
+        else if (above) warnings.push(`${b.label}: no vent above it`);
       } else {
         if (brush) { out.push(spacer("brush", r0, 1)); r0++; gap--; }
         if (gap > 0 && gap <= 4) { while (gap > 0) { const u = gap >= 2 ? 2 : 1; out.push(spacer("vent", r0, u)); r0 += u; gap -= u; } }
@@ -124,8 +144,17 @@ function manualRows(items, size, layout) {
     }
     out.push(b);
   });
-  items.splice(0, items.length, ...out.sort((x, y) => x.row - y.row));
-  return warnings;
+  out.push(...real.filter(i => i.side === "R"));
+  items.splice(0, items.length, ...out.sort((x, y) => x.row - y.row || (x.side === "R") - (y.side === "R")));
+  return { warnings, tucks };
+}
+// the rows a rack's items take: a half-width pair shares one
+export const rowsUsed = items => items.reduce((n, i) => n + (i.side === "R" ? 0 : i.u), 0);
+// what the gear needs with every spacer it would like (not the extra 2U over an amp) — Auto sizes to this
+function fullNeed(items) {
+  const copy = items.filter(i => i.side !== "R").map(i => ({ ...i }));
+  spaceRack(copy, 999, false);
+  return rowsUsed(copy) - copy.filter(i => i.kind === "vent" && i.u === 2).length;
 }
 
 /* gear depth against the rack's usable depth (Ryan 2026-10-02): a box deeper than the rails allow
@@ -159,16 +188,22 @@ export function rackPlans(job, ix, catalog) {
       // (a model, whatever the space), or by U (a plain count, no brand). Each mode keeps its own
       // inputs, so switching back and forth loses nothing.
       const space = r.space && (+r.space.h > 0 || +r.space.w > 0 || +r.space.d > 0) ? r.space : null;
-      const sizeMode = ["space", "model", "units"].includes(r.sizeMode) ? r.sizeMode : r.rackModel ? (space ? "space" : "model") : space ? "space" : "units";
-      const fits = space && sizeMode !== "units" ? fitRacks(space) : null;
+      // (2026-10-02, second pass) three modes on the Rack tab: Locked to space ("space" — the tallest rack
+      // that fits, pinned until unlocked; never grows), Auto ("auto" — sized to the gear, a standard height,
+      // two side by side past AUTO_RACK_MAX) and Fixed U ("units"); "model" (a picked rack) stays readable
+      const sizeMode = ["space", "auto", "model", "units"].includes(r.sizeMode) ? r.sizeMode : r.rackModel ? (space ? "space" : "model") : space ? "space" : "units";
+      const casters = r.casters !== false;
+      const fits = space ? fitRacks(space, undefined, casters) : null;
       const chosen = r.rackModel ? rackOption(r.rackModel) : null;
       // the deepest box (published depth) + room for cables: Fit the space prefers the tallest rack
       // that's also deep enough; only when none is, the tallest that fits at all
       const deepest = Math.max(0, ...(r.devices || []).map(d => specFor(d, catalog)?.depthIn).filter(v => typeof v === "number"));
       const deepEnough = o => !deepest || o.usable >= deepest + CABLE_IN;
       const fitPick = fits ? fits.find(deepEnough) || fits[0] || null : null;
-      const model = sizeMode === "units" ? null : sizeMode === "space" ? (chosen && fits?.some(o => o.part === chosen.part) ? chosen : fitPick) : chosen;
-      const size = model ? model.u : Math.min(60, Math.max(1, Math.floor(+r.units || +job.job?.rackUnits || DEFAULT_RACK_U) || DEFAULT_RACK_U));
+      // locked: the rack picked for the space stays, even if something later says it no longer fits (that's a note)
+      const model = sizeMode === "units" || sizeMode === "auto" ? null
+        : sizeMode === "space" ? (r.locked && chosen ? chosen : chosen && fits?.some(o => o.part === chosen.part) ? chosen : fitPick) : chosen;
+      let size = model ? model.u : Math.min(60, Math.max(1, Math.floor(+r.units || +job.job?.rackUnits || DEFAULT_RACK_U) || DEFAULT_RACK_U));
       const items = [], unknown = [], rear = [], small = [], cboxes = [], smallIds = [], cboxIds = [];
       const cat6 = cat6runs.filter(x => (x.racks?.length ? x.racks : [main]).includes(r.id)).reduce((n, x) => n + x.count, 0);
       if (cat6) for (let k = 0; k < Math.ceil(cat6 / PATCH_PORTS); k++)
@@ -186,7 +221,7 @@ export function rackPlans(job, ix, catalog) {
         // modules drawn 1U, flagged "need to confirm") — either way the elevation shows it and the advisor asks
         const confirm = u == null || !!c?.rackUnitsConfirm;
         if (confirm) unknown.push(name);
-        items.push({ kind: "device", id: d.id, tier, u: u ?? 1, label: name, type: d.type, guess: confirm, half: !!c?.halfRack, boxKind: deviceKind(d, c),
+        items.push({ kind: "device", id: d.id, tier, u: u ?? 1, label: name, type: d.type, guess: confirm, half: !!c?.halfRack, lowHeat: !!c?.lowHeat, boxKind: deviceKind(d, c),
           ...(typeof c?.depthIn === "number" ? { depthIn: c.depthIn } : {}) });
       }
       // rack-side adapters (MXNet encoders/decoders on rack gear) go in AVPro's own rack
@@ -239,19 +274,38 @@ export function rackPlans(job, ix, catalog) {
         items.push({ kind: "shelf", tier: 3, u: SHELF_U, label: `Shelf: ${small.slice(k, k + PER_SHELF).join(", ")}`, members: small.slice(k, k + PER_SHELF),
           memberIds: smallIds.slice(k, k + PER_SHELF).filter(Boolean) });
       items.sort((a, b) => a.tier - b.tier);   // stable by tier
-      // half-width boxes pair up side by side
+      // half-width boxes pair up side by side — two items on one row (left / right), each still its own
+      // box on the rack page, so one can be dragged away or into the empty half of another row
       for (let i = 0; i < items.length; i++) {
         const a = items[i];
-        if (!a.half || a.pairedWith) continue;
-        const j = items.findIndex((b, k) => k > i && b.half && !b.pairedWith && b.u === a.u);
-        if (j > 0) { a.pairedWith = items[j].label; items.splice(j, 1); a.label = `${a.label} | ${a.pairedWith}`; }
+        if (!a.half || a.side) continue;
+        const b = items.find((x, k) => k > i && x.half && !x.side && x.u === a.u);
+        if (b) { a.side = "L"; b.side = "R"; b.pairOf = a; }
       }
       keyItems(items);
+      const need = fullNeed(items);
+      // Auto: the smallest standard height that takes the gear with every spacer it would like
+      const autoMax = Math.min(60, Math.max(8, Math.floor(+job.job?.autoRackMax) || AUTO_RACK_MAX));
+      if (sizeMode === "auto") size = Math.min(autoMax, RACK_SIZES.find(n => n >= need) || need);
       // arranged by hand on the rack page (rack.layout = { key: row from the top }) — the gear goes
       // where it was put and the spacers fill in around it; otherwise the build-order stack
       const manual = r.layout && typeof r.layout === "object" && Object.keys(r.layout).length > 0;
-      const spacing = manual ? manualRows(items, size, r.layout) : (spaceRack(items, size, !!r.tight), autoRows(items, size), []);
-      const used = items.reduce((n, i) => n + i.u, 0);
+      let tucks = [], spacing = [], autoTight = false;
+      if (manual) ({ warnings: spacing, tucks } = manualRows(items, size, r.layout));
+      else {
+        // the right half of a pair rides with its left through the spacing and the stack
+        const rights = items.filter(i => i.side === "R");
+        const lay = tight => { const rows = items.filter(i => i.side !== "R").map(i => i); spaceRack(rows, size, tight); return rows; };
+        let rows = lay(!!r.tight);
+        // locked to the space: it never grows — squeeze first (only the vents round amps stay)
+        if (sizeMode === "space" && !r.tight && rowsUsed(rows) > size) { rows = lay(true); autoTight = true; }
+        autoRows(rows, size);
+        for (const x of rights) { x.row = x.pairOf.row; delete x.pairOf; }
+        items.splice(0, items.length, ...rows, ...rights);
+        items.sort((x, y) => x.row - y.row || (x.side === "R") - (y.side === "R"));
+      }
+      for (const x of items) delete x.pairOf;
+      const used = rowsUsed(items);
       const bottom = items.reduce((n, i) => Math.max(n, i.row + i.u), 0);
       // the rack hardware the elevation implies — part numbers come from the job
       // (RACK tab) or a kit's catalog entry; anything nobody has filled in is "?"
@@ -270,10 +324,14 @@ export function rackPlans(job, ix, catalog) {
       for (const [kit, qty] of Object.entries(kitQty)) hardware.push({ key: "kit", item: `MXNet rack kit, ${items.find(i => i.kit === kit).u}U`, qty, partNo: kit });
       out.push({ solution: sol.id, rack: r.id, name: r.name || "Equipment Rack", size, used, spare: size - used,
         over: Math.max(0, manual ? bottom - size : used - size), items, unknown, rear, cat6, manual, spacing,
-        model, space, tight: !!r.tight, sizeMode, depth: depthCheck(items, model),
-        cabinet: cabinetNeeds(model), belowMin: space ? belowMinimum(space) : null,
-        // the picked rack against the space it has to go in; the tallest that fits it (not in "by U")
-        spaceFit: fits ? { ok: !model || fits.some(o => o.part === model.part), best: fitPick, count: fits.length } : null,
+        model, space, tight: !!r.tight || autoTight, autoTight, sizeMode, casters, locked: sizeMode === "space" && !!r.locked, need, autoMax, tucks,
+        depth: depthCheck(items, model),
+        cabinet: cabinetNeeds(model, undefined, casters), belowMin: space ? belowMinimum(space) : null,
+        // the rack against the space it has to go in; the tallest that fits it. A size typed by hand
+        // (Fixed U, no brand) is checked by how tall a rack that size stands (Ryan 2026-10-02: it wasn't)
+        spaceFit: fits ? (model ? { ok: fits.some(o => o.part === model.part), best: fitPick, count: fits.length }
+          : +space.h > 0 ? (() => { const e = estimateHeight(size, casters); return { ok: e.h + RACK_CLEARANCE.top <= +space.h, best: fitPick, count: fits.length, typed: true, est: e }; })()
+          : null) : null,
         needDepth: deepest ? +(deepest + CABLE_IN).toFixed(1) : null,
         hardware: hardware.filter(h => h.qty > 0) });
     });
@@ -308,6 +366,9 @@ export function moveRackItem(sol, plans, { from, key, to, row }) {
   }
   // what's in the way at the drop
   const hits = toP.items.filter(i => i.key && i.key !== key && i.row < row + it.u && row < i.row + i.u);
+  // a half-width box onto a row with one half-width box alone in it: they pair up, side by side
+  const mate = it.half && hits.length === 1 && hits[0].half && !hits[0].side && hits[0].u === it.u ? hits[0] : null;
+  if (mate) { toR.layout[key] = mate.row; return { ok: true, msg: `${it.label} paired beside ${mate.label}` }; }
   if (hits.length === 1 && hits[0].u === it.u && hits[0].row === row && from === to) toR.layout[hits[0].key] = it.row;   // swap
   else {   // make room: each box in the way goes to the nearest free space — just below the drop first, then above
     const taken = new Set();

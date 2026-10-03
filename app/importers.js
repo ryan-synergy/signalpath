@@ -86,7 +86,7 @@ export function skeletonJob(name, clientName, address) {
       catalogSnapshot: { asOf: today() } },
     house: { areas: [], zones: [] },
     solutions: [{ id: "sol-a", name: "Proposed System", videoDistribution: "hybrid", platforms: [], auxCounts: {},
-      racks: [{ id: "rack-main", name: "Equipment Rack", devices: [] }],
+      racks: [{ id: "rack-main", name: "Equipment Rack", devices: [], sizeMode: "auto" }],   // a new build sizes itself to its gear
       localDevices: [], companions: [], connections: [], annotations: [] }],
   };
 }

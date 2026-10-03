@@ -204,7 +204,10 @@ export function normalizeJob(job) {
         else for (const k of Object.keys(r.space)) { const v = +r.space[k]; if (!["h", "w", "d"].includes(k) || !(v > 0 && v < 400)) delete r.space[k]; else r.space[k] = v; } }
       if (r.rackModel != null && typeof r.rackModel !== "string") delete r.rackModel;
       if (r.tight != null) r.tight = r.tight === true;
-      if (r.sizeMode != null && !["space", "model", "units"].includes(r.sizeMode)) delete r.sizeMode;
+      if (r.sizeMode != null && !["space", "auto", "model", "units"].includes(r.sizeMode)) delete r.sizeMode;
+      if (r.casters != null) r.casters = r.casters !== false;
+      if (r.locked != null) r.locked = r.locked === true;
+      if (r.autoOf != null && (typeof r.autoOf !== "string" || !sol.racks.some(x => x.id === r.autoOf && x !== r))) delete r.autoOf;
       if (r.beside != null && (typeof r.beside !== "string" || !sol.racks.some(x => x.id === r.beside && x !== r))) delete r.beside;
       // a rack arranged by hand on the rack page: { key: row from the top } — whole rows only
       if (r.layout != null) {
@@ -4746,12 +4749,22 @@ export function advise(job, ix = indexJob(job), catalog = null) {
   /* -- rack space: the elevation's U count against the rack's size -- */
   out.racks = catalog?.devices ? rackPlans(job, ix, catalog) : [];
   for (const r of out.racks) {
-    if (r.over) out.notes.push({ code: "rack-full", solution: r.solution, ref: r.rack, rack: r.rack, tight: r.tight, manual: r.manual,
+    // locked to the space: it never grows — it's squeezed already, so what's left is a second rack beside it
+    if (r.over && r.locked) out.notes.push({ code: "rack-full", solution: r.solution, ref: r.rack, rack: r.rack, tight: true, manual: r.manual, locked: true, bigger: null,
+      msg: `${r.name}: ${r.over}U over in the ${r.size}U rack locked to the space${r.autoTight ? " — already squeezed (only the vents round amps kept)" : ""}; add a second rack beside it, or move gear` });
+    else if (r.over && r.sizeMode === "auto") out.notes.push({ code: "rack-full", solution: r.solution, ref: r.rack, rack: r.rack, tight: r.tight, manual: r.manual, bigger: null,
+      msg: `${r.name}: ${r.over}U over at the ${r.autoMax}U limit for one rack${r.manual ? " — arranged by hand, so it isn't split on its own" : ""}; a second rack beside it takes the receivers and amps` });
+    else if (r.over) out.notes.push({ code: "rack-full", solution: r.solution, ref: r.rack, rack: r.rack, tight: r.tight, manual: r.manual,
       bigger: r.spaceFit ? (r.spaceFit.best && r.spaceFit.best.u > r.size ? r.spaceFit.best.part : null) : null,
       msg: `${r.name}: ${r.used}U of gear, shelves, vents and patch panels in a ${r.size}U rack — ${r.over}U over; ${r.spaceFit ? (r.spaceFit.best && r.spaceFit.best.u > r.size ? `a ${r.spaceFit.best.u}U rack still fits the space, ` : "it's the tallest that fits the space — ") : "a bigger rack, "}${r.tight ? "" : "squeeze the spacing, "}or move gear to a second rack` });
+    if (r.autoTight && !r.over) out.notes.push({ code: "rack-squeezed", solution: r.solution, ref: r.rack, rack: r.rack,
+      msg: `${r.name}: squeezed to fit the ${r.size}U rack locked to the space — only the vents round receivers and amps kept` });
+    for (const t of r.tucks || []) out.notes.push({ code: "rack-tuck", solution: r.solution, rack: r.rack, msg: `${r.name}: ${t}` });
     // the space it has to go in (cabinet opening / door): the picked rack doesn't fit, or nothing does
-    if (r.spaceFit && !r.spaceFit.ok) out.notes.push({ code: "rack-space", solution: r.solution, ref: r.rack, rack: r.rack, best: r.spaceFit.best?.part || null,
-      msg: `${r.name}: the ${r.model.part} (${r.model.hc}" tall on casters) doesn't fit the space (${[r.space.h && `${r.space.h}" high`, r.space.w && `${r.space.w}" wide`, r.space.d && `${r.space.d}" deep`].filter(Boolean).join(", ")})${r.spaceFit.best ? ` — the ${r.spaceFit.best.part} (${r.spaceFit.best.u}U) does` : " — no Middle Atlantic or Strong floor rack does"}` });
+    if (r.spaceFit && !r.spaceFit.ok && r.spaceFit.typed) out.notes.push({ code: "rack-space", solution: r.solution, ref: r.rack, rack: r.rack, best: r.spaceFit.best?.part || null,
+      msg: `${r.name}: a ${r.size}U rack stands ${r.spaceFit.est.exact ? "" : "about "}${r.spaceFit.est.h}" ${r.casters ? "on casters" : "without casters"} — the space is ${r.space.h}" high${r.spaceFit.best ? `; the tallest that fits is the ${r.spaceFit.best.part} (${r.spaceFit.best.u}U)` : " — no Middle Atlantic or Strong floor rack fits it"}` });
+    else if (r.spaceFit && !r.spaceFit.ok) out.notes.push({ code: "rack-space", solution: r.solution, ref: r.rack, rack: r.rack, best: r.spaceFit.best?.part || null,
+      msg: `${r.name}: the ${r.model.part} (${r.casters ? `${r.model.hc}" tall on casters` : `${r.model.h}" tall without casters`}) doesn't fit the space (${[r.space.h && `${r.space.h}" high`, r.space.w && `${r.space.w}" wide`, r.space.d && `${r.space.d}" deep`].filter(Boolean).join(", ")})${r.spaceFit.best ? ` — the ${r.spaceFit.best.part} (${r.spaceFit.best.u}U) does` : " — no Middle Atlantic or Strong floor rack does"}` });
     if (r.belowMin) out.notes.push({ code: "rack-space", solution: r.solution, ref: r.rack, rack: r.rack,
       msg: `${r.name}: the space (${[r.space.w && `${r.space.w}" wide`, r.space.d && `${r.space.d}" deep`].filter(Boolean).join(", ")}) is under Synergy's minimum cabinet — at least 22" wide and 26" deep` });
     if (r.spaceFit && !r.spaceFit.count && r.spaceFit.ok) out.notes.push({ code: "rack-space", solution: r.solution, ref: r.rack, rack: r.rack,
@@ -4801,4 +4814,50 @@ export function advise(job, ix = indexJob(job), catalog = null) {
     out.notes.push({ code: "no-port", solution, ref: m.fromWhy ? c.from : c.to, conn: i, msg: `${why} — ${describeNode(job, ix.solutions.find(x => x.sol.id === solution).sol, c.from).short} → ${describeNode(job, ix.solutions.find(x => x.sol.id === solution).sol, c.to).short} has no jack to land on (add a splitter / pick another box)` });
   });
   return out;
+}
+
+/* ---------- Auto racks: two side by side when one gets too tall (Ryan 2026-10-02) ----------
+   A rack in Auto sizes itself to its gear (rack.js). Past the limit (job.job.autoRackMax, 42U) it
+   becomes a two-wide: a second rack beside it (`autoOf` the first) takes the receivers and amps.
+   When the gear shrinks back under the limit the second rack folds back in — unless either rack
+   was arranged by hand on the rack page (then nothing moves on its own). Mutates `job`; returns
+   what it did, in words, for a toast. Run after a change, before drawing. */
+export function autoRacks(job, catalog) {
+  const said = [];
+  if (!catalog?.devices) return said;
+  const HOTT = new Set(["avr", "amp"]);
+  const limit = Math.min(60, Math.max(8, Math.floor(+job.job?.autoRackMax) || 42));
+  const needOf = (j, si, rackId) => {
+    try { const L = loadJob(structuredClone(j)); return rackPlans(L.job, L.ix, catalog).filter(p => p.solution === j.solutions[si].id).find(p => p.rack === rackId)?.need ?? 0; }
+    catch { return 0; }
+  };
+  job.solutions.forEach((sol, si) => {
+    for (const r of [...(sol.racks || [])]) {
+      if (r.sizeMode !== "auto" || r.autoOf) continue;
+      const partner = sol.racks.find(x => x.autoOf === r.id);
+      const hand = x => x?.layout && Object.keys(x.layout).length > 0;
+      if (hand(r) || hand(partner)) continue;
+      if (partner) {
+        // would it all fit one rack again?
+        const trial = structuredClone(job), ts = trial.solutions[si], tr = ts.racks.find(x => x.id === r.id), tp = ts.racks.find(x => x.id === partner.id);
+        tr.devices.push(...tp.devices); ts.racks = ts.racks.filter(x => x !== tp);
+        if (needOf(trial, si, r.id) <= limit) {
+          r.devices.push(...partner.devices); sol.racks = sol.racks.filter(x => x !== partner);
+          said.push(`${r.name}: back to one rack — the gear fits ${limit}U again`); continue;
+        }
+        // still two-wide: receivers / amps added since go to the second rack too
+        const late = r.devices.filter(d => HOTT.has(d.type));
+        if (late.length) { r.devices = r.devices.filter(d => !late.includes(d)); partner.devices.push(...late); said.push(`${late.map(d => d.model || d.id).join(", ")} → ${partner.name}`); }
+        continue;
+      }
+      if (needOf(job, si, r.id) <= limit) continue;
+      const hot = r.devices.filter(d => HOTT.has(d.type));
+      if (!hot.length) continue;                                    // nothing that moves would help — the note says it's over
+      let id = `${r.id}-2`, n = 2; while (sol.racks.some(x => x.id === id)) id = `${r.id}-${++n}`;
+      sol.racks.push({ id, name: `${r.name} 2`, devices: hot, beside: r.id, autoOf: r.id, sizeMode: "auto", ...(r.area ? { area: r.area } : {}), ...(r.casters === false ? { casters: false } : {}) });
+      r.devices = r.devices.filter(d => !hot.includes(d));
+      said.push(`${r.name} needs more than ${limit}U — a second rack beside it takes the receivers and amps`);
+    }
+  });
+  return said;
 }

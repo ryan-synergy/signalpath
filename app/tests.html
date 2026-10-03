@@ -2655,7 +2655,9 @@ for (const [name, raw] of Object.entries(fixtures)) {
     const dA = new DOMParser().parseFromString(sA, "image/svg+xml"), mk = dA.querySelector(`g.notemark[data-near="${dev.id}"]`), dv = pA.racks[0].devices.find(d => d.id === dev.id);
     t("notes: a box takes a note too — a numbered badge on its corner, no warning, a blank note draws nothing",
       !!mk && Math.abs(+mk.querySelector('circle[r="9.5"]').getAttribute("cx") - dv.x) < 8 && dA.querySelectorAll("g.notemark").length === 2 && !validate(L.job, L.ix).warnings.some(w => w.code === "bad-annotation"));
-    const box = mk?.querySelector("rect"), bx = box && { x: +box.getAttribute("x"), y: +box.getAttribute("y"), w: +box.getAttribute("width"), h: +box.getAttribute("height") };
+    const box = mk?.querySelector("rect.notecloud"), bq = box?.getAttribute("data-box").split(",").map(Number), bx = bq && { x: bq[0], y: bq[1], w: bq[2], h: bq[3] };
+    t("notes: a pinned note is a speech bubble whose tail points at the box (its tip lands on the box's edge)", !!box && (() => { const m = mk.querySelector("path.notetail")?.getAttribute("d").match(/L([\d.]+) ([\d.]+)L/);
+      return !!m && +m[1] >= dv.x - 1 && +m[1] <= dv.x + dv.w + 1 && +m[2] >= dv.y - 1 && +m[2] <= dv.y + dv.h + 1; })());
     const bodies = [...pA.zones, ...pA.racks.flatMap(k => k.devices), ...pA.chips];
     t("notes: a pinned note shows its text in a callout that covers no room or box; the legend says it's crew only",
       !!bx && mk.querySelectorAll("text").length >= 3 && !bodies.some(o => bx.x < o.x + o.w && bx.x + bx.w > o.x && bx.y < o.y + o.h && bx.y + bx.h > o.y) && sA.includes("(crew only)"), JSON.stringify(bx));

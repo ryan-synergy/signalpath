@@ -4444,20 +4444,35 @@ export function render(job, ix, P, rt, opts = {}) {
       const cx = it.x + 3 + (k - 1) * 21, cy = it.y + 3;
       let callout = "";
       if (a.pinned) {
-        const w = Math.min(190, Math.max(...a.box.map(l => l.length)) * 4.9 + 16), h = a.box.length * 11 + 10;
+        const w = Math.min(204, Math.max(...a.box.map(l => l.length)) * 5.2 + 26), h = a.box.length * 11 + 14;
         // the first spot beside the item that covers no room, box or other callout; else above it, over whatever's there
-        const spots = [[it.x + it.w + 14, it.y], [it.x - w - 14, it.y], [it.x, it.y - h - 12], [it.x, it.y + it.h + 12], [it.x + it.w + 14, it.y + it.h - h], [it.x - w - 14, it.y + it.h - h]]
+        const spots = [[it.x + it.w + 22, it.y], [it.x - w - 22, it.y], [it.x, it.y - h - 20], [it.x, it.y + it.h + 20], [it.x + it.w + 22, it.y + it.h - h], [it.x - w - 22, it.y + it.h - h]]
           .map(([x, y]) => ({ x, y, w, h })).filter(r => r.x >= 2 && r.y >= 2 && r.x + r.w <= P.bounds.w - 2);
-        const r = spots.find(r => ![...bodies, ...placed].some(o => hit(r, o))) || { x: Math.max(2, it.x), y: Math.max(2, it.y - h - 12), w, h };
+        const r = spots.find(r => ![...bodies, ...placed].some(o => hit(r, o))) || { x: Math.max(2, it.x), y: Math.max(2, it.y - h - 20), w, h };
         placed.push(r);
         // a short pointer from the callout to the nearest edge of what it's about (not across its face to the badge)
         const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
         const ix0 = clamp(r.x + r.w / 2, it.x, it.x + it.w), iy0 = clamp(r.y + r.h / 2, it.y, it.y + it.h);
         const ex = clamp(ix0, r.x, r.x + r.w), ey = clamp(iy0, r.y, r.y + r.h);
-        callout = `<line x1="${ix0}" y1="${iy0}" x2="${ex}" y2="${ey}" stroke="${NOTE}" stroke-width="1.2"/>` +
-          `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="4" fill="${bw ? "#fff" : "#fff6cc"}" fill-opacity="0.93" stroke="${NOTE}" stroke-width="1.1"/>` +
-          a.box.map((l, i) => `<text x="${r.x + 8}" y="${r.y + 13 + i * 11}" font-size="8.6" fill="#222">${esc(l)}</text>`).join("") +
-          `<circle cx="${r.x}" cy="${r.y}" r="6" fill="${NOTE}" stroke="#fff" stroke-width="1"/><text x="${r.x}" y="${r.y + 2.8}" text-anchor="middle" font-size="7.5" font-weight="700" fill="#fff">${a.n}</text>`;
+        // a comic-book speech bubble (Ryan 2026-10-03: "friendlier-looking … something from a comic book"): bold outline, a
+        // hard drop shadow, and a tail whose point lands on the edge of the thing it's about — the tail is the arrow
+        const INK = "#1c1c1c", FILL = bw ? "#fff" : "#ffe45c", f = v => +v.toFixed(1);
+        const dx = ix0 - ex, dy = iy0 - ey, len = Math.hypot(dx, dy);
+        let tail = "";
+        if (len >= 5) {
+          // the tail's base runs along the bubble's edge, kept off its rounded corners
+          const horiz = Math.abs(dx) >= Math.abs(dy), half = 7;
+          const b1 = horiz ? [ex, clamp(ey - half, r.y + 8, r.y + r.h - 8 - half * 2)] : [clamp(ex - half, r.x + 8, r.x + r.w - 8 - half * 2), ey];
+          const b2 = horiz ? [ex, b1[1] + half * 2] : [b1[0] + half * 2, ey];
+          const inn = horiz ? [Math.sign(-dx) * 3, 0] : [0, Math.sign(-dy) * 3];     // tuck the base under the bubble's outline
+          tail = `<path class="notetail" d="M${f(b1[0] + inn[0])} ${f(b1[1] + inn[1])}L${f(ix0)} ${f(iy0)}L${f(b2[0] + inn[0])} ${f(b2[1] + inn[1])}" fill="${FILL}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/>` +
+            `<path d="M${f(b1[0] + inn[0])} ${f(b1[1] + inn[1])}L${f(b2[0] + inn[0])} ${f(b2[1] + inn[1])}" stroke="${FILL}" stroke-width="3.4" stroke-linecap="butt"/>`;
+        }
+        const bubble = `<rect class="notecloud" data-box="${r.x},${r.y},${r.w},${r.h}" x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="11" fill="${FILL}" stroke="${INK}" stroke-width="1.8"/>`;
+        callout = `<rect x="${r.x + 2.5}" y="${r.y + 3}" width="${r.w}" height="${r.h}" rx="11" fill="${INK}" fill-opacity="0.85"/>` +
+          bubble + tail +
+          a.box.map((l, i) => `<text x="${r.x + 12}" y="${r.y + 15 + i * 11}" font-size="8.8" font-weight="600" fill="#161616">${esc(l)}</text>`).join("") +
+          `<circle cx="${r.x + 3}" cy="${r.y + 3}" r="6.5" fill="${NOTE}" stroke="#fff" stroke-width="1.2"/><text x="${r.x + 3}" y="${r.y + 5.8}" text-anchor="middle" font-size="7.8" font-weight="700" fill="#fff">${a.n}</text>`;
       }
       push(`<g class="notemark" data-note="${a.n - 1}" data-near="${esc(a.near)}" style="cursor:pointer">${callout}` +
         `<circle cx="${cx}" cy="${cy}" r="12.5" fill="${NOTE}" fill-opacity="0.22"/><circle cx="${cx}" cy="${cy}" r="9.5" fill="${NOTE}" stroke="#fff" stroke-width="1.6"/>` +

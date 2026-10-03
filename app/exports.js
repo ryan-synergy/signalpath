@@ -251,7 +251,7 @@ export function aiReviewMarkdown(job, solIndex, catalog, { today = new Date().to
   const gens = [...new Set(devs.map(d => cat(d.catalogRef)?.gen).filter(Boolean))];
   const JJ = J.job || {};
   const o = [];
-  o.push("---", "generator: SignalPath", "export: ai-review/1", `job: ${clean(JJ.name)}`,
+  o.push("---", "generator: SignalPath", "export: ai-review/1", `project: ${clean(JJ.name)}`,
     `client: ${clean(JJ.client?.name)}`, `site: ${clean(JJ.client?.address)}`, `stage: ${clean(JJ.stage)}`,
     `revision: ${(JJ.revisions || []).length || 1}`, `solution: ${clean(sol.name)}`,
     `control_platform: ${clean((sol.platforms || []).map(p => PLATFORM_NAME[p] || p).join(", ") || "not set")}`,

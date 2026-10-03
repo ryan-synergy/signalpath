@@ -1993,7 +1993,11 @@ function routeOnce(job, ix, placement, opts = {}) {
       // an upper row is reached from the one below through a clear vertical: a gap
       // between the lower row's cards nearest the riser, else the west gutter
       for (const r of busRows) {
-        const xs = [...(inRow.get(r) || []).map(m => m.t.tx), rRange[0], rRange[1]];
+        // a lower row's bus also carries the run over to the rooms above (out to the gap they're reached through):
+        // booked only over its own rooms, a west-margin riser serving an upper row ran its bus into another
+        // family's lane and the whole corridor was thrown out (Bel Air's family-room return, 2026-10-03)
+        const above = rows.slice(rows.indexOf(r) + 1).flatMap(r2 => (inRow.get(r2) || []).map(m => m.t.tx));
+        const xs = [...(inRow.get(r) || []).map(m => m.t.tx), ...above, rRange[0], rRange[1]];
         let x0 = Math.min(...xs) - 4, x1 = Math.max(...xs) + 4;
         if (r !== lowRow) x0 = Math.min(x0, westMarginX[0]);
         const floor = stripFloor(r, x0, x1);
@@ -3333,9 +3337,12 @@ function routeOnce(job, ix, placement, opts = {}) {
         if (y < laneLo) { rdbg({ [tag]: y, fail: "above-source-card" }); return false; }
         for (const range of rangesArr) {
           const isGap = range === gapABx || range === gapBCx;
-          const wx = alloc(usedV, isGap ? (range[0] + range[1]) / 2 : range[1],
+          let wx = alloc(usedV, isGap ? (range[0] + range[1]) / 2 : range[1],
             Math.min(y, ty), Math.max(y, ty), nWire, isGap ? 0 : -1,
             x => segBlocked(x, Math.min(y, ty), x, Math.max(y, ty), skip), range);
+          // the west margin holds three lanes (18 / 28 / 40) but whole-lane steps from its inner edge try 44, 32, 20 — when
+          // those are taken, its outer edge is the last lane left (Bel Air's casita return, 2026-10-03)
+          if (wx == null && !isGap && !conflicts(usedV, range[0], Math.min(y, ty), Math.max(y, ty), nWire) && !segBlocked(range[0], Math.min(y, ty), range[0], Math.max(y, ty), skip)) wx = range[0];
           if (wx == null) { rdbg({ [tag]: y, r: range === gapABx ? "ab" : "west", fail: "alloc" }); continue; }
           const list = buildCands(y, wx);
           // remember the first geometrically sane attempt (doesn't pierce the

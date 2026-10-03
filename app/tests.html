@@ -3805,6 +3805,20 @@ for (const [name, raw] of Object.entries(fixtures)) {
       const cross = segs(a.pts).some(([p1, p2]) => segs(b.pts).some(([q1, q2]) => { const hv = (h1, h2, v1, v2) => h1[1] === h2[1] && v1[0] === v2[0] &&
         v1[0] > Math.min(h1[0], h2[0]) && v1[0] < Math.max(h1[0], h2[0]) && h1[1] > Math.min(v1[1], v2[1]) && h1[1] < Math.max(v1[1], v2[1]); return hv(p1, p2, q1, q2) || hv(q1, q2, p1, p2); }));
       t("test job 1: the switch's two runs to the receivers' decoders don't cross each other", !cross, JSON.stringify([a.pts, b.pts])); }
+    { // Bel Air's two TV returns (2026-10-03): the family room's had its clean west-margin route thrown out (the lower row's bus
+      // was booked only over its own rooms, not the run over to the row above) and hopped ~27 wires down the rack; once it
+      // took the margin, the casita's classic return lost the lane there — whole-lane steps never tried the margin's outer edge
+      const ba = await (await fetch("../mock-system-belair.json")).json();
+      for (const st of ["bundle", "ribbon"]) { const x = structuredClone(ba); x.job.trunkStyle = st;
+        const Lx = loadJob(effectiveJob(x, 0)), px = enginePlace(Lx.job, Lx.ix), rx = engineRoute(Lx.job, Lx.ix, px);
+        const segs = q => q.slice(1).map((p, i) => [q[i], p]);
+        const xing = w => rx.wires.filter(o => o !== w && o.net !== w.net).reduce((n, o) => n + segs(w.pts).reduce((k, [a, b]) => k + segs(o.pts).filter(([c, d]) => {
+          const hv = (h1, h2, v1, v2) => h1[1] === h2[1] && v1[0] === v2[0] && v1[0] > Math.min(h1[0], h2[0]) && v1[0] < Math.max(h1[0], h2[0]) && h1[1] > Math.min(v1[1], v2[1]) && h1[1] < Math.max(v1[1], v2[1]);
+          return hv(a, b, c, d) || hv(c, d, a, b); }).length, 0), 0);
+        const fam = rx.wires.find(w => w.id === "z-family-room-tv→avr-2"), cas = rx.wires.find(w => w.id === "z-casita-living-room-tv→avr-5");
+        t(`bel air (${st}): the family room's TV return takes the west margin${st === "ribbon" ? ", the casita's keeps a lane there too" : ""}`,
+          fam && cas && Math.min(...fam.pts.map(q => q[0])) < 50 && (st === "bundle" || Math.min(...cas.pts.map(q => q[0])) < 50) && xing(fam) < 24 && xing(cas) < 26, `family ${fam && xing(fam)} casita ${cas && xing(cas)}`); }
+    }
     { // agent hammer 2026-10-03 (Jobs / Settings / Export / Print): the install record lists the adapters, the takeoff names a
       // place once, a projector's runs end at the projector, a long revision note wraps between words
       const tj = await (await fetch("./test-fixtures/test-job-1.json")).json();

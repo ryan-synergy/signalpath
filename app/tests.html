@@ -774,6 +774,14 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
       t("blueprinted/savant: a VIMAP8S is Savant's 8-input IP video transmitter, an AIO1C an AVB audio endpoint, a WattBox strip is power",
         of(/VIMAP8S2/)?.type === "videoMatrix" && of(/VIMAP8S2/)?.catalogRef === "savant-pav-vimap8s" && of(/AIO1C/)?.type === "audioInputModule"
         && of(/WB-800VPS/)?.type === "power" && !of(/IntelliTouch/) && r2.unmapped.some(u => /Pool \(Pool \/ Spa\)/.test(u)));
+      const { autoLinkCatalog: ALC } = await import("./engine.js"), CATS = await (await fetch("./catalog.json")).json();
+      const j3 = { solutions: [{ racks: [{ devices: [
+        { id: "a", type: "amp", model: "Savant AMP-2000" }, { id: "b", type: "amp", model: "Savant AMP-1640" },
+        { id: "c", type: "controlBox", model: "Savant SmartControl 25" }, { id: "d", type: "controlBox", model: "Savant SmartControl 12" }] }] }] };
+      ALC(j3, CATS);
+      t("catalog: the old Savant amps (AMP-2000 / AMP-1640, 3U, 8 zones) and SmartControl 12 / 25 (half-width) link by their imported names",
+        j3.solutions[0].racks[0].devices.map(d => d.catalogRef).join() === "savant-amp-2000,savant-amp-1640,savant-smartcontrol-25,savant-smartcontrol-12"
+        && CATS.devices["savant-amp-2000"].rackUnits === 3 && CATS.devices["savant-amp-2000"].zones === 8 && CATS.devices["savant-smartcontrol-25"].halfRack);
     }
     // PoE boxes on a switch that can't power them: pick injectors or local supplies, box by box
     const H = await import("./hookup.js"), XP = await import("./exports.js"), CAT = await (await fetch("./catalog.json")).json();

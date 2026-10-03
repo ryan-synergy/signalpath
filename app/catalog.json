@@ -5658,6 +5658,115 @@
       "rackUnits": 0,
       "notes": "Savant IP Audio Single In and Out (AVB endpoint): a bi-directional line-level converter between one IP-audio (AVB) channel and analog / digital audio; 24-bit/96 kHz; PoE Class 3 (802.3af) on its RJ45. A small box, not a rack unit (shelf it or mount it behind gear). Sources: rgbcomms SS-PAV-AIO1C, Savant IP Audio Deployment Guide 009-1571-09 (checked 2026-10-03).",
       "rackNote": "small PoE box — on a shelf or behind gear, no rack space"
+    },
+    "savant-amp-2000": {
+      "brand": "Savant",
+      "model": "AMP-2000-00",
+      "type": "amp",
+      "zones": 8,
+      "ampCh": 16,
+      "inputs": {
+        "analog": 8
+      },
+      "outputs": {},
+      "flags": [
+        "legacyOnImport"
+      ],
+      "verified": true,
+      "partNo": "AMP-2000-00",
+      "aliases": [
+        "AMP-2000",
+        "AMP-2000I-00",
+        "AMP-2000I"
+      ],
+      "rackUnits": 3,
+      "powerMaxW": 1150,
+      "depthIn": 15.0,
+      "depthSource": "Savant AMP-2000 technical specification 009-0493-00 (sav-documentation.s3.amazonaws.com) (checked 2026-10-03)",
+      "notes": "16-channel (8-zone) Class D amp, 40 WPC @ 8 ohms / 50 WPC @ 4 ohms; 8 stereo RCA inputs (one per zone pair), screw-terminal speaker outs; per-channel gain; turn-on: constant / audio sense / 3-24V trigger; 12V trigger out. Fanless but needs 2\" each side and 3\" above and behind. 3U, 17.30\" W x 15.00\" D x 5.21\" H, 43 lb shipping; 120V 10A, 1150 W max, 3925 BTU/hr at max load. Older Savant amp — on an imported job it's the old system's. Source: Savant AMP-2000 technical specification 009-0493-00 (checked 2026-10-03). POWER ESTIMATE 2026-10-03: Savant publishes no typical / 1/8-power draw; 150 W is an estimate (~13% of the AMP-2000's 1150 W max, in line with the published 1/8-power figures of other 16-channel Class D amps in this catalog — AudioControl D4600 330/2400, Sonance DSP 8-130 254/1650). Replace if Savant publishes one.",
+      "rackNote": "needs 3\" clear above (fanless, 3925 BTU/hr max)",
+      "powerTypicalW": 150
+    },
+    "savant-amp-1640": {
+      "brand": "Savant",
+      "model": "AMP-1640-01",
+      "type": "amp",
+      "zones": 8,
+      "ampCh": 16,
+      "inputs": {
+        "analog": 8
+      },
+      "outputs": {},
+      "flags": [
+        "legacyOnImport"
+      ],
+      "verified": true,
+      "partNo": "AMP-1640-01",
+      "aliases": [
+        "AMP-1640",
+        "AMP-1640-20",
+        "AMP-1640-00"
+      ],
+      "rackUnits": 3,
+      "depthIn": 15.0,
+      "depthSource": "Savant AMP-1640 launch spec (Audioholics / Residential Systems) (checked 2026-10-03)",
+      "notes": "16-channel (8-zone) Class D amp, 40 WPC @ 8 ohms / 50 WPC @ 4 ohms; RCA inputs, screw-terminal speaker outs (to 14 AWG); per-channel gain; 5-24V AC/DC trigger in, 12V trigger out; fanless. 3U, 17.3\" W x 15\" D x 5.2\" H, 35 lb; 120V 10A. The predecessor of the AMP-2000 (same chassis). Max watts not published in the sources found. Sources: Audioholics and Residential Systems launch coverage; Savant AMP-1640 QRG on manualslib (checked 2026-10-03). POWER ESTIMATE 2026-10-03: Savant publishes no typical / 1/8-power draw; 150 W is an estimate (~13% of the AMP-2000's 1150 W max, in line with the published 1/8-power figures of other 16-channel Class D amps in this catalog — AudioControl D4600 330/2400, Sonance DSP 8-130 254/1650). Replace if Savant publishes one.",
+      "powerUnpublished": true,
+      "powerTypicalW": 150
+    },
+    "savant-smartcontrol-25": {
+      "brand": "Savant",
+      "model": "SmartControl 25",
+      "type": "controlBox",
+      "inputs": {},
+      "outputs": {},
+      "flags": [
+        "savantControl"
+      ],
+      "verified": true,
+      "partNo": "SSC-P025-10",
+      "aliases": [
+        "SSC-P025",
+        "SSC-0025",
+        "SSC-P025-10",
+        "SSC-P025-11",
+        "SmartControl 25 (SSC-P025)"
+      ],
+      "rackUnits": 1,
+      "halfRack": true,
+      "lowHeat": true,
+      "powerMaxW": 15,
+      "powerTypicalW": 7,
+      "lan": 1,
+      "depthIn": 7.6,
+      "depthSource": "Savant SmartControl 25 technical specification 009-0939-00 (checked 2026-10-03)",
+      "notes": "Savant control expansion: 8 RS-232/422/485 (RJ-45), 6 IR, 3 relays, 7 GPIO, 1 Ethernet. SSC-P025 runs on PoE+ (802.3at) or an optional 12V DC supply; SSC-0025 is 12V DC. 7 W nominal / 15 W max, 51 BTU/hr. 1.5\" H x 7.99\" W x 7.6\" D — two fit side by side on a 1U shelf (or RMB-0025 rack bracket). Needs a Savant host. Source: Savant SmartControl 25 technical specification 009-0939-00 (checked 2026-10-03).",
+      "rackNote": "half-width: two per 1U shelf"
+    },
+    "savant-smartcontrol-12": {
+      "brand": "Savant",
+      "model": "SmartControl 12",
+      "type": "controlBox",
+      "inputs": {},
+      "outputs": {},
+      "flags": [
+        "savantControl"
+      ],
+      "verified": true,
+      "partNo": "SSC-0012-00",
+      "aliases": [
+        "SSC-0012",
+        "SSC-0012-00"
+      ],
+      "rackUnits": 1,
+      "halfRack": true,
+      "lowHeat": true,
+      "powerMaxW": 18,
+      "lan": 1,
+      "depthIn": 3.2,
+      "depthSource": "Savant SmartControl 12 QRG (manualslib) (checked 2026-10-03)",
+      "notes": "Small Savant control expansion box: IR, RS-232, relay and GPIO ports (Savant APAC lists 6 IR, 2 RS-232, 2 GPIO, 2 relay) plus 1 Ethernet. 12V DC 1.5A adapter, 18 W nominal. 1.40\" H x 6.00\" W x 3.20\" D, 0.5 lb — shelf it beside another half-width box. Needs a Savant host. Sources: Savant SmartControl 12 QRG via manualslib; Savant APAC SSC-0012-00 listing (checked 2026-10-03).",
+      "rackNote": "small box: half a 1U shelf"
     }
   },
   "licensing": {

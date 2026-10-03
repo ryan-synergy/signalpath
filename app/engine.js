@@ -808,6 +808,7 @@ function placeAt(job, ix, opts, gs) {
    "ribbon" | false / "off" for the classic drawing). */
 const LINK_MIN = 10;   // a trunk to this many rooms beside the rack may gather at its sources and cross the rack once (measured 6 / 10 / 14)
 const OFF_CHANNEL = 0.3;  // packed / bands, trunks off: lanes added to the rack-to-rooms channel per room feed
+const HEAD_LANES = 24;  // packed: a stacked area heading sits this far above its rooms, so the row's feed lanes run under it (measured 0 / 24 / 36)
 const PACK_SLACK = 14;   // packed / bands: every TV row's gap keeps a spare lane (measured 0 / 14 / 28 on every sample, 2026-10-03: 14 brings Bundle and Ribbon level with Classic)
 const BAND_COLORS = { surround: "#2f3e9e", tvspk: "#7a3fb0", tv: "#4b5563", speakers: "#12806a", outdoor: "#2f7a3a", off: "#6b7280" };
 export const LAYOUT_STYLES = ["packed", "bands", "classic"];
@@ -1141,7 +1142,7 @@ function placeOnce(job, ix, opts, variant) {
       if (!g.zones.length) continue;
       // another building's rooms (Packed): a headed block of rows under the main house's, in the same flow — placed to
       // the right as a group of their own they sat behind the main rooms, and their feeds had no clear way across
-      if (g.area) { y += 30; out.areaHeaders.push({ areaId: g.area.areaId, name: (g.area.name || "").toUpperCase(), cx: bandX + (g.area.name || "").length * 5.6 + 4, y: y - 10, stack: true }); }
+      if (g.area) { y += 30 + HEAD_LANES; out.areaHeaders.push({ areaId: g.area.areaId, name: (g.area.name || "").toUpperCase(), cx: bandX + (g.area.name || "").length * 5.6 + 4, y: y - 10 - HEAD_LANES, stack: true }); }
       // speaker-only rooms sit on a shared cell pitch (their feeds dive through the gutters between columns); rows
       // with TVs take each card at its own width, like the classic top band — their feeds run in the lanes under each row
       const cell = g.zones.some(hasTv) ? 0 : gridCell(g.zones.map(z => cardOf[z.id].w));

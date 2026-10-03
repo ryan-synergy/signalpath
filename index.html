@@ -437,7 +437,10 @@
   #qaChips .plan { width: 100%; padding: 6px 8px; }
   #qaChips .plan .ps { font-size: 12px; }
   #toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: #16181c; color: #eee; font-size: 13px;
-           padding: 8px 14px; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.35); display: none; z-index: 60; gap: 10px; align-items: center; }
+           padding: 8px 14px; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.35); display: none; z-index: 60; gap: 10px; align-items: center;
+           width: max-content; max-width: min(560px, calc(100vw - 32px)); box-sizing: border-box; }
+  #toast > span { flex: 1 1 auto; min-width: 0; }
+  #toast button { flex: none; }
   #toast.show { display: flex; }
   #toast button { background: none; border: 1px solid #555; color: #fff; border-radius: 6px; padding: 3px 9px; font: inherit; font-size: 12px; cursor: pointer; }
   /* ---- new job: rack starting points ---- */
@@ -610,29 +613,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003051918",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003051918",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003051918",
-    "./app/ports.js": "./app/ports.js?v=20261003051918",
-    "./app/commands.js": "./app/commands.js?v=20261003051918",
-    "./app/engine.js": "./app/engine.js?v=20261003051918",
-    "./app/exports.js": "./app/exports.js?v=20261003051918",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003051918",
-    "./app/hookup.js": "./app/hookup.js?v=20261003051918",
-    "./app/importers.js": "./app/importers.js?v=20261003051918",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003051918",
-    "./app/library.js": "./app/library.js?v=20261003051918",
-    "./app/names.js": "./app/names.js?v=20261003051918",
-    "./app/network.js": "./app/network.js?v=20261003051918",
-    "./app/pages.js": "./app/pages.js?v=20261003051918",
-    "./app/power.js": "./app/power.js?v=20261003051918",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003051918",
-    "./app/rack.js": "./app/rack.js?v=20261003051918",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003051918",
-    "./app/starters.js": "./app/starters.js?v=20261003051918",
-    "./app/kinds.js": "./app/kinds.js?v=20261003051918",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003051918",
-    "./app/sheets.js": "./app/sheets.js?v=20261003051918"
+    "./app/ai.js": "./app/ai.js?v=20261003052522",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003052522",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003052522",
+    "./app/ports.js": "./app/ports.js?v=20261003052522",
+    "./app/commands.js": "./app/commands.js?v=20261003052522",
+    "./app/engine.js": "./app/engine.js?v=20261003052522",
+    "./app/exports.js": "./app/exports.js?v=20261003052522",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003052522",
+    "./app/hookup.js": "./app/hookup.js?v=20261003052522",
+    "./app/importers.js": "./app/importers.js?v=20261003052522",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003052522",
+    "./app/library.js": "./app/library.js?v=20261003052522",
+    "./app/names.js": "./app/names.js?v=20261003052522",
+    "./app/network.js": "./app/network.js?v=20261003052522",
+    "./app/pages.js": "./app/pages.js?v=20261003052522",
+    "./app/power.js": "./app/power.js?v=20261003052522",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003052522",
+    "./app/rack.js": "./app/rack.js?v=20261003052522",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003052522",
+    "./app/starters.js": "./app/starters.js?v=20261003052522",
+    "./app/kinds.js": "./app/kinds.js?v=20261003052522",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003052522",
+    "./app/sheets.js": "./app/sheets.js?v=20261003052522"
 } }
 </script>
 <script>
@@ -891,7 +894,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003051918").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003052522").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -999,6 +1002,7 @@ function refresh(save = true) {
     if (now !== S.base.json) { S.undo.push({ job: JSON.parse(S.base.json), id: S.id, sol: S.base.sol, label: S.editLabel || "last change" }); if (S.undo.length > 30) S.undo.shift(); syncUndo(); }
   }
   S.undoMarked = false; S.editLabel = "";
+  if (S.shownId !== S.id) { if (S.shownId !== undefined) S.openRows.clear(); S.shownId = S.id; }   // another job: nothing open (ids repeat across jobs)
   const sol = S.job.solutions[S.sol] || S.job.solutions[0];
   S.sol = S.job.solutions.indexOf(sol);
   let v, a, svg = "", err, routeWarn = [], placeWarn = [];
@@ -2015,7 +2019,7 @@ $("#canvas").addEventListener("click", e => {
     const p = $("#canvas svg").querySelector(`path.wire[data-wire="${CSS.escape(selWire)}"]`);
     showTip(e.clientX, e.clientY,
       `<b>${esc(nodeName(p.dataset.from))}</b> → <b>${esc(nodeName(p.dataset.to))}</b> · ${esc(signalName(p.dataset.signal))}${connOf(selWire, p.dataset.signal)?.routeHint ? ' · <span class="mini">custom route</span>' : ""}${ids.length > 1 ? ` <span class="mini">(${idx + 2 > ids.length ? 1 : idx + 2}/${ids.length} here — tap to cycle)</span>` : ""}` +
-      (p.classList.contains("trunkwire") ? `<div class="mini" style="padding:4px 2px">Rides its trunk. For a path of its own, set View ▾ → Trunks → Off.</div>` : `<div id="rrGo" class="altrow">⟲ Reroute…</div>`) +
+      (p.classList.contains("trunkwire") ? `<div class="mini" style="padding:4px 2px">Rides its trunk. For a path of its own, set View ▾ → Trunks → Off.</div>` : `<div id="rrGo" class="altrow">⟲ Redraw this wire's path…</div>`) +
       `<div id="ceGo" class="altrow">✎ Edit connection — change what it connects</div>` +
       (wireZone(selWire, p.dataset.signal) ? `<div id="zhGo" class="altrow">⚙ ${esc(S.view.ix.zonesById[wireZone(selWire, p.dataset.signal)]?.name || "Zone")} hookup</div>` : ""));
     return;
@@ -2174,13 +2178,14 @@ const nodeInfo = id => describeNode(S.job, S.job.solutions[S.sol] || S.job.solut
 /* can this box be this end of this kind of wire? (2026-10-03 picker audit: a speaker wire's "To" offered the
    cable box, the WattBox and another room's TV — every pick broke the room). The current end always stays listed. */
 const NOT_AV = ["power", "networkSwitch", "avbSwitch", "gateway", "host", "controlBox", "danteBridge"];
+const rackDev = id => (S.job.solutions[S.sol] || S.job.solutions[0]).racks.flatMap(r => r.devices).find(d => d.id === id) || {};
 function endFits(end, id, other, signal, asType = null) {
   if (id === other) return false;
   const n = nodeInfo(id), k = n.kind, t = asType && n.kind === "rack" ? asType : n.type;
   const rack = (...types) => k === "rack" && types.includes(t);
   switch (signal) {
     case "speaker": return end === "from" ? rack("avr", "amp") : k === "speakers";
-    case "video": return end === "from" ? k === "local" || k === "adapter" || rack("source", "avr", "videoMatrix", "avSwitch", "splitter")
+    case "video": return end === "from" ? k === "local" || k === "adapter" || rack("avr", "videoMatrix", "avSwitch", "splitter") || (rack("source") && !noPicture(rackDev(id)))
                                          : k === "display" || k === "adapter" || rack("avr", "videoMatrix", "avSwitch", "splitter");
     case "audio": return end === "from" ? k === "local" || k === "adapter" || rack("source", "avr", "videoMatrix", "avSwitch", "audioOutputModule", "splitter")
                                          : k === "adapter" || rack("avr", "amp", "audioInputModule", "audioOutputModule", "danteBridge");
@@ -2258,7 +2263,7 @@ function enhanceSelects(root) {
         else (groups[groups.length - 1]?.loose ? groups[groups.length - 1] : (groups.push({ label: label, loose: true, items: [] }), groups[groups.length - 1])).items.push(ch);
       }
       openPicker({ title: label, groups: groups.map(g => ({ label: g.label, searchOnly: g.searchOnly && !g.items.some(o => o.selected), items: g.items.map(o => ({ value: o.value, label: o.textContent, current: o.selected,
-        disabled: o.disabled, reason: o.title || "not available here" })) })),
+        disabled: o.disabled, reason: o.title || "not available here", sub: o.dataset.sub || "" })) })),
         onPick: v => { sel.value = v; sel.dispatchEvent(new Event("change", { bubbles: true })); } });
     };
     sel.after(b);
@@ -2288,7 +2293,7 @@ function zonesHTML() {
     const has = ovHas(kind, id, f);
     return `<div class="f${has ? " ov" : ""}"><label>${label}${has ? `<button class="ovx" data-ovk="${esc(kind)}" data-ovid="${esc(id)}" data-ovf="${esc(f)}" title="Overridden in ${esc(sol.name)} — revert to House">×</button>` : ""}</label>${inner}</div>`;
   };
-  const rows = S.job.house.zones.map(z => {
+  const rowOf = z => {
     const spkH = (z.endpoints || []).find(e => e.type === "speakers");
     const tvH = (z.endpoints || []).find(e => e.type === "display");
     const spk = spkH && { ...spkH, ...(ov.endpoints || {})[spkH.id] };
@@ -2316,7 +2321,7 @@ function zonesHTML() {
     const head = `<div class="head zhead" data-toggle="${esc(z.id)}">${statusMark(found, wired)}
       <div class="zmain"><div class="zt"><span class="t">${esc(z.name)}</span>
         ${zEff.scope !== "included" ? `<span class="badge${ovHas("zones", z.id, "scope") ? " ovb" : ""}">${esc(SCOPE_NAME[zEff.scope] || zEff.scope)}</span>` : ""}</div>
-        <div class="zsum">${esc(what)}</div>${open && feed ? `<div class="zfeed">${esc(feed)}</div>` : ""}
+        <div class="zsum">${esc(what)}</div>
         ${issue && !open ? `<div class="ziss ${issue.level}">${esc(issue.msg)}${found.length > 1 ? ` <span class="mini">(+${found.length - 1} more)</span>` : ""}</div>` : ""}</div></div>`;
     // open: the essentials as taps; the rarely-touched fields behind "More"
     const spkCfg = spk ? spk.config || "stereo" : "none";
@@ -2355,7 +2360,17 @@ function zonesHTML() {
         </details>
       </div>
     </div>`;
-  }).join("");
+  };
+  // a job with areas (main house, casita, pool house) lists its rooms under each area (2026-10-03: 30 rooms in
+  // one flat list); one area or none — the plain list
+  const areas = S.job.house.areas || [];
+  let rows;
+  if (areas.length > 1) {
+    const by = new Map(areas.map(a => [a.id, []])); const loose = [];
+    for (const z of S.job.house.zones) (by.get(z.area) || loose).push(z);
+    rows = [...areas.map(a => [a.name || a.id, by.get(a.id)]), ["No area", loose]].filter(([, list]) => list.length)
+      .map(([name, list]) => `<div class="sect zarea-h">${esc(String(name).toUpperCase())} <span class="mini">${list.length} room${list.length > 1 ? "s" : ""}</span></div>${list.map(rowOf).join("")}`).join("");
+  } else rows = S.job.house.zones.map(rowOf).join("");
   return escope + qa + rows + `<button class="addbtn" id="addZone">＋ Add room</button>`;
 }
 
@@ -2419,7 +2434,10 @@ function hookupHTML(z, sol, multi) {
       ${locals.length ? `<optgroup label="At this TV">${locals.map(d => opt(d.id, nm(d.id), cur)).join("")}</optgroup>` : ""}
       <optgroup label="Add">${hasLocalAtv ? "" : opt("__new_local", "＋ Apple TV at this TV", "")}${opt("__new_avr", "＋ New AV receiver…", "")}</optgroup></select>`));
     if (byDev(cur)) {
-      fine.push(field("Run to TV", chips("hvrun", Object.entries(RUNS), h.video.run, "seg")));
+      // only the runs this feed can make: an MXNet switch reaches a TV through its decoder; HDMI out of a matrix or
+      // receiver goes by balun, Bullet Train or straight HDMI — never an MXNet decoder (2026-10-03 click-through)
+      const fromT = byDev(cur)?.type, okRun = fromT === "avSwitch" ? ["dec"] : ["balun", "bullet", "direct"];
+      fine.push(field("Run to TV", chips("hvrun", Object.entries(RUNS).filter(([k]) => okRun.includes(k) || k === h.video.run), h.video.run, "seg")));
       gist.push(RUNS[h.video.run] || h.video.run, z.runFt ? `${z.runFt} ft` : `${(REACH[z.reach || "average"] || "").toLowerCase()} run`);
       // rough distance to the rack (exact footage is optional) — sizes a Bullet Train
       fine.push(field("Distance", chips("hreach", Object.entries(REACH), z.runFt ? "" : z.reach || "average", "seg")
@@ -2443,7 +2461,13 @@ function hookupHTML(z, sol, multi) {
       const n = outputsNeeded(h.spk) || 2, zones = ampZones(d), next = nextFreeOutputs(sol, d.id, n, h.spk.id);
       return zones && +String(next).split("-").pop() > zones * 2 ? `full — all ${zones} zones in use` : "";
     };
-    const spkOpt = d => { const why = full(d); return why ? `<option value="${esc(d.id)}" disabled title="${esc(why)}">${esc(nm(d.id))}</option>` : opt(d.id, nm(d.id), cur); };
+    // a second line in the picker tells look-alike boxes apart: its rack (when there are several), the rooms on it, free zones
+    const rackName = id => sol.racks.length > 1 ? sol.racks.find(r => r.devices.some(x => x.id === id))?.name : "";
+    const subOf = d => { const on = (sol.connections || []).filter(c => c.from === d.id && c.signal === "speaker").map(c => describeNode(S.job, sol, c.to).short.replace(/ speakers$/, ""));
+      const z = d.type === "amp" ? ampZones(d) : 0;
+      return [nm(d.id).includes(rackName(d.id) || "\u0000") ? "" : rackName(d.id), on.length ? on.slice(0, 2).join(", ") + (on.length > 2 ? ` +${on.length - 2}` : "") : "nothing on it yet", z ? `${Math.max(0, z - on.length)} of ${z} zones free` : ""].filter(Boolean).join(" · "); };
+    const spkOpt = d => { const why = full(d); return why ? `<option value="${esc(d.id)}" disabled title="${esc(why)}">${esc(nm(d.id))}</option>`
+      : `<option value="${esc(d.id)}" data-sub="${esc(subOf(d))}" ${d.id === cur ? "selected" : ""}>${esc(nm(d.id))}</option>`; };
     const drivers = devs.filter(d => SPEAKERS_FROM.includes(d.type)).sort((a, b) => SPEAKERS_FROM.indexOf(a.type) - SPEAKERS_FROM.indexOf(b.type));
     rows.push(field("Sound from", `<select class="hsfrom">${opt("", "— not connected —", cur)}
       ${bar ? `<optgroup label="In this room">${opt("__tv", "The TV (soundbar on HDMI eARC)", h.speakers?.viaTv ? "__tv" : cur)}</optgroup>` : ""}
@@ -2482,6 +2506,7 @@ function hookupHTML(z, sol, multi) {
     fine.push(field("TV audio back", `<select class="hret">
       ${rcv && h.tv.displayType !== "projector" ? opt("earc", `${AUDIO_BACK.earc} (to ${nm(rcv.id)})`, cur) + opt("earc+optical", `${AUDIO_BACK["earc+optical"]} (to ${nm(rcv.id)})`, cur)
         + opt("earc-kit", `${AUDIO_BACK["earc-kit"]} (to ${nm(rcv.id)})`, cur) : ""}
+      ${!rcv && h.tv.displayType !== "projector" ? `<option value="__earc_why" disabled title="eARC rides the HDMI from a receiver — this TV's picture ${h.video?.from ? `comes from ${esc(nm(h.video.from))}` : "isn't fed yet"}. Use the eARC extender kit or optical.">eARC over the HDMI</option>` : ""}
       ${!rcv && roomAvr && h.tv.displayType !== "projector" ? opt(`earc-kit:${roomAvr.id}`, `${AUDIO_BACK["earc-kit"]} (to ${nm(roomAvr.id)})`, cur) : ""}
       ${optTargets.filter(mineRet).map(d => opt(`optical:${d.id}`, `Optical only → ${nm(d.id)}`, cur)).join("")}
       ${(() => { const rest = optTargets.filter(d => !mineRet(d));
@@ -3420,6 +3445,8 @@ $("#kitSave").onclick = () => {
 function wirePanel(body) {
   body.querySelectorAll("[data-toggle]").forEach(h => h.onclick = () => {
     const id = h.dataset.toggle;
+    const zoneIds = new Set(S.job.house.zones.map(z => z.id));
+    if (!S.openRows.has(id) && zoneIds.has(id)) for (const k of zoneIds) S.openRows.delete(k);   // one room open at a time
     S.openRows.has(id) ? S.openRows.delete(id) : S.openRows.add(id);
     // a connection row opened in the panel lights its wire on the sheet
     if (id.startsWith("conn:")) {
@@ -3518,20 +3545,24 @@ function wirePanel(body) {
   zon(".tvstatus", el => { setF("endpoints", zoneOf(el)?.endpoints.find(e => e.type === "display"), "status", el.value); });
   on(".tvconfirm", el => { const t = zoneOf(el)?.endpoints.find(e => e.type === "display"); if (t) { if (el.checked) t.confirm = ["size"]; else delete t.confirm; } });
   body.querySelectorAll(".zdel").forEach(el => el.onclick = () => {
-    const z = zoneOf(el); if (!z || !confirm(`Delete room "${z.name}"?`)) return;
+    const z = zoneOf(el); if (!z) return;
     S.job.house.zones = S.job.house.zones.filter(x => x !== z);
     purgeHouseRefs((z.endpoints || []).map(e => e.id), z.id);
-    S.openRows.delete(z.id);
+    S.openRows.delete(z.id); S.editLabel = `delete ${z.name}`;
     refresh();
+    toast(`Deleted ${z.name}`, true);
   });
   const addZone = body.querySelector("#addZone");
   if (addZone) addZone.onclick = () => {
-    const name = prompt("Room name:", "New Room"); if (!name) return;
+    const names = new Set(S.job.house.zones.map(z => z.name));
+    let name = "New Room", n = 2; while (names.has(name)) name = `New Room ${n++}`;
     const id = uid("z");
     S.job.house.zones.push({ id, name, scope: "included",
       endpoints: [{ id: uid(id + "-spk"), type: "speakers", config: "stereo", count: 2, status: "new" }] });
-    S.openRows.add(id);
+    for (const z of S.job.house.zones) S.openRows.delete(z.id);
+    S.openRows.add(id); S.openRows.add("more:" + id);
     refresh();
+    const inp = document.querySelector(`[data-zid="${id}"] .zname`); if (inp) { inp.scrollIntoView({ block: "center" }); inp.select(); }
   };
 
   body.querySelectorAll(".chip[data-act]").forEach(b => b.onclick = () => {

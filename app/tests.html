@@ -929,6 +929,11 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
       so.connections = so.connections.filter(c => c.to !== dec.id);
       const Lo = loadJob(effectiveJob(jo, 0)), vo = validate(Lo.job, Lo.ix);
       t("a decoder with nothing into it: its TV is flagged", vo.errors.some(e => /isn't connected to anything/.test(e.msg)), vo.errors.map(e => e.msg).join(" | ")); }
+    { // a surround set put on a plain amp zone is flagged, with "give it its own receiver"
+      const js = structuredClone(j), ss = js.solutions[0], kz = js.house.zones.find(z => z.name === "K");
+      kz.endpoints.find(e => e.type === "speakers").config = "surround-7.1.4";
+      const Ls = loadJob(effectiveJob(js, 0)), w = validate(Ls.job, Ls.ix).warnings.find(x => x.code === "surround-on-amp");
+      t("7.1.4 on an amp's 2-channel zone: a warning naming it, and a fix", !!w && /K speakers is 7\.1\.4/.test(w.msg) && Hk.quickFixes(js, ss, w, CATp).some(x => /receiver/.test(x.label)), w?.msg); }
     { // move a room to another area: its wiring goes to that area's rack (Ryan 2026-10-03: "fix the area, move wiring to")
       let ja = structuredClone(ba);
       const sayA = txt => { const cm = Cm.parseCommandText(txt, ja, ja.solutions[0]); ja = Cm.planCommands(ja, 0, cm || [], CATp).job; return cm; };
@@ -951,6 +956,9 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
       Hk.setAudioBack(jr, sr, fam, "optical", Hk.readHookup(jr, sr, fam).speakers.from);
       const denAvr = Hk.readHookup(jr, sr, den).speakers.from;
       Hk.setVideo(jr, sr, fam, denAvr); Hk.setSpeakers(jr, sr, fam, denAvr); Hk.followReturn(jr, sr, fam);
+      { const Lr = loadJob(effectiveJob(jr, 0)), w = validate(Lr.job, Lr.ix).warnings;
+        t("the receiver a room left behind says it drives nothing, with a delete fix", w.some(x => x.code === "idle-receiver") &&
+          Hk.quickFixes(jr, sr, w.find(x => x.code === "idle-receiver"), CATp).some(x => /^Delete/.test(x.label))); }
       t("move a room to another receiver: the TV's audio return follows it", Hk.readHookup(jr, sr, fam).ret?.to === denAvr, JSON.stringify(Hk.readHookup(jr, sr, fam).ret)); }
   }
   { // re-import merge: House refreshes, Solutions and endpoint ids survive

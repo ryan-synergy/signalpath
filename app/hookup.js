@@ -682,6 +682,17 @@ export function quickFixes(job, sol, f, catalog = null) {
       } });
     }
   }
+  if (f.code === "idle-receiver") {
+    const d = rackDevices(sol).find(x => x.id === f.ref);
+    if (d) out.push({ label: `Delete ${d.model || "the receiver"}`, run: (j, s) => { removeRackDevice(j, s, f.ref); } });
+  }
+  if (f.code === "surround-on-amp") {
+    const z = zoneOf(job);
+    if (z) out.push({ label: "Give it its own receiver", run: (j, s) => { const zz = (j.house.zones || []).find(x => x.id === z.id);
+      const spk = (zz.endpoints || []).find(e => e.type === "speakers"); const a = avrFor(spk);
+      const id = addRackDevice(j, s, "avr", a.model, { catalogRef: a.catalogRef }); setSpeakers(j, s, zz, id);
+      const h = readHookup(j, s, zz); if (h.tv && !h.video) setVideo(j, s, zz, id); } });
+  }
   if (f.code === "no-input") {
     const d = devs.find(x => x.id === f.ref);
     if (d?.type === "amp" && devs.some(x => x.type === "avSwitch" && !x.danteSwitch))

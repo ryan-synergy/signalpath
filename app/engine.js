@@ -495,6 +495,18 @@ export function validate(job, ix = indexJob(job)) {
       if (drives.length) W("no-input", `${d.model || d.id} has nothing plugged in — ${drives.length === 1 ? nm(drives[0].to) : `its ${drives.length} rooms`} will have no sound. Connect a source${d.type === "amp" ? " or an audio feed" : ""}`, d.id);
     }
 
+    // a surround set on a plain amp zone (2 channels) — it wants a receiver; an AXIS16-fed amp does the processing
+    for (const c of sol.connections || []) {
+      const e = ix.endpointsById[c.to], amp = s.devices[c.from];
+      if (c.signal !== "speaker" || !e || e.type !== "speakers" || amp?.type !== "amp" || !/^surround/.test(e.config || "")) continue;
+      const axis = (sol.connections || []).some(x => x.to === amp.id && x.dante && (sol.companions || []).some(k => k.id === x.from && k.type === "axis16"));
+      if (!axis) W("surround-on-amp", `${nm(c.to)} is ${String(e.config).replace("surround-", "")} on ${amp.model || amp.id}'s 2-channel zone — a surround set needs a receiver`, c.to);
+    }
+    // a receiver left driving nothing (its room moved to another one) — still in the rack, quoted, powered
+    if ((job.house?.zones || []).length) for (const d of Object.values(s.devices)) {
+      if (d.type !== "avr") continue;
+      if (!(sol.connections || []).some(c => c.from === d.id && (c.signal === "speaker" || c.signal === "video"))) W("idle-receiver", `${d.model || d.id} isn't driving any room — give it one or delete it`, d.id);
+    }
     // amp channel collisions + zone capacity
     const byAmp = {};
     for (const c of sol.connections || []) {
@@ -4071,7 +4083,7 @@ export function render(job, ix, P, rt, opts = {}) {
         if (dev.type === "avr") {
           const said = String(d.model || "").includes(" — ");
           const rooms = said ? [String(d.model).split(" — ").slice(1).join(" — ")] : drivesRooms(job, sol, d.id);
-          if (rooms.length) { brand = rooms.join(" · "); restName = [said ? String(d.model).split(" — ")[0] : d.model]; }
+          if (rooms.length) { brand = rooms[0]; restName = [said ? String(d.model).split(" — ")[0] : d.model]; }
         }
         push(fitText(d.x + d.w / 2, d.y + 17, brand, 11, dev.type === "avr" && brand !== tileName(d.model)[0] ? "#fff" : "#ddd", d.w - 12));
         // faceplate identity cues (squint-test assists, never the identifier)

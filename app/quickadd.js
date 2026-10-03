@@ -36,6 +36,9 @@ const ONES = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seve
   thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 };
 const TENS = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
 function wordsToDigits(t) {
+  // "one-hundred-forty-inch", "eighty-two-inch": hyphens between number words are spaces
+  const NW = "(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)";
+  for (let i = 0; i < 3; i++) t = t.replace(new RegExp(`\\b(${NW})-(?=${NW}\\b|inch)`, "g"), (m, w) => `${w} `);
   const W = `(?:${[...Object.keys(TENS), ...Object.keys(ONES)].join("|")})`;
   // "one hundred (and) twenty", "a hundred", "one twenty" (a projector screen) are rare; handle hundreds plainly
   t = t.replace(new RegExp(`\\b(?:a|one)\\s+hundred(?:\\s+and)?(?:\\s+(${W})(?:[\\s-]+(${W}))?)?\\b`, "g"), (m, a, b) =>
@@ -53,13 +56,13 @@ function wordsToDigits(t) {
 // "65 inch" and "two channel" must just work)
 const PHRASES = [
   [/\b(\d{2,3})\s*-?\s*(?:inches|inch|in\.|in(?=\s|$)|''|"|”)(?=[\s,]|$)/g, (m, n) => n],    // 65 inch / 65-inch / 65 in. / 65"
-  [/\b(?:2|two)[\s-]*(?:channel|ch)\b/g, "2.0"], [/\b(?:5|five)[\s-]*(?:channel|ch)\b/g, "5.1"],
+  [/\b(?:1|one|single)[\s-]*(?:channel|ch)\b/g, "mono"], [/\b(?:2|two)[\s-]*(?:channel|ch)\b/g, "2.0"], [/\b(?:5|five)[\s-]*(?:channel|ch)\b/g, "5.1"],
   [/\b(?:7|seven)[\s-]*(?:channel|ch)\b/g, "7.1"], [/\b2\s*ch\b/g, "2.0"],
   [/\bstereo\s+pair\b/g, "stereo"], [/\b(?:dolby\s+)?atmos\b|\b(?:ceiling\s+)?heights?(?:\s+(?:channels?|speakers?))?\b|\bheight\s+channels?\b/g, "__atmos"], [/\b7\.2\.4\b/g, "7.1.4"], [/\b5\.2\b/g, "5.1"], [/\b7\.2\b/g, "7.1"],
   [/\bsound\s*bar\s*(?:\+|&|and|with|w\/)\s*(?:a\s+)?(?:sub(?:woofer)?)\b/g, "soundbar-sub"],
   [/\b(?:surround(?:\s+sound)?)\b/g, "__surround"],
   [/\btv\s+only\b/g, "tv"],
-  [/\b(\d{1,2})\s+(?:(?:in-?)?ceiling|in-?wall|wall|outdoor|rock|bookshelf)\s+(speakers?)\b/g, (m, n, w) => `${n} ${w}`],
+  [/(?<![\d.])\b(\d{1,2})\s+(?:(?:in-?)?ceiling|in-?wall|wall|outdoor|rock|bookshelf)\s+(speakers?)\b/g, (m, n, w) => `${n} ${w}`],
 ];
 
 // words a sentence wraps around a room that aren't its name (Wispr Flow / dictation writes full sentences)
@@ -68,7 +71,8 @@ const FILLER = new Set(["the", "a", "an", "with", "and", "in", "on", "of", "has"
   "it", "its", "it's", "there", "that", "which", "for", "to", "some", "set", "setup", "up", "we", "they", "i", "it'll", "going", "goes", "using", "use",
   // spoken filler (voicemail-style dictation: "okay so uh master bedroom um …") and leftovers of fixes / "both"
   "uh", "uhh", "um", "umm", "er", "okay", "ok", "so", "oh", "yeah", "right", "well", "basically", "let", "me", "don't", "dont", "forget",
-  "both", "all", "each", "but", "not", "maybe", "actually", "wait", "sorry", "pretty", "we've", "got", "here", "at", "about", "around"]);
+  "provides", "provide", "includes", "include", "features", "feature", "featuring", "equipped", "showcases", "delivers", "offers", "through", "via", "channel", "channels",
+  "both", "all", "each", "add", "plus", "including", "but", "not", "maybe", "actually", "wait", "sorry", "pretty", "we've", "got", "here", "at", "about", "around"]);
 
 // a floor said as a heading ("upstairs we have …", "level 2 has three bedrooms") isn't part of a room's name.
 // Glued to one room ("upstairs bath") it stays — that's how the crew tells two baths apart.
@@ -81,11 +85,15 @@ export function parseQuickZone(text) {
   let t = " " + String(text || "").toLowerCase().trim() + " ";
   // dictation punctuation never sticks to a word ("soundbar:", "50 inch!", "3.1:") — decimals (5.1) and the inch mark stay
   t = t.replace(/[,;:!?–—()]/g, " ").replace(/\.(?=\s|$)/g, " ");
+  // tech shorthand: "4 ic spkrs" = 4 in-ceiling speakers, "iw spk" = in-wall
+  t = t.replace(/\bspkrs?\b|\bspks\b/g, "speakers").replace(/\bic\b(?=\s+speakers?)|\bic\b(?=\s+spk)/g, "in-ceiling").replace(/\biw\b(?=\s+(?:speakers?|spk))/g, "in-wall");
+  t = t.replace(/\bsurround-(\d\.\d(?:\.\d)?)\b/g, (m, c) => ` ${c} `).replace(/\bspeaker[_\s]?count\s*:?\s*(\d{1,2})\b/g, (m, n) => ` ${n} speakers `);
   for (const [re, sub] of SPOKEN) t = t.replace(re, (...m) => " " + (typeof sub === "function" ? sub(...m) : sub) + " ");
   t = wordsToDigits(t);
   for (const [re, sub] of PHRASES) t = t.replace(re, m => " " + m.replace(re, sub) + " ");
   // a bare "surround" is a 5.1 unless a setup was also given ("surround 7.1")
-  t = /(^|\s)(5\.1|5\.1\.2|7\.1|7\.1\.4)(\s|$)/.test(t) ? t.replace(/__surround/g, " ") : t.replace(/__surround/, " 5.1 ").replace(/__surround/g, " ");
+  // (with Atmos said too, the Atmos rule below decides: "surround sound with atmos" is a 7.1.4)
+  t = /(^|\s)(5\.1|5\.1\.2|7\.1|7\.1\.4)(\s|$)/.test(t) || /__atmos/.test(t) ? t.replace(/__surround/g, " ") : t.replace(/__surround/, " 5.1 ").replace(/__surround/g, " ");
   for (let i = 0; i < 4 && FIXUP.test(t); i++) t = t.replace(FIXUP, " ");
   t = t.replace(/\b(\d{2,3})\s+no\s+(?=\d{2,3}\b)/g, " ")                      // "77 no 75"
     .replace(/\b(?:soundbar|stereo|mono)\s+(?:uh|um)\s+(?=soundbar|stereo|mono)/g, " ");   // "soundbar uh soundbar with sub"
@@ -104,11 +112,16 @@ export function parseQuickZone(text) {
   if (/\b(?:both|all|each)\b/.test(t)) zone._both = true;
   let spk = null, tv = null, ofe = false, local = false, matrix = false, avr = false;
 
+
+
   const eat = re => { const m = t.match(re); if (m) t = t.replace(re, " "); return m; };
   const eatAll = re => { let m = null; for (let i = 0; i < 4; i++) { const x = eat(re); if (!x) break; m = m || x; } return m; };
-
   if (eat(/\bprewire(d)?\b|\bpre-wire(d)?\b/)) { zone.scope = "prewire"; chips.push({ kind: "scope", label: SCOPE_NAME.prewire }); }
-  if (eat(/\bfuture\b/)) { zone.scope = "future"; chips.push({ kind: "scope", label: SCOPE_NAME.future }); }
+  // "prewire only … ready for future expansion": the prewire is what's being done now — "future" doesn't override it
+  // ("future prewire", said together, is a prewire for a later phase — future)
+  const futurePre = /\bfuture\s+pre-?wire/.test(text.toLowerCase());
+  const prewireOnly = /\bpre-?wire\s+only\b|\bscope\s*:?\s*pre-?wire/.test(text.toLowerCase());
+  if (eatAll(/\bfuture\b/) && (zone.scope !== "prewire" || futurePre || !prewireOnly)) { zone.scope = "future"; chips.push({ kind: "scope", label: SCOPE_NAME.future }); }
   if (eat(/\b(?:customer|client|homeowner)[- ]?(?:supplied|provided|furnished|provides|supplies|owned)\b|\bofe\b|\bexisting\b|\bowner\b(?!'s|s\b)(?:[- ]?(?:supplied|provided|furnished))?/)) ofe = true;   // "owner's suite" is a room, not OFE
   if (eat(/\blocal\b/)) local = true;
   if (eat(/\bmatrix\b|\bdistributed\b/)) matrix = true;
@@ -138,6 +151,23 @@ export function parseQuickZone(text) {
     zone.remote = k === "savant" ? "savant" : k === "josh" ? "josh" : (k === "factory" || k === "oem") ? "factory" : "appletv";
     chips.push({ kind: "hint", label: (zone.remote === "appletv" ? "Apple TV" : zone.remote === "factory" ? "factory" : zone.remote) + " remote" });
   }
+  // things said ABOUT the room that aren't its name (Ryan 2026-10-03: "it's still creating random rooms") —
+  // a source, a sub, where the TV hangs, the mount. Kept as the room's note, never its name, never a new room.
+  const said = [];
+  // a Sonos soundbar is a soundbar ("master 65 with a sonos arc")
+  t = t.replace(/\bsonos\s+(?:arc(?:\s+ultra)?|beam|ray|playbar|playbase)\b/g, " soundbar ");
+  // sources: "with an apple tv", "and a cable box", "kaleidescape", "Apple TV and cable."
+  t = t.replace(/\b(?:an?\s+|the\s+)?(apple\s*tv(?:\s*4k)?|appletv|atv|cable(?:\s+box)?(?!\s+(?:run|runs|pull|drop|wire|wiring))|directv(?:\s+box)?|dish(?:\s+box)?|satellite(?:\s+box)?|roku|fire\s*tv|kaleidescape|blu-?ray(?:\s+player)?|xbox|playstation|ps5|nintendo|switch\s+console|game\s+console|turntable|record\s+player)\b/g,
+    (m, w) => { said.push(w.replace(/\s+/g, " ")); return " "; });
+  // a sub: with a soundbar it's a soundbar + sub, with a stereo pair a 2.1; surround and landscape already have one
+  let sub = false;
+  t = t.replace(/\b(?:an?\s+|the\s+|dual\s+|two\s+|2\s+)?(?<!-)(?:sub(?:woofer)?s?)\b(?!-)/g, m => { sub = true; return " "; });
+  // gear named in passing: "and the sonos", "a sonos amp", "an amp"
+  t = t.replace(/\b(?:an?\s+|the\s+)?(sonos(?:\s+(?:amp|port|connect))?)\b/g, (m, w) => { said.push(w); return " "; });
+  // where it goes / how it's mounted: "over the fireplace", "in the ceiling", "on an articulating mount", "mounted above the mantel"
+  t = t.replace(/\b(?:mounted\s+)?(?:over|above|on|in|under|below|beside|behind|into|next\s+to)\s+(?:the|a|an)\s+((?:[a-z-]+\s+)?(?:fireplace|mantel|mantle|wall|ceiling|island|bar|bed|cabinet|credenza|console|sofa|couch|bookshelf|bookcase|shelf|corner|window|built-?ins?|niche|vanity|mirror|pergola|eaves?|soffit|cabana|patio\s+cover))\b/g,
+    m => { said.push(m.trim().replace(/\s+/g, " ")); return " "; });
+  t = t.replace(/\b(?:on\s+)?(?:an?\s+)?(?:articulating|full[\s-]*motion|tilt(?:ing)?|fixed|swivel|ceiling)\s+mount\b|\bmounted\b|\blater\b/g, m => { if (/mount\b/.test(m)) said.push(m.trim()); return " "; });
   // "nothing else", "no nothing", "nothing in there": said, not a name
   eat(/\bno\s+nothing\b|\bnothing(?:\s+(?:else|in\s+there|at\s+all))?\b/);
   // "audio only" is speakers and no TV
@@ -153,7 +183,7 @@ export function parseQuickZone(text) {
   if (land) {
     // "landscape with eight speakers" — the count can come later in the sentence
     eat(/\bpairs?\b/);
-    const n = land[1] || eat(/\b(\d{1,2})\s*(?:x\s*)?(?:speakers?|satellites?|sats?)\b/)?.[1];
+    const n = land[1] || eat(/(?<![\d.])\b(\d{1,2})\s*(?:x\s*)?(?:speakers?|satellites?|sats?)\b/)?.[1];
     spk = { config: "landscape", satCount: n ? +n : 6, buriedSub: true };
   }
 
@@ -164,7 +194,7 @@ export function parseQuickZone(text) {
   // Atmos / height channels: 7.1 + Atmos = 7.1.4; 5.1 + Atmos stays a 5.1 set (5.1.2); Atmos alone = 7.1.4
   if (/__atmos/.test(t)) { t = t.replace(/__atmos/g, " "); if (!/(^|\s)(5\.1(\.2)?|7\.1\.4)(?=\s|$)/.test(t)) t = /(^|\s)7\.1(?=\s|$)/.test(t) ? t.replace(/(^|\s)7\.1(?=\s|$)/, " 7.1.4 ") : t + " 7.1.4 "; }
   // "outdoor stereo", "4 in-ceiling stereo": where they go, and how many
-  t = t.replace(/\b(\d{1,2})\s+(?:in[- ]?ceiling|in[- ]?wall|ceiling|wall|outdoor|rock)\s+(?=stereo\b)/g, (m, n) => ` ${n} speakers `)
+  t = t.replace(/(?<![\d.])\b(\d{1,2})\s+(?:in[- ]?ceiling|in[- ]?wall|ceiling|wall|outdoor|rock)\s+(?=stereo\b)/g, (m, n) => ` ${n} speakers `)
     .replace(/\b(?:in[- ]?ceiling|in[- ]?wall|outdoor|rock|ceiling)\s+(?=stereo\b|mono\b|audio\b|music\b|pair\b)/g, " ");
   // explicit configs (the richest first: "7.1.4" before "7.1")
   const RICH = ["7.1.4", "5.1.2", "7.1", "5.1", "soundbar-sub", "sb-sub", "2.1", "soundbar", "sb", "landscape", "stereo", "2.0", "mono"];
@@ -178,27 +208,32 @@ export function parseQuickZone(text) {
   // the setup said twice ("two-channel stereo", "7.1.4 Atmos", "5.1 surround") — the rest is not a name
   if (spk) { t = t.replace(/(^|\s)(\d\.\d(?:\.\d)?)(?=\s|$)/g, " "); eat(/\bstereo\b/); }
   // "stereo, 4 ceiling speakers": a stereo-type set with its count given too
-  if (spk) { const n = eat(/\b(\d{1,2})\s*(?:x\s*)?(?:speakers?|spk)\b/);
-    if (n && +n[1] > 0 && ["stereo", "mono"].includes(spk.config)) spk = { config: "stereo", count: +n[1] };
+  if (spk) { const n = eat(/(?<![\d.])\b(\d{1,2})\s*(?:x\s*)?(?:speakers?|spk)\b/);
+    if (n && +n[1] > 1 && ["stereo", "mono"].includes(spk.config)) spk = { config: "stereo", count: +n[1] };   // "one speaker (mono)" stays mono
     eat(/\bspeakers?\b/); }                                   // "7.1.4 with 6 ceiling speakers": the count isn't a name either
   // "N speakers" / "pair"
   // "just a single speaker" / "one speaker": a mono speaker
-  if (!spk && !noSpk && eat(/\b(?:a\s+)?(?:single|1|lone)\s+speaker\b/)) spk = { config: "mono" };
+  if (!spk && !noSpk && eat(/(?<![\d.])\b(?:a\s+)?(?:single|1|lone|one)\s+speakers?\b(?!\s*(?:pairs?|sets?))/)) spk = { config: "mono" };
   if (!spk && !noSpk) {
-    const pairs = eat(/\b(\d{1,2})\s*(x\s*)?pairs?\b/);
+    const pairs = eat(/(?<![\d.])\b(\d{1,2})\s*(x\s*)?pairs?\b/);
     const m = pairs ? [null, String(+pairs[1] * 2)]
-      : eat(/\b(\d{1,2})\s*(x\s*)?(speakers?|spk)\b/) || (eat(/\bpair\b/) && [null, "2"]);
+      : eat(/(?<![\d.])\b(\d{1,2})\s*(x\s*)?(speakers?|spk)\b/) || (eat(/\bpair\b/) && [null, "2"]);
     if (m) spk = { config: "stereo", count: +m[1] || 2 };
     // plain "speakers" (no number, no setup) is a stereo pair
     else if (eat(/\bspeakers?\b|\baudio\b|\bmusic\b/)) spk = { config: "stereo", count: 2 };
   }
 
+  // the sub said earlier: a soundbar gets its sub, a stereo pair becomes a 2.1
+  if (sub && spk?.config === "soundbar") spk = { config: "soundbar-sub" };
+  else if (sub && spk?.config === "stereo" && (spk.count || 2) === 2) spk = { config: "2.1" };
   t = t.replace(/\bprojection(?:\s+screen)?\b/g, " projector ");
   // projector: "projector 120"
   const proj = eat(/\bprojector\s*(\d{2,3})?\b|\bproj\s*(\d{2,3})?\b/);
   // brand
   let brand = "";
-  for (const b of BRANDS) { const re = new RegExp(`\\b${b}\\b`); if (re.test(t)) { t = t.replace(re, " "); brand = BRAND_LABEL[b] || b[0].toUpperCase() + b.slice(1); break; } }
+  // the brand said first wins ("a TCL … (the old Samsung moves to the den)")
+  const bHit = BRANDS.map(b => ({ b, i: t.search(new RegExp(`\\b${b}\\b`)) })).filter(x => x.i >= 0).sort((x, y) => x.i - y.i)[0];
+  if (bHit) { t = t.replace(new RegExp(`\\b${bHit.b}\\b`), " "); brand = BRAND_LABEL[bHit.b] || bHit.b[0].toUpperCase() + bHit.b.slice(1); }
   // TV size: standalone 32–229 number (after configs consumed), with an optional
   // inch suffix ("75in", "75\"", "75 inch")
   const size = eat(/(?<![#\d])\b(3[2-9]|[4-9]\d|1\d\d|2[0-2]\d)(?:\s*(?:in|inch|inches|"))?(?![\d.])/);
@@ -247,6 +282,7 @@ export function parseQuickZone(text) {
   if (bullet && tv) chips.push({ kind: "hint", label: "Bullet Train fiber HDMI to the TV" });
   if (zone.reach || zone.runFt) chips.push({ kind: "hint", label: zone.runFt ? `${zone.runFt} ft from the rack` : `${zone.reach} from the rack` });
   zone._hints = { local, matrix, apps, avr, dante, director, bullet };
+  if (said.length) { zone.note = [...new Set(said)].join(" · "); chips.push({ kind: "hint", label: `noted: ${zone.note}` }); }
   if (oddSetup && !spk) chips.push({ kind: "warn", label: `${oddSetup} isn't a setup here — pick stereo, 5.1, 7.1 or 7.1.4` });
   // a room with no speakers and no TV has nothing to draw — say so before Add skips it
   if (!zone.endpoints.length) chips.push({ kind: "warn", label: "nothing to add — give it a setup or a TV size" });

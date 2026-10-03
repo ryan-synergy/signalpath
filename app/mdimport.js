@@ -36,17 +36,18 @@ const OUTDOOR_AREA = /\b(exterior|outdoors?|outside|yard|backyard)\b/i;
 
 // gear words → the type a box gets when it isn't in the catalog
 const TYPE_GUESS = [
-  [/\b(av |a\/v )?receiver\b|\bavr\b|\bmrx\b/i, "avr"], [/\b(multi[- ]?zone |power |stereo )?amp(lifier)?s?\b|\bmdx\b/i, "amp"],
+  [/\b(av |a\/v |audio )?receivers?\b|\bavrs?\b|\bmrx\b/i, "avr"], [/\b(multi[- ]?zone |power |stereo )?amp(lifier)?s?\b|\bmdx\b/i, "amp"],
   [/\bhdmi matrix|\bmatrix\b/i, "videoMatrix"], [/\bmxnet\b.*\bswitch|\bav[- ]?over[- ]?ip\b.*\bswitch|\bavoip switch/i, "avSwitch"],
   [/\bavb\b/i, "avbSwitch"], [/\binput module|\baim\b/i, "audioInputModule"], [/\boutput module|\baom\b/i, "audioOutputModule"],
-  [/\b(network |poe |ethernet |lan )switch\b|\bnetgear\b|\baraknis\b|\bcisco\b|\bluxul\b/i, "networkSwitch"],
+  // plurals and the way a summary says it: "3x network switches", "10G switches", "network infrastructure", "ubiquiti sw"
+  [/\b(?:(?:network|poe|ethernet|lan|10g|1g|10 ?gb|gigabit|management|managed|core|access|edge)\s+)+switch(?:es)?\b|\bnetwork\s+(?:equipment|infrastructure|switching|gear|hardware)\b|\bnetgear\b|\baraknis\b|\bcisco\b|\bluxul\b|\bubiquiti\b|\bunifi\b|(?<!nintendo\s)\bswitch(?:es)?\b|\bsw\b/i, "networkSwitch"],
   [/\bmxnet\b(?!.*\b(enc|dec|encoder|decoder|cbox|control)\b)/i, "avSwitch"], [/\brouter\b|\bgateway\b|\bfirewall\b|\budm\b|\bdream ?machine\b|\bdream ?router\b|\bcloud gateway\b|\bpepwave\b|\bpakedge\b.*\brouter|\beero\b/i, "gateway"],
-  [/\bwattbox\b|\bpower conditioner\b|\bups\b|\bsurge\b|\bpdu\b/i, "power"], [/\bsplitter\b/i, "splitter"],
+  [/\bwattbox\b|\bpower (?:conditioners?|conditioning|distribution|management|manager)\b|\bups\b|\bbattery backup\b|\bsurge\b|\bpdu\b/i, "power"], [/\bsplitter\b/i, "splitter"],
   [/\bhost\b|\bcontroller\b|\bcontrol processor\b|\bcore\b/i, "host"],
   [/\bapple ?tv\b|\bcable box\b|\bdirec ?tv\b|\bdirect ?tv\b|\bgenie\b|\bxfinity\b|\bspectrum box\b|\bdish\b|\broku\b|\bkaleidescape\b|\bblu[- ]?ray\b|\bstreamer\b|\bmusic( server)?\b|\bturn ?table\b|\bsonos (port|connect)\b|\bxbox\b|\bplaystation\b|\bps5\b|\bnintendo\b|\bfire ?tv\b|\bchromecast\b|\bnvidia shield\b|\bsatellite\b|\bmedia player\b/i, "source"],
 ];
 // lines in a rack list that aren't boxes in the rack (they're wire, furniture, or in the rooms)
-const NOT_RACK = /\b(cable|cat ?6a?|cat ?5e?|wire|wiring|hdmi cord|patch cord|rack shelf|shelf|blank|vent panel|brush|screws?|labels?|mounts?|brackets?|in[- ]?ceiling|in[- ]?wall|speakers?|subwoofer|tv|television|display|projector|screen|remote|keypad|touch ?panel|ipad|labor|programming|installation|design fee|tax|shipping|freight)\b/i;
+const NOT_RACK = /\b(cable|cat ?6a?|cat ?5e?|wire|wiring|hdmi cord|patch cord|rack shelf|shelf|blank|vent panel|brush|screws?|labels?|mounts?|brackets?|in[- ]?ceiling|in[- ]?wall|speakers?|subwoofer|tv|television|display|projector|screen|remote|keypad|touch ?panel|ipad|labor|programming|installation|design fee|tax|shipping|freight|patch panels?|conduit|wall ?plates?|pull strings?)\b/i;
 const RACK_ITSELF = /\b(middle atlantic|strong|rack ?(enclosure|cabinet)?|\d{2}\s*u\b)/i;
 
 /* ---------- reading: Markdown → rooms / gear / meta / embedded JSON ---------- */
@@ -68,7 +69,27 @@ export function readMarkdown(text) {
     return pre + "\n";
   });
   const lines = src.split("\n");
+  // an outline ("1. **Main Floor**" › "1.1 **Great Room**" › "- 78-inch Sony"): a bullet that is only a bold name, with
+  // deeper lines under it, is a heading at its depth — floor or room is then decided the way a heading's is
+  const ind = l => l.match(/^\s*/)[0].replace(/\t/g, "    ").length;
+  for (let i = 0; i < lines.length; i++) {
+    // "Zone 1A: Family Room", "Area 3 – Den": the label isn't the name ("Zone 1: Living & Entertainment" is a group)
+    lines[i] = lines[i].replace(/^(\s*(?:#{1,6}\s+|[-*+•]\s+|\d{1,3}[.)]\s+)?(?:\*\*|__)?)(?:zone|area|space)\s+\d{1,3}[a-z]?\s*[:.–—-]\s*(?=\S)/i, (m, pre) => pre);
+    // "**Living Room** is the main hub with …": a bold name opening a sentence is the room, the rest its details
+    lines[i] = lines[i].replace(/^(\s*(?:[-*+•]\s+)?)(?:\*\*|__)([^*_]{2,40}?)(?:\*\*|__)\s+(?=[a-z])/, (m, pre, name) => `${pre}${name.trim()} — `);
+    const m = lines[i].match(/^(\s*)(?:(\d{1,3}(?:\.\d{1,3})*)\.?|[-*+•])\s+(?:\*\*|__)([^*_]{2,60}?)(?:\*\*|__)\s*:?\s*$/);
+    if (!m) continue;
+    let j = i + 1; while (j < lines.length && !lines[j].trim()) j++;
+    if (j >= lines.length || ind(lines[j]) <= ind(lines[i])) continue;
+    const depth = m[2] ? m[2].split(".").length : Math.floor(ind(lines[i]) / 2) + 1;
+    lines[i] = `${"#".repeat(Math.min(6, depth + 1))} ${m[3].trim()}`;
+  }
   let section = "none", sectionLevel = 0, area = null, areaLevel = 99, table = null, titled = false, rackName = null;
+  // a phase / section heading that says when ("## Phase 2: Expansion (Future)", "## Prewire Only"): the rooms under it
+  // carry that scope. A room is filed when the next heading arrives, so the scope is the one its own lines were read under.
+  let scopeH = null, contentScope = null;
+  const pushRoom = out.rooms.push.bind(out.rooms);
+  out.rooms.push = (...rs) => pushRoom(...rs.map(r => contentScope && r ? { ...r, parts: [...(r.parts || []), contentScope] } : r));
   let hroom = null;   // a sub-heading under Rooms: one room with details, or a floor of rooms — decided by what's under it
   let room = null;    // the bullet room being read (its indented bullets are its details)
   const closeRoom = () => { if (room) { out.rooms.push(room); room = null; } };
@@ -81,14 +102,22 @@ export function readMarkdown(text) {
     const specLines = h.items.some(it => SPEC_KEY.test(String(it.text).split(":")[0].trim()));
     // every line under it names a room ("Home Theater — 7.1.4…"): it's a floor, whatever it's called ("Basement")
     const allRooms = h.items.length && h.items.every(it => it.sep && looksLikeRoom(nameSep(it.text)?.[1] || ""));
+    // two or more lines name rooms ("Primary Bedroom: 55-inch Sony", "Master Bath: mono speaker"): a suite / wing of rooms
+    const roomLines = h.items.filter(it => it.sep && looksLikeRoom(nameSep(it.text)?.[1] || "") && nameSep(it.text)[1].trim().split(/\s+/).length <= 4);
     if (!specLines && (allRooms || (h.items.length && floorish && h.items.every(it => it.sep || looksLikeRoom(it.text)))))
-      for (const it of h.items) out.rooms.push(splitRoom(it.text, it.parts, h.name));
+      // a heading about rooms ("Detailed Room Specifications", "Room Breakdown") groups them; it isn't a floor
+      for (const it of h.items) out.rooms.push(splitRoom(it.text, it.parts, H_ROOMS.test(h.name) && !H_FLOOR_STRICT.test(h.name) ? h.area : h.name));
+    else if (!specLines && roomLines.length >= 2) for (const it of roomLines) out.rooms.push(splitRoom(it.text, it.parts, h.area));
     else if (!h.items.length && h.floor) { /* a floor heading with nothing under it */ }
     else out.rooms.push({ ...nameAndParens(h.name), parts: [...nameAndParens(h.name).parts, ...h.items.flatMap(it => [it.text, ...it.parts])], area: h.area });
   };
   const setSection = (kind, level) => { closeH(); section = kind; sectionLevel = level; area = null; areaLevel = 99; rackName = null; };
   const heading = (level, t) => {
     table = null;
+    if (scopeH && level <= scopeH.level) scopeH = null;
+    const sw = /\(\s*future\s*\)|\bfuture\s+(?:phase|expansion|rooms?|spaces?|work|scope|build)\b|\bfuture\s*$|^future\b/i.test(t) ? "future"
+      : /\bpre-?wire(?:\s+only)?\b/i.test(t) && !/\bno\s+pre-?wire/i.test(t) ? "prewire" : null;
+    if (sw) scopeH = { word: sw, level };
     if (level <= areaLevel) { area = null; areaLevel = 99; }
     // the document's title: the job's name, never a section
     if (!titled && level === 1 && section === "none" && !/^(?:the\s+)?(rooms?|zones?|spaces?|rack|equipment(?: rack)?|gear|room[- ]by[- ]room|by room|audio\s*\/\s*video|av)$/i.test(t) && (!isRoomName(t) || t.split(/\s+/).length >= 3)) {
@@ -102,7 +131,7 @@ export function readMarkdown(text) {
       if (H_SKIP.test(t) && !looksLikeRoom(t)) { closeH(); out.skipped.push(`section “${t}”`); section = "skip-in-rooms"; return; }
       section = "rooms";
       // a heading with nothing under it yet, and now a deeper one: it was a floor
-      if (hroom && !hroom.items.length && level > hroom.level) { area = hroom.name; areaLevel = hroom.level; hroom = null; }
+      if (hroom && !hroom.items.length && level > hroom.level) { if (!(H_ROOMS.test(hroom.name) && !H_FLOOR_STRICT.test(hroom.name))) { area = hroom.name; areaLevel = hroom.level; } hroom = null; }
       closeH();
       hroom = { name: t, level, items: [], area, floor: H_FLOOR.test(t) && !looksLikeRoom(t) };
       return;
@@ -130,6 +159,7 @@ export function readMarkdown(text) {
     const h = raw.match(/^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/) || (setext ? [raw, "#".repeat(setext), raw.trim()] : null);
     if (setext) i++;
     if (h) { const t = plain(linkText(h[2])).replace(/[:.]+$/, "").trim(); if (t) heading(h[1].length, t); continue; }
+    if (raw.trim()) contentScope = scopeH?.word || null;
     const line = raw.replace(/\s+$/, "");
     if (!line.trim()) { table = null; continue; }
     if (/^\s*([-*_]\s*){3,}$/.test(line)) { table = null; continue; }    // a rule
@@ -150,7 +180,9 @@ export function readMarkdown(text) {
     if (pseudo) { const t = plain(pseudo[1]).replace(/:$/, "").trim(); if (t && !(metaKey(t))) { heading(section === "none" ? 2 : 7, t); continue; } }
     const pl = plain(linkText(line));
     // "Rack: mrx 1140, atv4k qty2, mdx-16" / "Rack Equipment: A, B and C." — a whole rack on one line
-    const inl = pl.match(/^(?:[-*+•]\s+|\d{1,3}[.)]\s+)?(rack(?:\s+(?:equipment|gear))?|equipment(?:\s+rack)?|head[- ]?end|gear|components|hardware|bom)\s*:\s*(.+)$/i);
+    // and said in a sentence: "Equipment closet includes: …", "Rack contains …", "The equipment closet will house 6 Apple TV 4K units, …"
+    const inl = pl.match(/^(?:[-*+•]\s+|\d{1,3}[.)]\s+)?(rack(?:\s+(?:equipment|gear))?|equipment(?:\s+rack)?|head[- ]?end|gear|components|hardware|bom)\s*:\s*(.+)$/i)
+      || pl.match(/^(?:[-*+•]\s+)?(?:the\s+)?((?:main\s+|av\s+|a\/v\s+)?(?:rack|equipment(?:\s+(?:rack|closet|room|list|summary|inventory))?|(?:media|av|a\/v|mechanical)\s+(?:closet|room)|head[- ]?end)(?:\s+components)?)\s*(?::|\s+(?:includes?|contains?|holds?|houses?|has|will\s+(?:house|hold|include|contain|have))\b:?)\s*(.+)$/i);
     if (inl) { closeH(); for (const g of splitList(inl[2])) out.gear.push({ text: g, line: i + 1, rack: rackName }); continue; }
     const kv = pl.match(/^(?:[-*+•]\s+)?([A-Za-z][\w /&]{1,24}?)\s*:\s*(.+)$/);
     if (kv && (!["rooms", "rack"].includes(section) || (section === "rooms" && !room && !hroom && metaKey(kv[1]))) && metaLine(out.meta, `${kv[1]}: ${kv[2]}`)) continue;
@@ -168,6 +200,8 @@ export function readMarkdown(text) {
         else hroom.items.push({ text: body, sep: !!nameSep(body), parts: [] });
         continue;
       }
+      // a sentence that names no room ("These rooms are designed for future expansion. Cabling is …"): a note
+      if (!bullet && !room && body.split(/\s+/).length >= 8 && /[.!?]$/.test(body) && !nameSep(body) && !startsRoom(body)) { (out.noteLines ||= []).push(body); continue; }
       const lead = line.match(/^\s*/)[0].replace(/\t/g, "    ").length;
       const yn = body.match(/^(?:name|room|zone|space)\s*:\s*(.+)$/i);                    // YAML: "- name: great_room"
       if (!yn && room && ((bullet && indent >= 2) || (!bullet && lead >= 2))) { room.parts.push(body); continue; }   // a detail under the room above
@@ -178,6 +212,10 @@ export function readMarkdown(text) {
       continue;
     }
     if (section === "rack") {
+      // "Family Room — is equipped with an 82-inch Sony … surround": a room, even under a heading that sounded like gear ("… Hub")
+      const rns = !bullet && nameSep(body);
+      if (rns && looksLikeRoom(rns[1]) && rns[1].trim().split(/\s+/).length <= 4 && /\b\d{2,3}[- ]?inch|\btv\b|television|speakers?|surround|stereo|projector|display|soundbar/i.test(rns[2] || "")) {
+        closeH(); section = "rooms"; sectionLevel = 7; room = splitRoom(body, [], area); continue; }
       if (!bullet && body.split(/\s+/).length >= 8 && (/[.!?]$/.test(body) || SENTENCE.test(body))) { (out.noteLines ||= []).push(body); continue; }
       if (!bullet && /\S(?:\t|\s{2,})\S/.test(line.trim()) && line.trim().split(/\t|\s{2,}/).length >= 2) { for (const g of line.trim().split(/\t|\s{2,}/)) out.gear.push({ text: g, line: i + 1, rack: rackName }); continue; }
       if (!bullet && /,/.test(body) && splitList(body).length >= 2) { for (const g of splitList(body)) out.gear.push({ text: g, line: i + 1, rack: rackName }); continue; }
@@ -201,6 +239,15 @@ export function readMarkdown(text) {
   if (!out.rooms.length && out.titleRoom && (out.loose?.length || out.prose?.length)) {
     out.rooms.push({ name: out.titleRoom, parts: [...(out.loose || []).map(l => l.text), ...(out.prose || []).map(l => l.text)] }); out.loose = []; out.prose = [];
   }
+  // a room said twice (a summary table, then "Detailed Room Specifications"): one room — the first mention's
+  // details lead, the later ones only fill in what it didn't say
+  // (same name, and the same floor — or one of them names no floor)
+  const nk = r => String(r.name || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(), kept = [];
+  for (const r of out.rooms) {
+    const first = r.name && kept.find(k => nk(k) === nk(r) && (!k.area || !r.area || k.area === r.area));
+    if (first) { first.parts = [...(first.parts || []), ...(r.parts || [])]; first.area ||= r.area; } else kept.push(r);
+  }
+  out.rooms = kept;
   for (const r of out.rooms) if (r.area && !out.areas.includes(r.area)) out.areas.push(r.area);
   return out;
 }
@@ -231,7 +278,13 @@ const RACK_WORDS = /\b(equipment|head[- ]?end|gear|hardware|electronics|bill of 
 const H_FLOOR_STRICT = /\b(floor|level|upstairs|downstairs|exterior|outdoors?|outside|wing|grounds)\b/i;
 const metaKey = t => /^(job|project|job name|project name|client|customer|owner|homeowner|address|site|platform|control|control system|control platform|automation|prepared by|drawn by|designer|date|prepared for|phone|email|quote|proposal|budget|estimate)$/i.test(t);
 // sub-heading rooms keep collecting their lines
-const looksLikeRoom = t => /\b(room|bed(room)?|bath|kitchen|dining|living|family|great|den|office|study|library|theater|theatre|media|cinema|gym|patio|deck|pool|spa|lounge|bar|game|play|kids?|nursery|guest|master|primary|suite|loft|garage|entry|foyer|hall|wine|cellar|basement|yard|backyard|front ?yard|lanai|porch|terrace|balcony|court|outdoor|bonus|flex|mud|laundry|nook|sunroom|conservatory|studio|workshop|closet|attic)\b/i.test(t);
+// tech shorthand in a room's name ("fam rm", "mstr bdrm", "kit", "gr rm", "din rm") — applied to names only, never gear lines
+const ROOM_ABBR = [[/^\s*kit(?:\s+rm)?\s*$/i, "Kitchen"], [/\bfam\b/gi, "Family"], [/\bmstr\b|\bmst\b/gi, "Master"], [/\bbdrm\b|\bbdr\b|\bbedrm\b/gi, "Bedroom"],
+  [/\bgr\s+rm\b/gi, "Great Room"], [/\bdin\b/gi, "Dining"], [/\blvg\b|\bliv\b/gi, "Living"], [/\bofc\b/gi, "Office"], [/\bthtr\b/gi, "Theater"],
+  [/\bbsmt\b/gi, "Basement"], [/\bgst\b/gi, "Guest"], [/\brm\b/gi, "Room"]];
+const expandRoom = n => ROOM_ABBR.reduce((t, [re, w]) => t.replace(re, w), String(n ?? ""));
+const looksLikeRoom = t => LOOKS_ROOM.test(expandRoom(t));
+const LOOKS_ROOM = /\b(room|bed(room)?|bath|kitchen|dining|living|family|great|den|office|study|library|theater|theatre|media|cinema|gym|patio|deck|pool|spa|lounge|bar|game|play|kids?|nursery|guest|master|primary|suite|loft|garage|entry|foyer|hall|wine|cellar|basement|yard|backyard|front ?yard|lanai|porch|terrace|balcony|court|outdoor|bonus|flex|mud|laundry|nook|sunroom|conservatory|studio|workshop|closet|attic)\b/i;
 // a line that opens with a room ("kitchen stereo", "master 65 sony") rather than describing one ("Guest viewing capability")
 const startsRoom = t => { const x = String(t).replace(/^(?:the|our|your)\s+/i, ""); ROOM_PHRASE.lastIndex = 0; const m = ROOM_PHRASE.exec(x); ROOM_PHRASE.lastIndex = 0;
   return (m && m.index === 0) || /^(master|primary|family|great|media|game|bonus|living|guest)\s+(\d|stereo|mono|surround|soundbar|tv|projector|\d\.\d)/i.test(x); };
@@ -288,7 +341,8 @@ function tableRow(out, section, head, cells, area) {
   const other = head.map((h, i) => i).filter(i => ![roomCol, spkI, tvI, brI, flI, scI, szI, 0].includes(i) || (i === 0 && roomCol > 0)).filter(i => !keep.has(i));
   for (const i of other) parts.push(notesWords(get(i)));
   if (!name || /^(total|subtotal)$/i.test(name)) return;
-  out.rooms.push({ name, parts: parts.filter(Boolean), area: get(flI) || area, table: true });
+  const np = nameAndParens(name);                                       // "Patio (covered)": the note isn't the name
+  out.rooms.push({ name: np.name, parts: [...parts, ...np.parts].filter(Boolean), area: get(flI) || area, table: true });
 }
 // from a notes column, only the words that change the design
 // a room's "Label: value" line → the words that matter ("TV: None" = no TV; a long Notes line only keeps owner/brand words —
@@ -304,7 +358,9 @@ function partText(p) {
   return v;
 }
 const notesWords = v => String(v).trim().split(/\s+/).length <= 3 ? keywordsOnly(v)
-  : (String(v).match(/\b(sony|samsung|lg|tcl|vizio|hisense|panasonic|sharp|seura|sunbrite|ofe|owner[- ]?(?:furnished|supplied|provided)|customer[- ]?(?:supplied|provided)|existing)\b/gi) || []).join(" ");
+  : [...(String(v).match(/\b(sony|samsung|lg|tcl|vizio|hisense|panasonic|sharp|seura|sunbrite|ofe|owner[- ]?(?:furnished|supplied|provided)|customer[- ]?(?:supplied|provided)|existing)\b/gi) || []),
+     // "Prewire ready, no install", "future phase": the scope said in a long note
+     ...(/\bno\s+pre-?wire/i.test(v) ? [] : (String(v).match(/\bpre-?wire\b/gi) || []).slice(0, 1)), ...(String(v).match(/\bfuture\b/gi) || []).slice(0, 1)].join(" ");
 const keywordsOnly = s => (String(s).match(/\b(sony|samsung|lg|tcl|vizio|hisense|panasonic|sharp|seura|sunbrite|c[- ]seed|ofe|owner[- ]?(furnished|supplied|provided)|customer[- ]?(supplied|provided)|existing|re-?use|prewire|pre-wire|future|local|apps|avr|dante|bullet|matrix|projector)\b/gi) || []).join(" ");
 
 /* ---------- gear: a line → a catalog product (or a typed box) ---------- */
@@ -357,8 +413,13 @@ export function gearLine(catalog, text0) {
   const cols = String(text).split("|").map(x => x.trim());
   if (cols.length >= 4 && /unspecified|placeholder/i.test(cols[2]) && cols[3]) text = `${cols[0]} x ${cols.slice(3).join(" ")}`;
   let t = noMoney(text).replace(/\s*\|\s*/g, " ").replace(/\(\s*[-–—,;:]?\s*\)/g, " ").replace(/\s+[-–—:]\s*$/, "").replace(/\s+/g, " ").trim();
+  // a count said in words: "eight Apple TV units", "two Anthem receivers"
+  const WORDN = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, a: 1, an: 1, single: 1, pair: 2 };
+  t = t.replace(/^\s*(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|an?|single)\s+(?!x\b)(?=[a-z])/i, (m, w) => `${WORDN[w.toLowerCase()]} `)
+    .replace(/\s+(?:units?|pcs?|pieces?)\b(?=\s*$|\s*\()/i, "");
   let qty = 1;
-  const q = t.match(/^\s*(\d{1,3})\s*(?:x|×|pcs?\.?|ea\.?|units?)?\s+(?=\D)/i) || t.match(/\(\s*(?:qty|x|×)\s*:?\s*(\d{1,3})\s*\)/i) ||
+  // "3 x Apple TV", "(3) Apple TV 4K", "Apple TV (qty 3)", "Apple TV x3"
+  const q = t.match(/^\s*\(\s*(\d{1,3})\s*\)\s*/) || t.match(/^\s*(\d{1,3})\s*(?:x|×|pcs?\.?|ea\.?|units?)?\s+(?=\D)/i) || t.match(/\(\s*(?:qty|x|×)\s*:?\s*(\d{1,3})\s*\)/i) ||
     t.match(/\b(?:qty|quantity)\s*:?\s*(\d{1,3})\b/i) || t.match(/\s(?:x|×)\s*(\d{1,3})\s*$/i);
   if (q) { qty = Math.max(1, Math.min(24, +q[1])); t = t.replace(q[0], " ").trim(); }
   t = t.replace(/^[-–—:]\s*/, "").replace(/[-–—:,;.]+$/, "").replace(/\batv\s*4k\b|\batv4ks?\b|\batvs?\b/gi, "Apple TV 4K").replace(/\bmdx\s*-?\s*(8|16)\b/gi, (m, n) => `MDX-${n}`).trim();
@@ -374,7 +435,7 @@ export function gearLine(catalog, text0) {
   if (NOT_RACK.test(t) && !TYPE_GUESS.some(([re]) => re.test(t))) return { skip: t };
   const type = TYPE_GUESS.find(([re]) => re.test(t))?.[1];
   if (!type) return { unknown: t };
-  const name = t.split(/\s+(?:—|–|-|:|\bfor\b)\s+|\s*\(/i)[0].replace(/\s+(receiver|amplifier|amp|switch|box)$/i, (m, w) => /amp|receiver/i.test(w) ? m : m).slice(0, 60).trim();
+  const name = (t.split(/\s+(?:—|–|-|:|\bfor\b)\s+|\s*\(/i)[0].trim() || t.replace(/[()]/g, " ").replace(/\s+/g, " ").trim()).slice(0, 60).trim();
   return { qty, type, name };
 }
 
@@ -476,8 +537,7 @@ export function importMarkdown(text, catalog) {
   // the biggest surround rooms are wired first, so a receiver the file lists goes to the room it was
   // bought for (an MRX 1140 to the 7.1.4 theater, not the 5.1 living room); the file's order comes back after
   const RANK = { "surround-7.1.4": 3, "surround-7.1": 2, "surround-5.1": 1 };
-  roomsIn = roomsIn.flatMap(r => { const m = String(r.name || "").match(/^(.+?)\s+(?:\+|&)\s+(.+)$/);
-    return m && looksLikeRoom(m[1]) && looksLikeRoom(m[2]) ? [{ ...r, name: m[1] }, { ...r, name: m[2], parts: [...r.parts] }] : [r]; });
+  // "Kitchen & Breakfast Bar", "Game & Recreation Room": one space named as one — one room (splitting it copied the TV into both)
   for (const r of roomsIn) r.parts = (r.parts || []).filter(p => { const m = String(p).match(/^\s*(?:location|floor|level)\s*:\s*(.{1,40})$/i); if (m) { r.area ||= m[1].trim(); return false; } return true; });
   const prepped = roomsIn.map((r, order) => {
     const pq = pqRoom(r.parts);                                           // a PlanQueue room: "- 5 | Synergy | Unspecified Speakers"
@@ -496,7 +556,8 @@ export function importMarkdown(text, catalog) {
       if (!made) { unmapped.push(`not read as a room: ${rest.slice(0, 120)}`); continue; }
     } else {
       const p = rest ? parseQuickZone(`${name} ${rest}`) : null;
-      if (p && !p.empty) made = run({ op: "add_zones", text: `${name} ${rest}` }, name);
+      // a named room is one room, however many sentences describe it ("… speakers. The stereo pair delivers …")
+      if (p && !p.empty) made = run({ op: "add_zones", text: `${name} ${rest}`, ...(p.zone._same === undefined ? { one: true } : {}) }, name);
       if ((!made || !made.length) && r.prose && !looksLikeRoom(name)) { unmapped.push(`not read as a room: ${(name + " " + rest).trim().slice(0, 120)}`); continue; }
       if (!made || !made.length) {
         // a room listed with nothing readable in it: keep the room (a walk lists rooms before gear)
@@ -649,8 +710,8 @@ export function pqRoom(parts) {
 }
 const BRANDISH = /^(sony|samsung|lg|tcl|vizio|hisense|panasonic|sharp|seura|sunbrite|c seed|epson|jvc)$/i;
 // a room's name as written: no prices, no list punctuation, no trailing colon; all-lowercase gets capitals
-const cleanName = n => { let t = noMoney(plain(n)).replace(/[,;:]+$/g, "").replace(/\s+/g, " ").trim().slice(0, 60);
-  return t && t === t.toLowerCase() ? t.replace(/\b[a-z]/g, c => c.toUpperCase()) : t; };
+const cleanName = n => { const raw = noMoney(plain(n)).replace(/[,;:]+$/g, "").replace(/\s+/g, " ").trim(), t = expandRoom(raw).slice(0, 60);
+  return t && raw === raw.toLowerCase() ? t.replace(/\b[a-z]/g, c => c.toUpperCase()) : t; };
 const freeZoneId = (job, name) => { const b = "z-" + (String(name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "room"); let id = b, n = 2;
   const taken = new Set(job.house.zones.flatMap(z => [z.id, ...(z.endpoints || []).map(e => e.id)])); while (taken.has(id)) id = `${b}-${n++}`; return id; };
 const titleish = s => String(s).replace(/\b\w/g, c => c.toUpperCase());

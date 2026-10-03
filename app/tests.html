@@ -504,6 +504,14 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
     ["bathroom 32 with just a single speaker", ["Bathroom | Mono (1 speaker) | TV 32\""]],
     ["okay so uh master bedroom 65 inch with um 7.1 also don't forget the bathroom 32 TV no audio", ["Master Bedroom | 7.1 surround | TV 65\"", "Bathroom | TV 32\""]],
     ["upstairs master 65 7.1", ["Master | 7.1 surround | TV 65\""]],
+    // Ryan 2026-10-03: "surround sound" is a 5.1; gear and placement said in passing never make a room or a name
+    ["family room surround sound", ["Family Room | 5.1 surround"]],
+    ["theater surround sound with atmos", ["Theater | 7.1.4 Atmos"]],
+    ["family room 5.1 also a subwoofer", ["Family Room | 5.1 surround"]],
+    ["living room 75 with an apple tv and the sonos", ["Living Room | TV 75\" | noted: apple tv · sonos"]],
+    ["family room 75 inch tv over the fireplace", ["Family Room | TV 75\" | noted: over the fireplace"]],
+    ["den speakers and a sub", ["Den | 2.1 (pair + sub)"]],
+    ["lounge 5.1 outdoor speakers", ["Lounge | 5.1 surround"]],
     ["upper bedroom 50 stereo, lower bedroom 43", ["Upper Bedroom | Stereo pair | TV 50\"", "Lower Bedroom | TV 43\""]],
   ];
   t("quickadd: a floor stays in a name only when the job already has that room (\"upstairs bath\" beside an existing Bath)",
@@ -1837,6 +1845,16 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("commands: delete a box and its connections", r.steps[0].ok && !r.job.solutions[0].racks[0].devices.some(d => d.id === "turntable") &&
     !r.job.solutions[0].connections.some(c => c.from === "turntable" || c.to === "turntable"));
   t("commands: new-zone shorthand is not a command", C.parseCommandText("den 5.1 65 sony matrix", res, sol) === null && C.parseCommandText("theater 7.1 85 sony avr", res, sol) === null);
+  // Ryan 2026-10-03: "family room surround sound" on a job with a Family Room made a second one
+  {
+    const n0 = res.house.zones.length, spkOf = (j, n) => j.house.zones.find(z => z.name === n).endpoints.find(e => e.type === "speakers")?.config;
+    const a = run("family room surround sound"), b = run("The family room, 85 inch Sony."), c2 = run("family room surround sound, guest cottage 55 stereo");
+    t("commands: an existing room said the way rooms are described is an edit — never a second room of that name",
+      a && a.job.house.zones.length === n0 && spkOf(a.job, "Family Room") === "surround-5.1"
+      && b && b.job.house.zones.length === n0 && b.job.house.zones.find(z => z.name === "Family Room").endpoints.find(e => e.type === "display").size === 85
+      && c2 && c2.job.house.zones.length === n0 + 1 && c2.job.house.zones.some(z => z.name === "Guest Cottage"),
+      [a, b, c2].map(x => x ? x.job.house.zones.length : "null").join(","));
+  }
   r = run("master optical backup");
   t("commands: eARC only where a receiver feeds the TV (says why)", !r.steps[0].ok && /receiver/.test(r.steps[0].error));
   // a failed step changes nothing; later steps still run

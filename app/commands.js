@@ -12,7 +12,7 @@
 
 import { describeNode, productName, TYPE_NAME, SPEAKER_SETUP, SIGNAL_NAME, SCOPE_NAME, STATUS_NAME, REMOTE_NAME, AUDIO_BACK_NAME } from "./names.js";
 import { readHookup, setVideo, setSpeakers, setAudioBack, addRackDevice, autoHookup, nextFreeOutputs, outputsNeeded, RUNS, setAdapterAudio } from "./hookup.js";
-import { parseQuick } from "./quickadd.js";
+import { parseQuick, parseQuickZone, roomTexts } from "./quickadd.js";
 import { fitRacks } from "./racksizes.js";
 
 /* ---------- the vocabulary (also what the AI is told) ---------- */
@@ -200,7 +200,8 @@ function purgeZone(job, zone) {
 
 const HANDLERS = {
   add_zones(job, sol, c) {
-    const parses = parseQuick(c.text || "", job.house.zones.map(z => z.name)).filter(p => !p.empty);
+    // one: true — the text is ONE room (an imported room with its name and a description of several sentences)
+    const parses = (c.one ? [parseQuickZone(c.text || "")] : parseQuick(c.text || "", job.house.zones.map(z => z.name))).filter(p => !p.empty);
     if (!parses.length) throw new Error(`couldn't read any zones from "${c.text}"`);
     const names = [];
     for (const p of parses) {
@@ -243,6 +244,10 @@ const HANDLERS = {
       else if (tv) tv.displayType = d;
       else z.endpoints.push({ id: freeId(job, sol, z.id + "-tv"), type: "display", displayType: d, brand: "", size: 65, status: "new" });
       did.push(`display → ${d === "none" ? "none" : d === "tv" ? "TV" : "projector"}`);
+    }
+    // "patio 75" on a patio with no TV yet: that's a 75" TV for it
+    if ((c.tv_size != null || c.brand != null) && !ep("display") && c.display == null) {
+      z.endpoints.push({ id: freeId(job, sol, z.id + "-tv"), type: "display", displayType: "tv", brand: "", size: 65, status: "new" }); did.push("display → TV");
     }
     const tv = ep("display"), spk = ep("speakers");
     if (c.tv_size != null) { if (!tv) throw new Error(`${z.name} has no TV`); const n = Math.round(+String(c.tv_size).replace(/[^\d.]/g, ""));
@@ -519,8 +524,16 @@ export function parseCommandText(text, job, sol) {
   const parts = String(text || "").split(/\s*(?:;|\n|\bthen\b)\s*/).map(s => s.trim()).filter(Boolean);
   if (!parts.length) return null;
   const cmds = [];
-  for (const p of parts) { const c = parseOne(p, job, sol); if (!c) return null; cmds.push(...c); }
-  return cmds;
+  let all = true;
+  for (const p of parts) { const c = parseOne(p, job, sol); if (!c) { all = false; break; } cmds.push(...c); }
+  if (all) return cmds;
+  // a line that mixes rooms already in the job with new ones ("family room surround sound, guest room 55"):
+  // each room the job has is an edit, the rest are added — never a second Family Room
+  const segs = roomTexts(text);
+  if (segs.length < 2) return null;
+  const out = []; let edits = 0;
+  for (const sgm of segs) { const c = parseOne(sgm, job, sol); if (c) { out.push(...c); edits++; } else out.push({ op: "add_zones", text: sgm }); }
+  return edits ? out : null;
 }
 
 // the zone(s) a phrase starts with: "kitchen, office and dining ..." → names + the rest
@@ -533,7 +546,10 @@ function leadingZones(job, t) {
                 names.find(({ n }) => { const w = n.split(" ")[0]; return w.length >= 3 && (rest.startsWith(w + " ") || rest.startsWith(w + ",")) &&
                   names.filter(x => x.n.split(" ")[0] === w).length === 1; });
     if (!hit) break;
-    const len = rest.startsWith(hit.n) ? hit.n.length : hit.n.split(" ")[0].length;
+    let len = rest.startsWith(hit.n) ? hit.n.length : hit.n.split(" ")[0].length;
+    // the name said short: "master bed" for Master Bedroom — the next word starts the room's next word
+    if (!rest.startsWith(hit.n)) { const nw = hit.n.split(" ")[1], said = rest.slice(len).trim().split(/[\s,]/)[0];
+      if (nw && said && said.length >= 3 && nw.startsWith(said)) len = rest.indexOf(said, len) + said.length; }
     found.push(hit.z.name); rest = rest.slice(len).trim();
     if (!/^(,|and\b|&)/.test(rest)) break;
   }
@@ -562,7 +578,8 @@ function parseOne(p, job, sol) {
       return [{ op: "add_device", product: p.replace(/^add\s+(?:another\s+|a second\s+|one more\s+|an?\s+)?/i, "") }];
     return [{ op: "add_zones", text: p.replace(/^add\s+/i, "") }];
   }
-  const lz = leadingZones(job, t);
+  // dictation dresses a room up: "The family room.", "in the kitchen", "patio. landscape speakers"
+  const lz = leadingZones(job, t.replace(/[.!?:]+(?=\s|$)/g, " ").replace(/^(?:and\s+|also\s+|so\s+|ok(?:ay)?\s+|um\s+|uh\s+)*(?:in\s+)?(?:the|our|their|my)\s+/, "").replace(/\s+/g, " ").trim());
   if (!lz) {
     // "<box> into/to <thing>" without a verb: both ends must resolve, or it's not a command
     if ((m = t.match(/^(.+?)\s+(?:into|to|→|->)\s+(.+)$/)) && findNode(job, sol, m[1]).id && findNode(job, sol, m[2], "speakers").id !== undefined)
@@ -609,6 +626,22 @@ function parseOne(p, job, sol) {
     else if (w === "projector") c.display = "projector";
     else if (w === "confirm" || w === "size" || w === "check") c.confirm_size = true;
     else { ok = false; break; }
+  }
+  // the rest said the way a room is described ("surround sound", "with a 75 inch sony", "no tv just ceiling speakers"):
+  // read it with quick-add's reader — an existing room plus a setup is an edit, never a second room of that name
+  // (Ryan 2026-10-03: "family room surround sound" on a job that had a Family Room made another one)
+  if (!ok) {
+    const pz = parseQuickZone(rest);
+    const spk = pz.zone.endpoints.find(e => e.type === "speakers"), tv = pz.zone.endpoints.find(e => e.type === "display");
+    const noTv = /\bno\s*(?:video\s*)?(?:tv|display|screen|television)\b|\baudio\s*only\b/.test(rest), noSpk = /\bno\s+(?:speakers?|audio|sound|music)\b|\bvideo\s+only\b/.test(rest);
+    if (pz.named || (!spk && !tv && !noTv && !noSpk && pz.zone.scope === "included")) return null;
+    for (const k of Object.keys(c)) delete c[k];
+    ok = true;
+    if (spk) c.speakers = spk.config; else if (noSpk) c.speakers = "none";
+    if (tv) { c.display = tv.displayType || "tv"; if (!tv.confirm) c.tv_size = tv.size; if (tv.brand) c.brand = tv.brand; } else if (noTv) c.display = "none";
+    if (pz.zone.scope !== "included") c.scope = pz.zone.scope;
+    if (pz.zone.endpoints.some(e => e.status === "ofe")) { c.tv_status = c.speakers_status = "ofe"; }
+    if (pz.zone._hints?.matrix) feed = "matrix"; if (pz.zone._hints?.avr) feed = "avr";
   }
   if (!ok || (!Object.keys(c).length && !feed)) return null;
   const devs = rackDevices(sol);

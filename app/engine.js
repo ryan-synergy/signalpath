@@ -466,7 +466,7 @@ export function validate(job, ix = indexJob(job)) {
       const scope = ix.zonesById[ix.endpointZone[eid]]?.scope || "included";
       if (scope === "future" || (scope === "prewire" && !rackGear)) continue;
       if (scope === "prewire") { W("orphan-endpoint", `${nm(eid)} (pre-wire) isn't wired to the rack yet — its cable has no home run`, eid); continue; }
-      E("orphan-endpoint", `${nm(eid)} has nothing feeding it — add a connection`, eid);
+      E("orphan-endpoint", `${nm(eid)} ${/speakers$/i.test(nm(eid)) ? "have nothing feeding them" : "has nothing feeding it"} — add a connection`, eid);
     }
     // a TV whose only feed is its decoder / balun, and nothing feeds that (its switch or receiver was deleted,
     // or the wire into it re-pointed): as dark as an unwired TV — say so (2026-10-03 hammer: every room stayed green)
@@ -477,7 +477,7 @@ export function validate(job, ix = indexJob(job)) {
       if (!feeds.length) continue;
       const dead = feeds.every(c => { const k = (sol.companions || []).find(x => x.id === c.from); return k && !compIns(k.id); });
       const scope = ix.zonesById[ix.endpointZone[eid]]?.scope || "included";
-      if (dead && scope !== "future") E("orphan-endpoint", `${nm(eid)} has nothing feeding it — its ${adapterName((sol.companions || []).find(x => x.id === feeds[0].from))} isn't connected to anything`, eid);
+      if (dead && scope !== "future") E("orphan-endpoint", `${nm(eid)} ${/speakers$/i.test(nm(eid)) ? "have nothing feeding them" : "has nothing feeding it"} — its ${adapterName((sol.companions || []).find(x => x.id === feeds[0].from))} isn't connected to anything`, eid);
     }
     // sources should feed something
     // (a network link counts from either end: a music server on the AVB / Dante network IS connected)
@@ -4794,7 +4794,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       if (vsrc === rcv) continue;
       if ((sol.connections || []).some(c => c.from === tv.id && c.signal === "audioReturn" && c.to === rcv)) continue;
       out.notes.push({ code: "tv-apps-no-surround", solution: sol.id, ref: tv.id,
-        msg: `${z.name}: the TV's own apps won't play on the ${SPEAKER_SETUP_SHORT(spk.config)} speakers — the TV is fed from ${describeNode(job, sol, vsrc || "?").short} and nothing brings its sound back to ${describeNode(job, sol, rcv).short}; feed the TV through the receiver, or add TV audio back (eARC kit or optical)` });
+        msg: `${z.name}: the TV's own apps won't play on the ${SPEAKER_SETUP_SHORT(spk.config)} speakers — ${vsrc ? `the TV is fed from ${describeNode(job, sol, vsrc).short}` : "the TV runs on its own apps"} and nothing brings its sound back to ${describeNode(job, sol, rcv).short}; feed the TV through the receiver, or add TV audio back (eARC kit or optical)` });
     }
 
     /* -- an audio input module with nothing plugged in: it's how the video sources' sound

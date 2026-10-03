@@ -2035,7 +2035,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   const unfed = structuredClone(res); unfed.house.zones.push({ id: "z-den", name: "Den", scope: "included", endpoints: [{ id: "z-den-spk", type: "speakers", config: "stereo", count: 2, status: "new" }] });
   const sum = A.jobSummary(unfed, 0, CATX);
   t("ai: the job summary names zones, feeds, problems and the catalog", /Family Room: 5\.1 surround speakers/.test(sum) && /Den: .*speakers ← NOT FED/.test(sum) &&
-    /PROBLEM: Den speakers has nothing feeding it/.test(sum) && /Anthem MRX 1140\b/.test(sum));
+    /PROBLEM: Den speakers have nothing feeding them/.test(sum) && /Anthem MRX 1140\b/.test(sum));
   const hp = A.handoffPrompt(res, 0, CATX, "bump the patio to 75");
   t("ai: the handoff prompt carries rules, vocabulary, job and request", /propose|commands/i.test(hp) && Object.keys(C.OPS).every(op => hp.includes(op)) && hp.includes("WHAT I WANT:\nbump the patio to 75"));
   const p1 = A.extractProposal("Sure!\n```json\n{\"summary\":\"s\",\"commands\":[{\"op\":\"set_zone\",\"zone\":\"patio\",\"tv_size\":75}]}\n```\nDone.");

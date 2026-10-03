@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-x3y1PB9ZQKklK39YucVy/IdlSboKSiwjPCdD5wAYkBQ=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-jRv8SuVF4im1OCnX1LDJ1ACiAEb3BpSsNEadzcZZBbc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-GhMpansE7ADGxrvUc4SPDO5zGRPLK7WpRim2Wx6DsxA=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-Cj4uSMx75wCg7n1TFVqRxi7jmMf9W2iEe6tVyQgJSbM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -67,7 +67,8 @@
   #topbar #jobName { flex: 0 1 200px; min-width: 90px; width: 0; }
   #topbar #jobsSel, #topbar #solSel { max-width: 170px; }
   @media (max-width: 1200px) { #topbar .logo { display: none; } #topbar { gap: 6px; padding: 8px 10px; } }
-  @media (max-width: 1000px) { #topbar { flex-wrap: wrap; row-gap: 6px; } #topbar .spacer { display: none; } }
+  /* wraps up to 1100 — an iPad Pro in portrait (1024) ran Print and the tools button off the right edge (iPad pass 2026-10-03) */
+  @media (max-width: 1100px) { #topbar { flex-wrap: wrap; row-gap: 6px; } #topbar .spacer { display: none; } }
   label.chk { display: flex; align-items: center; gap: 5px; cursor: pointer; }
 
   /* ---- main split ---- */
@@ -228,7 +229,7 @@
   #right { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
   /* portrait tablet / narrow window: the drawing on top at full width, the
      editor panel underneath (side by side left the sheet at ~25% scale) */
-  @media (max-width: 900px) and (orientation: portrait) {
+  @media (max-width: 1100px) and (orientation: portrait) {
     #main { flex-direction: column; }
     #right { flex: 0 0 62%; min-height: 0; }
     #right #advisor { max-height: 96px; }
@@ -336,6 +337,11 @@
   .asb td .w { color: #b45309; font-size: 12px; margin-top: 2px; }
   .asb .asb-empty { text-align: center; padding: 32px 16px; }
   .asb .asb-empty p { color: var(--muted); max-width: 560px; margin: 8px auto 16px; }
+  /* tablets: each box is a card with its fields in a grid wide enough for a full MAC (the table's columns were ~95px on an iPad) */
+  @media (min-width: 761px) and (max-width: 1250px) { .asb table, .asb tbody { display: block; } .asb thead { display: none; }
+    .asb tr { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 4px 10px; border: 1px solid #eef0f3; border-radius: 10px; padding: 8px; margin-bottom: 8px; }
+    .asb td { display: block; border: 0; padding: 2px 0; } .asb td:first-child { grid-column: 1 / -1; } .asb td input { width: 100%; box-sizing: border-box; }
+    .asb td[data-l]::before { content: attr(data-l); display: block; font-size: 11px; color: var(--muted); font-weight: 700; } }
   @media (max-width: 760px) { .asb table, .asb tbody, .asb tr, .asb td { display: block; } .asb thead { display: none; }
     .asb tr { border: 1px solid #eef0f3; border-radius: 10px; padding: 6px; margin-bottom: 8px; } .asb td { border: 0; padding: 3px 4px; }
     .asb td[data-l]::before { content: attr(data-l); display: block; font-size: 11px; color: var(--muted); font-weight: 700; } }
@@ -536,6 +542,12 @@
   :root { --hit: 34px; --act-line: #c9ccd3; --sug-bg: #eef3fa; --sug-line: #c7d6ea; --sug-ink: #23507e;
           --tag-bg: #f0f1f4; --tag-line: #dfe1e6; --tag-ink: #3b3f47; --muted: #5d626b; --lbl: #4a4f58; }
   @media (pointer: coarse) { :root { --hit: 44px; } }
+  #pkSearch[hidden] { display: none; }
+  /* packet pages: the whole row is the checkbox's label, tall enough for a finger (iPad pass 2026-10-03) */
+  .pgrow { display: flex; align-items: center; gap: 10px; min-height: 34px; cursor: pointer; }
+  .pgrow input { width: 18px; height: 18px; flex: none; }
+  @media (pointer: coarse) { .pgrow { min-height: 44px; } .pgrow input { width: 22px; height: 22px; }
+    #zoomBar button { min-height: 40px; min-width: 40px; } .asb td input { min-height: 40px; } }
   /* top bar: [job] … [AI · status] … [View · Export · Print · tools] */
   #topbar { min-height: 56px; }
   #topbar #jobsSel, #topbar #fileMenu, #topbar #jobName, #topbar #solSel, #topbar #stageSel { display: none; }
@@ -621,29 +633,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003140624",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003140624",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003140624",
-    "./app/ports.js": "./app/ports.js?v=20261003140624",
-    "./app/commands.js": "./app/commands.js?v=20261003140624",
-    "./app/engine.js": "./app/engine.js?v=20261003140624",
-    "./app/exports.js": "./app/exports.js?v=20261003140624",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003140624",
-    "./app/hookup.js": "./app/hookup.js?v=20261003140624",
-    "./app/importers.js": "./app/importers.js?v=20261003140624",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003140624",
-    "./app/library.js": "./app/library.js?v=20261003140624",
-    "./app/names.js": "./app/names.js?v=20261003140624",
-    "./app/network.js": "./app/network.js?v=20261003140624",
-    "./app/pages.js": "./app/pages.js?v=20261003140624",
-    "./app/power.js": "./app/power.js?v=20261003140624",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003140624",
-    "./app/rack.js": "./app/rack.js?v=20261003140624",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003140624",
-    "./app/starters.js": "./app/starters.js?v=20261003140624",
-    "./app/kinds.js": "./app/kinds.js?v=20261003140624",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003140624",
-    "./app/sheets.js": "./app/sheets.js?v=20261003140624"
+    "./app/ai.js": "./app/ai.js?v=20261003141522",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003141522",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003141522",
+    "./app/ports.js": "./app/ports.js?v=20261003141522",
+    "./app/commands.js": "./app/commands.js?v=20261003141522",
+    "./app/engine.js": "./app/engine.js?v=20261003141522",
+    "./app/exports.js": "./app/exports.js?v=20261003141522",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003141522",
+    "./app/hookup.js": "./app/hookup.js?v=20261003141522",
+    "./app/importers.js": "./app/importers.js?v=20261003141522",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003141522",
+    "./app/library.js": "./app/library.js?v=20261003141522",
+    "./app/names.js": "./app/names.js?v=20261003141522",
+    "./app/network.js": "./app/network.js?v=20261003141522",
+    "./app/pages.js": "./app/pages.js?v=20261003141522",
+    "./app/power.js": "./app/power.js?v=20261003141522",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003141522",
+    "./app/rack.js": "./app/rack.js?v=20261003141522",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003141522",
+    "./app/starters.js": "./app/starters.js?v=20261003141522",
+    "./app/kinds.js": "./app/kinds.js?v=20261003141522",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003141522",
+    "./app/sheets.js": "./app/sheets.js?v=20261003141522"
 } }
 </script>
 <script>
@@ -903,7 +915,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003140624").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003141522").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1200,7 +1212,7 @@ function collectFindings(errs, warns, a, mine) {
   const isDev = ref => (sol?.racks || []).some(r => r.devices.some(d => d.id === ref));
   for (const [list, level] of [[errs, "e"], [warns, "w"]])
     for (const f of list) isDev(f.ref) ? push(byDev, f.ref, level, f.msg, f.code, f.ref) : push(byZone, zoneOfRef(f.ref), level, f.msg, f.code, f.ref);
-  for (const n of a?.notes || []) if (n.code === "earc-extender" && mine(n)) push(byZone, zoneOfRef(n.ref), "w", n.msg);
+  for (const n of a?.notes || []) if ((n.code === "earc-extender" || n.code === "tv-apps-no-surround") && mine(n)) push(byZone, zoneOfRef(n.ref), "w", n.msg);
   for (const n of a?.notes || []) if (n.code === "amp-sub-outs" && mine(n)) push(byDev, n.ref, "w", n.msg);
   for (const n of a?.notes || []) if (n.code === "no-port" && mine(n)) isDev(n.ref) ? push(byDev, n.ref, "w", n.msg) : push(byZone, zoneOfRef(n.ref), "w", n.msg);
   for (const io of a?.io || []) if (io.over && mine(io)) push(byDev, io.device, "e", io.msg);
@@ -1377,7 +1389,10 @@ const menus = [...document.querySelectorAll("#topbar .menu")];
 const closeMenus = except => menus.forEach(m => { if (m === except) return; m.querySelector(".mlist").hidden = true; m.querySelector(".mbtn").setAttribute("aria-expanded", "false"); });
 menus.forEach(m => {
   const btn = m.querySelector(".mbtn"), list = m.querySelector(".mlist");
-  btn.onclick = e => { e.stopPropagation(); const open = list.hidden; closeMenus(m); list.hidden = !open; btn.setAttribute("aria-expanded", String(open)); };
+  btn.onclick = e => { e.stopPropagation(); const open = list.hidden; closeMenus(m); list.hidden = !open; btn.setAttribute("aria-expanded", String(open));
+    // keep the whole menu on screen: a right-aligned menu on a wrapped second row opened 115px off the left edge on an iPad
+    list.style.transform = "";
+    if (open) { const r = list.getBoundingClientRect(), dx = r.left < 8 ? 8 - r.left : r.right > innerWidth - 8 ? innerWidth - 8 - r.right : 0; if (dx) list.style.transform = `translateX(${Math.round(dx)}px)`; } };
   list.addEventListener("click", e => { if (e.target.closest("button")) closeMenus(); else e.stopPropagation(); });
 });
 document.addEventListener("click", e => { if (!e.target.closest("#topbar .menu")) closeMenus(); });
@@ -1391,6 +1406,7 @@ async function startJobFrom(st) {
   S.qaHint = st.tip;                               // the quick-add box suggests how to add zones to this rack
   S.tab = "zones"; switchTab("zones");
   await persist(); refresh();
+  closeJobsHome();                                 // however it was started, the new project is what's on screen
   setTimeout(() => $("#qaInput")?.focus(), 50);
 }
 /* new job: simpler cards (Ryan 2026-10-02) — grouped, each a small rack picture in the
@@ -2078,9 +2094,11 @@ $("#canvas").addEventListener("click", e => {
 
 /* ============ panel ============ */
 document.querySelectorAll(".tabs button[data-tab]").forEach(b => b.onclick = () => {
+  const moved = S.tab !== b.dataset.tab;
   S.tab = b.dataset.tab;
   document.querySelectorAll(".tabs button[data-tab]").forEach(x => x.classList.toggle("on", x === b));
   renderPanel();
+  if (moved) $("#panelBody").scrollTop = 0;   // a tab opens at its top, not where the last one was left (Paperwork opened 539px down)
   syncGlow();
 });
 // the panel's width is the viewer's own preference (per browser); collapsing
@@ -2125,6 +2143,7 @@ function openPicker({ title, groups, onPick, empty = "" }) {
   const box = $("#picker"), list = $("#pkList"), q = $("#pkSearch"), opener = document.activeElement;
   $("#pkTitle").textContent = title; q.value = ""; list.scrollTop = 0; box.querySelector(".card").style.height = "";
   let all = false;   // the tucked-away groups (another room's receiver, can't-connect) open on search or "Show more"
+  q.hidden = groups.reduce((n, g) => n + g.items.length, 0) < 8;   // a handful of choices needs no search box (the 4-item ⋯ menu had one)
   const draw = () => {
     const t = q.value.trim().toLowerCase();
     const tucked = groups.filter(g => g.searchOnly && !t && !all);
@@ -2147,7 +2166,7 @@ function openPicker({ title, groups, onPick, empty = "" }) {
   draw(); box.classList.add("on"); list.scrollTop = 0;   // set once it's showing — a hidden list keeps the last picker's scroll
   // the sheet holds the height it opened at, so typing a search doesn't shrink it and jump the search box
   q.onfocus = () => { const c = box.querySelector(".card"); if (!c.style.height) c.style.height = c.getBoundingClientRect().height + "px"; };
-  if (matchMedia("(pointer: fine)").matches) q.focus();
+  if (matchMedia("(pointer: fine)").matches) (q.hidden ? list.querySelector(".pk-i.cur, .pk-i:not([disabled])") : q)?.focus();
   list.querySelector(".pk-i.cur")?.scrollIntoView({ block: "center" });
 }
 
@@ -2365,7 +2384,7 @@ function zonesHTML() {
     const open = S.openRows.has(z.id);
     const found = S.findings?.byZone.get(z.id) || [];
     const h = readHookup(S.job, sol, z);
-    const wired = (!h.tv || h.video) && (!h.spk || h.speakers) && (h.tv || h.spk);
+    const wired = (!h.tv || h.video || h.tv.ownApps) && (!h.spk || h.speakers) && (h.tv || h.spk);   // a TV on its own apps is set up, not "not set up"
     // closed, a row answers "what is it, what feeds it, is it done?"
     // closed, a row says what's in the room in plain words — which box feeds it is one tap away (2026-10-03, Ryan:
     // "simplify the room cards, but able to reveal more info if needed")
@@ -3111,7 +3130,7 @@ function jobHTML() {
       ${["channelMap:Channel Map", "audioSetup:Audio Setup (source & TV settings)", "equipment:Equipment & Takeoff", "patchList:Patch List (every jack)", "wireSchedule:Wire Schedule", "elevation:Rack (elevation, hardware, power)", "network:Network (switch ports)", "labels:Cable Labels",
          ...(S.job.solutions.length > 1 ? ["bomCompare:Solution Comparison"] : [])].map(kv => {
         const [k, label] = kv.split(":");
-        return `<div class="f"><input type="checkbox" class="pgflag" data-pg="${k}" ${pageFlags(S.job)[k] ? "checked" : ""}> <span>${label}</span></div>`;
+        return `<label class="f pgrow"><input type="checkbox" class="pgflag" data-pg="${k}" ${pageFlags(S.job)[k] ? "checked" : ""}> <span>${label}</span></label>`;
       }).join("")}
     </div></div>
     <div class="sect">CATALOG SPECS <span class="mini">locked ${esc(J.catalogSnapshot?.asOf || "—")}</span></div>

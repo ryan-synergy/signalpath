@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-dutGiG05p6GJhGNL/6VeLEOyu76m699J9e5/pci86yU=' 'sha256-oohLqRAr1Dvsa1svXVVDSwMjF8Kg3ADy9PXiKZK9OZA=' 'sha256-asqrbtsF/e6AqUJ/UcA3bPAIK8c6BDsTTS/qjcjE2zE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -616,29 +617,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003123922",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003123922",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003123922",
-    "./app/ports.js": "./app/ports.js?v=20261003123922",
-    "./app/commands.js": "./app/commands.js?v=20261003123922",
-    "./app/engine.js": "./app/engine.js?v=20261003123922",
-    "./app/exports.js": "./app/exports.js?v=20261003123922",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003123922",
-    "./app/hookup.js": "./app/hookup.js?v=20261003123922",
-    "./app/importers.js": "./app/importers.js?v=20261003123922",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003123922",
-    "./app/library.js": "./app/library.js?v=20261003123922",
-    "./app/names.js": "./app/names.js?v=20261003123922",
-    "./app/network.js": "./app/network.js?v=20261003123922",
-    "./app/pages.js": "./app/pages.js?v=20261003123922",
-    "./app/power.js": "./app/power.js?v=20261003123922",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003123922",
-    "./app/rack.js": "./app/rack.js?v=20261003123922",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003123922",
-    "./app/starters.js": "./app/starters.js?v=20261003123922",
-    "./app/kinds.js": "./app/kinds.js?v=20261003123922",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003123922",
-    "./app/sheets.js": "./app/sheets.js?v=20261003123922"
+    "./app/ai.js": "./app/ai.js?v=20261003125153",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003125153",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003125153",
+    "./app/ports.js": "./app/ports.js?v=20261003125153",
+    "./app/commands.js": "./app/commands.js?v=20261003125153",
+    "./app/engine.js": "./app/engine.js?v=20261003125153",
+    "./app/exports.js": "./app/exports.js?v=20261003125153",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003125153",
+    "./app/hookup.js": "./app/hookup.js?v=20261003125153",
+    "./app/importers.js": "./app/importers.js?v=20261003125153",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003125153",
+    "./app/library.js": "./app/library.js?v=20261003125153",
+    "./app/names.js": "./app/names.js?v=20261003125153",
+    "./app/network.js": "./app/network.js?v=20261003125153",
+    "./app/pages.js": "./app/pages.js?v=20261003125153",
+    "./app/power.js": "./app/power.js?v=20261003125153",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003125153",
+    "./app/rack.js": "./app/rack.js?v=20261003125153",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003125153",
+    "./app/starters.js": "./app/starters.js?v=20261003125153",
+    "./app/kinds.js": "./app/kinds.js?v=20261003125153",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003125153",
+    "./app/sheets.js": "./app/sheets.js?v=20261003125153"
 } }
 </script>
 <script>
@@ -897,7 +898,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003123922").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003125153").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1698,9 +1699,11 @@ function printPacket(packet = "service") {
       .pg { width: 100%; page-break-after: always; background: #fff; margin: 0 auto 8px; }
       .pg svg { display: block; width: 100%; height: auto; }
       @media print { html, body { background: #fff; } .pg { margin: 0; } }
-    </style></head><body>${pagesSvg.map(s => `<div class="pg">${s}</div>`).join("")}
-    <script>window.onload = () => setTimeout(() => window.print(), 300);<\/script></body></html>`);
+    </style></head><body>${pagesSvg.map(s => `<div class="pg">${s}</div>`).join("")}</body></html>`);
     w.document.close();
+    // started from here, not by a script inside the packet — the Content-Security-Policy the window inherits
+    // allows no inline script (2026-10-03 security hardening)
+    setTimeout(() => { try { w.focus(); w.print(); } catch {} }, 400);
   } catch (e) { alert("Print failed: " + e.message); }
 }
 $("#printBtn").onclick = () => printPacket("service");
@@ -3154,6 +3157,7 @@ function settingsHTML() {
     <div class="sect">AI <span class="mini">the ✦ AI button</span></div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       ${field("Connect", chips("aimode", [["off", "Off"], ["key", "My API key"], ["proxy", "Proxy"]], conn.mode))}
+      ${conn.mode === "key" ? `<div class="mini" style="margin:0 0 6px;color:#8a5a00;line-height:1.4">A key typed here is saved in this browser, which every tool on ryan-synergy.github.io shares. For the crew, use the <b>Proxy</b> — the key stays on Cloudflare (proxy/worker.js in the repo). On your own device, “forget the key” when you're done.</div>` : ""}
       ${conn.mode === "key" ? field("API key", `<input class="aikey" type="password" autocomplete="off" spellcheck="false" placeholder="${conn.key ? "saved — type a new one to replace it" : "sk-ant-…"}">`) + (conn.key ? `<div style="text-align:right"><button class="del" id="aiForget">forget the key</button></div>` : "") : ""}
       ${conn.mode === "proxy" ? field("Proxy URL", `<input class="aiproxy" placeholder="https://…" value="${esc(conn.proxy || "")}">`) +
         field("Access code", `<input class="aicode" type="password" autocomplete="off" placeholder="${conn.code ? "saved — type to replace" : "from whoever set up the proxy"}">`) : ""}

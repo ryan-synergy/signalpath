@@ -168,11 +168,14 @@ export function setAudioBack(job, sol, zone, mode, to) {
    or away if the room has none. A return to an input module (a Savant rack) isn't a receiver's — left alone. */
 export function followReturn(job, sol, zone) {
   const h = readHookup(job, sol, zone);
-  if (!h.tv || !h.ret?.to || !isReceiver(sol, h.ret.to)) return;
   const mine = [h.speakers?.from, h.video?.from].filter(id => isReceiver(sol, id));
+  if (h.tv && !h.ret && zone.retWas && mine.includes(zone.retWas.to)) {   // back on the receiver it had: its return comes back too
+    const w = zone.retWas; delete zone.retWas; setAudioBack(job, sol, zone, w.mode, w.to); return;
+  }
+  if (!h.tv || !h.ret?.to || !isReceiver(sol, h.ret.to)) return;
   if (mine.includes(h.ret.to)) return;
   const to = mine[0];
-  if (!to) { setAudioBack(job, sol, zone, h.earc ? "earc" : "none"); return; }
+  if (!to) { zone.retWas = { to: h.ret.to, mode: h.audioBack === "earc-kit" ? "earc-kit" : "optical" }; setAudioBack(job, sol, zone, h.earc ? "earc" : "none"); return; }
   setAudioBack(job, sol, zone, h.audioBack === "earc-kit" ? "earc-kit" : h.earc && isReceiver(sol, h.video?.from) && h.video.from === to ? "earc+optical" : "optical", to);
 }
 
@@ -398,6 +401,24 @@ export function removeRackDevice(job, sol, devId) {
   for (const c of sol.connections) if (c.routeHint?.between?.some?.(x => gone.has(x))) delete c.routeHint;
   if (sol.poePower) for (const id of gone) delete sol.poePower[id];
   return [...hit];
+}
+
+/* a TV or speaker set added to a room that has the other (Display "None" → "TV" dropped the wiring with it):
+   on the room's receiver if it has one, else the way quick-add would (the rack's switch, the next free amp zone) */
+export function wireAdded(job, sol, zone) {
+  let h = readHookup(job, sol, zone);
+  const rcv = [h.speakers?.from, h.video?.from].find(id => isReceiver(sol, id));
+  if (h.tv && !h.video && !h.tv.ownApps) {
+    if (rcv && !rackDevices(sol).some(d => d.type === "videoMatrix" || (d.type === "avSwitch" && !d.danteSwitch))) setVideo(job, sol, zone, rcv, "balun", true);
+    else autoHookup(job, sol, zone, {});
+  }
+  h = readHookup(job, sol, zone);
+  if (h.spk && !h.speakers) {
+    if (/^soundbar/.test(h.spk.config || "") && h.tv) setSpeakers(job, sol, zone, "__tv");
+    else if (rcv && /^surround/.test(h.spk.config || "")) setSpeakers(job, sol, zone, rcv);
+    else autoHookup(job, sol, zone, {});
+  }
+  followReturn(job, sol, zone);
 }
 
 /* a source added to an MXNet rack gets its encoder into the switch, like the kit's own sources (2026-10-03:
@@ -626,6 +647,12 @@ export function quickFixes(job, sol, f, catalog = null) {
     const busy = new Set((sol.connections || []).filter(c => c.signal === "speaker").map(c => c.from));
     if (ep.type === "display") {
       if (m) out.push({ label: `Feed it from the ${m.model || "rack"}`, run: (j, s) => setVideo(j, s, zoneOf(j), m.id) });
+      if (m) {
+        const unfed = (j, so) => (j.house?.zones || []).filter(z => (z.scope || "included") === "included" && z.area === zone.area && (() => {
+          const h = readHookup(j, so, z); return h.tv && !h.video && !h.tv.ownApps && !(so.localDevices || []).some(d => d.zone === z.id); })());
+        const n = unfed(job, sol).length;
+        if (n > 1) out.push({ label: `Feed all ${n} unfed TVs from the ${m.model || "rack"}`, run: (j, s) => { for (const z of unfed(j, s)) setVideo(j, s, z, m.id); } });
+      }
       const avr = (sol.connections || []).find(c => c.signal === "speaker" && zone.endpoints.some(e => e.id === c.to) && devs.some(d => d.id === c.from && d.type === "avr"))?.from;
       if (avr && !m) out.push({ label: `Feed it from the ${devs.find(d => d.id === avr).model}`, run: (j, s) => setVideo(j, s, zoneOf(j), avr, "balun", true) });
       out.push({ label: "Add an Apple TV at the TV", run: (j, s) => {

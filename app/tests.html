@@ -934,6 +934,30 @@ for (const [name, raw] of Object.entries(fixtures)) routed[name] = routerChecks(
       kz.endpoints.find(e => e.type === "speakers").config = "surround-7.1.4";
       const Ls = loadJob(effectiveJob(js, 0)), w = validate(Ls.job, Ls.ix).warnings.find(x => x.code === "surround-on-amp");
       t("7.1.4 on an amp's 2-channel zone: a warning naming it, and a fix", !!w && /K speakers is 7\.1\.4/.test(w.msg) && Hk.quickFixes(js, ss, w, CATp).some(x => /receiver/.test(x.label)), w?.msg); }
+    { // round trips the hammer caught: a TV removed and put back is wired again; a return comes back with its receiver
+      let jt = Sk.applyStarter(Im.skeletonJob("RT"), Sk.STARTERS.find(k => k.id === "theater-receiver"), CATp);
+      jt = Cm.planCommands(jt, 0, [{ op: "add_zones", text: "family room 5.1 75" }], CATp).job;
+      const st = jt.solutions[0], fz = jt.house.zones.find(z => z.name === "Family Room");
+      const rcv = Hk.readHookup(jt, st, fz).speakers.from;
+      const tv = fz.endpoints.find(e => e.type === "display");
+      st.connections = st.connections.filter(c => c.to !== tv.id && c.from !== tv.id);
+      st.companions = (st.companions || []).filter(k => k.serves !== tv.id);
+      Hk.wireAdded(jt, st, fz);
+      t("a TV put back in a receiver room is fed from that receiver again", Hk.readHookup(jt, st, fz).video?.from === rcv);
+      Hk.setAudioBack(jt, st, fz, "optical", rcv);
+      Hk.setSpeakers(jt, st, fz, null); Hk.setVideo(jt, st, fz, null); Hk.followReturn(jt, st, fz);
+      Hk.setSpeakers(jt, st, fz, rcv); Hk.followReturn(jt, st, fz);
+      t("sound off the receiver and back: the TV's optical return comes back too", Hk.readHookup(jt, st, fz).ret?.to === rcv, JSON.stringify(Hk.readHookup(jt, st, fz).ret)); }
+    { // a deleted switch, re-added: one tap feeds every TV again (was one pick per room — 20 on Bel Air)
+      const jb = structuredClone(ba), sb = jb.solutions[0], sw = sb.racks.flatMap(r => r.devices).find(d => d.type === "avSwitch");
+      const model = sw.model, ref = sw.catalogRef;
+      Hk.removeRackDevice(jb, sb, sw.id);
+      Hk.addRackDevice(jb, sb, "avSwitch", model, { catalogRef: ref });
+      const Lb2 = loadJob(effectiveJob(jb, 0)), e1 = validate(Lb2.job, Lb2.ix).errors.find(e => /TV has nothing feeding it/.test(e.msg));
+      const fx = Hk.quickFixes(jb, sb, e1, CATp).find(x => /^Feed all \d+ unfed TVs/.test(x.label));
+      if (fx) fx.run(jb, sb);
+      const Lb3 = loadJob(effectiveJob(jb, 0));
+      t("a re-added switch: \"Feed all N unfed TVs\" puts every main-house TV back on it", !!fx && !validate(Lb3.job, Lb3.ix).errors.some(e => /TV has nothing feeding it/.test(e.msg) && !/Casita|Pool/.test(e.msg)), fx?.label); }
     { // move a room to another area: its wiring goes to that area's rack (Ryan 2026-10-03: "fix the area, move wiring to")
       let ja = structuredClone(ba);
       const sayA = txt => { const cm = Cm.parseCommandText(txt, ja, ja.solutions[0]); ja = Cm.planCommands(ja, 0, cm || [], CATp).job; return cm; };

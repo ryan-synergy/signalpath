@@ -524,28 +524,28 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003002318",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003002318",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003002318",
-    "./app/ports.js": "./app/ports.js?v=20261003002318",
-    "./app/commands.js": "./app/commands.js?v=20261003002318",
-    "./app/engine.js": "./app/engine.js?v=20261003002318",
-    "./app/exports.js": "./app/exports.js?v=20261003002318",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003002318",
-    "./app/hookup.js": "./app/hookup.js?v=20261003002318",
-    "./app/importers.js": "./app/importers.js?v=20261003002318",
-    "./app/library.js": "./app/library.js?v=20261003002318",
-    "./app/names.js": "./app/names.js?v=20261003002318",
-    "./app/network.js": "./app/network.js?v=20261003002318",
-    "./app/pages.js": "./app/pages.js?v=20261003002318",
-    "./app/power.js": "./app/power.js?v=20261003002318",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003002318",
-    "./app/rack.js": "./app/rack.js?v=20261003002318",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003002318",
-    "./app/starters.js": "./app/starters.js?v=20261003002318",
-    "./app/kinds.js": "./app/kinds.js?v=20261003002318",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003002318",
-    "./app/sheets.js": "./app/sheets.js?v=20261003002318"
+    "./app/ai.js": "./app/ai.js?v=20261003002829",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003002829",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003002829",
+    "./app/ports.js": "./app/ports.js?v=20261003002829",
+    "./app/commands.js": "./app/commands.js?v=20261003002829",
+    "./app/engine.js": "./app/engine.js?v=20261003002829",
+    "./app/exports.js": "./app/exports.js?v=20261003002829",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003002829",
+    "./app/hookup.js": "./app/hookup.js?v=20261003002829",
+    "./app/importers.js": "./app/importers.js?v=20261003002829",
+    "./app/library.js": "./app/library.js?v=20261003002829",
+    "./app/names.js": "./app/names.js?v=20261003002829",
+    "./app/network.js": "./app/network.js?v=20261003002829",
+    "./app/pages.js": "./app/pages.js?v=20261003002829",
+    "./app/power.js": "./app/power.js?v=20261003002829",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003002829",
+    "./app/rack.js": "./app/rack.js?v=20261003002829",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003002829",
+    "./app/starters.js": "./app/starters.js?v=20261003002829",
+    "./app/kinds.js": "./app/kinds.js?v=20261003002829",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003002829",
+    "./app/sheets.js": "./app/sheets.js?v=20261003002829"
 } }
 </script>
 <script>
@@ -669,6 +669,11 @@
     <button id="aiCopy" title="Copies a ready prompt (this job, its issues, and the command list) to paste into Claude">Copy prompt for Claude</button>
     <span id="aiStatus" class="mini"></span>
   </div>
+  <div class="airow" style="margin-top:8px">
+    <button id="aiQuote" title="Give Claude the original quote or system design — it proposes the gear the job is missing">📄 Check against the quote…</button>
+    <input id="aiQuoteFile" type="file" accept=".pdf,.csv,.txt,.md,.tsv,.json,application/pdf,text/*" hidden>
+    <span id="aiQuoteChip" class="mini"></span>
+  </div>
   <details id="aiPasteBox"><summary>Paste Claude's reply</summary>
     <textarea id="aiReply" rows="4" placeholder="Paste the whole reply — the app finds the command list in it."></textarea>
     <button id="aiPaste">Preview these changes</button>
@@ -734,7 +739,7 @@ import { parseQuick, quickSuggest } from "./app/quickadd.js";
 import { rackReference, fitRacks, rackOption, RACK_CLEARANCE, RACK_OPTIONS } from "./app/racksizes.js";
 import { STARTERS, applyStarter, starterFromJob, listStarters, duplicateStarter } from "./app/starters.js";
 import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/commands.js";
-import { askClaude, handoffPrompt, extractProposal, jobSummary, assess, loadConn, saveConn, connReady, MODELS } from "./app/ai.js";
+import { askClaude, handoffPrompt, extractProposal, jobSummary, assess, loadConn, saveConn, connReady, MODELS, quoteRequest, quoteAttachment } from "./app/ai.js";
 import { setDanteAudio, danteAmpFor } from "./app/hookup.js";
 import { readHookup, setVideo, setSpeakers, setReturn, setAudioBack, AUDIO_BACK, addRackDevice, autoHookup, quickFixes, adapterAudioOut, adapterAudioTargets, setAdapterAudio, addLocalAmp, nextFreeOutputs, outputsNeeded,
          VIDEO_FROM, SPEAKERS_FROM, RETURN_TO, RUNS, REACH, bulletFor } from "./app/hookup.js";
@@ -771,7 +776,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003002318").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003002829").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1263,13 +1268,33 @@ function planHTML(plan, { summary = "", questions = [], before = null, after = n
 
 /* ---- ✦ AI dialog ---- */
 let AIP = null;   // the pending proposal: its commands re-run on apply (the job may have moved on)
+let AIQ = null;   // the quote given for a check: { name, text } or { name, pdf } — in memory only, never saved
+const showQuote = () => {
+  $("#aiQuoteChip").innerHTML = AIQ ? `Quote: <b>${esc(AIQ.name)}</b>${AIQ.pdf ? " (PDF — goes to Claude as-is)" : " (prices taken out before sending)"} <a href="#" id="aiQuoteX">remove</a>` : "";
+  const x = $("#aiQuoteX"); if (x) x.onclick = e => { e.preventDefault(); AIQ = null; showQuote(); };
+};
+$("#aiQuote").onclick = () => $("#aiQuoteFile").click();
+$("#aiQuoteFile").onchange = async () => {
+  const f = $("#aiQuoteFile").files?.[0]; $("#aiQuoteFile").value = "";
+  if (!f) return;
+  if (f.size > 20e6) { aiStatus("That file is over 20 MB — export the quote smaller (or as CSV)."); return; }
+  try {
+    if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
+      const b = new Uint8Array(await f.arrayBuffer()); let bin = "";
+      for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode(...b.subarray(i, i + 0x8000));
+      AIQ = { name: f.name, pdf: btoa(bin) };
+    } else AIQ = { name: f.name, text: await f.text() };
+  } catch (e) { aiStatus(`Couldn't read ${f.name}: ${e.message}`); return; }
+  showQuote();
+  aiStatus("Quote ready — press Ask Claude (or Copy prompt) to compare it with the job. Add anything else to check in the box.");
+};
 const aiStatus = m => { $("#aiStatus").textContent = m || ""; };
 function openAI() {
   const conn = loadConn(), ready = connReady(conn);
   $("#aiAsk").disabled = !ready;
   $("#aiAsk").title = ready ? `Uses ${MODELS.find(m => m[0] === conn.model)?.[1] || conn.model}` : "Set up the AI in ⚙ Settings → AI (or use Copy prompt for Claude)";
   aiStatus(ready ? "" : "Built-in AI is off — use “Copy prompt for Claude”, or set it up in ⚙ Settings → AI.");
-  $("#aiPrev").innerHTML = ""; AIP = null;
+  $("#aiPrev").innerHTML = ""; AIP = null; showQuote();
   $("#aiBox").classList.add("show");
   setTimeout(() => $("#aiReq").focus(), 30);
 }
@@ -1290,8 +1315,8 @@ function showProposal(pr) {
   $("#aiPrev").querySelector('[data-plan="discard"]').onclick = () => { $("#aiPrev").innerHTML = ""; AIP = null; aiStatus("Discarded."); };
 }
 $("#aiCopy").onclick = async () => {
-  const txt = handoffPrompt(S.job, S.sol, effectiveCatalog(), $("#aiReq").value.trim());
-  try { await navigator.clipboard.writeText(txt); aiStatus("Copied — paste it into Claude, then paste Claude's reply below."); }
+  const txt = handoffPrompt(S.job, S.sol, effectiveCatalog(), AIQ ? quoteRequest(AIQ, $("#aiReq").value.trim()) : $("#aiReq").value.trim());
+  try { await navigator.clipboard.writeText(txt); aiStatus(AIQ?.pdf ? `Copied — paste it into Claude AND attach ${AIQ.name}, then paste Claude's reply below.` : "Copied — paste it into Claude, then paste Claude's reply below."); }
   catch { $("#aiReply").value = txt; $("#aiReply").select(); aiStatus("Couldn't reach the clipboard — the prompt is in the box below: copy it from there."); }
   $("#aiPasteBox").open = true;
 };
@@ -1300,11 +1325,12 @@ $("#aiPaste").onclick = () => {
   catch (e) { aiStatus(e.message); }
 };
 $("#aiAsk").onclick = async () => {
-  const req = $("#aiReq").value.trim();
-  if (!req) { aiStatus("Say what should change first."); return; }
+  const typed = $("#aiReq").value.trim();
+  if (!typed && !AIQ) { aiStatus("Say what should change first (or give it the quote to check)."); return; }
+  const req = AIQ ? quoteRequest(AIQ, typed) : typed;
   $("#aiAsk").disabled = true; $("#aiPrev").innerHTML = "";
   try {
-    const r = await askClaude({ conn: loadConn(), job: S.job, solIndex: S.sol, catalog: effectiveCatalog(), request: req, onStatus: aiStatus });
+    const r = await askClaude({ conn: loadConn(), job: S.job, solIndex: S.sol, catalog: effectiveCatalog(), request: req, attach: quoteAttachment(AIQ), onStatus: aiStatus });
     showProposal(r);
     aiStatus("Review the changes — nothing is applied until you press Apply.");
   } catch (e) { aiStatus(e.message); }

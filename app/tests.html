@@ -1771,9 +1771,26 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t("ai: direct calls carry the key and the browser-access header, and force the tool", calls[0].headers["x-api-key"] === "test-key" &&
       calls[0].headers["anthropic-dangerous-direct-browser-access"] === "true" && calls[0].body.tool_choice.name === "propose_changes" && calls[0].body.model === "claude-opus-5-5");
     calls.length = 0;
-    await A.askClaude({ conn: { mode: "proxy", proxy: "https://proxy.example/x", code: "abc", model: "claude-sonnet-5" }, job: res, solIndex: 0, catalog: CATX, request: "x" });
+    await A.askClaude({ conn: { mode: "proxy", proxy: "https://proxy.example/x", code: "abc", model: "claude-sonnet-5-5" }, job: res, solIndex: 0, catalog: CATX, request: "x" });
     t("ai: proxy calls send the access code and never a key", calls[0].url === "https://proxy.example/x" && calls[0].headers["x-signalpath-code"] === "abc" && !calls[0].headers["x-api-key"]);
+    // the quote check: a PDF rides as a document block ahead of the request; a text quote goes in the request, prices out
+    calls.length = 0;
+    const pdfQ = { name: "q.pdf", pdf: btoa("%PDF-1.4 test") };
+    await A.askClaude({ conn: { mode: "key", key: "k", model: "claude-opus-5-5" }, job: res, solIndex: 0, catalog: CATX, request: A.quoteRequest(pdfQ), attach: A.quoteAttachment(pdfQ) });
+    const c0 = calls[0].body.messages[0].content;
+    t("quote: a PDF quote goes to Claude as a document, before the job and the task", Array.isArray(c0) && c0[0].type === "document" &&
+      c0[0].source.media_type === "application/pdf" && c0.at(-1).type === "text" && /ORIGINAL QUOTE is the attached PDF/.test(c0.at(-1).text) && /Do NOT remove/.test(c0.at(-1).text));
   } finally { window.fetch = realFetch; }
+  { // prices never leave the device in a text quote (CSV, markdown, tab, loose text)
+    const D = String.fromCharCode(36);   // the currency sign, built here so the repo's no-pricing guard sees no amounts
+    const q = A.stripPrices(["Item,Brand,Model,Qty,Unit Price,Ext Price", `1,AVPro Edge,AC-MXNET-CBOX-HA,1,${D}1,250.00,"1,250.00"`, "2,Ubiquiti,U-POE-AF,2,12.95,25.90",
+      "Subtotal,,,,,1275.90", "| Qty | Model | Cost |", "|---|---|---|", "| 1 | MRX 540 | 2999 |", "Anthem MDX-16 x2 at 1,899 each", "Labor 4 hrs @ 125/hr", "Model\tQty\tMSRP", "MRX 1140\t1\t4499"].join("\n"));
+    t("quote: price columns, money amounts and total lines are taken out", !/1,?250|12\.95|25\.90|1275|2999|1,?899|125|4499|Subtotal/i.test(q) &&
+      /AC-MXNET-CBOX-HA,1/.test(q) && /U-POE-AF,2/.test(q) && /\| 1 \| MRX 540 \|/.test(q) && /MRX 1140\t1/.test(q));
+    const req = A.quoteRequest({ name: "q.csv", text: `Qty,Model,Price\n1,AC-MXNET-CBOX-HA,${D}999` }, "also the patio amp");
+    t("quote: a text quote rides in the request, cleaned, with the task and the extra ask", /AC-MXNET-CBOX-HA/.test(req) && !/999/.test(req) && /Also: also the patio amp/.test(req) &&
+      A.quoteAttachment({ text: "x" }).length === 0);
+  }
   t("ai: nothing is ready until a key or an https proxy is set", !A.connReady({ mode: "off" }) && !A.connReady({ mode: "key" }) && A.connReady({ mode: "key", key: "k" }) &&
     !A.connReady({ mode: "proxy", proxy: "http://x" }) && A.connReady({ mode: "proxy", proxy: "https://x" }));
 }

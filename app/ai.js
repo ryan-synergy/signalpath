@@ -100,6 +100,61 @@ const TOOL = {
   },
 };
 
+/* ---------- check the job against the original quote (Ryan 2026-10-02) ----------
+   A Savant config doesn't list everything — the quote / system design is the source of truth.
+   The person gives the quote (a PDF, or a PlanQueue / CSV / text export); Claude compares it with
+   the job and proposes the missing gear as ordinary commands, previewed like any AI change.
+   A text quote has its prices taken out HERE, before anything leaves the device; a PDF can't be
+   cleaned, so it goes as it is. The quote is held in memory for the request only — never saved
+   on the job, never in this browser's storage. */
+export const QUOTE_TASK = `Compare THE ORIGINAL QUOTE with the job and bring the job in line with it.
+- Add equipment the quote lists that the job is missing: control boxes (e.g. an MXNet control box), amps, receivers, sources, switches, network gear, power conditioners. Use add_device with the catalog product when there is one, otherwise the quote's maker + model.
+- Match quantities: if the quote has more of something than the job, add the difference.
+- Wire what you add the way the rest of the job is wired (zones to their receiver / amp, sources to the switch) — only where the quote makes it clear.
+- Do NOT remove or rename anything. Gear in the job that the quote doesn't list, a quantity the job has MORE of, or anything you can't place goes in questions.
+- Ignore prices, labor, programming, wire, mounts, brackets, connectors and services.
+- In the summary, say how many quote items you matched and what you added.`;
+
+const PRICE_COL = /price|cost|msrp|map\b|sell|total|amount|ext(ended)?\b|margin|markup|labor|subtotal|tax|discount|rate/i;
+const MONEY = /(?:US)?\$\s?-?[\d,]+(?:\.\d+)?|"?-?\b\d{1,3}(?:,\d{3})*\.\d{2}\b"?(?:\s?USD)?|-?\b\d+\.\d{2}\b(?:\s?USD)?/gi;
+const csvSplit = line => { const out = []; let cur = "", q = false;
+  for (let i = 0; i < line.length; i++) { const ch = line[i];
+    if (ch === '"') { if (q && line[i + 1] === '"') { cur += '"'; i++; } else q = !q; }
+    else if (ch === "," && !q) { out.push(cur); cur = ""; } else cur += ch; }
+  out.push(cur); return out; };
+/* a quote's text with every price taken out: price-named columns of a CSV or a markdown / tab
+   table are dropped, money amounts anywhere become "[price removed]", and total / tax / deposit
+   lines go entirely */
+export function stripPrices(text) {
+  const lines = String(text || "").replace(/\r\n?/g, "\n").split("\n");
+  const out = [];
+  let drop = null, kind = null;                         // the price columns of the table we're in
+  for (const raw of lines) {
+    const line = raw.replace(MONEY, "[price removed]").replace(/(@|\bat)\s*\d[\d,]*(?:\.\d+)?(?=\s*(?:each|ea\b|\/|$|\s))/gi, () => "@ [price removed]");   // first, so a dollar amount with a comma in it can't split a CSV row
+    const k = /^\s*\|.*\|\s*$/.test(line) ? "md" : line.includes("\t") ? "tab" : (line.match(/,/g) || []).length >= 2 ? "csv" : null;
+    if (!k) { drop = null; kind = null; }
+    const cells = k === "md" ? line.trim().replace(/^\||\|$/g, "").split("|") : k === "tab" ? line.split("\t") : k === "csv" ? csvSplit(line) : null;
+    if (cells && (kind !== k || !drop)) {               // a header row names the price columns
+      const hits = cells.map((c, i) => PRICE_COL.test(c) && c.trim().length < 40 ? i : -1).filter(i => i >= 0);
+      if (hits.length) { drop = new Set(hits); kind = k; }
+    }
+    if (/^\s*[|,"]*\s*(sub-?total|grand total|total|sales tax|tax|deposit|balance due|discount|freight|shipping)\b/i.test(line)) continue;
+    let keep = line;
+    if (cells && drop && kind === k) {
+      const kept = cells.filter((_, i) => !drop.has(i));
+      keep = k === "md" ? `| ${kept.map(c => c.trim()).join(" | ")} |` : k === "tab" ? kept.join("\t")
+        : kept.map(c => /[",]/.test(c) ? `"${c.replace(/"/g, '""')}"` : c).join(",");
+    }
+    out.push(keep);
+  }
+  return out.join("\n").slice(0, 60000);
+}
+/* the request text for a quote check, with the cleaned quote in it (a PDF rides as an attachment) */
+export function quoteRequest(quote, extra = "") {
+  return `${QUOTE_TASK}${extra ? `\n\nAlso: ${extra}` : ""}\n\nTHE ORIGINAL QUOTE${quote?.pdf ? ` is the attached PDF (${quote.name || "quote.pdf"}).` : ` (${quote?.name || "pasted"}, prices removed):\n${stripPrices(quote?.text || "")}`}`;
+}
+export const quoteAttachment = quote => quote?.pdf ? [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: quote.pdf }, title: quote.name || "Quote" }] : [];
+
 /* ---------- handoff: paste into Claude, paste the reply back ---------- */
 export function handoffPrompt(job, solIndex, catalog, request) {
   return `${SYSTEM}
@@ -150,14 +205,15 @@ async function callClaude(conn, body) {
   return j;
 }
 
-export async function askClaude({ conn, job, solIndex, catalog, request, onStatus = () => {} }) {
+export async function askClaude({ conn, job, solIndex, catalog, request, attach = [], onStatus = () => {} }) {
   const model = conn.model || MODELS[0][0];
   const before = assess(job, solIndex, catalog);
-  const messages = [{ role: "user", content: `THE JOB RIGHT NOW:\n${jobSummary(job, solIndex, catalog)}\n\nWHAT I WANT:\n${request}` }];
+  const ask = `THE JOB RIGHT NOW:\n${jobSummary(job, solIndex, catalog)}\n\nWHAT I WANT:\n${request}`;
+  const messages = [{ role: "user", content: attach.length ? [...attach, { type: "text", text: ask }] : ask }];
   let proposal = null, plan = null;
   for (let round = 0; round < 3; round++) {
     onStatus(round ? `Checking and correcting (pass ${round + 1})…` : "Asking Claude…");
-    const resp = await callClaude(conn, { model, max_tokens: 4096, system: SYSTEM, tools: [TOOL],
+    const resp = await callClaude(conn, { model, max_tokens: attach.length ? 8192 : 4096, system: SYSTEM, tools: [TOOL],
       tool_choice: { type: "tool", name: TOOL.name }, messages });
     const use = (resp.content || []).find(b => b.type === "tool_use");
     if (!use) throw new Error("Claude didn't propose any changes.");

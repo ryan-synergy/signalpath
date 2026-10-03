@@ -2401,7 +2401,7 @@ function routeOnce(job, ix, placement, opts = {}) {
           // break out at each row. Without it a big switch's riser moves out to that channel and every port draws its
           // own line across the rack to reach it. The link and the spine are found once per family and shared.
           const rackRightX = Math.max(...P.racks.map(r => r.x + r.w));
-          if (P.layout && P.layout !== "classic" && F.dir === "out" && rx < rackRightX - 20 && F.members.filter(x => !x.rack).length >= LINK_MIN) {
+          if (P.layout && P.layout !== "classic" && F.dir === "out" && rx < rackRightX - 20 && rx >= gapRightOf(col)[0] - 1 && F.members.filter(x => !x.rack).length >= LINK_MIN) {
             if (F.link === undefined) {
               F.link = null;
               const side = P.zones.filter(z => z.band === "mid" || z.band === "audio"), zx0 = side.length ? Math.min(...side.map(z => z.x)) : 0;

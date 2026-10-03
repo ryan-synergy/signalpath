@@ -1223,8 +1223,10 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("glyphs: Apple TV wears the tv mark (rack tile + local puck)", (svg.match(/>tv<\/text>/g) || []).length >= 2);
   t("glyphs: streamer note, cable channel readout, turntable platter",
     svg.includes("♪") && svg.includes(">02</text>") && svg.includes('stroke="#6a6a6a"'));
-  t("glyphs: AVR reads as a receiver (knob ring + display slot)",
-    svg.includes('stroke="#7a7a7a"') && svg.includes('fill="#0d1116"'));
+  t("glyphs: AVR reads as a receiver (a solid knob with a pointer and a dotted arc of ticks, a dark display with its input lights)",
+    svg.includes('fill="#1b1b22" stroke="#e8e8e8"') && svg.includes('stroke-dasharray="1.2 3"') && svg.includes('fill="#0d0f16"'));
+  t("look: a rack box's model is bold white under small spaced capitals (the text itself stays as typed)",
+    /font-size="12" fill="#fff" font-weight="700"[^>]*>Anthem MRX 540</.test(svg) && /letter-spacing="[\d.]+" style="text-transform:uppercase"[^>]*>Family Room</.test(svg), (svg.match(/<text[^>]*>(Anthem MRX 540|Family Room)</g) || []).join(" | "));
   t("glyphs: video matrix crossbar is a 3×3 dot grid", (svg.match(/r="1\.3" fill="#8f8f8f"/g) || []).length === 9);
 }
 
@@ -3863,6 +3865,9 @@ for (const [name, raw] of Object.entries(fixtures)) {
       const Lr = loadJob(effectiveJob(rj, 0)), prr = enginePlace(Lr.job, Lr.ix), svg = render(Lr.job, Lr.ix, prr, engineRoute(Lr.job, Lr.ix, prr));
       t("title block: a long revision note wraps onto two lines between words (not \"Imported from Ma\")", svg.includes(">Imported from<") && svg.includes(">Markdown walk<") && !svg.includes(">Imported from Ma<"));
     }
+  { const CATu = await (await fetch("./catalog.json")).json(), Lu = loadJob(structuredClone(fixtures.residence)), au = advise(Lu.job, Lu.ix, CATu), pu = enginePlace(Lu.job, Lu.ix), ou = { usage: boxUsage(Lu.job, Lu.ix, CATu, au, 0) };
+    const su = render(Lu.job, Lu.ix, pu, engineRoute(Lu.job, Lu.ix, pu), ou);
+    t("glyphs: with the catalog in hand, the receiver's display reads used/total beside its input lights", /font-weight="600" fill="#[0-9a-f]{6}">\d+\/\d+<\/text>/.test(su)); }
     { // Ryan's third case (2026-10-03): the Master Bed TV's sound back to its receiver ran out past the speaker ribbon and
       // crossed back over it; it stays inside the speaker riser now, in both trunk looks
       const tj = await (await fetch("./test-fixtures/test-job-1.json")).json();

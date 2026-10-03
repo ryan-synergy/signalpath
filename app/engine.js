@@ -3747,12 +3747,18 @@ const fmtDate = iso => { const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d
 
 // a label that must stay inside its tile: past the width it's squeezed to fit
 // (textLength) instead of spilling over the tile edge or a neighbor
-const fitText = (x, y, text, size, fill, maxW) => {
+// look: { bold } = heavier weight; { caps: spacing } = small spaced capitals (drawn with CSS, so the text itself stays as typed)
+const fitText = (x, y, text, size, fill, maxW, look = {}) => {
   const t = String(text ?? "");
-  const est = t.length * size * 0.56;
+  const est = t.length * (size * (look.caps != null ? 0.66 : look.bold ? 0.6 : 0.56) + (look.caps || 0));
   const fit = est > maxW ? ` textLength="${Math.round(maxW)}" lengthAdjust="spacingAndGlyphs"` : "";
-  return `<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}" fill="${fill}"${fit}>${esc(t)}</text>`;
+  const extra = (look.bold ? ` font-weight="${look.bold === true ? 700 : look.bold}"` : "") + (look.caps != null ? ` letter-spacing="${est > maxW ? 0 : look.caps}" style="text-transform:uppercase"` : "");
+  return `<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}" fill="${fill}"${extra}${fit}>${esc(t)}</text>`;
 };
+// a color pulled toward white (0 = itself, 1 = white): the tint a box's top line and display text are printed in
+const lighten = (hex, f) => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return "#ddd";
+  const n = parseInt(m[1], 16), ch = k => Math.round(((n >> k) & 255) + (255 - ((n >> k) & 255)) * f).toString(16).padStart(2, "0");
+  return `#${ch(16)}${ch(8)}${ch(0)}`; };
 // a tile prints brand over model; a placeholder name ("AV receiver — Theater")
 // splits at its dash instead, so the generic type stays whole on top
 // A known brand (from the job's locked catalog entry, or a multi-word maker)
@@ -4165,12 +4171,15 @@ export function render(job, ix, P, rt, opts = {}) {
           else push([0, 1].map(i => `<rect x="${d.x + d.w - 34 + i * 12}" y="${d.y + d.h / 2 - 5}" width="9" height="10" rx="2" fill="none" stroke="#8f8f8f" stroke-width="0.9"/>`).join(""));
         } else if (dev.type === "avbSwitch" && u.ports) push(pipField(d.x + d.w - 30, d.y + d.h / 2 - 6, u.ports, { ...L, rows: 2, maxPer: 8, w: 4.5, h: 5, pitch: 6, what: "Ports" }));
         else push(faceGlyph(dev, d.x + d.w - 18, d.y + d.h / 2));
-        push(fitText(d.x + d.w / 2, d.y + d.h + 15, d.model, 12, "#333", d.w + 36));
+        push(fitText(d.x + d.w / 2, d.y + d.h + 15, d.model, 12, "#161616", d.w + 36, { bold: 600 }));
       } else if (d.kind === "amp") {
         push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="3" fill="${tint("#1c1c1c")}" stroke="#0d0d0d"/>`);
         if (kind) push(kindEdge(kind, d.x, d.y, d.h, 3, bw));
         const [brand, ...restName] = tileName(d.model, job.job?.catalogSnapshot?.devices?.[dev.catalogRef]?.brand);
-        push(fitText(d.x + d.w / 2, d.y + 16, brand, 11, "#ddd", d.w - 12));
+        // lettering (Ryan 2026-10-03, picked from concepts): the model is what the eye lands on — bold white, a size up —
+        // and the line over it is small spaced capitals in a tint of the box's own color
+        const topTint = bw || !kind || !KIND_STYLE[kind]?.edge ? "#cfcfcf" : lighten(KIND_STYLE[kind].edge, 0.55);
+        push(fitText(d.x + d.w / 2, d.y + 15, brand, 8.6, topTint, d.w - 14, { bold: 600, caps: 1.2 }));
         // channel strip: used (blue), reserved (gray), spare (outline)
         const zones = Math.max(1, Math.floor(+dev.zones) || 8);
         const feeds = (sol.connections || []).filter(c => c.from === d.id && c.signal === "speaker");
@@ -4199,8 +4208,8 @@ export function render(job, ix, P, rt, opts = {}) {
           push(`<text x="${x + 3.5}" y="${d.y + 48}" text-anchor="middle" font-size="8" fill="#9aa">${k}</text>`);
         }
         push(`</g>`);
-        push(fitText(d.x + d.w / 2, d.y + d.h - 10, restName.join(" ") || d.model, 11, "#eee", d.w - 40));   // clear of the status light
-        push(`<circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 12}" r="2.2" fill="#3fbf5a"/>`);
+        push(fitText(d.x + d.w / 2, d.y + d.h - 9, restName.join(" ") || d.model, 12.5, "#fff", d.w - 40, { bold: true }));   // clear of the status light
+        push(`<circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 12}" r="4" fill="#3fbf5a" fill-opacity="0.25"/><circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 12}" r="2.2" fill="#3fbf5a"/>`);
       } else {
         push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="3" fill="${tint("#262626")}" stroke="#101010"/>`);
         if (kind) push(kindEdge(kind, d.x, d.y, d.h, 3, bw));
@@ -4212,17 +4221,26 @@ export function render(job, ix, P, rt, opts = {}) {
           const rooms = said ? [String(d.model).split(" — ").slice(1).join(" — ")] : drivesRooms(job, sol, d.id);
           if (rooms.length) { brand = rooms[0]; restName = [said ? String(d.model).split(" — ")[0] : d.model]; }
         }
-        push(fitText(d.x + d.w / 2, d.y + 17, brand, 11, dev.type === "avr" && brand !== tileName(d.model)[0] ? "#fff" : "#ddd", d.w - 12));
+        const topTint = bw || !kind || !KIND_STYLE[kind]?.edge ? "#cfcfcf" : lighten(KIND_STYLE[kind].edge, 0.55);
+        push(fitText(d.x + d.w / 2, d.y + 15, brand, 8.6, topTint, d.w - 14, { bold: 600, caps: 1.2 }));
         // faceplate identity cues (squint-test assists, never the identifier)
         const my = d.y + d.h / 2 + 3;
         const u = usage[d.id] || {}, lit = kind && KIND_STYLE[kind].edge ? KIND_STYLE[kind].edge : "#3b82c4", dim = "#8f8f8f";
         const L = { lit, bw };
         if (dev.type === "avr") {
-          // display window: one light per HDMI input (a plain slot when the inputs aren't known)
-          push(`<rect x="${d.x + 14}" y="${my - 6}" width="${u.in ? Math.max(34, u.in.cap * 6 + 8) : 34}" height="12" rx="2" fill="#0d1116" stroke="#3a3f46" stroke-width="0.8"/>`);
-          if (u.in) push(pipField(d.x + 18 + (u.in.cap * 6 - 2) / 2, my - 3, u.in, { ...L, w: 4, pitch: 6, maxPer: 12, what: "HDMI inputs" }));
-          push(`<circle cx="${d.x + d.w - 24}" cy="${my}" r="8" fill="#161616" stroke="#7a7a7a" stroke-width="1.3"/>`);
-          push(`<line x1="${d.x + d.w - 24}" y1="${my - 2}" x2="${d.x + d.w - 24}" y2="${my - 7}" stroke="#9a9a9a" stroke-width="1.3"/>`);
+          // a receiver's front (Ryan 2026-10-03, K2 from concepts + the input lights he asked to keep): a dark display
+          // window with one light per HDMI input — lit as inputs fill — and "used/total" read out beside them, a solid
+          // volume knob with a pointer and a dotted arc of ticks
+          const cap = u.in?.cap || 0, read = u.in && cap <= 7;
+          const ww = u.in ? cap * 6 + 8 + (read ? 24 : 0) : 34, glow = bw ? "#e6e6e6" : lighten(lit, 0.45);
+          push(`<rect x="${d.x + 14}" y="${my - 8}" width="${Math.max(34, ww)}" height="14" rx="2" fill="#0d0f16" stroke="${bw ? "#6a6a6a" : lighten(lit, 0.15)}" stroke-opacity="0.7" stroke-width="0.8"/>`);
+          if (u.in) push(pipField(d.x + 18 + (cap * 6 - 2) / 2, my - 4, u.in, { ...L, w: 4, pitch: 6, maxPer: 12, what: "HDMI inputs" }));
+          if (read) push(`<text x="${d.x + 14 + ww - 4}" y="${my + 1.8}" text-anchor="end" font-size="7.2" font-weight="600" fill="${glow}">${Math.min(u.in.used || 0, 99)}/${cap}</text>`);
+          const kx = d.x + d.w - 25, ky = my - 1, kr = 9.5, tr = 13;
+          const pt = (r, deg) => `${+(kx + r * Math.sin(deg * Math.PI / 180)).toFixed(1)} ${+(ky - r * Math.cos(deg * Math.PI / 180)).toFixed(1)}`;
+          push(`<path d="M${pt(tr, -125)}A${tr} ${tr} 0 1 1 ${pt(tr, 125)}" fill="none" stroke="${bw ? "#9a9a9a" : lighten(lit, 0.35)}" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="1.2 3"/>`);
+          push(`<circle cx="${kx}" cy="${ky}" r="${kr}" fill="#1b1b22" stroke="#e8e8e8" stroke-width="1.3"/><circle cx="${kx}" cy="${ky}" r="6" fill="none" stroke="#6a6a72" stroke-width="0.8"/>`);
+          push(`<path d="M${kx} ${ky}L${pt(kr - 1.5, 28)}" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>`);
         } else if (fk === "video") {
           // matrix: a row of input lights over a row of output lights
           if (u.in || u.out) {
@@ -4266,8 +4284,8 @@ export function render(job, ix, P, rt, opts = {}) {
           push(`<line x1="${ax}" y1="${my}" x2="${ax + 9}" y2="${my}" stroke="${dim}" stroke-width="1.1"/>`);
           push(`<path d="M${ax + 9} ${my}l-3.2 -2.4v4.8z" fill="${dim}"/>`);
         }
-        push(fitText(d.x + d.w / 2, d.y + d.h - 10, restName.join(" "), 10.5, "#eee", d.w - 40));   // clear of the status light
-        push(`<circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 10}" r="2.2" fill="#3fbf5a"/>`);
+        push(fitText(d.x + d.w / 2, d.y + d.h - 9, restName.join(" "), 12, "#fff", d.w - 40, { bold: true }));   // clear of the status light
+        push(`<circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 10}" r="4" fill="#3fbf5a" fill-opacity="0.25"/><circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 10}" r="2.2" fill="#3fbf5a"/>`);
       }
       push(`</g>`);
     }

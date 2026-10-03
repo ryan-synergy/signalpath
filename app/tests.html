@@ -1146,8 +1146,10 @@ for (const [name, raw] of Object.entries(fixtures)) {
   t("residence: legend renders all five labels",
     ["Video", "Audio", "Audio return", "Network", "Pre-wire"].every(l => svg.includes(`>${l}</text>`)));
   // channel strip: 5 zones used (blue), 1 prewire-reserved (gray)
-  const used = (svg.match(/fill="#3b82c4"/g) || []).length;
-  const res = (svg.match(/height="11" fill="#8c8c8c"/g) || []).length;
+  // (2026-10-03 look: a lit window has a glow behind it; a reserved one is gray; an open one is dark with an outline)
+  const mdxG = new DOMParser().parseFromString(svg, "image/svg+xml").querySelector("g.devtile[data-device='mdx16'] g.lights");
+  const used = mdxG.querySelectorAll('rect[fill-opacity="0.3"]').length;
+  const res = mdxG.querySelectorAll('rect[fill="#8c8c8c"]').length;
   t("residence: MDX-16 strip = 5 used / 1 reserved / spares outlined", used === 5 && res === 1, `used=${used} res=${res}`);
   t("residence: annotation renders in red near the Gym", svg.includes("Gym pre-wired only"));
   t("residence: TV footprints carry brand and size", svg.includes(">New Sony</text>") && svg.includes(">75&quot;</text>"));
@@ -2384,7 +2386,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
   { const r = R(); r.solutions[0].connections.filter(c => c.from === "mdx16").forEach(c => delete c.channels);
     const o = pipeline(r);
     const doc = new DOMParser().parseFromString(o.svg, "image/svg+xml");
-    const lit = [...doc.querySelectorAll("g.devtile[data-device='mdx16'] rect")].filter(x => x.getAttribute("fill") === "#3b82c4").length;
+    const lit = doc.querySelectorAll("g.devtile[data-device='mdx16'] g.lights rect[fill-opacity='0.3']").length;
     t("audit: channel-less feeds take the next free amp slot (not all on slot 1)", lit === 5, `${lit} lit`); }
   { const r = R(); r.solutions[0].annotations.push({ text: "second gym note", near: "z-gym" });
     const o = pipeline(r); const doc = new DOMParser().parseFromString(o.svg, "image/svg+xml");
@@ -2672,6 +2674,16 @@ for (const [name, raw] of Object.entries(fixtures)) {
     t("switch faces: a 24-port switch shows 24 jacks and two fiber slots, and reads used/total; the MXNet switch leads with a play arrow on a disc; the AVB switch has its wave",
       jacks("lan") === 24 && g("lan").querySelectorAll('rect[width="10"][height="5.5"]').length === 2 && [...g("lan").querySelectorAll("text")].some(x => x.textContent === `${Us.lan.ports.used}/${Us.lan.ports.cap}`) &&
       jacks("sw") === 24 && !!g("sw").querySelector('circle[r="10.5"]') && !g("lan").querySelector('circle[r="10.5"]') && !!g("avb").querySelector('path[d*="q2.5 -9 5 0"]'), `${jacks("lan")} ${jacks("sw")}`);
+  }
+  { // amp faces (Ryan 2026-10-03): a multi-zone amp has heat-sink fins and a glowing window per zone in use; a theater amp has VU meters and a window per channel
+    const tj = await (await fetch("./test-fixtures/test-job-1.json")).json();
+    const hy = tj.solutions[0].racks.flatMap(r => r.devices).find(d => d.id === "hype"), spk = tj.house.zones[0].endpoints.find(e => e.type === "speakers");
+    const La = loadJob(effectiveJob(tj, 0)), pa = enginePlace(La.job, La.ix), da = new DOMParser().parseFromString(render(La.job, La.ix, pa, engineRoute(La.job, La.ix, pa)), "image/svg+xml");
+    const g = id => da.querySelector(`g.devtile[data-device="${id}"]`), used = (La.job.solutions[0].connections || []).filter(c => c.from === "amp" && c.signal === "speaker").length;
+    t("amp faces: the multi-zone amp has fins on both sides and one glowing window per zone in use, numbered 1–8",
+      g("amp").querySelectorAll('rect[width="1.6"]').length === 10 && g("amp").querySelectorAll('rect[fill-opacity="0.3"]').length === used && used > 0 && [...g("amp").querySelectorAll("g.lights text")].map(x => x.textContent).join("") === "12345678");
+    t("amp faces: the theater amp has two VU meters and a window per channel (L C R LS RS), no fins",
+      !!hy && g("hype").querySelectorAll('path[d*="a11 11 0 0 1 22 0z"]').length === 2 && [...g("hype").querySelectorAll("g.lights text")].map(x => x.textContent).join(" ") === "L C R LS RS" && !g("hype").querySelector('rect[width="1.6"]'));
   }
   { // the speaker look Ryan picked from concepts (2026-10-03): yellow cone, thin dark rim, sound lines per group, a glint on the TV
     const svgB = render(job, ix, p, route(job, ix, p), { grayscale: true });

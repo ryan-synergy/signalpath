@@ -4220,18 +4220,40 @@ export function render(job, ix, P, rt, opts = {}) {
           for (const ch of chs) mark(Math.min(zones, Math.ceil(ch / 2)), st);
         }
         for (const st of loose) { let k = 1; while (k < zones && slot[k]) k++; mark(k, st); }
-        const pitch = Math.min(18, (d.w - 32) / zones), x0 = d.x + d.w / 2 - (zones - 1) * pitch / 2 - 3.5;
-        const sv = Object.values(slot);
-        push(`<g class="lights">${lightsTitle("Amp zones", sv.filter(v => v === "used").length, zones, sv.filter(v => v === "res").length)}`);
-        for (let k = 1; k <= zones; k++) {
-          const x = x0 + (k - 1) * pitch;
-          const st = slot[k];
-          push(st === "used" ? `<rect x="${x}" y="${d.y + 26}" width="7" height="11" fill="${bw ? "#e6e6e6" : "#3b82c4"}"/>` :
-               st === "res" ? `<rect x="${x}" y="${d.y + 26}" width="7" height="11" fill="#8c8c8c"/>` :
-                              `<rect x="${x}" y="${d.y + 26}" width="7" height="11" fill="none" stroke="#666"/>`);
-          push(`<text x="${x + 3.5}" y="${d.y + 48}" text-anchor="middle" font-size="8" fill="#9aa">${k}</text>`);
+        /* an amp's front (Ryan 2026-10-03, from the concept sheet):
+           multi-zone amp — heat-sink fins down both sides, one rounded window per zone: glowing when a run uses it, gray
+             when it's reserved for a pre-wire, dark when open;
+           theater amp (one surround set off many channels) — two VU meters, then a window per CHANNEL (L C R LS RS …),
+             all lit when it's driving its room. The needles are decoration. */
+        const sv = Object.values(slot), usedN = sv.filter(v => v === "used").length, resN = sv.filter(v => v === "res").length;
+        const cat = job.job?.catalogSnapshot?.devices?.[dev.catalogRef] || {}, ampCh = +dev.ampCh || +cat.ampCh || 0;
+        const theater = (cat.flags || []).includes("theaterAmp") || (zones <= 1 && ampCh >= 5);
+        const lit = kind && KIND_STYLE[kind]?.edge ? KIND_STYLE[kind].edge : "#3b82c4", on = bw ? "#e6e6e6" : lighten(lit, 0.45), y0 = d.y + 27;
+        const win = (x, st, w, h) => (st === "used" ? `<rect x="${+(x - 2).toFixed(1)}" y="${y0 - 2}" width="${w + 4}" height="${h + 4}" rx="2" fill="${bw ? "#777" : lit}" fill-opacity="0.3"/>` : "") +
+          `<rect x="${+x.toFixed(1)}" y="${y0}" width="${w}" height="${h}" rx="1.5" fill="${st === "used" ? on : st === "res" ? "#8c8c8c" : "#0d1626"}"${st ? "" : ` stroke="#66707f" stroke-width="0.9"`}/>`;
+        const fins = (x, n) => Array.from({ length: n }, (_, i) => `<rect x="${+(x + i * 3.4).toFixed(1)}" y="${d.y + 26}" width="1.6" height="26" rx="0.8" fill="${bw ? "#4a4a4a" : "#3d4f6b"}"/>`).join("");
+        if (theater && ampCh >= 2) {
+          const names = { 2: ["L", "R"], 3: ["L", "C", "R"], 5: ["L", "C", "R", "LS", "RS"], 7: ["L", "C", "R", "LS", "RS", "LB", "RB"] }[ampCh] || Array.from({ length: Math.min(ampCh, 9) }, (_, i) => String(i + 1));
+          const st = usedN ? "used" : resN ? "res" : "", vu = (cx, ang) => { const cy = d.y + 40, a = ang * Math.PI / 180;
+            return `<path d="M${cx - 11} ${cy + 1}a11 11 0 0 1 22 0z" fill="${bw ? "#e6e6e6" : "#f3ecd6"}" stroke="#0d1626" stroke-width="0.8"/><path d="M${cx - 8} ${cy - 3.5}a9 9 0 0 1 16 0" fill="none" stroke="${bw ? "#555" : "#b9791c"}" stroke-width="1"/>` +
+              `<path d="M${cx + 5.5} ${cy - 6}a9 9 0 0 1 2.5 2.5" fill="none" stroke="${bw ? "#111" : "#d92d20"}" stroke-width="1.6"/><path d="M${cx} ${cy}L${+(cx + 8.5 * Math.sin(a)).toFixed(1)} ${+(cy - 8.5 * Math.cos(a)).toFixed(1)}" stroke="#1c1c1c" stroke-width="1.1" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="1.3" fill="#1c1c1c"/>`; };
+          const room = d.w - 74, pitch = Math.min(17, room / names.length), w = Math.min(10, pitch - 4);
+          push(vu(d.x + 24, usedN ? -20 : -52) + vu(d.x + 50, usedN ? 24 : -52));
+          push(`<g class="lights"><title>${usedN ? `All ${names.length} channels drive its room` : resN ? "Reserved for a pre-wired room" : `${names.length} channels, not driving a room yet`}</title>`);
+          names.forEach((nm, i) => { const x = d.x + 68 + i * pitch;
+            push(win(x, st, w, 12) + `<text x="${+(x + w / 2).toFixed(1)}" y="${y0 + 22}" text-anchor="middle" font-size="7.5" font-weight="600" fill="#9db8d8">${nm}</text>`); });
+          push(`</g>`);
+        } else {
+          const finN = zones > 12 ? 3 : 5, side = 12 + finN * 3.4, pitch = Math.min(13.2, (d.w - side * 2 - 10) / zones), w = Math.max(3.5, Math.min(7.5, pitch - 3.6));
+          const x0 = d.x + d.w / 2 + 2 - ((zones - 1) * pitch + w) / 2;
+          push(fins(d.x + 9, finN) + fins(d.x + d.w - 8 - finN * 3.4, finN));
+          push(`<g class="lights">${lightsTitle("Amp zones", usedN, zones, resN)}`);
+          for (let k = 1; k <= zones; k++) { const x = x0 + (k - 1) * pitch;
+            push(win(x, slot[k] === "used" ? "used" : slot[k] === "res" ? "res" : "", w, 12));
+            if (zones <= 10 || k % 2 === 1) push(`<text x="${+(x + w / 2).toFixed(1)}" y="${d.y + 49}" text-anchor="middle" font-size="${zones > 10 ? 6.6 : 8}" fill="#9aa">${k}</text>`);
+          }
+          push(`</g>`);
         }
-        push(`</g>`);
         push(fitText(d.x + d.w / 2, d.y + d.h - 9, restName.join(" ") || d.model, 12.5, "#fff", d.w - 40, { bold: true }));   // clear of the status light
         push(`<circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 12}" r="4" fill="#3fbf5a" fill-opacity="0.25"/><circle cx="${d.x + d.w - 12}" cy="${d.y + d.h - 12}" r="2.2" fill="#3fbf5a"/>`);
       } else {

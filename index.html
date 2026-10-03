@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-pSxUmyoLy8KSsXVaX5svpq9tFyV+SVVhpbx+DX3eFu0=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-xl3w4aQt2xZxRbxqaEkWwOGj9DQ/uYGKITw2D5OD/9k='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-cmqYmZICGR+CrLK11jRHxTIRjiHSKxpPPqTw/zSUfro=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-q+E5iJ53N+nY06oYLbfqsw3Ix7mNe01KNUMtW/+efl0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -268,6 +268,27 @@
   #canvas .devtile.selnode rect:first-of-type { stroke: #e8842c; stroke-width: 2.5; }
   #canvas .zcard.selnode > rect.hit { stroke: #e8842c; stroke-width: 2.2; fill: rgba(232,132,44,.06); }
   #canvas .zcard.zglow > rect.hit { stroke: #e8842c99; stroke-width: 2; fill: rgba(232,132,44,.04); }
+  /* the box pop-up (Ryan 2026-10-03): tap a rack box → its jacks and connections, right beside it */
+  #devPop { position: fixed; z-index: 42; width: 318px; max-height: min(78vh, 560px); overflow-y: auto; background: #fff; border: 1px solid #b9bec8; border-radius: 11px;
+            box-shadow: 0 8px 26px rgba(0,0,0,.22); padding: 12px 14px 10px; font-size: 13px; color: #16181c; }
+  #devPop[hidden] { display: none; }
+  #devPop .dph { display: flex; align-items: flex-start; gap: 8px; }
+  #devPop .dph b { font-size: 15px; line-height: 1.2; } #devPop .dph .mini { display: block; margin-top: 1px; }
+  #devPop .dpx { margin-left: auto; border: none; background: none; font-size: 18px; line-height: 1; color: #777; cursor: pointer; padding: 2px 4px; }
+  #devPop .dpjacks { display: flex; gap: 10px; background: #1f2430; border-radius: 8px; padding: 7px 9px 8px; margin: 9px 0 4px; }
+  #devPop .dpjacks > div { flex: 1 1 0; min-width: 0; } #devPop .dpjacks > div + div { border-left: 1px solid #3a4152; padding-left: 10px; }
+  #devPop .dpjacks h6 { margin: 0 0 4px; font-size: 9px; letter-spacing: 1.2px; color: #aab2c5; font-weight: 700; }
+  #devPop .dpj { display: inline-block; margin: 0 4px 4px 0; padding: 2px 5px; border-radius: 4px; border: 1px solid #56607a; color: #98a1b8; font-size: 9.5px; font-weight: 600; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: top; box-sizing: border-box; }
+  #devPop .dpj.on { color: #fff; border-color: transparent; }
+  #devPop .dpsect { font-size: 10px; letter-spacing: 1.1px; font-weight: 700; color: #6b7280; margin: 9px 0 4px; }
+  #devPop .dpl { display: grid; grid-template-columns: 14px minmax(54px, 84px) 1fr 22px; align-items: center; gap: 6px; margin-bottom: 5px; }
+  #devPop .dpl i { height: 3px; border-radius: 2px; } #devPop .dpl span { font-size: 11.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #devPop .dpl select { width: 100%; min-width: 0; font: inherit; font-size: 12.5px; padding: 5px 6px; border: 1px solid #d5d9e0; border-radius: 6px; background: #f4f5f8; }
+  #devPop .dpl .dpdel { border: none; background: none; color: #999; cursor: pointer; font-size: 14px; padding: 2px; } #devPop .dpl .dpdel:hover { color: #b32017; }
+  #devPop .dpempty { color: #888; font-size: 12px; margin-bottom: 4px; }
+  #devPop .dpadd { border: 1px dashed #b9bec8; background: none; border-radius: 6px; font: inherit; font-size: 12px; font-weight: 600; padding: 4px 8px; cursor: pointer; color: #16181c; }
+  #devPop .dpfoot { display: flex; justify-content: flex-end; margin-top: 8px; } #devPop .dpfoot a { font-size: 12px; color: var(--accent); }
+  @media (pointer: coarse) { #devPop .dpl select { padding: 9px 6px; } #devPop .dpadd { padding: 8px 10px; } #devPop .dpx { font-size: 22px; padding: 4px 8px; } }
   #wiretip { position: fixed; z-index: 40; background: #16181c; color: #eee; font-size: 12px;
              padding: 6px 11px; border-radius: 6px; display: none;
              box-shadow: 0 4px 14px rgba(0,0,0,.35); max-width: 300px; }
@@ -656,29 +677,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003195107",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003195107",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003195107",
-    "./app/ports.js": "./app/ports.js?v=20261003195107",
-    "./app/commands.js": "./app/commands.js?v=20261003195107",
-    "./app/engine.js": "./app/engine.js?v=20261003195107",
-    "./app/exports.js": "./app/exports.js?v=20261003195107",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003195107",
-    "./app/hookup.js": "./app/hookup.js?v=20261003195107",
-    "./app/importers.js": "./app/importers.js?v=20261003195107",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003195107",
-    "./app/library.js": "./app/library.js?v=20261003195107",
-    "./app/names.js": "./app/names.js?v=20261003195107",
-    "./app/network.js": "./app/network.js?v=20261003195107",
-    "./app/pages.js": "./app/pages.js?v=20261003195107",
-    "./app/power.js": "./app/power.js?v=20261003195107",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003195107",
-    "./app/rack.js": "./app/rack.js?v=20261003195107",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003195107",
-    "./app/starters.js": "./app/starters.js?v=20261003195107",
-    "./app/kinds.js": "./app/kinds.js?v=20261003195107",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003195107",
-    "./app/sheets.js": "./app/sheets.js?v=20261003195107"
+    "./app/ai.js": "./app/ai.js?v=20261003200530",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003200530",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003200530",
+    "./app/ports.js": "./app/ports.js?v=20261003200530",
+    "./app/commands.js": "./app/commands.js?v=20261003200530",
+    "./app/engine.js": "./app/engine.js?v=20261003200530",
+    "./app/exports.js": "./app/exports.js?v=20261003200530",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003200530",
+    "./app/hookup.js": "./app/hookup.js?v=20261003200530",
+    "./app/importers.js": "./app/importers.js?v=20261003200530",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003200530",
+    "./app/library.js": "./app/library.js?v=20261003200530",
+    "./app/names.js": "./app/names.js?v=20261003200530",
+    "./app/network.js": "./app/network.js?v=20261003200530",
+    "./app/pages.js": "./app/pages.js?v=20261003200530",
+    "./app/power.js": "./app/power.js?v=20261003200530",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003200530",
+    "./app/rack.js": "./app/rack.js?v=20261003200530",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003200530",
+    "./app/starters.js": "./app/starters.js?v=20261003200530",
+    "./app/kinds.js": "./app/kinds.js?v=20261003200530",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003200530",
+    "./app/sheets.js": "./app/sheets.js?v=20261003200530"
 } }
 </script>
 <script>
@@ -738,6 +759,7 @@
       <label class="chk"><input type="checkbox" id="hideNet"><span><b>Hide network</b><em>Drop the Cat6 network wires from the drawing</em></span></label>
       <label class="chk"><input type="checkbox" id="splitSheets"><span><b>A sheet per rack</b><em>Saved with the project: a pool house or guest house rack gets its own sheet</em></span></label>
       <label class="chk"><input type="checkbox" id="kindColor" checked><span><b>Color by kind</b><em>Tint rack boxes by what they are (remembered on this computer)</em></span></label>
+      <label class="chk"><input type="checkbox" id="devPopMode"><span><b>Edit boxes in a pop-up</b><em>Tap a rack box on the drawing: its jacks and connections open beside it. Off: the box opens in the side panel (remembered on this computer)</em></span></label>
       <label class="chk"><input type="checkbox" id="showTitle"><span><b>Show title block</b><em>The full band under the drawing (remembered on this computer). Off: a one-line tab. Print and downloads always carry the full band</em></span></label>
       <label class="chk"><input type="checkbox" id="bwMode"><span><b>Black &amp; white</b><em>Dash patterns carry each signal, for office laser printers</em></span></label>
       <details class="mstyle"><summary><b>Drawing style</b><em>Trunks, harness, Dante labels — how the wires are drawn</em></summary>
@@ -788,6 +810,7 @@
   <div id="grip" title="Drag to resize the panel"></div>
   <div id="right">
     <div id="canvas"></div>
+    <div id="devPop" hidden></div>
     <div id="sheetTabs" role="tablist" aria-label="Schematic sheets" hidden></div>
     <div id="zoomBar" role="group" aria-label="Zoom"><button id="zOut" title="Zoom out" aria-label="Zoom out">−</button><button id="zFit" title="Fit the sheet to the window">Fit</button><button id="zIn" title="Zoom in" aria-label="Zoom in">+</button></div>
     <div id="rackView" hidden>
@@ -887,7 +910,7 @@
 
 <script type="module">
 import { autoRacks, expandChannels } from "./app/engine.js";
-import { loadJob, normalizeJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock, trunkMode, boxUsage, SHEET, KIND_STYLE, deviceKind } from "./app/engine.js";
+import { SIGNAL_COLORS, loadJob, normalizeJob, validate, advise, place, route, render, effectiveJob, autoLinkCatalog, routeAlternates, lockCatalog, catalogDrift, refreshCatalogLock, trunkMode, boxUsage, SHEET, KIND_STYLE, deviceKind } from "./app/engine.js";
 import { importAny, mergeHouse, drawFromWalk, decodeHandoff, stripUnsafe } from "./app/importers.js";
 import { importMarkdown, designBrief } from "./app/mdimport.js";
 import { sheetGroups, sheetJob } from "./app/sheets.js";
@@ -941,7 +964,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003195107").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003200530").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1106,7 +1129,7 @@ function refresh(save = true) {
   $("#startAsBuilt").hidden = ab;                                    // an as-built isn't copied again
   $("#exportInstall").hidden = !ab;
   $("#canvas").innerHTML = svg || `<div style="color:#888;padding:60px;text-align:center">Add rooms on the left to start drawing${err ? "<br><small>" + esc(err.message) + "</small>" : ""}</div>`;
-  hideTip(); applySel(); syncGlow();
+  hideTip(); applySel(); syncGlow(); drawDevPop();
   const activeSolId = S.job.solutions[S.sol]?.id;
   const mine = e => !e.solution || e.solution === activeSolId;   // advisor speaks for the ACTIVE solution only
   const errs = (v?.errors || []).filter(mine), warns = (v?.warnings || []).filter(mine);
@@ -1295,6 +1318,8 @@ $("#hideNet").onchange = () => refresh(false);
 $("#bwMode").onchange = () => refresh(false);
 // color by kind is a per-computer preference (on unless turned off here)
 try { $("#kindColor").checked = localStorage.getItem("signalpath.kindColor") !== "off"; } catch {}
+try { $("#devPopMode").checked = localStorage.getItem("signalpath.devPop") !== "off"; } catch { $("#devPopMode").checked = true; }
+$("#devPopMode").onchange = e => { try { localStorage.setItem("signalpath.devPop", e.target.checked ? "on" : "off"); } catch {} if (!e.target.checked) closeDevPop(); };
 try { $("#showTitle").checked = localStorage.getItem("signalpath.titleBlock") === "on"; } catch {}
 const setTitleBlock = on => { $("#showTitle").checked = on; try { localStorage.setItem("signalpath.titleBlock", on ? "on" : "off"); } catch {} refresh(false); };
 $("#showTitle").onchange = e => setTitleBlock(e.target.checked);
@@ -1907,7 +1932,74 @@ function applySel() {
     g?.classList.add("selnode");
   }
 }
-function clearSel() { selWire = null; selDev = null; hideTip(); applySel(); clearGhosts(); }
+function clearSel() { selWire = null; selDev = null; hideTip(); applySel(); clearGhosts(); closeDevPop(); }
+
+/* ---- the box pop-up (Ryan 2026-10-03, picked from concepts: the connection list with the jack strip on top) ----
+   View ▾ → Edit boxes in a pop-up. A tap on a rack box opens a small card beside it: its jacks (lit in the wire's
+   color where something is plugged in), what comes in and what goes out — each a picker of what else could go there —
+   and ＋ buttons for a new input / output. "More…" opens the full editor in the side panel. Same rules as the panel
+   (endFits, the plug picker); it redraws after every change and follows the box when the sheet scrolls. */
+let popDev = null;
+function closeDevPop() { popDev = null; const el = $("#devPop"); if (el) el.hidden = true; }
+function placeDevPop() {
+  const el = $("#devPop"), tile = popDev && $("#canvas svg")?.querySelector(`[data-device="${CSS.escape(popDev)}"]`);
+  if (!tile || el.hidden) return;
+  const r = tile.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight, vw = innerWidth, vh = innerHeight;
+  let left = r.right + 12; if (left + w > vw - 8) left = r.left - w - 12;
+  if (left < 8) left = Math.max(8, Math.min(vw - w - 8, r.left + r.width / 2 - w / 2));   // no room either side: over / under the box
+  let top = left < r.right && left + w > r.left ? (r.bottom + 10 + h < vh ? r.bottom + 10 : r.top - h - 10) : r.top + r.height / 2 - 70;
+  el.style.left = `${Math.round(left)}px`; el.style.top = `${Math.round(Math.max(8, Math.min(vh - h - 8, top)))}px`;
+}
+function drawDevPop() {
+  const el = $("#devPop"); if (!popDev) { el.hidden = true; return; }
+  const sol = S.job.solutions[S.sol], d = sol?.racks.flatMap(r => r.devices).find(x => x.id === popDev);
+  if (!d || S.mainView === "rack" || !$("#canvas svg")?.querySelector(`[data-device="${CSS.escape(popDev)}"]`)) { closeDevPop(); return; }
+  const conns = sol.connections.map((c, i) => [c, i]), ins = conns.filter(([c]) => c.to === d.id), outs = conns.filter(([c]) => c.from === d.id);
+  const colorOf = c => c.dante ? SIGNAL_COLORS.dante : SIGNAL_COLORS[c.signal === "speaker" ? "audio" : c.signal] || "#888";
+  // the jack strip: every jack the product has; lit in its wire's color when something is plugged in
+  let strip = "";
+  try {
+    const { job, ix } = loadJob(effectiveJob(S.job, S.sol)), pm = S.portMap || [];
+    const side = dir => { const all = jacksOf(job, ix, effectiveCatalog(), S.sol, d.id, dir, pm).filter(p => p.conn !== "power"), av = all.filter(p => p.conn !== "network"), js = av.length ? av : all; if (!js.length) return "";   // a switch shows its network jacks
+      const used = js.filter(p => p.usedBy != null), free = js.length - used.length, show = js.length <= 8 ? js : used, short = l => String(l).replace(/\s*\(.*?\)\s*/g, " ").trim() || l;
+      return `<div><h6>${dir === "in" ? "IN" : "OUT"}</h6>${show.map(p => { const c = p.usedBy != null ? sol.connections[p.usedBy] : null;
+        return `<span class="dpj${c ? " on" : ""}"${c ? ` style="background:${colorOf(c)}"` : ""} title="${esc(p.label)}${c ? ` — ${esc(nodeInfo(dir === "in" ? c.from : c.to).short)}` : " — free"}">${esc(short(p.label))}</span>`; }).join("")}${js.length > 8 && free ? `<span class="dpj">${free} free</span>` : ""}</div>`; };
+    const a = side("in"), b = side("out");
+    if (a || b) strip = `<div class="dpjacks">${a}${b}</div>`;
+  } catch { /* a project that won't load draws no strip */ }
+  const twin = (from, to, signal) => sol.connections.some(k => k.from === from && k.to === to && k.signal === signal);   // already wired that way: not offered twice
+  const line = ([c, i], dir) => { const pm = S.portMap?.[i] || {}, jack = (dir === "in" ? pm.to : pm.from)?.label || (c.dante ? "Dante" : signalName(c.signal));
+    const fixed = roomOfHookup(c) && c.signal === "audioReturn";   // a TV's sound coming back is set from its room
+    const pick = fixed ? `<span title="Change it from ${esc(roomOfHookup(c).name)}">${esc(nodeInfo(dir === "in" ? c.from : c.to).short)}</span>`
+      : dir === "in" ? nodeSel("dpfrom", c.from, id => endFits("from", id, c.to, c.signal) && !twin(id, c.to, c.signal)) : nodeSel("dpto", c.to, id => endFits("to", id, c.from, c.signal) && !twin(c.from, id, c.signal));
+    return `<div class="dpl" data-ci="${i}"><i style="background:${colorOf(c)}"></i><span title="${esc(jack)}">${esc(jack)}</span>${pick}<button class="dpdel" title="Remove this connection">✕</button></div>`; };
+  el.innerHTML = `<div class="dph"><div><b>${esc(nodeInfo(d.id).short || d.model || d.id)}</b><span class="mini">${esc(DEV_TYPE_LABEL[d.type] || d.type)}</span></div><button class="dpx" title="Close" aria-label="Close">✕</button></div>
+    ${strip}
+    <div class="dpsect">COMING IN</div>${ins.length ? ins.map(x => line(x, "in")).join("") : `<div class="dpempty">Nothing plugged in yet.</div>`}
+    ${d.type === "source" ? "" : `<button class="dpadd" data-dir="in">＋ Add an input</button>`}
+    <div class="dpsect">GOING OUT</div>${outs.length ? outs.map(x => line(x, "out")).join("") : `<div class="dpempty">Not feeding anything yet.</div>`}
+    <button class="dpadd" data-dir="out">＋ Add an output</button>
+    <div class="dpfoot"><a href="#" class="dpmore">More — product, name, notes ›</a></div>`;
+  el.hidden = false;
+  const id = d.id, connAt = t => sol.connections[+t.closest("[data-ci]").dataset.ci];
+  el.querySelector(".dpx").onclick = () => clearSel();
+  el.querySelector(".dpmore").onclick = e => { e.preventDefault(); closeDevPop(); openGear(id); };
+  const repoint = (c, end, v) => { const was = `${c.from}→${c.to}`; c[end] = v; const g = suggestSignal(c.from, c.to); if (g) c.signal = g; if (selWire === was) selWire = `${c.from}→${c.to}`;
+    if (end === "to") { const z = S.job.house.zones.find(z => (z.endpoints || []).some(e => e.id === c.to)); if (z) { if ((z.scope || "included") === "included") delete c.scope; else c.scope = z.scope; } }
+    S.editLabel = "re-point a connection"; refresh(); };
+  el.querySelectorAll(".dpfrom").forEach(s => s.onchange = () => { const c = connAt(s); if (c) repoint(c, "from", s.value); });
+  el.querySelectorAll(".dpto").forEach(s => s.onchange = () => { const c = connAt(s); if (c) repoint(c, "to", s.value); });
+  el.querySelectorAll(".dpdel").forEach(b => b.onclick = () => { const [gone] = sol.connections.splice(+b.closest("[data-ci]").dataset.ci, 1);
+    for (const k of [...S.openRows]) if (k.startsWith("conn:")) S.openRows.delete(k);
+    const what = gone ? `${nodeInfo(gone.from).short} → ${nodeInfo(gone.to).short}` : "connection";
+    S.editLabel = `delete ${what}`; refresh(); toast(`Deleted ${what}`, true); });
+  // ＋ uses the side panel's own plug picker (every box that can connect, the rest grayed with the reason)
+  el.querySelectorAll(".dpadd").forEach(b => b.onclick = () => { const dir = b.dataset.dir; openGear(id);
+    $(`#panelBody [data-did="${CSS.escape(id)}"] .addconn[data-dir="${dir}"]`)?.click(); });
+  placeDevPop();
+}
+addEventListener("scroll", () => placeDevPop(), true); addEventListener("resize", () => placeDevPop());
+document.addEventListener("keydown", e => { if (e.key === "Escape" && popDev && !document.querySelector("#picker.on")) clearSel(); });
 
 /* ---- guided rerouting: pick from legal alternate routes for the selected wire ---- */
 let ALTS = null;
@@ -2127,7 +2219,9 @@ $("#canvas").addEventListener("click", e => {
     return;
   }
   const dev = e.target.closest("[data-device]");
-  if (dev) { clearSel(); selDev = dev.dataset.device; applySel(); openGear(dev.dataset.device); return; }
+  if (dev) { clearSel(); selDev = dev.dataset.device; applySel();
+    if ($("#devPopMode").checked) { popDev = dev.dataset.device; drawDevPop(); } else openGear(dev.dataset.device);
+    return; }
   // an adapter chip opens what it serves: the room (a DEC / balun at a TV) or the box (an ENC on a source)
   const chipEl = e.target.closest("[data-chip]");
   if (chipEl) {

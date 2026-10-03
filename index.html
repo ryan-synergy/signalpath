@@ -32,6 +32,8 @@
   #topbar .mlist[hidden] { display: none; }
   #topbar .menu[hidden], #topbar .mlist button[hidden], #topbar > button[hidden] { display: none; }
   #topbar .mlist.right { left: auto; right: 0; }
+  #topbar .mlist { max-height: calc(100vh - 120px); max-height: calc(100dvh - 120px); overflow-y: auto; max-width: calc(100vw - 16px); overscroll-behavior: contain; }
+  @media (max-width: 560px) { #topbar .mlist, #topbar .mlist.right { position: fixed; left: 8px; right: 8px; top: auto; min-width: 0; } }
   #topbar .mlist button, #topbar .mlist label { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left;
     background: transparent; border: 0; border-radius: 6px; padding: 7px 10px; width: 100%; }
   #topbar .mlist label { flex-direction: row; gap: 10px; align-items: flex-start; cursor: pointer; }
@@ -187,7 +189,7 @@
   #picker .pk-hd b { font-size: 15px; }
   #picker .pk-hd button { border: 0; background: none; font-size: 18px; cursor: pointer; min-width: 44px; min-height: 44px; }
   #pkSearch { margin: 0 14px 8px; padding: 9px 10px; font: inherit; font-size: 15px; border: 1px solid var(--line); border-radius: 8px; }
-  #pkList { overflow-y: auto; padding: 0 8px 16px; -webkit-overflow-scrolling: touch; }
+  #pkList { overflow-y: auto; padding: 0 8px calc(16px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; overscroll-behavior: contain; flex: 1 1 auto; min-height: 0; }
   #pkList .pk-g { font-size: 11px; color: #666; margin: 12px 8px 4px; text-transform: uppercase; letter-spacing: .05em; }
   .mstyle { border-top: 1px solid var(--line, #ddd); margin-top: 4px; padding-top: 2px; }
   .mstyle > summary { list-style: none; cursor: pointer; padding: 8px 10px; display: flex; flex-direction: column; }
@@ -437,7 +439,7 @@
   #qaChips .plan { width: 100%; padding: 6px 8px; }
   #qaChips .plan .ps { font-size: 12px; }
   #toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: #16181c; color: #eee; font-size: 13px;
-           padding: 8px 14px; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.35); display: none; z-index: 60; gap: 10px; align-items: center;
+           padding: 8px 14px; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.35); display: none; z-index: 70; gap: 10px; align-items: center;
            width: max-content; max-width: min(560px, calc(100vw - 32px)); box-sizing: border-box; }
   #toast > span { flex: 1 1 auto; min-width: 0; }
   #toast button { flex: none; }
@@ -566,7 +568,7 @@
   .fieldbtn .v { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .fieldbtn .v > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fieldbtn small { font-size: 11.5px; color: var(--muted); }
-  .fieldbtn .ch { color: var(--muted); }
+  .fieldbtn .ch { color: var(--muted); flex: none; }
   .pickbtn { min-height: var(--hit); border-radius: 8px; border-color: var(--act-line); font-size: 13px; padding: 4px 12px; }
   /* actions: outlined, neutral; suggestions: soft blue with ✦ */
   .addconn, .addbtn { min-height: var(--hit); border: 1px solid var(--act-line) !important; background: #fff; color: #16181c; font-weight: 600;
@@ -613,29 +615,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003053459",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003053459",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003053459",
-    "./app/ports.js": "./app/ports.js?v=20261003053459",
-    "./app/commands.js": "./app/commands.js?v=20261003053459",
-    "./app/engine.js": "./app/engine.js?v=20261003053459",
-    "./app/exports.js": "./app/exports.js?v=20261003053459",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003053459",
-    "./app/hookup.js": "./app/hookup.js?v=20261003053459",
-    "./app/importers.js": "./app/importers.js?v=20261003053459",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003053459",
-    "./app/library.js": "./app/library.js?v=20261003053459",
-    "./app/names.js": "./app/names.js?v=20261003053459",
-    "./app/network.js": "./app/network.js?v=20261003053459",
-    "./app/pages.js": "./app/pages.js?v=20261003053459",
-    "./app/power.js": "./app/power.js?v=20261003053459",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003053459",
-    "./app/rack.js": "./app/rack.js?v=20261003053459",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003053459",
-    "./app/starters.js": "./app/starters.js?v=20261003053459",
-    "./app/kinds.js": "./app/kinds.js?v=20261003053459",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003053459",
-    "./app/sheets.js": "./app/sheets.js?v=20261003053459"
+    "./app/ai.js": "./app/ai.js?v=20261003054402",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003054402",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003054402",
+    "./app/ports.js": "./app/ports.js?v=20261003054402",
+    "./app/commands.js": "./app/commands.js?v=20261003054402",
+    "./app/engine.js": "./app/engine.js?v=20261003054402",
+    "./app/exports.js": "./app/exports.js?v=20261003054402",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003054402",
+    "./app/hookup.js": "./app/hookup.js?v=20261003054402",
+    "./app/importers.js": "./app/importers.js?v=20261003054402",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003054402",
+    "./app/library.js": "./app/library.js?v=20261003054402",
+    "./app/names.js": "./app/names.js?v=20261003054402",
+    "./app/network.js": "./app/network.js?v=20261003054402",
+    "./app/pages.js": "./app/pages.js?v=20261003054402",
+    "./app/power.js": "./app/power.js?v=20261003054402",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003054402",
+    "./app/rack.js": "./app/rack.js?v=20261003054402",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003054402",
+    "./app/starters.js": "./app/starters.js?v=20261003054402",
+    "./app/kinds.js": "./app/kinds.js?v=20261003054402",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003054402",
+    "./app/sheets.js": "./app/sheets.js?v=20261003054402"
 } }
 </script>
 <script>
@@ -894,7 +896,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003053459").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003054402").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -1321,7 +1323,7 @@ async function openJobsHome() { $("#jhSearch").value = ""; await renderJobsHome(
 $("#jobsHomeBtn").onclick = openJobsHome;
 $("#jhClose").onclick = closeJobsHome;
 $("#jhSearch").oninput = () => renderJobsHome();
-addEventListener("keydown", e => { if (e.key === "Escape" && $("#jobsHome").classList.contains("show") && !document.querySelector("#starter.show, #pasteBox.show, #picker.show")) closeJobsHome(); });
+addEventListener("keydown", e => { if (e.key === "Escape" && $("#jobsHome").classList.contains("show") && !document.querySelector("#starter.show, #pasteBox.show, #picker.on")) closeJobsHome(); });
 $("#jobsHome").querySelector(".jh-start").onclick = e => {
   const b = e.target.closest("[data-start]"); if (!b) return;
   if (b.dataset.start === "sample") return openPicker({ title: "Open a sample", groups: [{ label: "Samples (a new copy each time)", items: [
@@ -1436,7 +1438,8 @@ function pushUndo(label) {
 // undo belongs to the job it was recorded on — switching jobs hides it
 function syncUndo() {
   const top = S.undo[S.undo.length - 1], b = $("#undoBtn");
-  b.style.display = top && top.id === S.id ? "" : "none";
+  const on = !!(top && top.id === S.id);
+  b.style.display = ""; b.style.visibility = on ? "" : "hidden"; b.disabled = !on;   // keeps its place: the bar never jumps
   if (top) b.title = `Undo: ${top.label}`;
 }
 function undo() {
@@ -2097,8 +2100,8 @@ const DEV_TYPE_LABEL = TYPE_NAME, SIGNAL_LABEL = SIGNAL_NAME, SCOPE_LABEL = SCOP
    reason (Ryan 2026-09-29: gray, don't hide), search narrows; a group marked
    searchOnly (legacy gear, other kinds of box) only shows while searching */
 function openPicker({ title, groups, onPick }) {
-  const box = $("#picker"), list = $("#pkList"), q = $("#pkSearch");
-  $("#pkTitle").textContent = title; q.value = "";
+  const box = $("#picker"), list = $("#pkList"), q = $("#pkSearch"), opener = document.activeElement;
+  $("#pkTitle").textContent = title; q.value = ""; list.scrollTop = 0; box.querySelector(".card").style.height = "";
   let all = false;   // the tucked-away groups (another room's receiver, can't-connect) open on search or "Show more"
   const draw = () => {
     const t = q.value.trim().toLowerCase();
@@ -2108,16 +2111,20 @@ function openPicker({ title, groups, onPick }) {
       const items = g.items.filter(it => !t || `${it.label} ${it.sub || ""} ${it.reason || ""} ${it.keys || ""}`.toLowerCase().includes(t));
       if (!items.length) return "";
       return `<div class="pk-g">${esc(g.label)}</div>` + items.map(it => `<button class="pk-i${it.current ? " cur" : ""}" data-v="${esc(it.value)}" ${it.disabled ? "disabled" : ""}>${esc(it.label)}${(it.disabled ? it.reason : it.sub) ? `<small>${esc(it.disabled ? it.reason : it.sub)}</small>` : ""}</button>`).join("");
-    }).join("") + (tucked.some(g => g.items.length) ? `<button class="pk-more">Show ${tucked.reduce((n, g) => n + g.items.length, 0)} more — ${esc(tucked.map(g => g.label.replace(/\s*\(.*\)$/, "").toLowerCase()).join(", "))}</button>` : "")
+    }).join("") + (tucked.some(g => g.items.length) ? `<button class="pk-more">Show ${tucked.reduce((n, g) => n + g.items.length, 0)} ${tucked.every(g => g.items.every(it => it.disabled)) ? "unavailable" : "more"} — ${esc(tucked.map(g => g.label.replace(/\s*\(.*\)$/, "").toLowerCase()).join(", "))}</button>` : "")
       || `<div class="mini" style="padding:14px">Nothing matches “${esc(q.value)}”.</div>`;
     list.querySelector(".pk-more")?.addEventListener("click", () => { all = true; draw(); });
     list.querySelectorAll(".pk-i:not([disabled])").forEach(b => b.onclick = () => { close(); onPick(b.dataset.v); });
   };
-  const key = e => { if (e.key === "Escape") close(); };
-  const close = () => { box.classList.remove("on"); removeEventListener("keydown", key); };
+  // Escape closes the picker and nothing under it (the Jobs screen, the Rack view) — 2026-10-03 mechanics pass
+  const key = e => { if (e.key === "Escape") { e.stopImmediatePropagation(); e.preventDefault(); close(); } };
+  const close = () => { box.classList.remove("on"); removeEventListener("keydown", key, true); box.querySelector(".card").style.height = "";
+    if (opener?.isConnected && opener.focus && matchMedia("(pointer: fine)").matches) opener.focus({ preventScroll: true }); };
   q.oninput = draw; $("#pkClose").onclick = close; box.onclick = e => { if (e.target === box) close(); };
-  addEventListener("keydown", key);
-  draw(); box.classList.add("on");
+  addEventListener("keydown", key, true);
+  draw(); box.classList.add("on"); list.scrollTop = 0;   // set once it's showing — a hidden list keeps the last picker's scroll
+  // the sheet holds the height it opened at, so typing a search doesn't shrink it and jump the search box
+  q.onfocus = () => { const c = box.querySelector(".card"); if (!c.style.height) c.style.height = c.getBoundingClientRect().height + "px"; };
   if (matchMedia("(pointer: fine)").matches) q.focus();
   list.querySelector(".pk-i.cur")?.scrollIntoView({ block: "center" });
 }
@@ -2181,6 +2188,16 @@ const NOT_AV = ["power", "networkSwitch", "avbSwitch", "gateway", "host", "contr
 // the wire into a TV's balun / decoder, or out of it to the TV, is the TV's picture — nothing else
 const tvAdapterWire = c => { const sol = S.job.solutions[S.sol] || S.job.solutions[0], tvs = new Set(S.job.house.zones.flatMap(z => (z.endpoints || []).filter(e => e.type === "display").map(e => e.id)));
   return (sol.companions || []).some(k => tvs.has(k.serves) && (k.id === c.to || (k.id === c.from && c.to === k.serves))); };
+/* a wire that IS a room's hookup — into its TV (or the TV's balun / decoder) or its speakers: where it lands is the
+   room's business, changed on the room card (2026-10-03 crawl: re-pointing it here stranded the balun) */
+function roomOfHookup(c) {
+  // a TV's sound coming back (to a receiver, or a soundbar played off it) is the room's "TV audio back"
+  if (c.signal === "audioReturn") return S.job.house.zones.find(z => (z.endpoints || []).some(e => e.id === c.from && e.type === "display")) || null;
+  if (!["video", "speaker"].includes(c.signal)) return null;
+  const sol = S.job.solutions[S.sol] || S.job.solutions[0], k = (sol.companions || []).find(x => x.id === c.to);
+  const ep = k ? k.serves : c.to;
+  return S.job.house.zones.find(z => (z.endpoints || []).some(e => e.id === ep && (e.type === "display" || e.type === "speakers"))) || null;
+}
 const rackDev = id => (S.job.solutions[S.sol] || S.job.solutions[0]).racks.flatMap(r => r.devices).find(d => d.id === id) || {};
 function endFits(end, id, other, signal, asType = null) {
   if (id === other) return false;
@@ -2369,7 +2386,7 @@ function zonesHTML() {
           ${fieldO("Remote", sel("zremote", ["none", "savant", "appletv", "josh", "factory"], zEff.remote || "none", REMOTE_LABEL), "zones", z.id, "remote")}
           ${field("Outdoor", sel("zoutdoor", ["auto", "yes", "no"], typeof z.outdoor === "boolean" ? (z.outdoor ? "yes" : "no") : "auto",
             { auto: `Auto (${isOutdoorZone({ ...z, outdoor: undefined }) ? "outdoor" : "indoor"})`, yes: "Outdoor", no: "Indoor" }))}
-          ${(S.job.house.areas || []).length ? field("Area", sel("zarea", ["", ...S.job.house.areas.map(a => a.id)], z.area || "", { "": "—", ...Object.fromEntries(S.job.house.areas.map(a => [a.id, a.name || a.id])) })) : ""}
+          ${(S.job.house.areas || []).length ? field("Area", sel("zarea", ["", ...S.job.house.areas.map(a => a.id)], z.area || "", { "": "No area", ...Object.fromEntries(S.job.house.areas.map(a => [a.id, a.name || a.id])) })) : ""}
           ${spk && !/^(surround|soundbar)/.test(spk.config || "") ? fieldO("Spk count", `<input class="spkcount" type="number" min="1" max="12" value="${esc(spk.count || 2)}">`, "endpoints", spkH.id, "count") : ""}
           ${spk ? fieldO("Speakers are", chips("spkstatus", STATUSES.map(k => [k, STATUS_LABEL[k]]), spk.status || "new"), "endpoints", spkH.id, "status") : ""}
           ${tv ? fieldO("TV is", chips("tvstatus", STATUSES.slice(0, 2).map(k => [k, STATUS_LABEL[k]]), tv.status || "new"), "endpoints", tvH.id, "status") : ""}
@@ -2523,7 +2540,7 @@ function hookupHTML(z, sol, multi) {
     const optTargets = devs.filter(d => RETURN_TO.includes(d.type)).sort((a, b) => (b.id === (rcv || roomAvr)?.id) - (a.id === (rcv || roomAvr)?.id));
     gist.push(h.audioBack === "optical" ? "optical back" : h.audioBack === "none" || !h.audioBack ? "no audio back" : (AUDIO_BACK[h.audioBack] || h.audioBack).replace(/\s*\(.*\)$/, ""));
     fine.push(field("TV audio back", `<select class="hret">
-      ${rcv && h.tv.displayType !== "projector" ? opt("earc", `${AUDIO_BACK.earc} (to ${nm(rcv.id)})`, cur) + opt("earc+optical", `${AUDIO_BACK["earc+optical"]} (to ${nm(rcv.id)})`, cur)
+      ${rcv && h.tv.displayType !== "projector" ? (h.video?.run === "balun" || h.video?.run === "dec" ? `<option value="earc" data-sub="many ${h.video.run === "balun" ? "HDBaseT baluns" : "decoders"} don't pass eARC — the optical backup covers it" ${cur === "earc" ? "selected" : ""}>${esc(`${AUDIO_BACK.earc} (to ${nm(rcv.id)})`)}</option>` : opt("earc", `${AUDIO_BACK.earc} (to ${nm(rcv.id)})`, cur)) + opt("earc+optical", `${AUDIO_BACK["earc+optical"]} (to ${nm(rcv.id)})`, cur)
         + opt("earc-kit", `${AUDIO_BACK["earc-kit"]} (to ${nm(rcv.id)})`, cur) : ""}
       ${!rcv && h.tv.displayType !== "projector" ? `<option value="__earc_why" disabled title="eARC rides the HDMI from a receiver — this TV's picture ${h.video?.from ? `comes from ${esc(nm(h.video.from))}` : "isn't fed yet"}. Use the eARC extender kit or optical.">eARC over the HDMI</option>` : ""}
       ${!rcv && roomAvr && h.tv.displayType !== "projector" ? opt(`earc-kit:${roomAvr.id}`, `${AUDIO_BACK["earc-kit"]} (to ${nm(roomAvr.id)})`, cur) : ""}
@@ -2636,9 +2653,10 @@ function connRowHTML(c, i, sol, ctx, dir) {
       <div class="head" data-toggle="${esc(key)}"><span class="t">${esc(title)}</span><span class="sub">${esc(tail)}</span></div>
       ${jacks}
       <div class="fields">
-        ${field("From", nodeSel("cfrom", c.from, id => endFits("from", id, c.to, c.signal)))}
-        ${field("To", nodeSel("cto", c.to, id => endFits("to", id, c.from, c.signal)))}
-        ${field("Carries", sel("csig", SIGNALS.filter(g => g === c.signal || (endFits("from", c.from, c.to, g) && endFits("to", c.to, c.from, g) && !(tvAdapterWire(c) && g !== "video" && g !== "network"))), c.signal, SIGNAL_LABEL))}
+        ${field("Comes from", nodeSel("cfrom", c.from, id => endFits("from", id, c.to, c.signal)))}
+        ${roomOfHookup(c) ? field("Goes to", `<span class="mini" style="line-height:1.5">${esc(nodeInfo(c.to).label)} · <a href="#" class="goroom" data-zone="${esc(roomOfHookup(c).id)}">change it from ${esc(roomOfHookup(c).name)} ›</a></span>`)
+          : field("Goes to", nodeSel("cto", c.to, id => endFits("to", id, c.from, c.signal)))}
+        ${roomOfHookup(c) ? "" : field("Carries", sel("csig", SIGNALS.filter(g => g === c.signal || (endFits("from", c.from, c.to, g) && endFits("to", c.to, c.from, g) && !(tvAdapterWire(c) && g !== "video"))), c.signal, SIGNAL_LABEL))}
         ${c.signal === "video" && fromRcv ? field("eARC", `<input type="checkbox" class="cearc" ${c.earc ? "checked" : ""}> <span class="mini">the TV's audio comes back over this HDMI</span>`) : ""}
         ${c.signal === "audioReturn" && !c.earcKit ? field("Backup", `<input type="checkbox" class="cbackup" ${c.backup ? "checked" : ""}> <span class="mini">optical backup to eARC</span>`) : ""}
         ${c.signal !== "network" ? field("Outputs", `<input class="cch" placeholder="optional, e.g. 3-4" title="Which outputs this uses — amp channels (3-4) or a matrix output (2). Shows on the channel strip." value="${esc(c.channels || "")}">`) : ""}
@@ -2908,7 +2926,7 @@ function rkStart(e, g) {
 }
 $("#rkUndo").onclick = () => { undo(); renderRackEd(); };
 document.addEventListener("click", e => { if (e.target.closest(".rkopen")) { e.preventDefault(); openRackEd(); } });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && S.mainView === "rack" && !e.target.closest?.("input, textarea, select")) setView("schematic"); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && S.mainView === "rack" && !$("#picker").classList.contains("on") && !e.target.closest?.("input, textarea, select")) setView("schematic"); });
 
 /* start from the space (Ryan 2026-10-02): the opening a rack has to fit — the lower of the cabinet opening
    and the door it goes through — picks the tallest Middle Atlantic / Strong floor rack that fits (on
@@ -3594,12 +3612,14 @@ function wirePanel(body) {
   // More / Other: the rarer choices, through the picker
   body.querySelectorAll('.chip.more[data-more="spkcfg"]').forEach(b => b.onclick = () => {
     const rest = ZSPK.filter(([v]) => !SPK_MAIN.includes(v));
-    openPicker({ title: "Speaker setup", groups: [{ label: "More setups", items: rest.map(([v, l]) => ({ value: v, label: l, sub: SPEAKER_SETUP[v] || "" })) }],
+    openPicker({ title: "Speaker setup", groups: [{ label: "More setups", items: rest.map(([v, l]) => ({ value: v, label: l, sub: SPEAKER_SETUP[v] && SPEAKER_SETUP[v] !== l ? SPEAKER_SETUP[v] : "" })) }],
       onPick: v => { ZH[".spkcfg"]?.({ value: v, checked: false, closest: q => b.closest(q) }); refresh(); } });
   });
   body.querySelectorAll('.chip.more[data-other="tvsize"]').forEach(b => b.onclick = () => {
-    const n = prompt('TV size in inches (24–220):', ""); if (n == null) return;
-    ZH[".tvsize"]?.({ value: n, checked: false, closest: q => b.closest(q) }); refresh();
+    const z = zoneOf(b), tv = z?.endpoints?.find(e => e.type === "display"), proj = tv?.displayType === "projector";
+    const sizes = proj ? [92, 100, 106, 110, 120, 135, 150, 165, 180, 200] : [24, 32, 40, 43, 48, 50, 55, 60, 65, 70, 75, 77, 80, 83, 85, 86, 90, 98, 100, 110, 115, 120];
+    openPicker({ title: proj ? "Screen size" : "TV size", groups: [{ label: proj ? "Screen (diagonal, inches)" : "TV (inches)", items: sizes.map(n => ({ value: String(n), label: `${n}″`, current: +tv?.size === n })) }],
+      onPick: v => { ZH[".tvsize"]?.({ value: v, checked: false, closest: q => b.closest(q) }); refresh(); } });
   });
   ZH[".hreach"] = el => { const z = zoneOf(el); if (z) { z.reach = el.value; delete z.runFt; } };
   body.querySelectorAll(".hrunft").forEach(el => el.onchange = () => { const z = zoneOf(el); if (!z) return;
@@ -3860,12 +3880,15 @@ function wirePanel(body) {
   const reguess = c => { const g = suggestSignal(c.from, c.to); if (g) c.signal = g; };
   const follow = (c, fn) => { const was = `${c.from}→${c.to}`; fn(); if (selWire === was) selWire = `${c.from}→${c.to}`; };
   on(".cfrom", el => { const c = connOf(el); if (c) follow(c, () => { c.from = el.value; reguess(c); }); });
-  on(".cto", el => { const c = connOf(el); if (c) follow(c, () => { c.to = el.value; reguess(c); }); });
+  on(".cto", el => { const c = connOf(el); if (c) follow(c, () => { c.to = el.value; reguess(c);
+    // a wire into a pre-wire / future room's gear takes that room's scope (else: "Pre-wire only, but the wire … is Included")
+    const z = S.job.house.zones.find(z => (z.endpoints || []).some(e => e.id === c.to)); if (z) { if ((z.scope || "included") === "included") delete c.scope; else c.scope = z.scope; } }); });
   on(".csig", el => { const c = connOf(el); if (c) c.signal = el.value; });
   on(".cearc", el => { const c = connOf(el); if (c) { if (el.checked) c.earc = true; else delete c.earc; } });
   on(".cbackup", el => { const c = connOf(el); if (c) { if (el.checked) c.backup = true; else delete c.backup; } });
   on(".cch", el => { const c = connOf(el); if (c) { if (el.value) c.channels = el.value; else delete c.channels; } });
   on(".cscope", el => { const c = connOf(el); if (c) { if (el.value !== "included") c.scope = el.value; else delete c.scope; } });
+  body.querySelectorAll(".goroom").forEach(a => a.onclick = e => { e.preventDefault(); openZone(a.dataset.zone); });
   body.querySelectorAll(".cdel").forEach(el => el.onclick = () => {
     const sol = S.job.solutions[S.sol];
     const [gone] = sol.connections.splice(+el.closest("[data-ci]").dataset.ci, 1);

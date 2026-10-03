@@ -615,29 +615,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003054402",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003054402",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003054402",
-    "./app/ports.js": "./app/ports.js?v=20261003054402",
-    "./app/commands.js": "./app/commands.js?v=20261003054402",
-    "./app/engine.js": "./app/engine.js?v=20261003054402",
-    "./app/exports.js": "./app/exports.js?v=20261003054402",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003054402",
-    "./app/hookup.js": "./app/hookup.js?v=20261003054402",
-    "./app/importers.js": "./app/importers.js?v=20261003054402",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003054402",
-    "./app/library.js": "./app/library.js?v=20261003054402",
-    "./app/names.js": "./app/names.js?v=20261003054402",
-    "./app/network.js": "./app/network.js?v=20261003054402",
-    "./app/pages.js": "./app/pages.js?v=20261003054402",
-    "./app/power.js": "./app/power.js?v=20261003054402",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003054402",
-    "./app/rack.js": "./app/rack.js?v=20261003054402",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003054402",
-    "./app/starters.js": "./app/starters.js?v=20261003054402",
-    "./app/kinds.js": "./app/kinds.js?v=20261003054402",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003054402",
-    "./app/sheets.js": "./app/sheets.js?v=20261003054402"
+    "./app/ai.js": "./app/ai.js?v=20261003054732",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003054732",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003054732",
+    "./app/ports.js": "./app/ports.js?v=20261003054732",
+    "./app/commands.js": "./app/commands.js?v=20261003054732",
+    "./app/engine.js": "./app/engine.js?v=20261003054732",
+    "./app/exports.js": "./app/exports.js?v=20261003054732",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003054732",
+    "./app/hookup.js": "./app/hookup.js?v=20261003054732",
+    "./app/importers.js": "./app/importers.js?v=20261003054732",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003054732",
+    "./app/library.js": "./app/library.js?v=20261003054732",
+    "./app/names.js": "./app/names.js?v=20261003054732",
+    "./app/network.js": "./app/network.js?v=20261003054732",
+    "./app/pages.js": "./app/pages.js?v=20261003054732",
+    "./app/power.js": "./app/power.js?v=20261003054732",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003054732",
+    "./app/rack.js": "./app/rack.js?v=20261003054732",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003054732",
+    "./app/starters.js": "./app/starters.js?v=20261003054732",
+    "./app/kinds.js": "./app/kinds.js?v=20261003054732",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003054732",
+    "./app/sheets.js": "./app/sheets.js?v=20261003054732"
 } }
 </script>
 <script>
@@ -896,7 +896,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003054402").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003054732").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -2489,8 +2489,11 @@ function hookupHTML(z, sol, multi) {
     const cur = h.speakers?.from || "";
     const bar = /^soundbar/.test(h.spk.config || "") && h.tv;
     // a receiver already driving another room, or an amp with no free zone, is shown greyed with why (2026-10-03)
+    // a surround set needs a receiver — an amp's 2-channel zone can't run it (an AXIS16 Dante job is the exception)
+    const surround = /^surround/.test(h.spk.config || "") && sol.audioNetwork !== "dante";
     const full = d => {
       if (d.id === cur) return "";
+      if (surround && d.type === "amp") return `a ${String(h.spk.config).replace("surround-", "")} set needs a receiver — an amp zone is 2 channels`;
       const other = (sol.connections || []).filter(c => c.from === d.id && c.signal === "speaker" && c.to !== h.spk.id);
       if (d.type === "avr") { const o = other[0]; return o ? `already drives ${describeNode(S.job, sol, o.to).short}` : ""; }
       const n = outputsNeeded(h.spk) || 2, zones = ampZones(d), next = nextFreeOutputs(sol, d.id, n, h.spk.id);
@@ -2507,9 +2510,10 @@ function hookupHTML(z, sol, multi) {
     const drivers = devs.filter(d => SPEAKERS_FROM.includes(d.type)).sort((a, b) => SPEAKERS_FROM.indexOf(a.type) - SPEAKERS_FROM.indexOf(b.type));
     rows.push(field("Sound from", `<select class="hsfrom">${opt("", "— not connected —", cur)}
       ${bar ? `<optgroup label="In this room">${opt("__tv", "The TV (soundbar on HDMI eARC)", h.speakers?.viaTv ? "__tv" : cur)}</optgroup>` : ""}
-      <optgroup label="In the rack">${drivers.filter(d => !(d.type === "avr" && full(d))).map(spkOpt).join("")}</optgroup>
+      <optgroup label="In the rack">${drivers.filter(d => !((d.type === "avr" || surround) && full(d))).map(spkOpt).join("")}</optgroup>
       ${drivers.some(d => d.type === "avr" && full(d)) ? `<optgroup label="Receivers already in use" data-search="1">${drivers.filter(d => d.type === "avr" && full(d)).map(spkOpt).join("")}</optgroup>` : ""}
-      <optgroup label="Add">${opt("__new_avr", "＋ New AV receiver…", "")}${opt("__new_amp", "＋ New multi-zone amp…", "")}</optgroup></select>`));
+      ${surround && drivers.some(d => d.type === "amp" && full(d)) ? `<optgroup label="Amps (2-channel zones)" data-search="1">${drivers.filter(d => d.type === "amp" && full(d)).map(spkOpt).join("")}</optgroup>` : ""}
+      <optgroup label="Add">${opt("__new_avr", "＋ New AV receiver…", "")}${surround ? "" : opt("__new_amp", "＋ New multi-zone amp…", "")}</optgroup></select>`));
     if (byDev(cur)?.type === "amp") {
       gist.push(`outputs ${h.speakers.channels || "?"}`);
       // the amp's outputs as a list — free ones to pick, taken ones greyed with the room on them (was a typed field)

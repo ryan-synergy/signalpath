@@ -374,3 +374,34 @@ export function duplicateStarter(st, taken = []) {
   let id = "my-" + kitSlug(c.name), k = 2; while (taken.includes(id)) id = `my-${kitSlug(c.name)}-${k++}`;
   c.id = id; return c;
 }
+
+/* ---- editing a kit's gear in place (Ryan 2026-10-03: "Starter Kit 1 starts with two Apple TVs and a cable box —
+   maybe I want to remove the cable box"). Pure: each takes the kit and changes it. ---- */
+const kitIds = kit => new Set([...(kit.devices || []), ...(kit.companions || [])].map(d => d.id));
+const freeKitId = (kit, base) => { const ids = kitIds(kit), b = kitSlug(base).slice(0, 24) || "box"; let id = b, n = 2; while (ids.has(id)) id = `${b}-${n++}`; return id; };
+// a box out of the kit: its adapters (an encoder on a source) and every patch to either go with it
+export function kitRemoveDevice(kit, devId) {
+  const gone = new Set([devId, ...(kit.companions || []).filter(c => c.serves === devId).map(c => c.id)]);
+  kit.devices = (kit.devices || []).filter(d => d.id !== devId);
+  if (kit.companions) kit.companions = kit.companions.filter(c => !gone.has(c.id));
+  if (kit.connections) kit.connections = kit.connections.filter(c => !gone.has(c.from) && !gone.has(c.to));
+  return kit;
+}
+// one more of a box ("a second Apple TV"): the copy is patched the way the original is, adapters and all
+export function kitDuplicateDevice(kit, devId) {
+  const d = (kit.devices || []).find(x => x.id === devId); if (!d) return null;
+  const map = new Map([[d.id, freeKitId(kit, d.id.replace(/-\d+$/, ""))]]);
+  kit.devices.push({ ...structuredClone(d), id: map.get(d.id) });
+  for (const c of (kit.companions || []).filter(c => c.serves === devId)) {
+    const id = freeKitId(kit, c.id); map.set(c.id, id); kit.companions.push({ ...structuredClone(c), id, serves: map.get(d.id) });
+  }
+  const re = x => map.get(x) ?? x;
+  for (const c of [...(kit.connections || [])].filter(c => map.has(c.from) || map.has(c.to))) kit.connections.push({ ...structuredClone(c), from: re(c.from), to: re(c.to) });
+  return map.get(d.id);
+}
+// a new box from the catalog (not patched yet — the job's hookup and fixes wire it)
+export function kitAddDevice(kit, { type, catalogRef, model }) {
+  const id = freeKitId(kit, model || catalogRef || type);
+  (kit.devices ||= []).push({ id, type, ...(catalogRef ? { catalogRef } : {}), ...(model ? { model } : {}), status: "new" });
+  return id;
+}

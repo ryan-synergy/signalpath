@@ -476,6 +476,10 @@
   @media (max-width: 600px) { #topbar #jobsHomeBtn span { display: none; }
     #jobsHome .jh-start { grid-template-columns: 1fr 1fr; } #jobsHome .jh-start button { min-height: 64px; } #jobsHome .jh-start span { display: none; }
     .jcard .ja { width: 100%; } .jcard .ja button { flex: 1; } .jcard .ja button:not(.open):not(.more) { display: none; } .jcard .ja .more { display: block; } }
+  .kgear { display: flex; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid #eef0f3; }
+  .kgear .kg-n { flex: 1; min-width: 0; }
+  .kgear button { min-height: 32px; min-width: 40px; border-radius: 8px; border: 1px solid var(--act-line); background: #fff; font-size: 13px; }
+  .kgear button.danger { color: #b3261e; }
   #starter { position: fixed; inset: 0; background: rgba(10,12,16,.55); display: none; z-index: 50; align-items: center; justify-content: center; }
   #starter.show { display: flex; }
   #starter .card { background: #fff; border-radius: 12px; width: min(820px, 94vw); max-height: 88vh; overflow-y: auto;
@@ -598,29 +602,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003031628",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003031628",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003031628",
-    "./app/ports.js": "./app/ports.js?v=20261003031628",
-    "./app/commands.js": "./app/commands.js?v=20261003031628",
-    "./app/engine.js": "./app/engine.js?v=20261003031628",
-    "./app/exports.js": "./app/exports.js?v=20261003031628",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003031628",
-    "./app/hookup.js": "./app/hookup.js?v=20261003031628",
-    "./app/importers.js": "./app/importers.js?v=20261003031628",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003031628",
-    "./app/library.js": "./app/library.js?v=20261003031628",
-    "./app/names.js": "./app/names.js?v=20261003031628",
-    "./app/network.js": "./app/network.js?v=20261003031628",
-    "./app/pages.js": "./app/pages.js?v=20261003031628",
-    "./app/power.js": "./app/power.js?v=20261003031628",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003031628",
-    "./app/rack.js": "./app/rack.js?v=20261003031628",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003031628",
-    "./app/starters.js": "./app/starters.js?v=20261003031628",
-    "./app/kinds.js": "./app/kinds.js?v=20261003031628",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003031628",
-    "./app/sheets.js": "./app/sheets.js?v=20261003031628"
+    "./app/ai.js": "./app/ai.js?v=20261003032318",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003032318",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003032318",
+    "./app/ports.js": "./app/ports.js?v=20261003032318",
+    "./app/commands.js": "./app/commands.js?v=20261003032318",
+    "./app/engine.js": "./app/engine.js?v=20261003032318",
+    "./app/exports.js": "./app/exports.js?v=20261003032318",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003032318",
+    "./app/hookup.js": "./app/hookup.js?v=20261003032318",
+    "./app/importers.js": "./app/importers.js?v=20261003032318",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003032318",
+    "./app/library.js": "./app/library.js?v=20261003032318",
+    "./app/names.js": "./app/names.js?v=20261003032318",
+    "./app/network.js": "./app/network.js?v=20261003032318",
+    "./app/pages.js": "./app/pages.js?v=20261003032318",
+    "./app/power.js": "./app/power.js?v=20261003032318",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003032318",
+    "./app/rack.js": "./app/rack.js?v=20261003032318",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003032318",
+    "./app/starters.js": "./app/starters.js?v=20261003032318",
+    "./app/kinds.js": "./app/kinds.js?v=20261003032318",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003032318",
+    "./app/sheets.js": "./app/sheets.js?v=20261003032318"
 } }
 </script>
 <script>
@@ -838,7 +842,7 @@ import { startAsBuilt, asBuiltChanges, changeMarks, isAsBuilt, installRows, inst
 import { renderExtraPages, sheetCount, sheetTotal, pageFlags, takeoffCSV, labelsCSV, rackFrontSVG, rackEditSVG, rackData, wireLabels } from "./app/pages.js";
 import { parseQuick, quickSuggest } from "./app/quickadd.js";
 import { rackReference, fitRacks, rackOption, RACK_CLEARANCE, RACK_OPTIONS } from "./app/racksizes.js";
-import { STARTERS, applyStarter, starterFromJob, listStarters, duplicateStarter } from "./app/starters.js";
+import { STARTERS, applyStarter, starterFromJob, listStarters, duplicateStarter, kitRemoveDevice, kitDuplicateDevice, kitAddDevice } from "./app/starters.js";
 import { planCommands, parseCommandText, vocabularyText, OPS } from "./app/commands.js";
 import { askClaude, handoffPrompt, extractProposal, jobSummary, assess, loadConn, saveConn, connReady, MODELS, quoteRequest, quoteAttachment } from "./app/ai.js";
 import { setDanteAudio, danteAmpFor } from "./app/hookup.js";
@@ -877,7 +881,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003031628").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003032318").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -3185,10 +3189,13 @@ function renderKitEditor(kits) {
   const k = kits.find(x => x.id === KIT.sel), ed = $("#kitEd");
   if (!k) { ed.innerHTML = `<div class="empty">No kits.</div>`; return; }
   const mine = SETTINGS.starters.mine[k.id], cat = SETTINGS.catalog.devices || {}, idx = kits.indexOf(k);
-  const ro = !mine;
+  const ro = false;   // a shipped kit edits too — the first change makes it yours (makeKitMine)
   const fld = (key, label, val, kind = "text", help = "") => `<div class="fld${kind === "area" ? " wide" : ""}"><label>${esc(label)}</label>${
     kind === "area" ? `<textarea data-kk="${key}"${ro ? " disabled" : ""}>${esc(val || "")}</textarea>` : `<input type="text" data-kk="${key}" value="${esc(val || "")}"${ro ? " disabled" : ""}>`}${help ? `<div class="help">${esc(help)}</div>` : ""}</div>`;
-  const gear = k.devices.map(d => `<div>${esc(d.model || productName(cat[d.catalogRef]) || d.id)} <span class="mini">· ${esc(typeLabel(d.type))}${d.catalogRef && !cat[d.catalogRef] ? " · ⚠ not in your library" : ""}</span></div>`).join("");
+  // the gear, editable: one more of a box, or take it out (Ryan 2026-10-03)
+  const nameOf = d => d.model || productName(cat[d.catalogRef]) || d.id;
+  const gear = k.devices.map(d => `<div class="kgear"><span class="kg-n">${esc(nameOf(d))} <span class="mini">· ${esc(typeLabel(d.type))}${d.catalogRef && !cat[d.catalogRef] ? " · ⚠ not in your library" : ""}</span></span>
+    <button data-kg="dup" data-dev="${esc(d.id)}" title="Add another ${esc(nameOf(d))}, patched the same way">＋1</button><button data-kg="del" data-dev="${esc(d.id)}" class="danger" title="Take it out of the kit (and its patching)" aria-label="Remove ${esc(nameOf(d))}">✕</button></div>`).join("");
   const jobRooms = (S.job?.house?.zones || []).length;
   ed.innerHTML = `
     <div class="ttl">${esc(k.name)}</div>
@@ -3200,7 +3207,7 @@ function renderKitEditor(kits) {
       <button data-ka="dup">Duplicate</button>
       ${mine ? `<button data-ka="update" title="Replace this kit's rack with the open job's (its rooms too, if it has rooms)">Update from this job</button><button class="danger" data-ka="del">Delete</button>` : ""}
     </div>
-    ${ro ? `<div class="note">Ships with SignalPath — reorder or hide it here; Duplicate it to change it.</div>` : ""}
+    ${!mine ? `<div class="note">Ships with SignalPath. Change anything below and it becomes your copy, in the same spot — the original is hidden, and you can show it again any time.</div>` : ""}
     <h3>Kit</h3><div class="grid">
       ${fld("name", "Name", k.name)}
       ${fld("tip", "Quick-add hint", k.tip, "text", "shown in the quick-add box after starting, e.g. family room 5.1 75 matrix")}
@@ -3208,15 +3215,36 @@ function renderKitEditor(kits) {
     </div>
     <h3>Starting rooms <span class="mini" style="text-transform:none;letter-spacing:0">optional · quick-add text, comma between rooms</span></h3>
     <div class="grid">${fld("rooms", "Rooms a new job starts with", k.rooms, "area", "e.g. family room 5.1 75 sony matrix, kitchen stereo 55 matrix, patio landscape 8 — wired to this kit's rack the same way as typing them")}</div>
-    ${mine && jobRooms ? `<button data-ka="fillrooms" style="margin-top:6px">Use this job's ${jobRooms} rooms</button>` : ""}
+    ${jobRooms ? `<button data-ka="fillrooms" style="margin-top:6px">Use this job's ${jobRooms} rooms</button>` : ""}
     <h3>Audio</h3><div class="grid">
       <div class="fld"><label>Audio network</label><select data-kk="audioNetwork"${ro ? " disabled" : ""}>${[["", "—"], ["avb", "Savant AVB"], ["dante", "Dante"]].map(([v, l]) => `<option value="${v}"${(k.solution?.audioNetwork || "") === v ? " selected" : ""}>${l}</option>`).join("")}</select></div>
       ${fld("platforms", "Control platform", (k.solution?.platforms || []).join(", "), "text", "savant, josh, control4 — sets the licensing advice")}
     </div>
     <h3>Rack · ${k.devices.length} boxes, ${k.companions?.length || 0} adapters, ${k.connections?.length || 0} patches</h3>
-    <div style="font-size:13px;line-height:1.7">${gear || `<span class="mini">No gear — a blank rack.</span>`}</div>`;
+    <div style="font-size:13px">${gear || `<span class="mini">No gear — a blank rack.</span>`}</div>
+    <button data-kg="add" class="addbtn" style="margin-top:8px">＋ Add gear</button>
+    <div class="help" style="margin-top:6px">＋1 adds another of that box, patched the same way. A box you add from the library starts unpatched — the job wires it, or offers to.</div>`;
+  // a shipped kit becomes yours on the first change: a copy with the same name in the same spot; the original is hidden
+  const makeKitMine = () => {
+    const K = SETTINGS.starters; if (K.mine[k.id]) return K.mine[k.id];
+    const c = duplicateStarter(k, kitTaken()); c.name = k.name; c.note = "your copy of a shipped kit";
+    K.mine[c.id] = c; const ids = listStarters(K).map(x => x.id).filter(x => x !== c.id), at = ids.indexOf(k.id);
+    K.order = [...ids.slice(0, at + 1), c.id, ...ids.slice(at + 1)]; if (!K.hidden.includes(k.id)) K.hidden = [...K.hidden, k.id];
+    KIT.sel = c.id; toast(`"${k.name}" is now your copy — the shipped one is hidden`); return c;
+  };
+  ed.querySelectorAll("[data-kg]").forEach(el => el.onclick = () => {
+    const a = el.dataset.kg;
+    if (a === "add") return openPicker({ title: "Add gear to the kit", groups: Object.entries(Object.entries(cat).reduce((g, [ref, c]) => { (g[c.type] ||= []).push([ref, c]); return g; }, {}))
+        .sort((x, y) => typeLabel(x[0]).localeCompare(typeLabel(y[0])))
+        .map(([type, list]) => ({ label: typeLabel(type), items: list.map(([ref, c]) => ({ value: ref, label: productName(c) || c.model, sub: c.brand || "" })) })),
+      onPick: ref => { const m = makeKitMine(); kitAddDevice(m, { type: cat[ref].type, catalogRef: ref }); kitsSaved(); } });
+    const m = makeKitMine(), dev = el.dataset.dev;
+    if (a === "dup") kitDuplicateDevice(m, dev);
+    if (a === "del") kitRemoveDevice(m, dev);
+    kitsSaved();
+  });
   ed.querySelectorAll("[data-kk]").forEach(el => el.onchange = () => {
-    const m = SETTINGS.starters.mine[k.id]; if (!m) return;
+    const m = makeKitMine();
     const key = el.dataset.kk, v = el.value.trim();
     if (key === "audioNetwork") { m.solution ||= {}; if (v) m.solution.audioNetwork = v; else delete m.solution.audioNetwork; }
     else if (key === "platforms") { m.solution ||= {}; const a = v.split(",").map(x => x.trim().toLowerCase()).filter(Boolean); if (a.length) m.solution.platforms = a; else delete m.solution.platforms; }
@@ -3235,7 +3263,7 @@ function renderKitEditor(kits) {
       const n = starterFromJob(S.job, S.sol, { name: k.name, blurb: k.blurb, tip: k.tip, includeRooms: !!k.rooms, taken: [] });
       K.mine[k.id] = { ...n, id: k.id, name: k.name, ...(k.blurb ? { blurb: k.blurb } : {}), ...(k.tip ? { tip: k.tip } : {}) };
     }
-    if (a === "fillrooms") { const n = starterFromJob(S.job, S.sol, { includeRooms: true }); if (n.rooms) K.mine[k.id].rooms = n.rooms; }
+    if (a === "fillrooms") { const n = starterFromJob(S.job, S.sol, { includeRooms: true }); if (n.rooms) makeKitMine().rooms = n.rooms; }
     kitsSaved();
   });
 }

@@ -3948,6 +3948,21 @@ for (const [name, raw] of Object.entries(fixtures)) {
     ix("mxnet-10g-estate") === ix("savant-whole-home") + 1 && ix("prewire") < ix("blank"), L.map(k => k.id).join(","));
   const dup = S.duplicateStarter(L.find(k => k.id === "mxnet"), L.map(k => k.id));
   t("kits: copying a shipped kit gives you an editable one with its own id", dup.custom && dup.id !== "mxnet" && /copy/.test(dup.name) && dup.devices.length === S.STARTERS.find(k => k.id === "mxnet").devices.length);
+  {
+    // editing a kit's gear in place (Ryan 2026-10-03: "remove the cable box")
+    const tk = S.duplicateStarter(S.STARTERS.find(k => k.id === "theater-receiver"), []);
+    const cb = tk.devices.find(d => /cable/i.test(d.model || "")).id, atv = tk.devices.find(d => /apple/i.test(d.model || "")).id;
+    S.kitRemoveDevice(tk, cb);
+    const atv2 = S.kitDuplicateDevice(tk, atv), sm = S.kitAddDevice(tk, { type: "controlBox", catalogRef: "savant-smartcontrol-25" });
+    t("kits: a box comes out with its patching; ＋1 adds another patched the same way; a library box joins unpatched with its own id",
+      !tk.devices.some(d => d.id === cb) && !tk.connections.some(c => c.from === cb || c.to === cb)
+      && atv2 && atv2 !== atv && tk.connections.filter(c => c.from === atv2).length === tk.connections.filter(c => c.from === atv).length
+      && tk.devices.find(d => d.id === sm)?.catalogRef === "savant-smartcontrol-25" && new Set(tk.devices.map(d => d.id)).size === tk.devices.length);
+    const mx = S.duplicateStarter(S.STARTERS.find(k => k.id === "mxnet"), []), withEnc = mx.devices.find(d => (mx.companions || []).some(c => c.serves === d.id));
+    if (withEnc) { const n0 = (mx.companions || []).length, d2 = S.kitDuplicateDevice(mx, withEnc.id);
+      t("kits: ＋1 on a source with an encoder brings its own encoder", mx.companions.length === n0 + (S.STARTERS.find(k => k.id === "mxnet").companions || []).filter(c => c.serves === withEnc.id).length && mx.companions.some(c => c.serves === d2));
+      S.kitRemoveDevice(mx, d2); t("kits: removing that source takes its encoder too", mx.companions.length === n0 && !mx.companions.some(c => c.serves === d2)); }
+  }
   const rt = ["patio stereo sony local", "den tv", "theater 7.1.4 98 sony far savant remote", "guest prewire 50", "pool house 5.1 65 120ft", "porch landscape 8 no tv", "bonus room 4 speakers 55"].every(tx => {
     const z = Q.parseQuickZone(tx).zone, z2 = Q.parseQuickZone(Q.zoneToQuick(z, {})).zone;
     const g = z => `${z.name}|${z.scope}|${z.reach || ""}${z.runFt || ""}|${z.remote || ""}|` + z.endpoints.map(e => `${e.type}:${e.config || ""}:${e.count || e.satCount || ""}:${e.size || ""}:${e.brand || ""}`).join(",");

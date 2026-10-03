@@ -38,13 +38,13 @@ export const OPS = {
   add_rack:    { args: "name, beside?", eg: `{"op":"add_rack","name":"Pool House Rack"}`,
                  about: "Add a rack. beside: the rack it stands next to (same space — no rack-to-rack cable); leave it out for a rack somewhere else (a pool house). A new rack sizes itself to its gear (Auto)." },
   set_rack:    { args: "rack?, name?, size_mode?, space_h?, space_w?, space_d?, casters?, units?", eg: `{"op":"set_rack","size_mode":"locked","space_h":72,"casters":true}`,
-                 about: "How a rack is sized. size_mode: locked (the tallest Middle Atlantic / Strong rack that fits the space — give space_h in inches; it never grows), auto (sized to the gear; two racks side by side past the job's limit), fixed (units = U count). casters: true|false. rack: by name (the first if left out)." },
+                 about: "How a rack is sized. size_mode: locked (the tallest Middle Atlantic / Strong rack that fits the space — give space_h in inches; it never grows), auto (sized to the gear; two racks side by side past the project's limit), fixed (units = U count). casters: true|false. rack: by name (the first if left out)." },
   move_device: { args: "device, rack", eg: `{"op":"move_device","device":"mdx-16","rack":"Equipment Rack 2"}`, about: "Move a box to another rack (its wiring goes with it)." },
   poe_power:   { args: "how, device?", eg: `{"op":"poe_power","how":"injector","device":"all"}`,
                  about: "How PoE gear on a switch that can't power it gets power. how: injector (in the rack, a Ubiquiti U-POE-AF on the quote) | psu (a local power supply) | none (clear). device: a box, an MXNet decoder as '<zone> decoder', or 'all'." },
   encoder_audio: { args: "source, to", eg: `{"op":"encoder_audio","source":"apple tv","to":"amp"}`,
                  about: "Where an MXNet encoder's analog audio out goes: to = a box in the rack (an audio input module, an amp) or 'none'. source: the box the encoder is on." },
-  set_job:     { args: "name?, client?, address?, drawn_by?", eg: `{"op":"set_job","client":"The Smiths"}`, about: "Job details for the title block." },
+  set_job:     { args: "name?, client?, address?, drawn_by?", eg: `{"op":"set_job","client":"The Smiths"}`, about: "Project details for the title block." },
   add_revision: { args: "description", eg: `{"op":"add_revision","description":"Patio TV to 75\\""}`, about: "Log a revision on the title block." },
 };
 
@@ -492,7 +492,7 @@ const HANDLERS = {
     if (c.address) { (job.job.client ||= {}).address = String(c.address); did.push(`address → ${c.address}`); }
     if (c.drawn_by) { job.job.drawnBy = String(c.drawn_by); did.push(`drawn by → ${c.drawn_by}`); }
     if (!did.length) throw new Error("nothing to change");
-    return `Job: ${did.join(", ")}`;
+    return `Project: ${did.join(", ")}`;
   },
 
   add_revision(job, sol, c) {

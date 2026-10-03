@@ -466,12 +466,12 @@ export function importMarkdown(text, catalog) {
       res.notes.push(`${ok.length} of ${plan.steps.length} changes from the file applied${ok.length ? `: ${ok.map(x => x.text).slice(0, 6).join("; ")}${ok.length > 6 ? "…" : ""}` : ""}`);
       for (const x of plan.steps.filter(x => !x.ok)) res.warnings.push(`Change not applied — ${JSON.stringify(x.cmd)}: ${x.error}`);
     } else if (doc.rooms.length || doc.gear.length)
-      res.warnings.push("The job came from the data block at the end of this file — edits written in the text above it aren't read. To change it, have the AI add a command list (```json {\"commands\": [...]}```) or edit the data block.");
+      res.warnings.push("The project came from the data block at the end of this file — edits written in the text above it aren't read. To change it, have the AI add a command list (```json {\"commands\": [...]}```) or edit the data block.");
     return { ...res, markdown: true };
   }
   // 2. the job: front matter / "Client:" lines
   const m = doc.meta;
-  const job = skeletonJob(m.name || "Imported Job", m.client, m.address);
+  const job = skeletonJob(m.name || "Imported Project", m.client, m.address);
   job.job.revisions[0].description = "Imported from Markdown";
   if (m.platform) { const p = String(m.platform).toLowerCase(); const plat = /savant/.test(p) ? "savant" : /control ?4|c4/.test(p) ? "control4" : /josh/.test(p) ? "josh" : /crestron/.test(p) ? "crestron" : null; if (plat) job.solutions[0].platforms = [plat]; }
   const cmds = [], gearNote = [], autoNote = [], ofeNote = [];

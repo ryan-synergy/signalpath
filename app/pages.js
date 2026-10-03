@@ -1041,7 +1041,7 @@ function installPages(job, ix, opts, label) {
   const recs = installRows(raw, 0);
   const rows = recs.map(r => ({ tint: r.warn.length > 0, cells: [clipText(r.name, 34), clipText(r.where, 22), clipText(r.serial, 24),
     r.mac, clipText(r.ip, 18), clipText([r.notes, ...r.warn.map(w => `⚠ ${w}`)].filter(Boolean).join(" · "), 70)] }));
-  if (!rows.length) rows.push({ gray: true, cells: ["", "", "", "", "", "No gear on this job."] });
+  if (!rows.length) rows.push({ gray: true, cells: ["", "", "", "", "", "No gear on this project."] });
   const cols = [{ label: "Box", dx: 14 }, { label: "Where", dx: 330 }, { label: "Serial", dx: 520 }, { label: "MAC", dx: 740 }, { label: "IP", dx: 940 }, { label: "Notes", dx: 1090 }];
   const bodies = [];
   let rest = rows;

@@ -162,7 +162,7 @@ export function loadJob(raw) {
 export function normalizeJob(job) {
   const list = (o, k) => { o[k] = Array.isArray(o[k]) ? o[k].filter(x => x && typeof x === "object") : []; return o[k]; };
   if (!job.job || typeof job.job !== "object") job.job = {};
-  if (typeof job.job.name !== "string") job.job.name = job.job.name == null || typeof job.job.name === "object" ? "Untitled job" : String(job.job.name);
+  if (typeof job.job.name !== "string") job.job.name = job.job.name == null || typeof job.job.name === "object" ? "Untitled project" : String(job.job.name);
   if (job.job.client != null && typeof job.job.client !== "object") job.job.client = { name: String(job.job.client) };
   for (const k of ["name", "address"]) if (job.job.client && job.job.client[k] != null && typeof job.job.client[k] === "object") delete job.job.client[k];
   for (const k of ["stage", "trunkStyle", "danteStyle", "drawnBy"]) if (job.job[k] != null && typeof job.job[k] !== "string") delete job.job[k];
@@ -4701,7 +4701,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       const avbSwitchPicked = Object.values(s.devices).some(d => d.type === "avbSwitch" && catalog.devices[d.catalogRef]);
       if (sol.audioNetwork !== "dante" && !avbSwitchPicked && Object.values(s.devices).some(d => d.type !== "avbSwitch" && catalog.devices[d.catalogRef]?.flags?.includes("avb")))
         out.notes.push({ code: "avb-switch", solution: sol.id,
-          msg: "AVB/IP audio gear on this job — requires an Avnu-certified AVB switch (MOTU AVB Switch for small systems, Savant ESN-AVB12E or a Netgear M4250 AV Line for bigger ones); an uncertified switch breaks AVB stream sync silently" });
+          msg: "AVB/IP audio gear on this project — requires an Avnu-certified AVB switch (MOTU AVB Switch for small systems, Savant ESN-AVB12E or a Netgear M4250 AV Line for bigger ones); an uncertified switch breaks AVB stream sync silently" });
       // controllers: MXNet needs its control box; a Dante system needs AVPro's Dante controller
       const flagsOf = d => catalog.devices[d.catalogRef]?.flags || [];
       const rackAndLocal = [...Object.values(s.devices), ...Object.values(s.locals)];
@@ -4711,7 +4711,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       const danteCtl = d => flagsOf(d).includes("danteController") || /dante/i.test(d.model || "");
       if (mxnet && !rackAndLocal.some(d => d.type === "controlBox" && !danteCtl(d) && (flagsOf(d).includes("mxnet") || /mxnet|cbox/i.test(d.model || ""))))
         out.notes.push({ code: "mxnet-no-cbox", solution: sol.id,
-          msg: "MXNet on this job but no MXNet control box — add an AC-MXNET-CBOX-HA (it runs the system and is what Savant/Control4 talk to)" });
+          msg: "MXNet on this project but no MXNet control box — add an AC-MXNET-CBOX-HA (it runs the system and is what Savant/Control4 talk to)" });
       const danteGear = rackAndLocal.filter(d => flagsOf(d).includes("dante"));
       const danteJob = sol.audioNetwork === "dante" || danteGear.some(d => d.type === "danteBridge");
       if (danteJob && !rackAndLocal.some(d => d.type === "controlBox" && danteCtl(d)))
@@ -4724,7 +4724,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       const mxCtl = rackAndLocal.filter(d => d.type === "controlBox" && !danteCtl(d) && (flagsOf(d).includes("mxnet") || /mxnet|cbox/i.test(d.model || ""))).length;
       if (gens.size > 1 && mxCtl < gens.size)
         out.notes.push({ code: "mxnet-cbox-per-platform", solution: sol.id,
-          msg: `MXNet ${[...gens].join(" + ")} on one job — a CBOX-HA runs one platform at a time: needs ${gens.size} CBOX-HAs (has ${mxCtl})${danteJob ? ", plus the Dante-mode one" : ""}. 1G and 10G endpoints never route to each other.` });
+          msg: `MXNet ${[...gens].join(" + ")} on one project — a CBOX-HA runs one platform at a time: needs ${gens.size} CBOX-HAs (has ${mxCtl})${danteJob ? ", plus the Dante-mode one" : ""}. 1G and 10G endpoints never route to each other.` });
       // Dante-enabled MXNet endpoints: what they carry, and where their Dante travels
       const ddec = Object.values(s.companions).filter(c => c.type === "dec" && c.dante);
       if (ddec.length) {
@@ -4748,11 +4748,11 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       const danteOnly = rackAndLocal.filter(d => d.type === "danteBridge");
       const names = list => list.map(d => d.model || d.id).join(", ");
       if (sol.audioNetwork === "dante" && avbOnly.length)
-        out.notes.push({ code: "net-mismatch", solution: sol.id, msg: `AVB gear on a Dante job: ${names(avbOnly)} — swap for Dante encoders/decoders, or set the job's audio network to Savant AVB` });
+        out.notes.push({ code: "net-mismatch", solution: sol.id, msg: `AVB gear on a Dante project: ${names(avbOnly)} — swap for Dante encoders/decoders, or set the project's audio network to Savant AVB` });
       else if (sol.audioNetwork === "avb" && danteOnly.length)
-        out.notes.push({ code: "net-mismatch", solution: sol.id, msg: `Dante gear on a Savant AVB job: ${names(danteOnly)} — one audio network per job` });
+        out.notes.push({ code: "net-mismatch", solution: sol.id, msg: `Dante gear on a Savant AVB project: ${names(danteOnly)} — one audio network per project` });
       else if (!sol.audioNetwork && avbOnly.length && danteOnly.length)
-        out.notes.push({ code: "net-mixed", solution: sol.id, msg: `Both Dante (${names(danteOnly)}) and AVB (${names(avbOnly)}) gear — pick one audio network for the job (Paperwork → Audio network)` });
+        out.notes.push({ code: "net-mixed", solution: sol.id, msg: `Both Dante (${names(danteOnly)}) and AVB (${names(avbOnly)}) gear — pick one audio network for the project (Paperwork → Audio network)` });
       // Dante on its own switch, set up for Dante (AVPro guidance; MXNet E-series ship this way)
       if (danteJob)
         out.notes.push({ code: "dante-switch", solution: sol.id,
@@ -4761,7 +4761,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
       const allSolDevs = [...Object.values(s.devices), ...Object.values(s.locals)];
       if (allSolDevs.some(d => catalog.devices[d.catalogRef]?.flags?.includes("sonos")))
         out.notes.push({ code: "sonos-net", solution: sol.id,
-          msg: "Sonos on the job — audio distributes over the LAN; hardwire every Sonos device where possible (Cat6 drop per device)" });
+          msg: "Sonos on the project — audio distributes over the LAN; hardwire every Sonos device where possible (Cat6 drop per device)" });
       // TV audio into a Sonos line-in (Port/Connect) buffers ≥75ms once grouped —
       // an installer-tuned delay, not a plug-and-play eARC replacement
       const sonosLineIn = id => { const c2 = catalog.devices[(s.locals[id] || s.devices[id])?.catalogRef];
@@ -4915,7 +4915,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
     if (p.virtual) {
       const sug = suggestLanSwitch(catalog, p.used);
       out.notes.push({ code: "lan-no-switch", solution: p.solution, add: sug ? { type: "networkSwitch", ref: sug.ref } : null,
-        msg: `No LAN switch on this job — ${p.used} Ethernet ports needed on the house network (every TV, the networked rack gear, the AV switch uplinks)${sug ? `; a ${sug.model} (${sug.ports} ports) covers it with spare` : ""}` });
+        msg: `No LAN switch on this project — ${p.used} Ethernet ports needed on the house network (every TV, the networked rack gear, the AV switch uplinks)${sug ? `; a ${sug.model} (${sug.ports} ports) covers it with spare` : ""}` });
     }
     // a switch the catalog doesn't know (an imported "Generic NetworkSwitch", a Savant driver profile) may well be PoE — ask, don't tell
     if (p.needsInjector) out.notes.push({ code: "switch-no-poe", solution: p.solution, ref: p.switch, ids: p.unpowered, unknown: !p.known,
@@ -4963,7 +4963,7 @@ export function advise(job, ix = indexJob(job), catalog = null) {
     const who = p.multi ? p.rackName : "Rack", R = { solution: p.solution, rack: p.rack };
     const pick = p.pick ? `${p.pick.qty > 1 ? `${p.pick.qty} × ` : ""}${p.pick.model} (${p.pick.outlets} outlets${p.pick.qty > 1 ? " each" : ""})` : "a WattBox";
     if (!p.units.length)
-      out.notes.push({ code: "power-none", ...R, add: p.pick ? { type: "power", ref: p.pick.ref, qty: p.pick.qty } : null, msg: `${p.multi ? `${p.rackName}: ` : ""}${p.need} rack outlet${p.need === 1 ? "" : "s"} needed (${p.loads.length} boxes${p.poe.length ? `, ${p.poe.length} more on PoE` : ""}) — no power conditioner ${p.multi ? "in this rack" : "on the job"}; spec ${pick}` });
+      out.notes.push({ code: "power-none", ...R, add: p.pick ? { type: "power", ref: p.pick.ref, qty: p.pick.qty } : null, msg: `${p.multi ? `${p.rackName}: ` : ""}${p.need} rack outlet${p.need === 1 ? "" : "s"} needed (${p.loads.length} boxes${p.poe.length ? `, ${p.poe.length} more on PoE` : ""}) — no power conditioner ${p.multi ? "in this rack" : "on the project"}; spec ${pick}` });
     else if (p.short)
       out.notes.push({ code: "power-short", ...R, add: p.pick ? { type: "power", ref: p.pick.ref, qty: p.pick.qty, swap: true } : null, msg: `${who} power: ${p.need} outlets needed, ${p.supply} on the power conditioner — ${p.short} short; step up to ${pick}` });
     else if (p.tight)

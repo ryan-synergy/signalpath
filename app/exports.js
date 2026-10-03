@@ -259,7 +259,7 @@ export function aiReviewMarkdown(job, solIndex, catalog, { today = new Date().to
     `video_distribution: ${clean(gens.length ? gens.map(g => ({ "1g": "MXNet 1G", "1g-ev2": "MXNet 1G EVO II", "10g": "MXNet 10G" }[g] || g)).join(", ") : devs.some(d => d.type === "videoMatrix") ? "HDMI matrix" : "none")}`,
     `catalog_as_of: ${clean(catalog?.asOf || JJ.catalogSnapshot?.asOf || "")}`, `exported: ${today}`, "---", "");
   o.push(`# ${clean(JJ.name)} — design review`, "");
-  o.push("> For an AI reviewer. Everything below is generated from the SignalPath job; the JSON block at the end is the",
+  o.push("> For an AI reviewer. Everything below is generated from the SignalPath project; the JSON block at the end is the",
     "> source of truth (SignalPath imports it back). To propose changes, reply with SignalPath command lines — the",
     "> vocabulary is at the bottom — so they can be previewed, checked and undone before anything changes.", "");
 
@@ -328,13 +328,13 @@ export function aiReviewMarkdown(job, solIndex, catalog, { today = new Date().to
   o.push("## Network & power", "");
   const nets = (adv.network || []).filter(mine);
   for (const p of nets) {
-    o.push(`### ${p.virtual ? "House network (no LAN switch on the job)" : `${clean(p.model)} — ${NET_ROLE_NAME[p.role]}`}`, "",
+    o.push(`### ${p.virtual ? "House network (no LAN switch on the project)" : `${clean(p.model)} — ${NET_ROLE_NAME[p.role]}`}`, "",
       p.virtual ? `${p.used} Ethernet ports needed.` : p.known ? `${p.copper} RJ45 + ${p.sfp} SFP · ${p.used} used · ${p.over ? `${p.over} short` : `${p.spare} spare`}${p.poeBudgetW ? ` · PoE budget ${p.poeBudgetW} W` : ""}` : `${p.used} connections (port count not in the catalog)`, "",
       table(["Port", "Device", "Location", "Network", "Power"], p.rows.map(r => [r.port ?? "NO PORT", r.what, r.where, r.net, r.power || "—"])), "");
   }
   for (const pw of (adv.power || []).filter(mine)) {
   o.push(`### Rack power (outlets)${pw.multi ? ` — ${clean(pw.rackName)}` : ""}`, "",
-    `${pw.units.length ? pw.units.map(u => `${u.model} (${u.outlets ?? "?"} outlets)`).join(" + ") : "No power conditioner on the job"} · ${pw.need} outlets needed · ${pw.supply == null ? (pw.pick ? `suggest ${pw.pick.qty > 1 ? pw.pick.qty + " × " : ""}${pw.pick.model}` : "size unknown") : pw.short ? `${pw.short} short` : `${pw.supply - pw.need} spare`}`, "",
+    `${pw.units.length ? pw.units.map(u => `${u.model} (${u.outlets ?? "?"} outlets)`).join(" + ") : "No power conditioner on the project"} · ${pw.need} outlets needed · ${pw.supply == null ? (pw.pick ? `suggest ${pw.pick.qty > 1 ? pw.pick.qty + " × " : ""}${pw.pick.model}` : "size unknown") : pw.short ? `${pw.short} short` : `${pw.supply - pw.need} spare`}`, "",
     table(["Device", "Outlets", "Note"], [...pw.loads.map(l => [l.what, String(l.outlets), l.why || "—"]), ...pw.poe.map(p => [p.what, "0", "PoE from its switch"])]), "");
   o.push(`Load: ~${pw.noWatts.length ? "at least " : ""}${pw.typicalW} W typical / ${pw.maxW} W max against ${pw.circuitW} W continuous (${pw.circuits > 1 ? `${pw.circuits} × ` : ""}${pw.circuitA}A)${pw.noWatts.length ? ` — no wattage on file for ${pw.noWatts.join(", ")}` : ""}`, "");
   }
@@ -354,6 +354,6 @@ export function aiReviewMarkdown(job, solIndex, catalog, { today = new Date().to
   for (const f of planQueueFiles(job, solIndex, catalog)) o.push(`### ${f.type}`, "", "```markdown", f.text.trimEnd(), "```", "");
 
   o.push("## SignalPath command vocabulary", "", "```text", vocabularyText().trimEnd(), "```", "");
-  o.push("## Source data (SignalPath job)", "", "```json", JSON.stringify(job, null, 2), "```", "");
+  o.push("## Source data (SignalPath project)", "", "```json", JSON.stringify(job, null, 2), "```", "");
   return o.join("\n");
 }

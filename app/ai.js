@@ -78,12 +78,12 @@ export function jobSummary(job, solIndex, catalog) {
   return L.join("\n");
 }
 
-export const SYSTEM = `You help design residential AV systems in SignalPath, the schematic tool used by Synergy Audio Video (Tustin, CA). A job is an equipment rack of boxes (sources, AV receivers, HDMI matrices, multi-zone amps, audio modules, switches) feeding zones (rooms with TVs and speakers).
+export const SYSTEM = `You help design residential AV systems in SignalPath, the schematic tool used by Synergy Audio Video (Tustin, CA). A project is an equipment rack of boxes (sources, AV receivers, HDMI matrices, multi-zone amps, audio modules, switches) feeding zones (rooms with TVs and speakers).
 
-You change the job ONLY by proposing commands. The app runs them on a copy, checks the result with its validator, and shows the person a preview to accept or reject — nothing you propose applies by itself.
+You change the project ONLY by proposing commands. The app runs them on a copy, checks the result with its validator, and shows the person a preview to accept or reject — nothing you propose applies by itself.
 
 Rules:
-- Refer to zones and boxes by the names shown in the job. "<zone> tv" and "<zone> speakers" name a zone's TV and speakers.
+- Refer to zones and boxes by the names shown in the project. "<zone> tv" and "<zone> speakers" name a zone's TV and speakers.
 - Make only the changes asked for, plus what they strictly need (e.g. a receiver the request implies). Don't remove or rename anything unless asked.
 - Prefer catalog products for new gear. Speakers on a multi-zone amp get the next free outputs automatically; leave outputs out unless the person names them.
 - A receiver feeding a TV returns the TV's audio by eARC by default; add an optical backup only when asked. For full Atmos from the TV's own apps through an HDBaseT balun, the choice is audio_back "earc-kit" (AVPro AC-AEX-DEARC-KIT, one Cat6A into a receiver HDMI input).
@@ -95,7 +95,7 @@ ${vocabularyText()}`;
 
 const TOOL = {
   name: "propose_changes",
-  description: "Propose changes to the SignalPath job as a list of commands. They are previewed for the person before anything is applied.",
+  description: "Propose changes to the SignalPath project as a list of commands. They are previewed for the person before anything is applied.",
   input_schema: {
     type: "object",
     properties: {
@@ -114,11 +114,11 @@ const TOOL = {
    A text quote has its prices taken out HERE, before anything leaves the device; a PDF can't be
    cleaned, so it goes as it is. The quote is held in memory for the request only — never saved
    on the job, never in this browser's storage. */
-export const QUOTE_TASK = `Compare THE ORIGINAL QUOTE with the job and bring the job in line with it.
-- Add equipment the quote lists that the job is missing: control boxes (e.g. an MXNet control box), amps, receivers, sources, switches, network gear, power conditioners. Use add_device with the catalog product when there is one, otherwise the quote's maker + model.
-- Match quantities: if the quote has more of something than the job, add the difference.
-- Wire what you add the way the rest of the job is wired (zones to their receiver / amp, sources to the switch) — only where the quote makes it clear.
-- Do NOT remove or rename anything. Gear in the job that the quote doesn't list, a quantity the job has MORE of, or anything you can't place goes in questions.
+export const QUOTE_TASK = `Compare THE ORIGINAL QUOTE with the project and bring the project in line with it.
+- Add equipment the quote lists that the project is missing: control boxes (e.g. an MXNet control box), amps, receivers, sources, switches, network gear, power conditioners. Use add_device with the catalog product when there is one, otherwise the quote's maker + model.
+- Match quantities: if the quote has more of something than the project, add the difference.
+- Wire what you add the way the rest of the project is wired (zones to their receiver / amp, sources to the switch) — only where the quote makes it clear.
+- Do NOT remove or rename anything. Gear in the project that the quote doesn't list, a quantity the project has MORE of, or anything you can't place goes in questions.
 - Ignore prices, labor, programming, wire, mounts, brackets, connectors and services.
 - In the summary, say how many quote items you matched and what you added.`;
 
@@ -233,7 +233,7 @@ export async function askClaude({ conn, job, solIndex, catalog, request, attach 
     // hand the verdict back: what failed, what broke — and ask for the whole corrected list
     messages.push({ role: "assistant", content: resp.content });
     messages.push({ role: "user", content: [{ type: "tool_result", tool_use_id: use.id, content:
-      `The app ran your commands on a copy of the job:\n${plan.steps.map(s => s.ok ? `✓ ${s.text}` : `✗ ${JSON.stringify(s.cmd)} — ${s.error}`).join("\n")}` +
+      `The app ran your commands on a copy of the project:\n${plan.steps.map(s => s.ok ? `✓ ${s.text}` : `✗ ${JSON.stringify(s.cmd)} — ${s.error}`).join("\n")}` +
       (fresh.length ? `\n\nNew problems the validator found:\n${fresh.map(e => "- " + e).join("\n")}` : "") +
       `\n\nFix these and call ${TOOL.name} again with the COMPLETE corrected command list (it replaces the previous one).` }] });
   }

@@ -28,7 +28,7 @@ export function startAsBuilt(job, solIndex = 0, today = new Date().toISOString()
   const revs = J.revisions || [];
   const out = {
     ...clone(eff), solutions: [sol],
-    job: { ...J, name: `${J.name || "Job"} — As-Built`, stage: "asBuilt",
+    job: { ...J, name: `${J.name || "Project"} — As-Built`, stage: "asBuilt",
       revisions: [...revs, { rev: revs.length + 1, date: today, description: "As-built started", by: String(J.drawnBy || "SP").slice(0, 2).toUpperCase() }],
       asBuilt: { fromName: J.name || "", fromSolution, started: today,
                  baseline: { house: clone(eff.house), solution: clone(sol) } } },

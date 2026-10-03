@@ -2171,7 +2171,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
       && !errsOf(jb).warnings.some(w => w.code === "no-input"));
     const lanNote = (() => { const Lx = loadJob(structuredClone(jb)); return advise(Lx.job, Lx.ix, CAT).notes.find(n => n.code === "lan-no-switch"); })();
     t("fixes: 'no LAN switch' adds the switch the advisor sized, and the note goes away",
-      /^No LAN switch on this job/.test(lanNote?.msg) && !!applyFix(jb, lanNote) && (() => { const Lx = loadJob(structuredClone(jb)); return !advise(Lx.job, Lx.ix, CAT).notes.some(n => n.code === "lan-no-switch"); })());
+      /^No LAN switch on this project/.test(lanNote?.msg) && !!applyFix(jb, lanNote) && (() => { const Lx = loadJob(structuredClone(jb)); return !advise(Lx.job, Lx.ix, CAT).notes.some(n => n.code === "lan-no-switch"); })());
     const ee = structuredClone(fixtures.estate);
     const pn = (() => { const Lx = loadJob(structuredClone(ee)); return advise(Lx.job, Lx.ix, CAT).notes.find(n => n.code === "power-none" && n.rack === "rack-pool"); })();
     applyFix(ee, pn);
@@ -3068,7 +3068,7 @@ for (const [name, raw] of Object.entries(fixtures)) {
       pp.unpublished?.some(w => /MDX-8/.test(w)) && CAT.devices["sonos-amp"].powerMaxW === 121);
     const one = advise(loadJob(fixtures.residence).job, loadJob(fixtures.residence).ix, CAT);
     t("power: a one-rack job reads as before (no rack name in the note)",
-      one.power.length === 1 && one.notes.some(n => n.code === "power-none" && /no power conditioner on the job/.test(n.msg) && /^\d/.test(n.msg)));
+      one.power.length === 1 && one.notes.some(n => n.code === "power-none" && /no power conditioner on the project/.test(n.msg) && /^\d/.test(n.msg)));
   }
   t("rack: small boxes (Apple TVs, CBOX, encoders) ride shelves of up to 3",
     r.items.filter(i => i.kind === "shelf" && !i.kit).every(i => i.members.length <= 3 && i.u === 2) && r.items.some(i => i.kind === "shelf" && i.members.some(m => /CBOX/.test(m))));

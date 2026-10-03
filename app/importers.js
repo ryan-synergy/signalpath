@@ -80,7 +80,7 @@ export function skeletonJob(name, clientName, address) {
   name = txt(name); clientName = txt(clientName); address = txt(address);
   return {
     generator: "SignalPath", schemaVersion: 1,
-    job: { name: name || "Imported Job", client: { name: clientName || "Customer Name", address: address || "" },
+    job: { name: name || "Imported Project", client: { name: clientName || "Customer Name", address: address || "" },
       stage: "proposal", drawnBy: "SignalPath",
       revisions: [{ rev: 1, date: today(), description: "Imported", by: "SP" }],
       catalogSnapshot: { asOf: today() } },

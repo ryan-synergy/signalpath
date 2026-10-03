@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-OBHDN/0HoeRkADOWWfigvBgKAgOmtPpJw2RcKGw4u6Q=' 'sha256-oohLqRAr1Dvsa1svXVVDSwMjF8Kg3ADy9PXiKZK9OZA=' 'sha256-b4wZvpj92XOcFdUWYP5h+IOZHYrf1cD6eNwrgxjC7ZQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-xflzxEMWrqVrhXtVYRnHrpxp61SV23nJy37yqZI+Dbs=' 'sha256-zUkrrgO9hsUbPrnUdqFX3Gl6k+r+fRLNprqaWcAuGw0=' 'sha256-zh0jwbIvLy1E5kA7xaCZj4AuhIgvPoPHax4sxHl+iKA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignalPath</title>
 <style>
@@ -481,7 +481,9 @@
   .jcard .ja button.danger { color: #b3261e; }
   #jobsHome .jh-empty { padding: 24px; text-align: center; color: var(--muted); background: #fff; border-radius: 12px; border: 1px dashed var(--act-line); }
   #jobsHome .jh-foot { font-size: 12.5px; color: var(--muted); margin-top: 18px; }
-  .jcard .ja .more { display: none; }
+  /* Open, and everything else under ⋯ (Ryan 2026-10-03: six buttons a row was too much) — the buttons stay in the DOM for the menu to click */
+  .jcard .ja button:not(.open):not(.more) { display: none; }
+  .jcard .ja .more { font-size: 18px; line-height: 1; padding: 0 14px; }
   /* a proposal and its as-built(s): one block, the as-built indented under it */
   .jgroup.many { margin-bottom: 8px; } .jgroup.many > .jcard { margin-bottom: 0; } .jgroup.many > .jcard:first-child { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
   .jcard.sub { margin-left: 28px; border-top: 0; border-radius: 0; background: #fbfcfd; position: relative; }
@@ -491,7 +493,7 @@
   /* phone: two start tiles a row (titles only), and each job keeps Open + More (the rest in a picker) */
   @media (max-width: 600px) { #topbar #jobsHomeBtn span { display: none; }
     #jobsHome .jh-start { grid-template-columns: 1fr 1fr; } #jobsHome .jh-start button { min-height: 64px; } #jobsHome .jh-start span { display: none; }
-    .jcard .ja { width: 100%; } .jcard .ja button { flex: 1; } .jcard .ja button:not(.open):not(.more) { display: none; } .jcard .ja .more { display: block; } }
+    .jcard .ja { width: 100%; } .jcard .ja .open { flex: 1; } }
   .kgear { display: flex; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid #eef0f3; }
   .kgear .kg-n { flex: 1; min-width: 0; }
   .kgear button { min-height: 32px; min-width: 40px; border-radius: 8px; border: 1px solid var(--act-line); background: #fff; font-size: 13px; }
@@ -619,29 +621,29 @@
      imports resolve through this map too. -->
 <script type="importmap">
 { "imports": {
-    "./app/ai.js": "./app/ai.js?v=20261003135425",
-    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003135425",
-    "./app/audiochain.js": "./app/audiochain.js?v=20261003135425",
-    "./app/ports.js": "./app/ports.js?v=20261003135425",
-    "./app/commands.js": "./app/commands.js?v=20261003135425",
-    "./app/engine.js": "./app/engine.js?v=20261003135425",
-    "./app/exports.js": "./app/exports.js?v=20261003135425",
-    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003135425",
-    "./app/hookup.js": "./app/hookup.js?v=20261003135425",
-    "./app/importers.js": "./app/importers.js?v=20261003135425",
-    "./app/mdimport.js": "./app/mdimport.js?v=20261003135425",
-    "./app/library.js": "./app/library.js?v=20261003135425",
-    "./app/names.js": "./app/names.js?v=20261003135425",
-    "./app/network.js": "./app/network.js?v=20261003135425",
-    "./app/pages.js": "./app/pages.js?v=20261003135425",
-    "./app/power.js": "./app/power.js?v=20261003135425",
-    "./app/quickadd.js": "./app/quickadd.js?v=20261003135425",
-    "./app/rack.js": "./app/rack.js?v=20261003135425",
-    "./app/route-audit.js": "./app/route-audit.js?v=20261003135425",
-    "./app/starters.js": "./app/starters.js?v=20261003135425",
-    "./app/kinds.js": "./app/kinds.js?v=20261003135425",
-    "./app/racksizes.js": "./app/racksizes.js?v=20261003135425",
-    "./app/sheets.js": "./app/sheets.js?v=20261003135425"
+    "./app/ai.js": "./app/ai.js?v=20261003140034",
+    "./app/asbuilt.js": "./app/asbuilt.js?v=20261003140034",
+    "./app/audiochain.js": "./app/audiochain.js?v=20261003140034",
+    "./app/ports.js": "./app/ports.js?v=20261003140034",
+    "./app/commands.js": "./app/commands.js?v=20261003140034",
+    "./app/engine.js": "./app/engine.js?v=20261003140034",
+    "./app/exports.js": "./app/exports.js?v=20261003140034",
+    "./app/fuzz-jobs.js": "./app/fuzz-jobs.js?v=20261003140034",
+    "./app/hookup.js": "./app/hookup.js?v=20261003140034",
+    "./app/importers.js": "./app/importers.js?v=20261003140034",
+    "./app/mdimport.js": "./app/mdimport.js?v=20261003140034",
+    "./app/library.js": "./app/library.js?v=20261003140034",
+    "./app/names.js": "./app/names.js?v=20261003140034",
+    "./app/network.js": "./app/network.js?v=20261003140034",
+    "./app/pages.js": "./app/pages.js?v=20261003140034",
+    "./app/power.js": "./app/power.js?v=20261003140034",
+    "./app/quickadd.js": "./app/quickadd.js?v=20261003140034",
+    "./app/rack.js": "./app/rack.js?v=20261003140034",
+    "./app/route-audit.js": "./app/route-audit.js?v=20261003140034",
+    "./app/starters.js": "./app/starters.js?v=20261003140034",
+    "./app/kinds.js": "./app/kinds.js?v=20261003140034",
+    "./app/racksizes.js": "./app/racksizes.js?v=20261003140034",
+    "./app/sheets.js": "./app/sheets.js?v=20261003140034"
 } }
 </script>
 <script>
@@ -655,8 +657,8 @@
     const stale = /export named|does not provide|doesn't provide|binding name|indirect export|Importing a module script failed|Failed to fetch dynamically|error loading dynamically|module script/i.test(msg);
     const box = document.createElement("div");
     box.style.cssText = "position:fixed;inset:auto 16px 16px 16px;z-index:99999;background:#fff4e5;color:#4a2a00;border:1px solid #e0a040;border-radius:8px;padding:12px 14px;font:14px/1.4 -apple-system,system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.18)";
-    box.innerHTML = (stale ? "<b>SignalPath was just updated.</b> Reload to get the new version — your jobs are saved in this browser."
-                           : "<b>SignalPath didn't start.</b> Reload to try again — your jobs are saved in this browser.<br><small style=\"opacity:.7\"></small>")
+    box.innerHTML = (stale ? "<b>SignalPath was just updated.</b> Reload to get the new version — your projects are saved in this browser."
+                           : "<b>SignalPath didn't start.</b> Reload to try again — your projects are saved in this browser.<br><small style=\"opacity:.7\"></small>")
       + ' <button style="margin-left:8px;font:inherit;padding:3px 10px">Reload</button>';
     if (!stale) box.querySelector("small").textContent = msg.slice(0, 200);
     box.querySelector("button").onclick = () => { const u = new URL(location.href); u.searchParams.set("r", Date.now()); location.replace(u); };
@@ -675,17 +677,17 @@
 
 <div id="topbar">
   <span class="logo">SIGNALPATH</span>
-  <button id="jobsHomeBtn" title="All jobs — start, open, copy, back up" aria-label="All jobs"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M1.5 4.5v8a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-6.5a1 1 0 0 0-1-1H8L6.5 3h-4a1 1 0 0 0-1 1.5z"/></svg><span>Jobs</span></button>
-  <button id="jobBtn" title="This job: rename, stage, option"><b id="jobBtnName">Job ▾</b><span id="jobBtnSub"></span></button>
-  <select id="jobsSel" title="Jobs"></select>
+  <button id="jobsHomeBtn" title="All projects — start, open, copy, back up" aria-label="All projects"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M1.5 4.5v8a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-6.5a1 1 0 0 0-1-1H8L6.5 3h-4a1 1 0 0 0-1 1.5z"/></svg><span>Projects</span></button>
+  <button id="jobBtn" title="This project: rename, stage, option"><b id="jobBtnName">Project ▾</b><span id="jobBtnSub"></span></button>
+  <select id="jobsSel" title="Projects"></select>
   <div class="menu" id="fileMenu"><button class="mbtn" aria-haspopup="true" aria-expanded="false">File ▾</button>
     <div class="mlist" role="menu" hidden>
-      <button id="newJob" role="menuitem"><b>New job</b><span>Start from a rack: Savant, theater, MXNet, Dante or blank</span></button>
-      <button id="importBtn" role="menuitem"><b>Import…</b><span>A Markdown design (from an AI or a tech), a PlanQueue file, a SignalPath job, an AVWalk survey or a Blueprinted file</span></button>
+      <button id="newJob" role="menuitem"><b>New project</b><span>Start from a rack: Savant, theater, MXNet, Dante or blank</span></button>
+      <button id="importBtn" role="menuitem"><b>Import…</b><span>A Markdown design (from an AI or a tech), a PlanQueue file, a SignalPath project, an AVWalk survey or a Blueprinted file</span></button>
       <button id="pasteBtn" role="menuitem"><b>Paste Markdown…</b><span>Paste a design straight from Claude, ChatGPT or notes — rooms and rack gear come in wired</span></button>
-      <button id="startAsBuilt" role="menuitem"><b>Start as-built</b><span>Copy this job as "— As-Built" to record what was installed; the proposal stays as it is</span></button>
+      <button id="startAsBuilt" role="menuitem"><b>Start as-built</b><span>Copy this project as "— As-Built" to record what was installed; the proposal stays as it is</span></button>
       <hr>
-      <button id="delJob" role="menuitem" class="danger"><b>Delete job</b><span>Removes this job from this browser</span></button>
+      <button id="delJob" role="menuitem" class="danger"><b>Delete project</b><span>Removes this project from this browser</span></button>
     </div></div>
   <input id="jobName" title="Project name">
   <select id="solSel" title="Solution"></select>
@@ -699,18 +701,18 @@
   <div class="menu" id="viewMenu"><button class="mbtn" aria-haspopup="true" aria-expanded="false">View ▾</button>
     <div class="mlist" role="menu" hidden>
       <label class="chk"><input type="checkbox" id="hideNet"><span><b>Hide network</b><em>Drop the Cat6 network wires from the drawing</em></span></label>
-      <label class="chk"><input type="checkbox" id="splitSheets"><span><b>A sheet per rack</b><em>Saved with the job: a pool house or guest house rack gets its own sheet</em></span></label>
+      <label class="chk"><input type="checkbox" id="splitSheets"><span><b>A sheet per rack</b><em>Saved with the project: a pool house or guest house rack gets its own sheet</em></span></label>
       <label class="chk"><input type="checkbox" id="kindColor" checked><span><b>Color by kind</b><em>Tint rack boxes by what they are (remembered on this computer)</em></span></label>
       <label class="chk"><input type="checkbox" id="bwMode"><span><b>Black &amp; white</b><em>Dash patterns carry each signal, for office laser printers</em></span></label>
       <details class="mstyle"><summary><b>Drawing style</b><em>Trunks, harness, Dante labels — how the wires are drawn</em></summary>
       <div class="mgroup" role="group" aria-label="Trunks">
-        <div class="mlabel">Trunks <em>Saved with the job: one trunk per signal type, breaking out at each room</em></div>
+        <div class="mlabel">Trunks <em>Saved with the project: one trunk per signal type, breaking out at each room</em></div>
         <label class="chk"><input type="radio" name="trunkStyle" value="bundle"><span><b>Bundle</b><em>The default: one heavy run with ×N, thin breakouts, wire numbers</em></span></label>
         <label class="chk"><input type="radio" name="trunkStyle" value="ribbon"><span><b>Ribbon</b><em>Same trunks, every wire its own line side by side</em></span></label>
         <label class="chk"><input type="radio" name="trunkStyle" value="off"><span><b>Off</b><em>Each wire takes its own path (the older drawing)</em></span></label>
       </div>
-      <label class="chk"><input type="checkbox" id="danteLabels"><span><b>Dante as labels</b><em>Saved with the job: Dante shown as text on each box instead of lines</em></span></label>
-      <label class="chk"><input type="checkbox" id="harnessMode"><span><b>Harness style</b><em>Saved with the job: runs to 3+ rooms share one line and branch off at each room</em></span></label>
+      <label class="chk"><input type="checkbox" id="danteLabels"><span><b>Dante as labels</b><em>Saved with the project: Dante shown as text on each box instead of lines</em></span></label>
+      <label class="chk"><input type="checkbox" id="harnessMode"><span><b>Harness style</b><em>Saved with the project: runs to 3+ rooms share one line and branch off at each room</em></span></label>
       </details>
     </div></div>
   <input type="file" id="importFile" accept=".json,.md,.markdown,.txt,text/markdown,text/plain,application/json" hidden>
@@ -721,7 +723,7 @@
       <button id="exportLabels" role="menuitem"><b>Cable labels</b><span>One row per wire (.csv) for Brady / P-touch</span></button>
       <button id="exportInstall" role="menuitem" hidden><b>Install record</b><span>Serial, MAC, IP and notes per box (.csv)</span></button>
       <hr>
-      <button id="exportJson" role="menuitem"><b>Job file</b><span>The whole job (.json) — reopen, share, back up</span></button>
+      <button id="exportJson" role="menuitem"><b>Project file</b><span>The whole project (.json) — reopen, share, back up</span></button>
       <button id="exportSvg" role="menuitem"><b>Drawing</b><span>The schematic sheet (.svg)</span></button>
       <button id="exportAi" role="menuitem"><b>AI review</b><span>The whole design as Markdown, for an AI to check</span></button>
       <button id="exportBrief" role="menuitem"><b>Design brief for an AI</b><span>The Markdown format SignalPath imports, with the catalog's product names — give it to an AI to write a design</span></button>
@@ -763,16 +765,16 @@
 </div>
 
 <div id="aiBox" role="dialog" aria-modal="true" aria-labelledby="aiTitle"><div class="card">
-  <div class="aihd"><h2 id="aiTitle">✦ Ask AI to change this job</h2><button id="aiClose" aria-label="Close">✕</button></div>
+  <div class="aihd"><h2 id="aiTitle">✦ Ask AI to change this project</h2><button id="aiClose" aria-label="Close">✕</button></div>
   <label class="ailbl" for="aiReq">What should change?</label>
   <textarea id="aiReq" rows="3" placeholder="e.g. Add a theater with a 7.1 system and an 85&quot; Sony on its own receiver, with an optical backup. Bump the patio TV to 75."></textarea>
   <div class="airow">
     <button id="aiAsk" class="primary">Ask Claude</button>
-    <button id="aiCopy" title="Copies a ready prompt (this job, its issues, and the command list) to paste into Claude">Copy prompt for Claude</button>
+    <button id="aiCopy" title="Copies a ready prompt (this project, its issues, and the command list) to paste into Claude">Copy prompt for Claude</button>
     <span id="aiStatus" class="mini"></span>
   </div>
   <div class="airow" style="margin-top:8px">
-    <button id="aiQuote" title="Give Claude the original quote or system design — it proposes the gear the job is missing">📄 Check against the quote…</button>
+    <button id="aiQuote" title="Give Claude the original quote or system design — it proposes the gear the project is missing">📄 Check against the quote…</button>
     <input id="aiQuoteFile" type="file" accept=".pdf,.csv,.txt,.md,.tsv,.json,application/pdf,text/*" hidden>
     <span id="aiQuoteChip" class="mini"></span>
   </div>
@@ -797,21 +799,21 @@
 </div></div>
 
 <div id="jobsHome" role="dialog" aria-modal="true" aria-labelledby="jhTitle"><div class="jh">
-  <div class="jh-hd"><h2 id="jhTitle">Jobs</h2><button id="jhClose" class="jh-back">Back to the job</button></div>
-  <div class="jh-sect">Start a job</div>
+  <div class="jh-hd"><h2 id="jhTitle">Projects</h2><button id="jhClose" class="jh-back">Back to the project</button></div>
+  <div class="jh-sect">Start a project</div>
   <div class="jh-start">
-    <button data-start="newJob"><b>New job</b><span>Pick the closest rack — Savant, theater, MXNet, Dante or blank — then type the rooms</span></button>
+    <button data-start="newJob"><b>New project</b><span>Pick the closest rack — Savant, theater, MXNet, Dante or blank — then type the rooms</span></button>
     <button data-start="pasteBtn"><b>Paste a design</b><span>Markdown or notes from Claude, ChatGPT, an email or a tech — rooms and gear come in wired</span></button>
-    <button data-start="importBtn"><b>Import a file</b><span>A Markdown design, PlanQueue file, SignalPath job, AVWalk survey or Blueprinted (Savant) file</span></button>
-    <button data-start="sample"><b>Open a sample</b><span>Sample Residence, Sample Estate, a 30-room Bel Air estate or a 25-room stress job to try things on</span></button>
+    <button data-start="importBtn"><b>Import a file</b><span>A Markdown design, PlanQueue file, SignalPath project, AVWalk survey or Blueprinted (Savant) file</span></button>
+    <button data-start="sample"><b>Open a sample</b><span>Sample Residence, Sample Estate, a 30-room Bel Air estate or a 25-room stress project to try things on</span></button>
   </div>
-  <div class="jh-sect jh-row"><span>Your jobs <em id="jhCount"></em></span><input id="jhSearch" placeholder="Search jobs, clients, addresses…" autocomplete="off" spellcheck="false"></div>
+  <div class="jh-sect jh-row"><span>Your projects <em id="jhCount"></em></span><input id="jhSearch" placeholder="Search projects, clients, addresses…" autocomplete="off" spellcheck="false"></div>
   <div id="jhList"></div>
-  <div class="jh-foot">Jobs are saved in this browser. <b>Download</b> a job file to back it up or move it to another computer; <b>Import a file</b> brings it back.</div>
+  <div class="jh-foot">Projects are saved in this browser. <b>Download</b> a project file to back it up or move it to another computer; <b>Import a file</b> brings it back.</div>
 </div></div>
 
 <div id="starter" role="dialog" aria-modal="true" aria-labelledby="stTitle"><div class="card">
-  <h2 id="stTitle">New job — pick the closest rack</h2>
+  <h2 id="stTitle">New project — pick the closest rack</h2>
   <div class="s">Its gear comes filled in. Then type the rooms — they wire themselves to it.</div>
   <div class="grid" id="stGrid"></div>
   <div class="ft"><button id="stCancel">Cancel</button></div>
@@ -830,7 +832,7 @@
 
 <div id="kits" class="libov"><div class="card">
   <div class="hd"><div class="t">Starter kits</div>
-    <button id="kitSave" title="The rack's gear, its source adapters and patching, and (if you want) its rooms">＋ Save this job's rack as a starter</button>
+    <button id="kitSave" title="The rack's gear, its source adapters and patching, and (if you want) its rooms">＋ Save this project's rack as a starter</button>
     <button class="primary" id="kitClose">Done</button></div>
   <div class="bd"><div class="list" id="kitList"></div><div class="ed" id="kitEd"></div></div>
 </div></div>
@@ -840,8 +842,8 @@
   <div class="bd" id="rvBody"></div>
   <div class="ft">
     <label id="rvDrawWrap" title="Adds MXNet, amps and receivers from how the walk says each room is fed"><input type="checkbox" id="rvDraw" checked> Draw the rack + wiring</label>
-    <button class="primary" id="rvNew">Create new job</button>
-    <select id="rvTarget"></select><button id="rvMerge">Update selected job</button>
+    <button class="primary" id="rvNew">Create new project</button>
+    <select id="rvTarget"></select><button id="rvMerge">Update selected project</button>
     <span style="flex:1"></span><button id="rvCancel">Cancel</button>
   </div>
 </div></div>
@@ -901,7 +903,7 @@ const dbDel = id => DB
 // offline on a job site: the app keeps a copy of itself (sw.js); only on the real site (http/https)
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
-const SHIPPED = await fetch("./app/catalog.json?v=20261003135425").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
+const SHIPPED = await fetch("./app/catalog.json?v=20261003140034").then(r => r.json()).catch(() => ({ devices: {}, licensing: {} }));
 let SETTINGS = { company: { name: "SYNERGY", tagline: "AUDIO VIDEO SYSTEMS",
   info: "300 El Camino Real · Tustin, CA 92780 · P: 714-505-2003 · www.synergy.tv" }, catalog: null };
 {
@@ -975,7 +977,7 @@ const S = { job: null, id: null, sol: 0, tab: "zones", openRows: new Set(), edit
 const uid = p => p + "-" + Math.random().toString(36).slice(2, 7);
 const $ = s => document.querySelector(s);
 
-function blankJob(name = "New Job") {
+function blankJob(name = "New Project") {
   return {
     generator: "SignalPath", schemaVersion: 1,
     job: { name, client: { name: "Customer Name", address: "Street, City, CA" }, stage: "proposal",
@@ -1231,7 +1233,7 @@ const safeUrl = u => /^https?:\/\//i.test(String(u || "")) ? u : "#";   // exter
 /* ============ top bar ============ */
 function renderTopbar() {
   $("#jobName").value = S.job.job.name || "";
-  $("#jobBtnName").textContent = `${S.job.job.name || "Untitled job"} ▾`;
+  $("#jobBtnName").textContent = `${S.job.job.name || "Untitled project"} ▾`;
   $("#jobBtnSub").textContent = `${(S.job.job.stage || "proposal") === "asBuilt" ? "As-built" : "Proposal"} · ${S.job.solutions[S.sol]?.name || "Solution"}`;
   $("#stageSel").value = (S.job.job.stage || "proposal") === "asBuilt" ? "asBuilt" : "proposal";
   const sel = $("#solSel");
@@ -1272,25 +1274,22 @@ $("#solSel").onchange = e => {
 /* the job button: rename, stage, option, file actions and other jobs in one
    picker — the old selects / File menu stay in the DOM (hidden) and do the work */
 $("#jobBtn").onclick = () => {
-  const stage = (S.job.job.stage || "proposal") === "asBuilt" ? "asBuilt" : "proposal";
   const opts = sel => [...$(sel).querySelectorAll("option")];
   const jobs = [...$("#jobsSel").children];
-  openPicker({ title: S.job.job.name || "Job", groups: [
-    { label: "This job", items: [
-      { value: "rename", label: "Rename…", sub: S.job.job.name || "" },
-      { value: "stage:proposal", label: "Proposal", current: stage === "proposal", sub: "stage" },
-      { value: "stage:asBuilt", label: "As-built", current: stage === "asBuilt", sub: "stage" } ] },
+  openPicker({ title: S.job.job.name || "Project", groups: [
+    { label: "This project", items: [
+      // no Proposal / As-built switch here (Ryan 2026-10-03): it only relabelled the job — "Start as-built" makes the real one
+      { value: "rename", label: "Rename…", sub: S.job.job.name || "" } ] },
     { label: "Option", items: opts("#solSel").map(o => ({ value: `sol:${o.value}`, label: o.textContent, current: o.value === String(S.sol) })) },
     ...($("#startAsBuilt").hidden ? [] : [{ label: "When it's installed", items: [{ value: "file:startAsBuilt", label: "Start as-built", sub: "A copy to record what was installed — this proposal stays as it is" }] }]),
     // the rest of the jobs live on the Jobs screen; the last few stay one tap away here
-    { label: "Recent jobs", items: [...jobs.filter(o => o.tagName === "OPTION" && o.value !== String(S.id)).slice(0, 5).map(o => ({ value: `job:${o.value}`, label: o.textContent })),
-      { value: "home", label: "All jobs…", sub: "Start, open, rename, copy, back up or delete jobs" }] },
+    { label: "Recent projects", items: [...jobs.filter(o => o.tagName === "OPTION" && o.value !== String(S.id)).slice(0, 5).map(o => ({ value: `job:${o.value}`, label: o.textContent })),
+      { value: "home", label: "All projects…", sub: "Start, open, rename, copy, back up or delete projects" }] },
   ], onPick: v => {
     if (v === "home") return openJobsHome();
     const [k, ...rest] = v.split(":"), val = rest.join(":");
     const set = (sel, x) => { $(sel).value = x; $(sel).dispatchEvent(new Event("change")); };
-    if (k === "rename") { const n = prompt("Job name:", S.job.job.name || ""); if (n != null && n.trim()) set("#jobName", n.trim()); }
-    else if (k === "stage") set("#stageSel", val);
+    if (k === "rename") { const n = prompt("Project name:", S.job.job.name || ""); if (n != null && n.trim()) set("#jobName", n.trim()); }
     else if (k === "sol") set("#solSel", val);
     else if (k === "file") $("#" + val).click();
     else if (k === "job") set("#jobsSel", val);
@@ -1330,9 +1329,9 @@ async function renderJobsHome() {
     const real = v => { v = String(v || "").trim(); return v && !/^(customer name|street, city, ca)$/i.test(v) ? v : ""; };   // the blank job's placeholders aren't a client
     const meta = [sub && jb.asBuilt?.started && `started ${new Date(jb.asBuilt.started + "T12:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`, !sub && real(jb.client?.name), !sub && real(jb.client?.address), `${rooms} room${rooms === 1 ? "" : "s"}`, opts > 1 && `${opts} options`, `edited ${ago(j.updated)}`].filter(Boolean).join(" · ");
     return `<div class="jcard${j.id === S.id ? " cur" : ""}${sub ? " sub" : ""}" data-id="${esc(j.id)}">
-      <div class="jt" data-a="open"><b>${esc(jb.name || "Untitled job")}<span class="chips"><span class="chip${ab ? " ab" : ""}">${ab ? "As-built" : "Proposal"}</span>${j.id === S.id ? '<span class="chip now">Open now</span>' : ""}</span></b><div class="jm">${esc(meta)}</div></div>
-      <div class="ja"><button class="open" data-a="open">${j.id === S.id ? "Back to it" : "Open"}</button><button data-a="rename">Rename</button><button data-a="dup">Duplicate</button><button data-a="dl" title="The job file (.json) — a backup you can import anywhere">Download</button>${canAb ? '<button data-a="ab" title="When it\'s installed: a copy to record what went in — this proposal stays as it is">Start as-built</button>' : ""}<button data-a="del" class="danger">Delete</button><button class="more" data-a="more">More…</button></div></div>`;
-  }).join("")}</div>`).join("") : `<div class="jh-empty">${q ? "No job matches that." : "No saved jobs yet — start one above."}</div>`;
+      <div class="jt" data-a="open"><b>${esc(jb.name || "Untitled project")}<span class="chips"><span class="chip${ab ? " ab" : ""}">${ab ? "As-built" : "Proposal"}</span>${j.id === S.id ? '<span class="chip now">Open now</span>' : ""}</span></b><div class="jm">${esc(meta)}</div></div>
+      <div class="ja"><button class="open" data-a="open">${j.id === S.id ? "Back to it" : "Open"}</button><button data-a="rename">Rename</button><button data-a="dup">Duplicate</button><button data-a="dl" title="The project file (.json) — a backup you can import anywhere">Download</button>${canAb ? '<button data-a="ab" title="When it\'s installed: a copy to record what went in — this proposal stays as it is">Start as-built</button>' : ""}<button data-a="del" class="danger">Delete</button><button class="more" data-a="more" aria-label="More: rename, duplicate, download, delete" title="Rename, duplicate, download, delete">⋯</button></div></div>`;
+  }).join("")}</div>`).join("") : `<div class="jh-empty">${q ? "No project matches that." : "No saved projects yet — start one above."}</div>`;
 }
 async function openJobsHome() { $("#jhSearch").value = ""; await renderJobsHome(); $("#jobsHome").classList.add("show"); $("#jobsHome").scrollTop = 0; }
 $("#jobsHomeBtn").onclick = openJobsHome;
@@ -1349,21 +1348,21 @@ $("#jobsHome").querySelector(".jh-start").onclick = e => {
 $("#jhList").onclick = async e => {
   const a = e.target.closest("[data-a]")?.dataset.a, card = e.target.closest(".jcard"); if (!a || !card) return;
   const id = card.dataset.id, rec = (await dbAll()).find(j => j.id === id); if (!rec) return renderJobsHome();
-  const name = rec.data.job?.name || "Untitled job";
+  const name = rec.data.job?.name || "Untitled project";
   if (a === "open") return id === S.id ? closeJobsHome() : openJob(id);
   if (a === "more") return openPicker({ title: name, groups: [{ label: "", items: [
       { value: "rename", label: "Rename…" }, { value: "dup", label: "Duplicate", sub: "A copy to try another idea on" },
-      { value: "dl", label: "Download", sub: "The job file (.json) — a backup you can import anywhere" },
+      { value: "dl", label: "Download", sub: "The project file (.json) — a backup you can import anywhere" },
       ...(card.querySelector('[data-a="ab"]') ? [{ value: "ab", label: "Start as-built", sub: "When it's installed: a copy to record what went in" }] : []),
       { value: "del", label: "Delete", sub: "Removes it from this browser" }] }],
     onPick: v => card.querySelector(`[data-a="${CSS.escape(v)}"]`)?.click() });
   if (a === "ab") { if (id !== S.id) await openJob(id); closeJobsHome(); return $("#startAsBuilt").click(); }
-  if (a === "rename") { const n = prompt("Job name:", name); if (n == null || !n.trim()) return;
+  if (a === "rename") { const n = prompt("Project name:", name); if (n == null || !n.trim()) return;
     if (id === S.id) { S.job.job.name = n.trim(); await persist(); refresh(false); }
     else { rec.data.job.name = n.trim(); await dbPut({ ...rec, updated: Date.now() }); await renderJobsSel(); } }
   else if (a === "dup") { const copy = structuredClone(id === S.id ? S.job : rec.data); copy.job.name = `${name} (copy)`;
     await dbPut({ id: uid("job"), updated: Date.now(), data: copy }); await renderJobsSel(); toast(`Copied — "${copy.job.name}" is at the top`); }
-  else if (a === "dl") { const base = String(name).replace(/[\\/:*?"<>|\u0000-\u001f]+/g, "-").trim() || "SignalPath job";
+  else if (a === "dl") { const base = String(name).replace(/[\\/:*?"<>|\u0000-\u001f]+/g, "-").trim() || "SignalPath project";
     download(`${base}.json`, JSON.stringify(id === S.id ? S.job : rec.data, null, 2), "application/json"); }
   // no confirm — the toast's Undo puts it back (agent hammer 2026-10-03: delete was the one destructive step with no undo)
   else if (a === "del") {
@@ -1397,7 +1396,7 @@ async function startJobFrom(st) {
 /* new job: simpler cards (Ryan 2026-10-02) — grouped, each a small rack picture in the
    equipment colors, the kit's name, one line, and its size; the full description and the
    part list wait behind "Details". The kit manager's order holds inside each group. */
-const KIT_GROUPS = [["mine", "Your kits"], ["whole", "Whole home"], ["small", "Smaller jobs"], ["room", "One room"], ["start", "Start from"]];
+const KIT_GROUPS = [["mine", "Your kits"], ["whole", "Whole home"], ["small", "Smaller projects"], ["room", "One room"], ["start", "Start from"]];
 const KIT_RANK = { network: 0, mxnet: 1, video: 1, avb: 2, control: 2, source: 3, avr: 4, audio: 4, power: 5 };
 function kitThumb(st, cat) {
   const W = 54, H = 78, inner = H - 8;
@@ -1522,7 +1521,7 @@ $("#aiQuoteFile").onchange = async () => {
     } else AIQ = { name: f.name, text: await f.text() };
   } catch (e) { aiStatus(`Couldn't read ${f.name}: ${e.message}`); return; }
   showQuote();
-  aiStatus("Quote ready — press Ask Claude (or Copy prompt) to compare it with the job. Add anything else to check in the box.");
+  aiStatus("Quote ready — press Ask Claude (or Copy prompt) to compare it with the project. Add anything else to check in the box.");
 };
 const aiStatus = m => { $("#aiStatus").textContent = m || ""; };
 function openAI() {
@@ -1622,7 +1621,7 @@ $("#jobsSel").onchange = async e => {
   refresh(false);
 };
 // job names become filenames — strip the characters file systems reject
-const fileBase = () => String(S.job.job.name || "SignalPath job").replace(/[\\/:*?"<>|\u0000-\u001f]+/g, "-").trim() || "SignalPath job";
+const fileBase = () => String(S.job.job.name || "SignalPath project").replace(/[\\/:*?"<>|\u0000-\u001f]+/g, "-").trim() || "SignalPath project";
 $("#exportJson").onclick = () => download(`${fileBase()}.json`, JSON.stringify(S.job, null, 2), "application/json");
 $("#exportSvg").onclick = () => {
   const svg = $("#canvas svg"); if (!svg) return;
@@ -1676,7 +1675,7 @@ $("#toolsBtn").onclick = () => {
 };
 
 /* ---- print packet: sheet 1 + enabled pages, print-CSS one page each ---- */
-// packet: "service" (everything; as-built jobs add clouds + the changes page) or "client" (clean handover)
+// packet: "service" (everything; as-built projects add clouds + the changes page) or "client" (clean handover)
 function printPacket(packet = "service") {
   try {
     const full = effectiveJob(S.job, S.sol);
@@ -1716,7 +1715,7 @@ $("#printClient").onclick = () => printPacket("client");
 $("#startAsBuilt").onclick = async () => {
   closeMenus();
   const sol = S.job.solutions[S.sol] || S.job.solutions[0];
-  if (!confirm(`Start an as-built of "${S.job.job.name}" (${sol.name || "this solution"})?\n\nA copy called "${S.job.job.name} — As-Built" opens; edit it to match what was installed. This job stays as it is.`)) return;
+  if (!confirm(`Start an as-built of "${S.job.job.name}" (${sol.name || "this solution"})?\n\nA copy called "${S.job.job.name} — As-Built" opens; edit it to match what was installed. This project stays as it is.`)) return;
   await flushSave();
   const fromId = S.id;
   S.job = startAsBuilt(S.job, S.sol); S.id = uid("job"); S.sol = 0; S.editScope = "house";
@@ -1727,7 +1726,7 @@ $("#startAsBuilt").onclick = async () => {
 $("#importBtn").onclick = () => $("#importFile").click();
 $("#importFile").onchange = async e => {
   const file = e.target.files[0]; if (!file) return;
-  if (file.size > 25e6) { alert(`Import failed: ${file.name} is ${Math.round(file.size / 1e6)} MB — job files are well under 1 MB. Wrong file?`); e.target.value = ""; return; }
+  if (file.size > 25e6) { alert(`Import failed: ${file.name} is ${Math.round(file.size / 1e6)} MB — project files are well under 1 MB. Wrong file?`); e.target.value = ""; return; }
   const text = await file.text();
   e.target.value = "";
   try { await importText(text, file.name); }
@@ -1757,7 +1756,7 @@ $("#pasteGo").onclick = async () => {
 /* ---- lenient review screen: every import lands here before touching a job ---- */
 async function showReview(res) {
   const j = res.job, sol = j.solutions[0];
-  const KINDS = { sitewalk: "SiteWalk / AVWalk survey", blueprinted: "Blueprinted takeoff (old Savant system)", markdown: "Markdown design", signalpath: "SignalPath job (from Markdown)" };
+  const KINDS = { sitewalk: "SiteWalk / AVWalk survey", blueprinted: "Blueprinted takeoff (old Savant system)", markdown: "Markdown design", signalpath: "SignalPath project (from Markdown)" };
   $("#rvTitle").textContent = `Import review — ${KINDS[res.kind] || res.kind}`;
   $("#rvSub").textContent = `${j.job.name} · ${plural(j.house.zones.length, "zone")} · ${plural(sol.racks.reduce((n, r) => n + (r.devices || []).length, 0), "rack box", "rack boxes")}${sol.racks.length > 1 ? ` in ${sol.racks.length} racks` : ""} · ${plural(sol.connections.length, "connection")}${sol.platforms.length ? " · platform: " + sol.platforms[0] : ""}`;
   const zoneRow = z => {
@@ -2602,7 +2601,7 @@ function hookupHTML(z, sol, multi) {
     if (h.dante.type === "ddec")
       fine.push(`<div style="margin:-2px 0 6px 80px"><button class="addbtn hdante" data-how="axis">Use an AXIS2 instead (TV's own apps too)</button></div>`);
   } else if ((sol.audioNetwork === "dante" || h.spk) && (h.tv || h.spk) && sol.audioNetwork !== "avb" && !/^soundbar/.test(h.spk?.config || ""))
-    fine.push(`<div style="margin:2px 0 6px 80px"><button class="addbtn hdante" data-how="auto">Put this zone on Dante${sol.audioNetwork === "dante" ? "" : " (makes this a Dante job)"}</button></div>`);
+    fine.push(`<div style="margin:2px 0 6px 80px"><button class="addbtn hdante" data-how="auto">Put this zone on Dante${sol.audioNetwork === "dante" ? "" : " (makes this a Dante project)"}</button></div>`);
   // one receiver for the whole zone is the common case — offer to finish it
   const vDev = byDev(h.video?.from), sDev = byDev(h.speakers?.from);
   let nudge = "";
@@ -2769,7 +2768,7 @@ function rackHTML(o = {}) {
   const { racks, powers } = rackData(a, ix.solutions[S.sol]?.sol.id);
   const allNotes = (a.notes || []).filter(n => /^(power|rack|switch-no-poe)/.test(n.code) && (!n.solution || n.solution === sol.id));
   const num = v => v == null ? "" : String(Math.round(v * 10) / 10);
-  const inp = (dev, k, own, fromCat, w = 46) => `<input class="rspec" data-dev="${esc(dev)}" data-k="${k}" value="${esc(num(own ?? fromCat))}" placeholder="?" style="width:${w}px${own == null && fromCat != null ? ";color:#777" : ""}" title="${own != null ? "Typed in for this job" : fromCat != null ? "From the catalog — type to override" : "Not known yet — type it in"}">`;
+  const inp = (dev, k, own, fromCat, w = 46) => `<input class="rspec" data-dev="${esc(dev)}" data-k="${k}" value="${esc(num(own ?? fromCat))}" placeholder="?" style="width:${w}px${own == null && fromCat != null ? ";color:#777" : ""}" title="${own != null ? "Typed in for this project" : fromCat != null ? "From the catalog — type to override" : "Not known yet — type it in"}">`;
   const rackRow = rr => {
     const r = racks.find(x => x.rack === rr.id);
     const devs = (rr.devices || []).map(d => {
@@ -2788,7 +2787,7 @@ function rackHTML(o = {}) {
       ${(() => { const ref = rackReference(r.size), n1 = v => String(Math.round(v * 10) / 10);   // floor racks this size, on casters
         return `<div class="mini" style="margin:6px 0 2px"><b>Floor racks — ${r.size}U</b> (${n1(ref.railIn)}" of rail) · outside, on casters</div>` + ref.models.map(m =>
           `<div class="mini" style="margin:2px 0 2px 8px${m.fit !== "exact" ? ";color:#888" : ""}">${esc(m.brand === "Middle Atlantic" ? "MA" : "Strong")} ${esc(m.model)}${m.fit !== "exact" ? ` <i>(${m.u}U — nearest ${m.fit})</i>` : ""}: ${n1(m.hc)}" H · ${n1(m.w)}" W · ${esc(m.depths.map(([o]) => n1(o)).join(" / "))}" D</div>`).join(""); })()}` : ""}
-      <div class="mini" style="margin:8px 0 4px"><b>Gear</b> — U · cords · typical W · max W. <span style="color:#a45a12">?</span> = not known: type it in (saved on this job).</div>
+      <div class="mini" style="margin:8px 0 4px"><b>Gear</b> — U · cords · typical W · max W. <span style="color:#a45a12">?</span> = not known: type it in (saved on this project).</div>
       <table class="rtab"><tr><th>Box</th><th>U</th><th>Cords</th><th>Typ W</th><th>Max W</th></tr>${devs}</table>
       ${hw ? `<div class="mini" style="margin:10px 0 4px"><b>Rack hardware</b> — part numbers; <span style="color:#a45a12">?</span> = fill in later</div>
       <table class="rtab"><tr><th>Item</th><th>Qty</th><th>Part no.</th></tr>${hw}</table>` : ""}
@@ -2826,7 +2825,7 @@ function rackHTML(o = {}) {
     return { parts, rest: powers.filter(p => !placed.has(p)).map(pw).join(""), badge: Object.fromEntries(racks.map(r => [r.rack, `${r.used}U of ${r.size}U used`])),
       plans: Object.fromEntries((a.racks || []).filter(x => x.solution === ix.solutions[S.sol]?.sol.id).map(x => [x.rack, x])) };
   }
-  return rs.length ? rs.map(rr => rackRow(rr) + under(rr)).join("") + powers.filter(p => !placed.has(p)).map(pw).join("") : `<div class="mini" style="padding:12px">No rack on this job yet — add gear under GEAR.</div>`;
+  return rs.length ? rs.map(rr => rackRow(rr) + under(rr)).join("") + powers.filter(p => !placed.has(p)).map(pw).join("") : `<div class="mini" style="padding:12px">No rack on this project yet — add gear under GEAR.</div>`;
 }
 /* a source's MXNet encoder (AVDM) breaks its audio out as analog — normally into the Savant input
    module; pick another home for it here: an amp or receiver directly, gear in a room, or nothing.
@@ -2872,11 +2871,11 @@ async function renderAsBuilt() {
   if (!isAsBuilt(S.job)) {
     const kid = asbFind(await dbAll(), id, J.name);
     if (S.id !== id || S.mainView !== "asbuilt") return;
-    body.innerHTML = kid ? `<div class="asb-card asb-empty"><h2>${esc(J.name || "This job")} is the proposal</h2>
+    body.innerHTML = kid ? `<div class="asb-card asb-empty"><h2>${esc(J.name || "This project")} is the proposal</h2>
         <p>Its as-built is <b>${esc(kid.data.job.name)}</b>${kid.data.job.asBuilt?.started ? ` — started ${esc(kid.data.job.asBuilt.started)}` : ""}. That's where the installed drawing, the changes and the install record live.</p>
         <div class="asb-acts" style="justify-content:center"><button class="primary" data-asb="open" data-id="${esc(kid.id)}">Open the as-built</button></div></div>`
       : `<div class="asb-card asb-empty"><h2>No as-built yet</h2>
-        <p>When the job is installed, start an as-built: a copy of this proposal you edit to match what went in. Every difference is clouded on the drawing and listed here, and each box gets its serial, MAC and IP. This proposal stays exactly as it is.</p>
+        <p>When the project is installed, start an as-built: a copy of this proposal you edit to match what went in. Every difference is clouded on the drawing and listed here, and each box gets its serial, MAC and IP. This proposal stays exactly as it is.</p>
         <div class="asb-acts" style="justify-content:center"><button class="primary" data-asb="start">Start as-built</button></div></div>`;
     body.querySelector('[data-asb="open"]')?.addEventListener("click", e => openJob(e.target.dataset.id));
     body.querySelector('[data-asb="start"]')?.addEventListener("click", () => $("#startAsBuilt").click());
@@ -2901,7 +2900,7 @@ async function renderAsBuilt() {
           <td data-l="MAC"><input data-k="mac" value="${esc(r.mac)}" title="e.g. 00:11:22:AA:BB:CC — any format, it tidies itself" autocapitalize="characters" autocorrect="off" spellcheck="false"></td>
           <td data-l="IP"><input data-k="ip" value="${esc(r.ip)}" title="e.g. 192.168.1.50" inputmode="decimal" autocorrect="off" spellcheck="false"></td>
           <td data-l="Notes"><input data-k="notes" value="${esc(r.notes)}"></td></tr>`).join("")}</tbody></table>`
-        : `<div class="mini">No gear on this job yet.</div>`}</div>`;
+        : `<div class="mini">No gear on this project yet.</div>`}</div>`;
   body.querySelectorAll("tr[data-asbid] input").forEach(el => el.onchange = () => {
     const did = el.closest("tr").dataset.asbid, sol = S.job.solutions[S.sol];
     const d = [...sol.racks.flatMap(r => r.devices), ...(sol.localDevices || []), ...(sol.companions || [])].find(d => d.id === did);
@@ -3013,7 +3012,7 @@ function spaceHTML(rr, plan) {
     const two = (S.job.solutions[S.sol].racks || []).find(x => x.autoOf === rr.id), first = rr.autoOf && (S.job.solutions[S.sol].racks || []).find(x => x.id === rr.autoOf);
     const firstAuto = (S.job.solutions[S.sol].racks || []).find(x => (x.sizeMode || "auto") === "auto")?.id === rr.id;
     body = !firstAuto ? `<div class="mini" style="margin:6px 0 4px"><b>Auto</b> · ${plan?.size || "?"}U (${plan?.used ?? plan?.need ?? "?"}U used)</div>` : `<div class="mini" style="margin:6px 0 4px"><b>Auto</b> — the smallest standard rack that holds it: <b>${plan?.size || "?"}U</b> (${plan?.used ?? plan?.need ?? "?"}U used, gear plus its spacing and panels). Past ${plan?.autoMax || 42}U it becomes two racks side by side${rr.layout ? " (not while arranged by hand)" : ""}.</div>
-      <div style="display:flex;gap:6px;align-items:center;font-size:12px;margin:2px 0 4px">Two racks side by side past <input class="rautomax" inputmode="numeric" value="${esc(S.job.job.autoRackMax || 42)}" style="width:48px"> U <span class="mini" style="color:#8a8f98">(this job, every Auto rack)</span></div>
+      <div style="display:flex;gap:6px;align-items:center;font-size:12px;margin:2px 0 4px">Two racks side by side past <input class="rautomax" inputmode="numeric" value="${esc(S.job.job.autoRackMax || 42)}" style="width:48px"> U <span class="mini" style="color:#8a8f98">(this project, every Auto rack)</span></div>
       ${two ? `<div class="mini">Two-wide: <b>${esc(two.name)}</b> stands beside it.</div>` : ""}${first ? `<div class="mini">The second of a two-wide, beside <b>${esc(first.name)}</b>.</div>` : ""}`;
   } else {
     const cur = +rr.units || plan?.size || +S.job.job.rackUnits || DEFAULT_RACK_U, sizes = [...new Set([...RACK_SIZES, cur])].sort((a, b) => a - b);
@@ -3035,7 +3034,7 @@ function spaceHTML(rr, plan) {
    rack hardware and power & heat folded under one line. */
 function rackTabHTML() {
   const sol = S.job.solutions[S.sol];
-  if (!(sol.racks || []).length) return `<div class="mini" style="padding:12px">No rack on this job yet.</div>`;
+  if (!(sol.racks || []).length) return `<div class="mini" style="padding:12px">No rack on this project yet.</div>`;
   const k = rackHTML({ parts: true }), g = gearHTML({ parts: true, badge: k.badge });
   const strip = h => h.replace(/^\s*<div class="sect" data-rackid="[^"]*">[\s\S]*?<\/div>/, "");   // the rack's name already heads its boxes
   return g.driftBar + sol.racks.map(r => {
@@ -3061,7 +3060,7 @@ function installHTML() {
         ${field("MAC", `<input class="inst" data-k="mac" value="${esc(r.mac)}" placeholder="${PH.mac}" autocapitalize="characters" autocorrect="off" spellcheck="false">`)}
         ${field("IP", `<input class="inst" data-k="ip" value="${esc(r.ip)}" placeholder="${PH.ip}" inputmode="decimal" autocorrect="off" spellcheck="false">`)}
         ${field("Notes", `<input class="inst" data-k="notes" value="${esc(r.notes)}" placeholder="${PH.notes}">`)}
-      </div></div>`; }).join("") : `<div class="mini" style="padding:8px 2px">No gear on this job yet.</div>`}`;
+      </div></div>`; }).join("") : `<div class="mini" style="padding:8px 2px">No gear on this project yet.</div>`}`;
 }
 
 /* as-built switch ports: the port each box was actually patched into (sol.portMap[switch][box]).
@@ -3089,7 +3088,7 @@ function jobHTML() {
     ${isAsBuilt(S.job) ? (() => { const ab = J.asBuilt, ch = asBuiltChanges(S.job);
       return `<div class="sect">AS-BUILT <span class="badge">${ch.length} change${ch.length === 1 ? "" : "s"}</span></div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
-      <div class="mini">Copy of <b>${esc(ab.fromName)}</b> (${esc(ab.fromSolution)}) · started ${esc(ab.started)}. Edit this job to match the install; each difference from the proposal is clouded on the drawing and numbered here.</div>
+      <div class="mini">Copy of <b>${esc(ab.fromName)}</b> (${esc(ab.fromSolution)}) · started ${esc(ab.started)}. Edit this project to match the install; each difference from the proposal is clouded on the drawing and numbered here.</div>
       ${ch.length ? ch.map(c => `<div class="mini" style="margin-top:4px"><b style="color:#c2410c">△${c.n}</b> ${esc(c.text)}${c.action === "removed" ? ` <span style="color:#888">(listed only — not on the drawing)</span>` : ""}</div>`).join("")
         : `<div class="mini" style="margin-top:6px">No changes yet — built as proposed.</div>`}
     </div></div>`; })() : ""}
@@ -3119,7 +3118,7 @@ function jobHTML() {
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       ${(() => { const d = catalogDrift(S.job, SETTINGS.catalog); return d.length
         ? `<div class="mini">Newer catalog data for: ${esc(d.map(x => x.model).join(", "))}</div><button class="addbtn" id="updCat" style="margin-top:6px">Update catalog specs</button>`
-        : `<div class="mini">This job's gear matches the current catalog.</div>`; })()}
+        : `<div class="mini">This project's gear matches the current catalog.</div>`; })()}
     </div></div>
     <div class="sect">REVISIONS</div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
@@ -3171,7 +3170,7 @@ function settingsHTML() {
       ${conn.mode === "proxy" ? field("Proxy URL", `<input class="aiproxy" placeholder="https://…" value="${esc(conn.proxy || "")}">`) +
         field("Access code", `<input class="aicode" type="password" autocomplete="off" placeholder="${conn.code ? "saved — type to replace" : "from whoever set up the proxy"}">`) : ""}
       ${conn.mode !== "off" ? field("Model", sel("aimodel", MODELS.map(m => m[0]), conn.model, Object.fromEntries(MODELS))) : ""}
-      <div class="mini" style="line-height:1.45;margin-top:4px">Never saved in jobs, exports or backups. Claude sees this job (rooms, gear, client name) only when you send it something from ✦ Ask AI, and every change is previewed before it's made. “Copy prompt for Claude” works with no setup.</div>
+      <div class="mini" style="line-height:1.45;margin-top:4px">Never saved in projects, exports or backups. Claude sees this project (rooms, gear, client name) only when you send it something from ✦ Ask AI, and every change is previewed before it's made. “Copy prompt for Claude” works with no setup.</div>
     </div></div>`;
   return ai + `
     <div class="sect">COMPANY (title block)</div>
@@ -3195,9 +3194,9 @@ function settingsHTML() {
     <div class="row open"><div class="fields" style="display:block;border-top:none">
       <div class="mini" style="line-height:1.45">Every product's inputs and outputs, capabilities, rack height, power and part number — edit them, add new ones, or copy one (an MDX-16 → an MDX-18). ${Object.values(SETTINGS.catalog.devices || {}).filter(d => d.custom).length} of yours.</div>
       <button class="addbtn" id="openLib" style="margin-top:8px">Open device library</button></div></div>
-    <div class="sect">STARTER KITS <span class="mini">what ＋ New job offers</span></div>
+    <div class="sect">STARTER KITS <span class="mini">what ＋ New project offers</span></div>
     <div class="row open"><div class="fields" style="display:block;border-top:none">
-      <div class="mini" style="line-height:1.45">Save any job's rack as a kit (with its rooms if you like), reorder or hide kits, copy a shipped one to change it. ${Object.keys(SETTINGS.starters?.mine || {}).length} of yours.</div>
+      <div class="mini" style="line-height:1.45">Save any project's rack as a kit (with its rooms if you like), reorder or hide kits, copy a shipped one to change it. ${Object.keys(SETTINGS.starters?.mine || {}).length} of yours.</div>
       <button class="addbtn" id="openKits" style="margin-top:8px">Open starter kits</button></div></div>
     <button class="addbtn" id="resetCat" style="margin-top:8px;border-color:#d99;color:#b55">Reset licensing &amp; catalog to shipped defaults</button>`;
 }
@@ -3338,7 +3337,7 @@ function renderLibEditor() {
       ${shipped && stale ? `<button data-act="revert" title="Take back the specs SignalPath ships">Revert to shipped</button>` : ""}
       ${e.custom ? `<button class="danger" data-act="del">Delete</button>` : ""}
     </div>
-    ${used ? `<div class="note">Used ${used}× in this job. Saved jobs keep the specs they were drawn with — the Paperwork tab offers to take your changes.</div>` : ""}
+    ${used ? `<div class="note">Used ${used}× in this project. Saved projects keep the specs they were drawn with — the Paperwork tab offers to take your changes.</div>` : ""}
     ${!e.custom && !stale ? `<div class="note">Ships with SignalPath. Edit it and your version is kept from then on (Revert brings the shipped one back).</div>` : ""}
     ${warns.length ? `<div class="warn">${warns.map(esc).join("<br>")}</div>` : ""}
     ${sections.slice(0, 1).map(sc => `<h3>${esc(sc.title)}</h3><div class="grid">${sc.fields.map(f => libFieldHTML(e, f)).join("")}</div>`).join("")}
@@ -3378,7 +3377,7 @@ function renderLibEditor() {
     const a = el.dataset.act, devs = SETTINGS.catalog.devices;
     if (a === "dup") { const r = duplicateDevice(devs, id); devs[r.id] = r.entry; LIB.sel = r.id; LIB.q = ""; save(true); $("#libEd").scrollTop = 0; }
     if (a === "revert" && confirm(`Replace your version of ${e.brand} ${e.model} with the specs SignalPath ships?`)) { takeShipped(id); save(true); }
-    if (a === "del" && confirm(`Delete ${e.brand} ${e.model} from your library?${used ? ` It's used ${used}× in this job (the job keeps its copy of the specs).` : ""}`)) { delete devs[id]; LIB.sel = null; save(true); }
+    if (a === "del" && confirm(`Delete ${e.brand} ${e.model} from your library?${used ? ` It's used ${used}× in this project (the project keeps its copy of the specs).` : ""}`)) { delete devs[id]; LIB.sel = null; save(true); }
     if (a === "dropports") { delete e.ports; delete e.portsSource; save(); }
   });
 }
@@ -3424,10 +3423,10 @@ const EYE_OFF = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" str
 function renderKits() {
   const kits = listStarters(SETTINGS.starters);
   if (!kits.some(k => k.id === KIT.sel)) KIT.sel = kits[0]?.id || null;
-  $("#kitList").innerHTML = `<div class="grp">New-job picker order · ${kits.filter(k => !k.hidden).length} shown</div>` + kits.map(k =>
+  $("#kitList").innerHTML = `<div class="grp">New-project picker order · ${kits.filter(k => !k.hidden).length} shown</div>` + kits.map(k =>
     `<div class="it kit${k.id === KIT.sel ? " on" : ""}" data-id="${esc(k.id)}"><div class="tx" style="${k.hidden ? "opacity:.5" : ""}"><div class="m">${esc(k.name)}${k.custom ? `<span class="badge2">yours</span>` : ""}${k.hidden ? `<span class="badge2 ed">hidden</span>` : ""}</div>
      <div class="s">${plural(k.devices.length, "box", "boxes")}${k.rooms ? ` · ${plural(k.rooms.split(",").length, "room")}` : ""}</div></div>
-     <button type="button" class="eye${k.hidden ? " off" : ""}" data-eye="${esc(k.id)}" aria-pressed="${!k.hidden}" aria-label="${k.hidden ? "Show" : "Hide"} ${esc(k.name)} in ＋ New job" title="${k.hidden ? "Hidden from ＋ New job — tap to show" : "Shown in ＋ New job — tap to hide"}">${k.hidden ? EYE_OFF : EYE_ON}</button></div>`).join("");
+     <button type="button" class="eye${k.hidden ? " off" : ""}" data-eye="${esc(k.id)}" aria-pressed="${!k.hidden}" aria-label="${k.hidden ? "Show" : "Hide"} ${esc(k.name)} in ＋ New project" title="${k.hidden ? "Hidden from ＋ New project — tap to show" : "Shown in ＋ New project — tap to hide"}">${k.hidden ? EYE_OFF : EYE_ON}</button></div>`).join("");
   $("#kitList").querySelectorAll(".it").forEach(el => el.onclick = () => { KIT.sel = el.dataset.id; renderKits(); });
   // the eye: show / hide in one tap, without opening the kit
   $("#kitList").querySelectorAll("[data-eye]").forEach(b => b.onclick = ev => {
@@ -3452,13 +3451,13 @@ function renderKitEditor(kits) {
   const jobRooms = (S.job?.house?.zones || []).length;
   ed.innerHTML = `
     <div class="ttl">${esc(k.name)}</div>
-    <div class="sub">${k.custom ? "Yours" : "Ships with SignalPath"}${k.hidden ? " · hidden from ＋ New job" : ""}${k.madeFrom ? ` · saved from ${esc(k.madeFrom)}` : ""}${k.copiedFrom ? ` · copied from ${esc(k.copiedFrom)}` : ""}${k.note ? ` · ${esc(k.note)}` : ""}</div>
+    <div class="sub">${k.custom ? "Yours" : "Ships with SignalPath"}${k.hidden ? " · hidden from ＋ New project" : ""}${k.madeFrom ? ` · saved from ${esc(k.madeFrom)}` : ""}${k.copiedFrom ? ` · copied from ${esc(k.copiedFrom)}` : ""}${k.note ? ` · ${esc(k.note)}` : ""}</div>
     <div class="acts">
-      <button class="primary" data-ka="start">Start a new job from it</button>
+      <button class="primary" data-ka="start">Start a new project from it</button>
       <button data-ka="up"${idx === 0 ? " disabled" : ""}>↑</button><button data-ka="down"${idx === kits.length - 1 ? " disabled" : ""}>↓</button>
-      <button data-ka="hide">${k.hidden ? "Show in ＋ New job" : "Hide from ＋ New job"}</button>
+      <button data-ka="hide">${k.hidden ? "Show in ＋ New project" : "Hide from ＋ New project"}</button>
       <button data-ka="dup">Duplicate</button>
-      ${mine ? `<button data-ka="update" title="Replace this kit's rack with the open job's (its rooms too, if it has rooms)">Update from this job</button><button class="danger" data-ka="del">Delete</button>` : ""}
+      ${mine ? `<button data-ka="update" title="Replace this kit's rack with the open project's (its rooms too, if it has rooms)">Update from this project</button><button class="danger" data-ka="del">Delete</button>` : ""}
     </div>
     ${!mine ? `<div class="note">Ships with SignalPath. Change anything below and it becomes your copy, in the same spot — the original is hidden, and you can show it again any time.</div>` : ""}
     <h3>Kit</h3><div class="grid">
@@ -3467,8 +3466,8 @@ function renderKitEditor(kits) {
       ${fld("blurb", "Description", k.blurb, "area")}
     </div>
     <h3>Starting rooms <span class="mini" style="text-transform:none;letter-spacing:0">optional · quick-add text, comma between rooms</span></h3>
-    <div class="grid">${fld("rooms", "Rooms a new job starts with", k.rooms, "area", "e.g. family room 5.1 75 sony matrix, kitchen stereo 55 matrix, patio landscape 8 — wired to this kit's rack the same way as typing them")}</div>
-    ${jobRooms ? `<button data-ka="fillrooms" style="margin-top:6px">Use this job's ${jobRooms} rooms</button>` : ""}
+    <div class="grid">${fld("rooms", "Rooms a new project starts with", k.rooms, "area", "e.g. family room 5.1 75 sony matrix, kitchen stereo 55 matrix, patio landscape 8 — wired to this kit's rack the same way as typing them")}</div>
+    ${jobRooms ? `<button data-ka="fillrooms" style="margin-top:6px">Use this project's ${jobRooms} rooms</button>` : ""}
     <h3>Audio</h3><div class="grid">
       <div class="fld"><label>Audio network</label><select data-kk="audioNetwork"${ro ? " disabled" : ""}>${[["", "—"], ["avb", "Savant AVB"], ["dante", "Dante"]].map(([v, l]) => `<option value="${v}"${(k.solution?.audioNetwork || "") === v ? " selected" : ""}>${l}</option>`).join("")}</select></div>
       ${fld("platforms", "Control platform", (k.solution?.platforms || []).join(", "), "text", "savant, josh, control4 — sets the licensing advice")}
@@ -3476,7 +3475,7 @@ function renderKitEditor(kits) {
     <h3>Rack · ${k.devices.length} boxes, ${k.companions?.length || 0} adapters, ${k.connections?.length || 0} patches</h3>
     <div style="font-size:13px">${gear || `<span class="mini">No gear — a blank rack.</span>`}</div>
     <button data-kg="add" class="addbtn" style="margin-top:8px">＋ Add gear</button>
-    <div class="help" style="margin-top:6px">＋1 adds another of that box, patched the same way. A box you add from the library starts unpatched — the job wires it, or offers to.</div>`;
+    <div class="help" style="margin-top:6px">＋1 adds another of that box, patched the same way. A box you add from the library starts unpatched — the project wires it, or offers to.</div>`;
   // a shipped kit becomes yours on the first change: a copy with the same name in the same spot; the original is hidden
   const makeKitMine = () => {
     const K = SETTINGS.starters; if (K.mine[k.id]) return K.mine[k.id];
@@ -3511,8 +3510,8 @@ function renderKitEditor(kits) {
     if (a === "up" || a === "down") { const j = idx + (a === "up" ? -1 : 1); [ids[idx], ids[j]] = [ids[j], ids[idx]]; K.order = ids; }
     if (a === "hide") K.hidden = k.hidden ? K.hidden.filter(x => x !== k.id) : [...K.hidden, k.id];
     if (a === "dup") { const c = duplicateStarter(k, kitTaken()); K.mine[c.id] = c; K.order = [...ids.slice(0, idx + 1), c.id, ...ids.slice(idx + 1)]; KIT.sel = c.id; }
-    if (a === "del" && confirm(`Delete the kit "${k.name}"? Jobs started from it are unaffected.`)) { delete K.mine[k.id]; K.order = K.order.filter(x => x !== k.id); K.hidden = K.hidden.filter(x => x !== k.id); KIT.sel = null; }
-    if (a === "update" && confirm(`Replace "${k.name}"'s rack with this job's (${(S.job.solutions[S.sol]?.racks?.[0]?.devices || []).length} boxes)?`)) {
+    if (a === "del" && confirm(`Delete the kit "${k.name}"? Projects started from it are unaffected.`)) { delete K.mine[k.id]; K.order = K.order.filter(x => x !== k.id); K.hidden = K.hidden.filter(x => x !== k.id); KIT.sel = null; }
+    if (a === "update" && confirm(`Replace "${k.name}"'s rack with this project's (${(S.job.solutions[S.sol]?.racks?.[0]?.devices || []).length} boxes)?`)) {
       const n = starterFromJob(S.job, S.sol, { name: k.name, blurb: k.blurb, tip: k.tip, includeRooms: !!k.rooms, taken: [] });
       K.mine[k.id] = { ...n, id: k.id, name: k.name, ...(k.blurb ? { blurb: k.blurb } : {}), ...(k.tip ? { tip: k.tip } : {}) };
     }
@@ -3524,10 +3523,10 @@ $("#kitClose").onclick = () => { $("#kits").classList.remove("show"); renderPane
 $("#kits").addEventListener("click", ev => { if (ev.target.id === "kits") $("#kitClose").click(); });
 $("#kitSave").onclick = () => {
   const sol = S.job?.solutions?.[S.sol], rack = sol?.racks?.[0];
-  if (!rack?.devices?.length) { alert("This job's rack is empty — add gear first, then save it as a kit."); return; }
+  if (!rack?.devices?.length) { alert("This project's rack is empty — add gear first, then save it as a kit."); return; }
   const name = (prompt("Name this starter kit:", `${S.job.job?.name || "My"} rack`) || "").trim(); if (!name) return;
   const rooms = (S.job.house.zones || []).length;
-  const includeRooms = rooms ? confirm(`Include this job's ${rooms} rooms as the kit's starting rooms?\n\nOK = rack + rooms · Cancel = rack only`) : false;
+  const includeRooms = rooms ? confirm(`Include this project's ${rooms} rooms as the kit's starting rooms?\n\nOK = rack + rooms · Cancel = rack only`) : false;
   const k = starterFromJob(S.job, S.sol, { name, includeRooms, taken: kitTaken() });
   SETTINGS.starters.mine[k.id] = k; SETTINGS.starters.order = [...listStarters(SETTINGS.starters).map(x => x.id).filter(x => x !== k.id), k.id];
   KIT.sel = k.id; kitsSaved();
@@ -4005,12 +4004,12 @@ function wirePanel(body) {
     const ok = cands.filter(c => !c.disabled), no = cands.filter(c => c.disabled);
     const groups = ["In the rack", "Adapters", "In the rooms"].map(g => ({ label: g, items: ok.filter(c => c.group === g).map(item) }));
     // nothing fits: say so at the top, in words (2026-10-03: an empty sheet with only "Advanced" left you guessing)
-    if (!ok.length) groups.unshift({ label: "Nothing fits", items: [{ value: "__none", disabled: true, label: dir === "in" ? `Nothing in this job can plug into ${d.model || "it"}` : `Nothing in this job can take an output from ${d.model || "it"}`,
-      reason: no.length ? `${no.length} box${no.length > 1 ? "es" : ""} can't — "Show more" says why` : `it has no free ${dir === "in" ? "inputs" : "outputs"} for this job's gear` }] });
+    if (!ok.length) groups.unshift({ label: "Nothing fits", items: [{ value: "__none", disabled: true, label: dir === "in" ? `Nothing in this project can plug into ${d.model || "it"}` : `Nothing in this project can take an output from ${d.model || "it"}`,
+      reason: no.length ? `${no.length} box${no.length > 1 ? "es" : ""} can't — "Show more" says why` : `it has no free ${dir === "in" ? "inputs" : "outputs"} for this project's gear` }] });
     groups.push({ label: "Can't connect (search to see why)", items: no.map(item), searchOnly: true });   // the long list of misfits only while searching (2026-10-03)
     groups.push({ label: "Advanced", items: [{ value: "__free", label: "Any connection — pick both ends and the signal yourself", sub: "for the exceptions: nothing is checked" }] });
     openPicker({ title: dir === "in" ? `Add an input to ${d.model || d.id}` : `Add an output from ${d.model || d.id}`, groups,
-      empty: no.length ? "" : `Nothing in this job can ${dir === "in" ? `plug into ${d.model || "it"} — it has no free inputs (or none at all)` : `take an output from ${d.model || "it"} — it has no free outputs (or none at all)`}. "Any connection" below draws one anyway.`, onPick: v => {
+      empty: no.length ? "" : `Nothing in this project can ${dir === "in" ? `plug into ${d.model || "it"} — it has no free inputs (or none at all)` : `take an output from ${d.model || "it"} — it has no free outputs (or none at all)`}. "Any connection" below draws one anyway.`, onPick: v => {
       if (v === "__free") {
         const other = allNodes().find(x => x !== d.id) || "";
         sol.connections.push(dir === "in" ? { from: other, to: d.id, signal: suggestSignal(other, d.id) || "video" } : { from: d.id, to: other, signal: suggestSignal(d.id, other) || "video" });
@@ -4133,7 +4132,7 @@ function wirePanel(body) {
   const updCat = body.querySelector("#updCat");
   if (updCat) updCat.onclick = () => {
     const d = catalogDrift(S.job, SETTINGS.catalog);
-    if (!confirm(`Update ${d.length} device spec${d.length > 1 ? "s" : ""} on this job to the current catalog?\n\n${d.map(x => x.model).join("\n")}\n\nPort budgets and advice may change.`)) return;
+    if (!confirm(`Update ${d.length} device spec${d.length > 1 ? "s" : ""} on this project to the current catalog?\n\n${d.map(x => x.model).join("\n")}\n\nPort budgets and advice may change.`)) return;
     refreshCatalogLock(S.job, SETTINGS.catalog);
     refresh();
   };
@@ -4178,8 +4177,8 @@ if (!DB) {
   const bar = document.createElement("div");
   bar.id = "noSaveBar"; bar.setAttribute("role", "alert");
   bar.style.cssText = "position:fixed;left:16px;right:16px;bottom:16px;z-index:9999;background:#fff4e5;color:#4a2a00;border:1px solid #e0a040;border-radius:8px;padding:10px 14px;font:14px/1.4 -apple-system,system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.18);display:flex;gap:10px;align-items:center;flex-wrap:wrap";
-  bar.innerHTML = `<span style="flex:1;min-width:220px"><b>This browser isn't letting SignalPath save.</b> (A private window, or site data turned off.) Your work lasts until you close this tab — use <b>Export → Job file</b> to keep it.</span>
-    <button type="button" data-a="export" style="font:inherit;padding:4px 10px">Save a job file now</button><button type="button" data-a="ok" style="font:inherit;padding:4px 10px">Got it</button>`;
+  bar.innerHTML = `<span style="flex:1;min-width:220px"><b>This browser isn't letting SignalPath save.</b> (A private window, or site data turned off.) Your work lasts until you close this tab — use <b>Export → Project file</b> to keep it.</span>
+    <button type="button" data-a="export" style="font:inherit;padding:4px 10px">Save a project file now</button><button type="button" data-a="ok" style="font:inherit;padding:4px 10px">Got it</button>`;
   bar.querySelector('[data-a="export"]').onclick = () => $("#exportJson").click();
   bar.querySelector('[data-a="ok"]').onclick = () => bar.remove();
   document.body.appendChild(bar);

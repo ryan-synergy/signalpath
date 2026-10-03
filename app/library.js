@@ -102,11 +102,11 @@ export const BEHAVIOURS = [
   ["ultimo", "Dante Ultimo chip", "fixed 4×4 Dante, PCM only"],
   ["controlLanOnly", "Ethernet is control only", "no audio over its network jack"],
   ["danteController", "Dante controller", "manages the Dante network"],
-  ["hdbasetOut", "Outputs are HDBaseT", "powers the far-end receiver — the job quotes the receiver only, no rack outlet"],
+  ["hdbasetOut", "Outputs are HDBaseT", "powers the far-end receiver — the project quotes the receiver only, no rack outlet"],
   ["sonos", "Sonos", "Sonos network and lip-sync advice applies"],
   ["twentyAmp", "Needs a 20 A circuit", ""],
   ["wattboxPick", "Advisor may pick it", "a candidate when the advisor sizes a WattBox"],
-  ["legacy", "Legacy", "never auto-picked; kept for existing jobs"],
+  ["legacy", "Legacy", "never auto-picked; kept for existing projects"],
 ];
 const BEHAVIOUR_SET = new Set(BEHAVIOURS.map(b => b[0]));
 export const tagsOf = e => (e.flags || []).filter(f => !BEHAVIOUR_SET.has(f));

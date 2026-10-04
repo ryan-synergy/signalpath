@@ -645,14 +645,16 @@ function speakerGroupSize(ep, gs = 1, bar = null) {
     return sz({ w: 90, h: SPK, bar: kind, linkY: Math.round(16 * gs), caption: cap(`${kind === "passive" ? "Passive" : "Powered"} soundbar${sub ? " + Sub" : ""}`) });
   }
   if (cfg === "landscape") {
-    const sats = satCount(ep), subs = ep.buriedSub ? 1 : 0;
-    return sz({ w: sats * 26 + subs * 34, h: SPK, caption: cap(`Landscape ${sats}${subs ? "+" + subs : ""}`) });
+    // stake speakers in one row, or two from six up (Ryan 2026-10-03, picked from concepts), the in-ground sub beside them
+    const sats = satCount(ep), subs = ep.buriedSub ? 1 : 0, rows = landRows(sats), per = Math.ceil(sats / rows);
+    return sz({ w: per * 26 + subs * 38, h: rows * SPK + (rows - 1) * 4, caption: cap(`Landscape ${sats}${subs ? " + sub" : ""}`) });
   }
   const n = spkCount(ep);
   return sz({ w: SPK_PITCH * n - 2, h: SPK, caption: cap(`${n} Speakers`) });
 }
 // a typed "-1" or "1.5" in the Count field must not become Array(-1)
 const spkCount = ep => Math.min(24, Math.max(1, Math.floor(+ep?.count) || 2));
+const landRows = sats => sats >= 6 ? 2 : 1;
 const satCount = ep => Math.min(24, Math.max(1, Math.floor(+ep?.satCount) || 4));
 
 function displaySize(ep, gs = 1) {
@@ -4386,7 +4388,11 @@ export function render(job, ix, P, rt, opts = {}) {
   ${/* speakers (Ryan 2026-10-03, picked from concepts): a big flat yellow cone inside a thin dark rim — the cone, not the
        rim, is what you see — with the white glint on the rim (on the cone it read as a bulge). Light gray in B&W. */""}
   <g id="spk"><circle r="16" fill="#3f3f3f" stroke="#222" stroke-width="1.2"/><circle r="12" fill="${bw ? "#d9d9d9" : "#ffd93b"}" stroke="#222" stroke-width="0.9"/><circle r="3.3" fill="#2a2a2a"/><path d="M-12.6 -6.2a14 14 0 0 1 6.4 -6.4" fill="none" stroke="#fff" stroke-opacity="0.8" stroke-width="1.2" stroke-linecap="round"/></g>
-  <g id="spks"><circle r="10" fill="#3f3f3f" stroke="#222" stroke-width="1"/><circle r="7.4" fill="${bw ? "#d9d9d9" : "#ffd93b"}" stroke="#222" stroke-width="0.8"/><circle r="2" fill="#2a2a2a"/></g>
+  ${/* landscape (Ryan 2026-10-03, picked from concepts — side view, bronze with a black face): a can tilted up on a
+       blunt stake, and the in-ground sub — a mushroom cap, the canister half under a ground line. Drawn in a 26 × 34 /
+       34 × 34 cell, scaled to the speaker row's height. Grays in B&W. */""}
+  <g id="lsat" transform="scale(.94)"><path d="M11.4,21 H14.6 L13.9,31.6 Q13,33.2 12.1,31.6 Z" fill="#26272b" stroke="#1d1d1f" stroke-width=".5" stroke-linejoin="round"/><circle cx="13" cy="20.5" r="2.4" fill="#26272b" stroke="#1d1d1f" stroke-width=".8"/><g transform="rotate(-24 13 13)"><path d="M6,7 H19 V19 H6 Q1.5,19 1.5,13 Q1.5,7 6,7 Z" fill="${bw ? "#8f8f8f" : "#6b4a2f"}" stroke="#1d1d1f" stroke-width="1.1"/><path d="M6,9 H17" stroke="${bw ? "#b5b5b5" : "#8a6442"}" stroke-width="1.2" fill="none"/><ellipse cx="19.5" cy="13" rx="3.1" ry="6.4" fill="#1b1b1d" stroke="#1d1d1f" stroke-width="1.1"/></g></g>
+  <g id="lsub" transform="scale(.94)"><rect x="9.5" y="14" width="15" height="19" rx="1.5" fill="#2b2d32" stroke="#1d1d1f" stroke-width="1.1"/><rect x="9.5" y="14" width="15" height="3.2" fill="#111" stroke="#1d1d1f" stroke-width=".9"/><path d="M3.5,14.5 Q3.5,2.5 17,2.5 Q30.5,2.5 30.5,14.5 Z" fill="${bw ? "#8f8f8f" : "#6b4a2f"}" stroke="#1d1d1f" stroke-width="1.2"/><path d="M8,9 Q10,5.4 16,4.8" stroke="${bw ? "#b5b5b5" : "#8a6442"}" stroke-width="1.3" fill="none" stroke-linecap="round"/><rect x="1" y="25" width="32" height="9" fill="#fff" fill-opacity=".72"/><path d="M1,25 H33" stroke="${bw ? "#666" : "#4d7a3a"}" stroke-width="1.4"/><path d="M4,28.5 h3 M12,30 h3 M20,28.5 h3 M27,30.5 h3" stroke="${bw ? "#666" : "#4d7a3a"}" stroke-width="1" opacity=".7"/></g>
   <g id="sub"><rect x="-15" y="-15" width="30" height="30" rx="3" fill="#3f3f3f" stroke="#222" stroke-width="1.2"/><circle r="10.5" fill="${bw ? "#d9d9d9" : "#ffd93b"}" stroke="#222" stroke-width="0.9"/><circle r="3" fill="#2a2a2a"/></g>
 </defs>`);
 
@@ -5213,10 +5219,10 @@ function speakerGlyphs(ep, gx, gy, gw, bar = null, bw = false) {
     return o;
   }
   if (cfg === "landscape") {
-    const sats = satCount(ep), subs = ep?.buriedSub ? 1 : 0;
+    const sats = satCount(ep), subs = ep?.buriedSub ? 1 : 0, rows = landRows(sats), per = Math.ceil(sats / rows);
     let out2 = "";
-    for (let i = 0; i < sats; i++) out2 += use("spks", 10 + i * 26, 16);
-    if (subs) out2 += use("sub", sats * 26 + 18, 16);
+    for (let i = 0; i < sats; i++) out2 += use("lsat", 1 + (i % per) * 26, Math.floor(i / per) * (SPK + 4));
+    if (subs) out2 += use("lsub", per * 26 + 5, (rows - 1) * (SPK + 4) / 2);
     return out2;
   }
   return row(Array(spkCount(ep)).fill("spk"), 16);

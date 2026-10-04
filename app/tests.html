@@ -3464,6 +3464,15 @@ for (const [name, raw] of Object.entries(fixtures)) {
       }
     }
   }
+  { // landscape speakers (Ryan 2026-10-03, picked from concepts): stake speakers, two rows from six up, the in-ground sub only when the room has one
+    const mk = (n, sub) => { const j = structuredClone(fixtures.residence); const z = j.house.zones.find(z => (z.endpoints || []).some(e => e.type === "speakers"));
+      Object.assign(z.endpoints.find(e => e.type === "speakers"), { config: "landscape", satCount: n, buriedSub: sub }); const L = loadJob(j), p = enginePlaceNow(L.job, L.ix), rt = engineRoute(L.job, L.ix, p);
+      return render(L.job, L.ix, p, rt).split("</defs>").pop(); };
+    const count = (svg, id) => (svg.match(new RegExp(`href="#${id}"`, "g")) || []).length, ys = svg => new Set([...svg.matchAll(/href="#lsat" x="[^"]+" y="([^"]+)"/g)].map(m => m[1])).size;
+    const a = mk(4, false), b = mk(8, true);
+    t("landscape: 4 stake speakers sit in one row with no sub; 8 sit in two rows of four with the in-ground sub, captioned \"Landscape 8 + sub\"",
+      count(a, "lsat") === 4 && count(a, "lsub") === 0 && ys(a) === 1 && count(b, "lsat") === 8 && count(b, "lsub") === 1 && ys(b) === 2 && b.includes("Landscape 8 + sub") && a.includes(">Landscape 4<"));
+  }
   const def = loadJob(structuredClone(fixtures.residence)), pd = enginePlaceNow(def.job, def.ix);
   t("layout: Packed is the default; job.layoutStyle picks Bands or Classic; grouping \"in the order I added them\" keeps the classic arrangement",
     pd.layout === "packed" && lay({ ...fixtures.residence, job: { ...fixtures.residence.job, layoutStyle: "bands" } }).p.layout === "bands" &&
@@ -3505,7 +3514,9 @@ for (const [name, raw] of Object.entries(fixtures)) {
   // 2026-09-27 baseline before the audit fixes: big 30, ratio 1.189, smells 27, fallbacks 7; after audit round 1: big 17
   // 10 → 12 on 2026-10-03: the sectioned legend is taller, so some sheets wrap their room rows differently (no router change;
   // fallbacks and kinks unchanged)
-  t(`route audit — 60 random jobs: wires with a much shorter legal route ≤ 12 (${big})`, big <= 12);
+  // 12 → 14 on 2026-10-03: landscape rooms draw stake speakers in two rows from six up, so those cards are narrower and
+  // taller and their rows sit differently (no router change; the all-samples harness count went down, 232 → 200 in Packed)
+  t(`route audit — 60 random jobs: wires with a much shorter legal route ≤ 14 (${big})`, big <= 14);
   t(`route audit — 60 random jobs: drawn length ≤ 1.170× the Manhattan minimum (${(len / manh).toFixed(3)})`, len / manh <= 1.170);
   t(`route audit — 60 random jobs: kinks/spikes ≤ 2 (${smells}), best-effort fallbacks ≤ 3 (${fb}; 5 before page-width placement)`, smells <= 2 && fb <= 3);
 }
